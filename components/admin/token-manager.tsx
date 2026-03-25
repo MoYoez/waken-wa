@@ -34,9 +34,9 @@ interface ApiToken {
   id: number
   name: string
   token: string
-  is_active: boolean
-  created_at: string
-  last_used_at: string | null
+  isActive: boolean
+  createdAt: string
+  lastUsedAt: string | null
 }
 
 export function TokenManager() {
@@ -121,6 +121,13 @@ export function TokenManager() {
     setDialogOpen(false)
     setNewTokenName('')
     setNewToken(null)
+  }
+
+  const safeFormat = (value: string | null, fmt: string) => {
+    if (!value) return null
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return null
+    return format(date, fmt, { locale: zhCN })
   }
 
   return (
@@ -213,7 +220,7 @@ export function TokenManager() {
                   <CardTitle className="text-base">{token.name}</CardTitle>
                   <div className="flex items-center gap-2">
                     <Switch
-                      checked={token.is_active}
+                      checked={token.isActive}
                       onCheckedChange={(checked) => handleToggle(token.id, checked)}
                     />
                     <AlertDialog>
@@ -246,15 +253,15 @@ export function TokenManager() {
               <CardContent>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span>
-                    创建于 {format(new Date(token.created_at), 'yyyy-MM-dd', { locale: zhCN })}
+                    创建于 {safeFormat(token.createdAt, 'yyyy-MM-dd') ?? '—'}
                   </span>
-                  {token.last_used_at && (
+                  {safeFormat(token.lastUsedAt, 'MM-dd HH:mm') && (
                     <span>
-                      最后使用 {format(new Date(token.last_used_at), 'MM-dd HH:mm', { locale: zhCN })}
+                      最后使用 {safeFormat(token.lastUsedAt, 'MM-dd HH:mm')}
                     </span>
                   )}
-                  <span className={token.is_active ? 'text-emerald-500' : 'text-muted-foreground'}>
-                    {token.is_active ? '已启用' : '已禁用'}
+                  <span className={token.isActive ? 'text-emerald-500' : 'text-muted-foreground'}>
+                    {token.isActive ? '已启用' : '已禁用'}
                   </span>
                 </div>
               </CardContent>
