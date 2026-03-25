@@ -45,6 +45,7 @@ interface SetupInitialConfig {
   userBio: string
   avatarUrl: string
   userNote: string
+  historyWindowMinutes: number
   currentlyText: string
   earlierText: string
   updatesText: string
@@ -65,6 +66,9 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
   const [userBio, setUserBio] = useState(initialConfig?.userBio ?? '')
   const [avatarUrl, setAvatarUrl] = useState(initialConfig?.avatarUrl ?? '')
   const [userNote, setUserNote] = useState(initialConfig?.userNote ?? '')
+  const [historyWindowMinutes, setHistoryWindowMinutes] = useState(
+    initialConfig?.historyWindowMinutes ?? 120
+  )
   const [currentlyText, setCurrentlyText] = useState(initialConfig?.currentlyText ?? '')
   const [earlierText, setEarlierText] = useState(initialConfig?.earlierText ?? '')
   const [updatesText, setUpdatesText] = useState(initialConfig?.updatesText ?? '')
@@ -173,6 +177,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
           userBio,
           avatarUrl,
           userNote,
+          historyWindowMinutes,
           currentlyText,
           earlierText,
           updatesText,
@@ -353,6 +358,21 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   打开裁剪弹窗
                 </button>
               )}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">历史展示窗口（分钟）</label>
+                  <p className="text-[11px] text-muted-foreground">主页历史列表仅显示最近这段时间，默认 120 分钟。</p>
+                  <input
+                    type="number"
+                    min={10}
+                    max={1440}
+                    step={10}
+                    value={historyWindowMinutes}
+                    onChange={(e) => setHistoryWindowMinutes(Number(e.target.value || 120))}
+                    className="w-full px-3 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground">“当前”区块标题</label>

@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const { device, process_name, process_title, started_at, ended_at, metadata } = body
+    const { device, process_name, process_title, metadata } = body
     
     if (!device || !process_name) {
       return NextResponse.json(
@@ -76,13 +76,18 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    await prisma.activityLog.updateMany({
+      where: { device, endedAt: null },
+      data: { endedAt: new Date() }
+    })
+
     const log = await prisma.activityLog.create({
       data: {
         device,
         processName: process_name,
         processTitle: process_title || null,
-        startedAt: started_at ? new Date(started_at) : new Date(),
-        endedAt: ended_at ? new Date(ended_at) : null,
+        startedAt: new Date(),
+        endedAt: null,
         metadata: metadata || null
       }
     })

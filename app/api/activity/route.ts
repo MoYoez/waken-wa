@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getActivityFeedData, getHistoryWindowMinutes } from '@/lib/activity-feed'
 
 // 验证 API Token
 async function validateToken(request: NextRequest): Promise<boolean> {
@@ -31,9 +32,13 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
     const offset = parseInt(searchParams.get('offset') || '0')
     const device = searchParams.get('device')
-    
-    const where = device ? { device } : {}
-    
+    const historyWindowMinutes = await getHistoryWindowMinutes()
+    const since = new Date(Date.now() - historyWindowMinutes * 60 * 1000)
+
+    const where = device
+      ? { device, startedAt: { gte: since } }
+      : { startedAt: { gte: since } }
+
     const [logs, total] = await Promise.all([
       prisma.activityLog.findMany({
         where,
@@ -43,11 +48,14 @@ export async function GET(request: NextRequest) {
       }),
       prisma.activityLog.count({ where })
     ])
-    
+
+    const feed = await getActivityFeedData(limit)
+
     return NextResponse.json({
       success: true,
       data: logs,
-      pagination: { limit, offset, total }
+      pagination: { limit, offset, total },
+      feed
     })
   } catch (error) {
     console.error('获取活动日志失败:', error)
@@ -70,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json()
-    const { device, process_name, process_title, started_at, ended_at, metadata } = body
+    const { device, process_name, process_title, metadata } = body
     
     if (!device || !process_name) {
       return NextResponse.json(
@@ -79,13 +87,18 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    await prisma.activityLog.updateMany({
+      where: { device, endedAt: null },
+      data: { endedAt: new Date() },
+    })
+
     const log = await prisma.activityLog.create({
       data: {
         device,
         processName: process_name,
         processTitle: process_title || null,
-        startedAt: started_at ? new Date(started_at) : new Date(),
-        endedAt: ended_at ? new Date(ended_at) : null,
+        startedAt: new Date(),
+        endedAt: null,
         metadata: metadata || null
       }
     })

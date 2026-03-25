@@ -21,6 +21,7 @@ export default async function AdminSetupPage() {
               userBio: config.userBio,
               avatarUrl: config.avatarUrl,
               userNote: config.userNote,
+              historyWindowMinutes: config.historyWindowMinutes,
               currentlyText: config.currentlyText,
               earlierText: config.earlierText,
               updatesText: config.updatesText,

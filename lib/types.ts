@@ -5,8 +5,6 @@ export interface ActivityInput {
   device: string
   process_name: string
   process_title?: string
-  started_at?: string
-  ended_at?: string
   metadata?: Record<string, unknown>
 }
 

@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
       userBio,
       avatarUrl,
       userNote,
+      historyWindowMinutes,
       currentlyText,
       earlierText,
       updatesText,
@@ -24,6 +25,10 @@ export async function POST(request: NextRequest) {
     const normalizedUserBio = String(userBio ?? '').trim()
     const normalizedAvatarUrl = String(avatarUrl ?? '').trim()
     const normalizedUserNote = String(userNote ?? '').trim()
+    const parsedWindow = Number(historyWindowMinutes ?? 120)
+    const normalizedHistoryWindowMinutes = Number.isFinite(parsedWindow)
+      ? Math.min(Math.max(Math.round(parsedWindow), 10), 24 * 60)
+      : 120
     const normalizedCurrentlyText = String(currentlyText ?? '').trim() || 'currently'
     const normalizedEarlierText = String(earlierText ?? '').trim() || 'earlier'
     const normalizedUpdatesText =
@@ -74,6 +79,7 @@ export async function POST(request: NextRequest) {
           userBio: normalizedUserBio,
           avatarUrl: normalizedAvatarUrl,
           userNote: normalizedUserNote,
+          historyWindowMinutes: normalizedHistoryWindowMinutes,
           currentlyText: normalizedCurrentlyText,
           earlierText: normalizedEarlierText,
           updatesText: normalizedUpdatesText,
@@ -85,6 +91,7 @@ export async function POST(request: NextRequest) {
           userBio: normalizedUserBio,
           avatarUrl: normalizedAvatarUrl,
           userNote: normalizedUserNote,
+          historyWindowMinutes: normalizedHistoryWindowMinutes,
           currentlyText: normalizedCurrentlyText,
           earlierText: normalizedEarlierText,
           updatesText: normalizedUpdatesText,

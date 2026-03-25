@@ -1,9 +1,6 @@
 'use client'
 
-import useSWR from 'swr'
-import { Activity } from '@/lib/types'
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+import { useActivityFeed } from '@/hooks/use-activity-feed'
 
 interface UserProfileProps {
   name?: string
@@ -18,14 +15,9 @@ export function UserProfile({
   avatarUrl = '/avatar.jpg',
   note = '',
 }: UserProfileProps) {
-  const { data } = useSWR<{ data: Activity[] }>(
-    '/api/activity?limit=1',
-    fetcher,
-    { refreshInterval: 30000 }
-  )
-
-  const activity = data?.data?.[0]
-  const isOnline = activity && !activity.endedAt
+  const { feed } = useActivityFeed()
+  const activity = feed?.activeStatuses?.[0] || feed?.recentActivities?.[0]
+  const isOnline = Boolean(feed?.activeStatuses?.length)
 
   return (
     <div className="space-y-6">

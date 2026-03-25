@@ -1,12 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import useSWR from 'swr'
-import { Activity } from '@/lib/types'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+import { useActivityFeed } from '@/hooks/use-activity-feed'
 
 function getHoursAgo(date: Date): number {
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60))
@@ -22,15 +19,18 @@ function getTimeLabel(hoursAgo: number): string {
 }
 
 interface GroupedActivities {
-  [key: string]: Activity[]
+  [key: string]: Array<{
+    id: number
+    device: string
+    processName: string
+    processTitle: string | null
+    startedAt: string
+    endedAt: string | null
+  }>
 }
 
 export function ActivityTimeline() {
-  const { data, error } = useSWR<{ data: Activity[] }>(
-    '/api/activity?limit=30',
-    fetcher,
-    { refreshInterval: 30000 }
-  )
+  const { feed, error } = useActivityFeed()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export function ActivityTimeline() {
     )
   }
 
-  const activities = data?.data || []
+  const activities = feed?.recentActivities || []
 
   if (activities.length === 0) {
     return (
@@ -68,8 +68,13 @@ export function ActivityTimeline() {
     grouped[label].push(activity)
   })
 
+  const hours = Math.max(1, Math.round((feed?.historyWindowMinutes ?? 120) / 60))
+
   return (
     <div className="space-y-10">
+      <div className="text-xs text-muted-foreground">
+        历史窗口：最近 {hours} 小时（可在初始化配置中调整）
+      </div>
       {Object.entries(grouped).map(([timeLabel, items]) => (
         <div key={timeLabel}>
           {/* 时间标签 */}

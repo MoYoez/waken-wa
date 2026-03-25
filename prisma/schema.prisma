@@ -47,6 +47,7 @@ model SiteConfig {
   userBio       String   @map("user_bio")
   avatarUrl     String   @map("avatar_url")
   userNote      String   @map("user_note")
+  historyWindowMinutes Int @map("history_window_minutes") @default(120)
   currentlyText String   @map("currently_text") @db.VarChar(60) @default("currently")
   earlierText   String   @map("earlier_text") @db.VarChar(60) @default("earlier")
   updatesText   String   @map("updates_text") @db.VarChar(120) @default("updates every 30 seconds")

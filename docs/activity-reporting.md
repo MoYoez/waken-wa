@@ -26,9 +26,12 @@
 可选字段：
 
 - `process_title`: 进程标题
-- `started_at`: 开始时间（ISO 8601）
-- `ended_at`: 结束时间（ISO 8601）
 - `metadata`: 扩展 JSON 对象
+
+说明：
+
+- `started_at` / `ended_at` 无需上传，由服务端自动处理时间。
+- 同一设备上报新事件时，服务端会自动结束该设备上一条未结束状态。
 
 ## 3. curl 示例
 
@@ -83,4 +86,4 @@ await fetch('http://localhost:3000/api/activity', {
 1. Token 是否为完整值（不是截断值）
 2. 是否带了 `Bearer ` 前缀
 3. `device` 与 `process_name` 是否存在
-4. `started_at` / `ended_at` 是否为合法 ISO 时间
+4. Token 是否处于启用状态（后台可切换）
