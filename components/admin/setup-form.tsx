@@ -491,12 +491,12 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                 style={{
                   left: `calc(50% + ${cropOffset.x}px)`,
                   top: `calc(50% + ${cropOffset.y}px)`,
-                  transform: 'translate(-50%, -50%)',
+                  transform: `translate(-50%, -50%) scale(${cropZoom})`,
                   width: naturalSize.width
-                    ? `${naturalSize.width * getBaseScale() * cropZoom}px`
+                    ? `${naturalSize.width * getBaseScale()}px`
                     : 'auto',
                   height: naturalSize.height
-                    ? `${naturalSize.height * getBaseScale() * cropZoom}px`
+                    ? `${naturalSize.height * getBaseScale()}px`
                     : 'auto',
                   cursor: dragStart ? 'grabbing' : 'grab',
                 }}

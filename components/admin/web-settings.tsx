@@ -337,7 +337,7 @@ export function WebSettings() {
             onClick={() => setCropDialogOpen(true)}
             className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
           >
-            重新打��裁剪
+            重新打开裁剪
           </button>
         )}
         {form.avatarUrl && (
@@ -388,9 +388,9 @@ export function WebSettings() {
                   style={{
                     left: `calc(50% + ${cropOffset.x}px)`,
                     top: `calc(50% + ${cropOffset.y}px)`,
-                    transform: 'translate(-50%, -50%)',
-                    width: naturalSize.width ? `${naturalSize.width * getBaseScale() * cropZoom}px` : 'auto',
-                    height: naturalSize.height ? `${naturalSize.height * getBaseScale() * cropZoom}px` : 'auto',
+                    transform: `translate(-50%, -50%) scale(${cropZoom})`,
+                    width: naturalSize.width ? `${naturalSize.width * getBaseScale()}px` : 'auto',
+                    height: naturalSize.height ? `${naturalSize.height * getBaseScale()}px` : 'auto',
                     cursor: dragStart ? 'grabbing' : 'grab',
                   }}
                 />
