@@ -14,6 +14,7 @@ interface SiteConfig {
   customCss: string
   historyWindowMinutes: number
   historyWindowHintText: string
+  processStaleSeconds: number
   appMessageRules: Array<{ match: string; text: string }>
   pageLockEnabled: boolean
   pageLockPassword: string
@@ -47,6 +48,7 @@ export function WebSettings() {
     customCss: '',
     historyWindowMinutes: 120,
     historyWindowHintText: '历史窗口：最近 2 小时（可在设置中调整）',
+    processStaleSeconds: 500,
     appMessageRules: [],
     pageLockEnabled: false,
     pageLockPassword: '',
@@ -73,6 +75,7 @@ export function WebSettings() {
             historyWindowMinutes: Number(data.data.historyWindowMinutes ?? 120),
             historyWindowHintText:
               data.data.historyWindowHintText ?? '历史窗口：最近 2 小时（可在设置中调整）',
+            processStaleSeconds: Number(data.data.processStaleSeconds ?? 500),
             appMessageRules: rules,
             pageLockEnabled: Boolean(data.data.pageLockEnabled),
             pageLockPassword: '',
@@ -268,6 +271,19 @@ export function WebSettings() {
           value={form.historyWindowHintText}
           onChange={(e) => patch('historyWindowHintText', e.target.value)}
         />
+      </div>
+      <div className="space-y-2">
+        <Label>进程超时判定（秒）</Label>
+        <Input
+          type="number"
+          min={30}
+          max={86400}
+          value={form.processStaleSeconds}
+          onChange={(e) => patch('processStaleSeconds', Number(e.target.value || 500))}
+        />
+        <p className="text-xs text-muted-foreground">
+          超过该时长仍未收到该进程新活动时，将自动判定为已结束。默认 500 秒。
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

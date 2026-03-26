@@ -5,6 +5,7 @@ export interface ActivityFeedData {
   recentActivities: any[]
   historyWindowMinutes: number
   historyWindowHintText: string
+  processStaleSeconds: number
   recentTopApps: any[]
   generatedAt: string
 }
@@ -45,10 +46,25 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
   const historyWindowHintText =
     String(config?.historyWindowHintText ?? '').trim() ||
     '历史窗口：最近 2 小时（可在设置中调整）'
+  const staleSecondsRaw = Number(config?.processStaleSeconds ?? 500)
+  const processStaleSeconds = Number.isFinite(staleSecondsRaw)
+    ? Math.min(Math.max(Math.round(staleSecondsRaw), 30), 24 * 60 * 60)
+    : 500
   const appMessageRules: Array<{ match: string; text: string }> = Array.isArray(config?.appMessageRules)
     ? config.appMessageRules
     : []
   const since = new Date(Date.now() - historyWindowMinutes * 60 * 1000)
+  const staleBefore = new Date(Date.now() - processStaleSeconds * 1000)
+
+  await prisma.activityLog.updateMany({
+    where: {
+      endedAt: null,
+      startedAt: { lt: staleBefore },
+    },
+    data: {
+      endedAt: new Date(),
+    },
+  })
 
   const [recentActivities, openActivities] = await Promise.all([
     prisma.activityLog.findMany({
@@ -92,6 +108,7 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     recentActivities,
     historyWindowMinutes,
     historyWindowHintText,
+    processStaleSeconds,
     recentTopApps,
     generatedAt: new Date().toISOString(),
   }

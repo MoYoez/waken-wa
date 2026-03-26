@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { normalizeCustomCss } from '@/lib/theme-css'
+import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
       historyWindowMinutes,
       historyWindowHintText,
       appMessageRules,
+      processStaleSeconds,
       pageLockEnabled,
       pageLockPassword,
       currentlyText,
@@ -46,6 +48,10 @@ export async function POST(request: NextRequest) {
     const normalizedHistoryWindowMinutes = Number.isFinite(parsedWindow)
       ? Math.min(Math.max(Math.round(parsedWindow), 10), 24 * 60)
       : 120
+    const parsedStaleSeconds = Number(processStaleSeconds ?? 500)
+    const normalizedProcessStaleSeconds = Number.isFinite(parsedStaleSeconds)
+      ? Math.min(Math.max(Math.round(parsedStaleSeconds), 30), 24 * 60 * 60)
+      : 500
     const normalizedHistoryWindowHintText =
       String(historyWindowHintText ?? '').trim() ||
       '历史窗口：最近 2 小时（可在设置中调整）'
@@ -112,7 +118,7 @@ export async function POST(request: NextRequest) {
           ? await bcrypt.hash(rawPageLockPassword, 12)
           : existingConfig?.pageLockPasswordHash ?? null
 
-      await (tx as any).siteConfig.upsert({
+      await safeSiteConfigUpsert(tx as any, {
         where: { id: 1 },
         update: {
           userName: normalizedUserName,
@@ -124,6 +130,7 @@ export async function POST(request: NextRequest) {
           historyWindowMinutes: normalizedHistoryWindowMinutes,
           historyWindowHintText: normalizedHistoryWindowHintText,
           appMessageRules: normalizedAppMessageRules,
+          processStaleSeconds: normalizedProcessStaleSeconds,
           pageLockEnabled: normalizedPageLockEnabled,
           pageLockPasswordHash,
           currentlyText: normalizedCurrentlyText,
@@ -142,6 +149,7 @@ export async function POST(request: NextRequest) {
           historyWindowMinutes: normalizedHistoryWindowMinutes,
           historyWindowHintText: normalizedHistoryWindowHintText,
           appMessageRules: normalizedAppMessageRules,
+          processStaleSeconds: normalizedProcessStaleSeconds,
           pageLockEnabled: normalizedPageLockEnabled,
           pageLockPasswordHash,
           currentlyText: normalizedCurrentlyText,

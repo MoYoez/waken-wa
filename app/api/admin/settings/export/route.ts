@@ -55,6 +55,7 @@ export async function GET(request: Request) {
         customCss: siteConfig.customCss,
         historyWindowMinutes: siteConfig.historyWindowMinutes,
         historyWindowHintText: siteConfig.historyWindowHintText,
+        processStaleSeconds: siteConfig.processStaleSeconds ?? 500,
         appMessageRules: siteConfig.appMessageRules,
         pageLockEnabled: siteConfig.pageLockEnabled,
         currentlyText: siteConfig.currentlyText,

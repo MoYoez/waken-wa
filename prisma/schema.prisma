@@ -52,6 +52,7 @@ model SiteConfig {
   historyWindowMinutes Int @map("history_window_minutes") @default(120)
   historyWindowHintText String @map("history_window_hint_text") @default("历史窗口：最近 2 小时（可在设置中调整）")
   appMessageRules Json?  @map("app_message_rules")
+  processStaleSeconds Int @map("process_stale_seconds") @default(500)
   pageLockEnabled Boolean @map("page_lock_enabled") @default(false)
   pageLockPasswordHash String? @map("page_lock_password_hash")
   currentlyText String   @map("currently_text") @db.VarChar(60) @default("currently")

@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { normalizeCustomCss } from '@/lib/theme-css'
+import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 
 async function requireAdmin() {
   const session = await getSession()
@@ -60,6 +61,10 @@ export async function PATCH(request: NextRequest) {
     const historyWindowMinutes = Number.isFinite(parsedWindow)
       ? Math.min(Math.max(Math.round(parsedWindow), 10), 24 * 60)
       : 120
+    const parsedStaleSeconds = Number(body.processStaleSeconds ?? 500)
+    const processStaleSeconds = Number.isFinite(parsedStaleSeconds)
+      ? Math.min(Math.max(Math.round(parsedStaleSeconds), 30), 24 * 60 * 60)
+      : 500
 
     if (!userName || !userBio || !avatarUrl) {
       return NextResponse.json(
@@ -81,7 +86,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const config = await (prisma as any).siteConfig.upsert({
+    const config = await safeSiteConfigUpsert(prisma as any, {
       where: { id: 1 },
       update: {
         userName,
@@ -93,6 +98,7 @@ export async function PATCH(request: NextRequest) {
         historyWindowMinutes,
         historyWindowHintText,
         appMessageRules,
+        processStaleSeconds,
         pageLockEnabled,
         pageLockPasswordHash,
         currentlyText,
@@ -111,6 +117,7 @@ export async function PATCH(request: NextRequest) {
         historyWindowMinutes,
         historyWindowHintText,
         appMessageRules,
+        processStaleSeconds,
         pageLockEnabled,
         pageLockPasswordHash,
         currentlyText,
