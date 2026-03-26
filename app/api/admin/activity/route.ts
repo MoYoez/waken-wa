@@ -3,6 +3,10 @@ import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
+// 强制动态渲染，禁用缓存
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // 检查管理员权限
 async function requireAdmin() {
   const session = await getSession()

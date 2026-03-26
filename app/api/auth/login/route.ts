@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { authenticateAdmin, createSession } from '@/lib/auth'
 
+// 强制动态渲染
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json()
@@ -25,9 +28,13 @@ export async function POST(request: NextRequest) {
     const token = await createSession(user.id, user.username)
     
     const cookieStore = await cookies()
+    const isProduction = process.env.NODE_ENV === 'production'
+    
+    console.log('[v0] Setting session cookie, production:', isProduction)
+    
     cookieStore.set('session', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 天
       path: '/',

@@ -1,6 +1,9 @@
 import { getActivityFeedData } from '@/lib/activity-feed'
 
 export const runtime = 'nodejs'
+// 强制动态渲染，禁用缓存
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 function toSseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`

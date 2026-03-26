@@ -29,14 +29,16 @@ model ApiToken {
 }
 
 model ActivityLog {
-  id           Int       @id @default(autoincrement())
-  device       String    @db.VarChar(200)
-  processName  String    @map("process_name") @db.VarChar(200)
-  processTitle String?   @map("process_title")
-  startedAt    DateTime  @default(now()) @map("started_at")
-  endedAt      DateTime? @map("ended_at")
-  metadata     Json?
-  createdAt    DateTime  @default(now()) @map("created_at")
+  id                    Int       @id @default(autoincrement())
+  device                String    @db.VarChar(200)
+  processName           String    @map("process_name") @db.VarChar(200)
+  processTitle          String?   @map("process_title")
+  startedAt             DateTime  @default(now()) @map("started_at")
+  endedAt               DateTime? @map("ended_at")
+  metadata              Json?
+  reportIntervalSeconds Int?      @map("report_interval_seconds")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at")
 
   @@map("activity_logs")
 }

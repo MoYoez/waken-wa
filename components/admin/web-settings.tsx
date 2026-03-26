@@ -1,9 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+
+const CROP_VIEW_SIZE = 320
+const CROP_FRAME_SIZE = 220
+
+function getMinZoom(naturalW: number, naturalH: number): number {
+  if (!naturalW || !naturalH) return 0.2
+  const fitScale = Math.min(CROP_VIEW_SIZE / naturalW, CROP_VIEW_SIZE / naturalH)
+  const baseScale = Math.max(CROP_FRAME_SIZE / naturalW, CROP_FRAME_SIZE / naturalH)
+  return Math.max(0.1, fitScale / baseScale)
+}
 
 interface SiteConfig {
   userName: string
@@ -24,21 +42,19 @@ interface SiteConfig {
   adminText: string
 }
 
-interface AdminUser {
-  id: number
-  username: string
-  createdAt: string
-}
-
 export function WebSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string>('')
   const [rulesText, setRulesText] = useState('[]')
-  const [admins, setAdmins] = useState<AdminUser[]>([])
-  const [newAdminUsername, setNewAdminUsername] = useState('')
-  const [newAdminPassword, setNewAdminPassword] = useState('')
-  const [creatingAdmin, setCreatingAdmin] = useState(false)
+  // 裁剪弹窗状态
+  const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)
+  const [cropDialogOpen, setCropDialogOpen] = useState(false)
+  const [cropZoom, setCropZoom] = useState(1)
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 })
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null)
+  const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 })
+  const cropImageRef = useRef<HTMLImageElement | null>(null)
   const [form, setForm] = useState<SiteConfig>({
     userName: '',
     userBio: '',
@@ -86,9 +102,6 @@ export function WebSettings() {
           })
           setRulesText(JSON.stringify(rules, null, 2))
         }
-        const usersRes = await fetch('/api/admin/users')
-        const usersData = await usersRes.json()
-        if (usersData?.success) setAdmins(usersData.data || [])
       } finally {
         setLoading(false)
       }
@@ -100,14 +113,64 @@ export function WebSettings() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  const onFileSelected = async (file?: File) => {
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : ''
-      if (result) patch('avatarUrl', result)
+  const getBaseScale = () => {
+    if (!naturalSize.width || !naturalSize.height) return 1
+    return Math.max(CROP_FRAME_SIZE / naturalSize.width, CROP_FRAME_SIZE / naturalSize.height)
+  }
+
+  const clampOffset = (x: number, y: number, zoom = cropZoom) => {
+    if (!naturalSize.width || !naturalSize.height) return { x: 0, y: 0 }
+    const totalScale = getBaseScale() * zoom
+    const renderedWidth = naturalSize.width * totalScale
+    const renderedHeight = naturalSize.height * totalScale
+    const maxX = Math.max(0, (renderedWidth - CROP_FRAME_SIZE) / 2)
+    const maxY = Math.max(0, (renderedHeight - CROP_FRAME_SIZE) / 2)
+    return {
+      x: Math.min(maxX, Math.max(-maxX, x)),
+      y: Math.min(maxY, Math.max(-maxY, y)),
     }
-    reader.readAsDataURL(file)
+  }
+
+  const onFileSelected = (file?: File) => {
+    if (!file) return
+    if (cropSourceUrl) URL.revokeObjectURL(cropSourceUrl)
+    const objectUrl = URL.createObjectURL(file)
+    setCropSourceUrl(objectUrl)
+    setCropZoom(1)
+    setCropOffset({ x: 0, y: 0 })
+    setDragStart(null)
+    setCropDialogOpen(true)
+  }
+
+  const applyCrop = () => {
+    if (!cropSourceUrl || !cropImageRef.current || !naturalSize.width || !naturalSize.height) return
+    const totalScale = getBaseScale() * cropZoom
+    const imageLeft = CROP_VIEW_SIZE / 2 + cropOffset.x - (naturalSize.width * totalScale) / 2
+    const imageTop = CROP_VIEW_SIZE / 2 + cropOffset.y - (naturalSize.height * totalScale) / 2
+    const frameLeft = (CROP_VIEW_SIZE - CROP_FRAME_SIZE) / 2
+    const frameTop = (CROP_VIEW_SIZE - CROP_FRAME_SIZE) / 2
+
+    let sx = (frameLeft - imageLeft) / totalScale
+    let sy = (frameTop - imageTop) / totalScale
+    let sw = CROP_FRAME_SIZE / totalScale
+    let sh = CROP_FRAME_SIZE / totalScale
+
+    sx = Math.max(0, Math.min(sx, naturalSize.width - sw))
+    sy = Math.max(0, Math.min(sy, naturalSize.height - sh))
+    sw = Math.max(1, Math.min(sw, naturalSize.width))
+    sh = Math.max(1, Math.min(sh, naturalSize.height))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = 64
+    canvas.height = 64
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(cropImageRef.current, sx, sy, sw, sh, 0, 0, 64, 64)
+    patch('avatarUrl', canvas.toDataURL('image/png'))
+    setCropDialogOpen(false)
+    URL.revokeObjectURL(cropSourceUrl)
+    setCropSourceUrl(null)
+    setDragStart(null)
   }
 
   const save = async () => {
@@ -145,34 +208,6 @@ export function WebSettings() {
       setMessage('网络异常，请重试')
     } finally {
       setSaving(false)
-    }
-  }
-
-  const createAdmin = async () => {
-    setMessage('')
-    setCreatingAdmin(true)
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: newAdminUsername,
-          password: newAdminPassword,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data?.success) {
-        setMessage(data?.error || '创建管理员失败')
-        return
-      }
-      setNewAdminUsername('')
-      setNewAdminPassword('')
-      setAdmins((prev) => [data.data, ...prev])
-      setMessage('管理员创建成功')
-    } catch {
-      setMessage('网络异常，请重试')
-    } finally {
-      setCreatingAdmin(false)
     }
   }
 
@@ -223,11 +258,20 @@ export function WebSettings() {
           onChange={(e) => patch('themePreset', e.target.value)}
           className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
         >
-          <option value="basic">Basic（默认）</option>
-          <option value="midnight">Midnight（深夜蓝）</option>
-          <option value="forest">Forest（森林绿）</option>
-          <option value="sakura">Sakura（樱花粉）</option>
+          <option value="basic">Basic - 默认主题</option>
+          <option value="obsidian">Obsidian - 纯黑极简</option>
+          <option value="mono">Mono - 纯白极简</option>
+          <option value="midnight">Midnight - 深邃蓝紫</option>
+          <option value="ocean">Ocean - 深海蓝绿</option>
+          <option value="nord">Nord - 北欧冷淡</option>
+          <option value="forest">Forest - 自然森林</option>
+          <option value="sakura">Sakura - 柔和樱花</option>
+          <option value="lavender">Lavender - 淡雅薰衣草</option>
+          <option value="amber">Amber - 温暖琥珀</option>
         </select>
+        <p className="text-xs text-muted-foreground">
+          深色系：Obsidian、Midnight、Ocean、Nord | 浅色系：Mono、Forest、Sakura、Lavender、Amber
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -247,13 +291,124 @@ export function WebSettings() {
       <div className="space-y-2">
         <Label>头像地址（URL / DataURL）</Label>
         <Input value={form.avatarUrl} onChange={(e) => patch('avatarUrl', e.target.value)} />
+        <p className="text-xs text-muted-foreground">可直接填写图片链接，或通过下方上传并裁剪后自动生成。</p>
         <input
           type="file"
           accept="image/*"
-          onChange={(e) => void onFileSelected(e.target.files?.[0])}
-          className="w-full text-xs text-muted-foreground"
+          onChange={(e) => { onFileSelected(e.target.files?.[0]); e.target.value = '' }}
+          className="w-full text-xs text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border file:border-border file:bg-muted/50 file:text-foreground hover:file:bg-muted file:cursor-pointer"
         />
+        {cropSourceUrl && (
+          <button
+            type="button"
+            onClick={() => setCropDialogOpen(true)}
+            className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
+          >
+            重新打��裁剪
+          </button>
+        )}
+        {form.avatarUrl && (
+          <div className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3">
+            <img
+              src={form.avatarUrl}
+              alt="头像预览"
+              className="w-10 h-10 rounded-full border border-border object-cover"
+            />
+            <span className="text-xs text-muted-foreground">头像预览</span>
+          </div>
+        )}
       </div>
+
+      <Dialog open={cropDialogOpen} onOpenChange={setCropDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>裁剪头像</DialogTitle>
+            <DialogDescription>左滑缩放可看全图，放大后拖动图片选取区域，确认后生成 64×64 头像。</DialogDescription>
+          </DialogHeader>
+          {cropSourceUrl && (
+            <div className="space-y-3">
+              <div
+                className="relative mx-auto border border-border rounded-md overflow-hidden bg-black/40 select-none"
+                style={{ width: CROP_VIEW_SIZE, height: CROP_VIEW_SIZE }}
+                onMouseDown={(e) => setDragStart({ x: e.clientX, y: e.clientY, offsetX: cropOffset.x, offsetY: cropOffset.y })}
+                onMouseMove={(e) => {
+                  if (!dragStart) return
+                  const next = clampOffset(dragStart.offsetX + e.clientX - dragStart.x, dragStart.offsetY + e.clientY - dragStart.y)
+                  setCropOffset(next)
+                }}
+                onMouseUp={() => setDragStart(null)}
+                onMouseLeave={() => setDragStart(null)}
+              >
+                <img
+                  ref={cropImageRef}
+                  src={cropSourceUrl}
+                  alt="裁剪预览"
+                  onLoad={() => {
+                    const img = cropImageRef.current
+                    if (!img) return
+                    setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight })
+                    setCropZoom(1)
+                    setCropOffset({ x: 0, y: 0 })
+                  }}
+                  draggable={false}
+                  className="absolute"
+                  style={{
+                    left: `calc(50% + ${cropOffset.x}px)`,
+                    top: `calc(50% + ${cropOffset.y}px)`,
+                    transform: 'translate(-50%, -50%)',
+                    width: naturalSize.width ? `${naturalSize.width * getBaseScale() * cropZoom}px` : 'auto',
+                    height: naturalSize.height ? `${naturalSize.height * getBaseScale() * cropZoom}px` : 'auto',
+                    cursor: dragStart ? 'grabbing' : 'grab',
+                  }}
+                />
+                <div
+                  className="absolute border-2 border-primary pointer-events-none"
+                  style={{
+                    left: (CROP_VIEW_SIZE - CROP_FRAME_SIZE) / 2,
+                    top: (CROP_VIEW_SIZE - CROP_FRAME_SIZE) / 2,
+                    width: CROP_FRAME_SIZE,
+                    height: CROP_FRAME_SIZE,
+                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.35)',
+                  }}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">缩放（左滑缩小可看全图，右滑放大后拖动选取区域）</label>
+                <input
+                  type="range"
+                  min={getMinZoom(naturalSize.width, naturalSize.height)}
+                  max={4}
+                  step={0.01}
+                  value={cropZoom}
+                  onChange={(e) => {
+                    const nextZoom = Number(e.target.value)
+                    const nextOffset = clampOffset(cropOffset.x, cropOffset.y, nextZoom)
+                    setCropZoom(nextZoom)
+                    setCropOffset(nextOffset)
+                  }}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setCropDialogOpen(false)}
+              className="px-3 py-2 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={applyCrop}
+              className="px-3 py-2 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              确认裁剪
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-2">
         <Label>历史窗口（分钟）</Label>
@@ -336,42 +491,6 @@ export function WebSettings() {
           value={form.pageLockPassword}
           onChange={(e) => patch('pageLockPassword', e.target.value)}
         />
-      </div>
-
-      <div className="space-y-2">
-        <Label>管理员账号（支持多个）</Label>
-        <div className="rounded-md border p-3 space-y-2">
-          {admins.length === 0 ? (
-            <p className="text-xs text-muted-foreground">暂无管理员</p>
-          ) : (
-            admins.map((u) => (
-              <div key={u.id} className="text-xs text-muted-foreground">
-                {u.username}
-              </div>
-            ))
-          )}
-        </div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Input
-            placeholder="新管理员用户名"
-            value={newAdminUsername}
-            onChange={(e) => setNewAdminUsername(e.target.value)}
-          />
-          <Input
-            type="password"
-            placeholder="新管理员密码"
-            value={newAdminPassword}
-            onChange={(e) => setNewAdminPassword(e.target.value)}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={creatingAdmin || !newAdminUsername || !newAdminPassword}
-            onClick={createAdmin}
-          >
-            {creatingAdmin ? '创建中...' : '新增管理员'}
-          </Button>
-        </div>
       </div>
 
       {message && <p className="text-sm text-muted-foreground">{message}</p>}

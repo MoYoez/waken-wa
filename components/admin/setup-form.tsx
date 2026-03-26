@@ -14,6 +14,15 @@ import {
 const CROP_VIEW_SIZE = 320
 const CROP_FRAME_SIZE = 220
 
+// 让图片缩小到能完整看到全貌的最小缩放比例
+function getMinZoom(naturalW: number, naturalH: number): number {
+  if (!naturalW || !naturalH) return 0.2
+  const fitScale = Math.min(CROP_VIEW_SIZE / naturalW, CROP_VIEW_SIZE / naturalH)
+  // baseScale 是 max(frame/w, frame/h)，minZoom 让总缩放等于 fitScale
+  const baseScale = Math.max(CROP_FRAME_SIZE / naturalW, CROP_FRAME_SIZE / naturalH)
+  return Math.max(0.1, fitScale / baseScale)
+}
+
 interface SetupInitialConfig {
   userName: string
   userBio: string
@@ -73,18 +82,17 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
   const onCropImageLoad = () => {
     const image = cropImageRef.current
     if (!image) return
-
-    setNaturalSize({ width: image.naturalWidth, height: image.naturalHeight })
+    const nw = image.naturalWidth
+    const nh = image.naturalHeight
+    setNaturalSize({ width: nw, height: nh })
+    // 初始缩放让图片恰好填满裁剪框（min 1.0 of baseScale）
     setCropZoom(1)
     setCropOffset({ x: 0, y: 0 })
   }
 
-  const getBaseScale = () => {
-    if (!naturalSize.width || !naturalSize.height) return 1
-    return Math.max(
-      CROP_FRAME_SIZE / naturalSize.width,
-      CROP_FRAME_SIZE / naturalSize.height
-    )
+  const getBaseScale = (nw = naturalSize.width, nh = naturalSize.height) => {
+    if (!nw || !nh) return 1
+    return Math.max(CROP_FRAME_SIZE / nw, CROP_FRAME_SIZE / nh)
   }
 
   const clampOffset = (x: number, y: number, zoom = cropZoom) => {
@@ -92,11 +100,17 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
     const totalScale = getBaseScale() * zoom
     const renderedWidth = naturalSize.width * totalScale
     const renderedHeight = naturalSize.height * totalScale
-    const maxX = Math.max(0, (renderedWidth - CROP_FRAME_SIZE) / 2)
-    const maxY = Math.max(0, (renderedHeight - CROP_FRAME_SIZE) / 2)
+    // 当图片小于视口时，允许图片在视口内自由移动但不超出视口边界
+    const halfView = CROP_VIEW_SIZE / 2
+    const halfW = renderedWidth / 2
+    const halfH = renderedHeight / 2
+    const maxX = Math.max(0, halfW - CROP_FRAME_SIZE / 2)
+    const maxY = Math.max(0, halfH - CROP_FRAME_SIZE / 2)
+    const minX = Math.min(0, halfView - halfW - (CROP_VIEW_SIZE - CROP_FRAME_SIZE) / 2)
+    const minY = Math.min(0, halfView - halfH - (CROP_VIEW_SIZE - CROP_FRAME_SIZE) / 2)
     return {
-      x: Math.min(maxX, Math.max(-maxX, x)),
-      y: Math.min(maxY, Math.max(-maxY, y)),
+      x: Math.min(maxX, Math.max(-maxX, Math.min(Math.max(x, minX), maxX))),
+      y: Math.min(maxY, Math.max(-maxY, Math.min(Math.max(y, minY), maxY))),
     }
   }
 
@@ -362,7 +376,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">“当前”区块标题</label>
+                  <label className="text-xs font-medium text-foreground">“当前”区块标���</label>
                   <p className="text-[11px] text-muted-foreground">首页活动详情区域的标题文案。</p>
                   <input
                     type="text"
@@ -486,11 +500,11 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">缩放</label>
+                <label className="text-xs text-muted-foreground">缩放（左滑缩小可看全图，右滑放大后拖动选取区域）</label>
                 <input
                   type="range"
-                  min={1}
-                  max={3}
+                  min={getMinZoom(naturalSize.width, naturalSize.height)}
+                  max={4}
                   step={0.01}
                   value={cropZoom}
                   onChange={(e) => {

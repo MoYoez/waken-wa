@@ -5,6 +5,10 @@ import bcrypt from 'bcryptjs'
 import { normalizeCustomCss } from '@/lib/theme-css'
 import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 
+// 强制动态渲染，禁用缓存
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 async function requireAdmin() {
   const session = await getSession()
   return session ?? null

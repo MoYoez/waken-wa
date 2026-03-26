@@ -10,7 +10,8 @@ import {
   Settings,
   LogOut,
   Clock,
-  Home
+  Home,
+  UserCog
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -18,6 +19,7 @@ import { ActivityList } from './activity-list'
 import { TokenManager } from './token-manager'
 import { AddActivityForm } from './add-activity-form'
 import { WebSettings } from './web-settings'
+import { AccountSettings } from './account-settings'
 
 interface DashboardProps {
   username: string
@@ -82,6 +84,10 @@ export function AdminDashboard({ username }: DashboardProps) {
               <Settings className="h-4 w-4" />
               设置
             </TabsTrigger>
+            <TabsTrigger value="account" className="gap-2">
+              <UserCog className="h-4 w-4" />
+              账户
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -104,6 +110,10 @@ export function AdminDashboard({ username }: DashboardProps) {
 
           <TabsContent value="settings">
             <WebSettings />
+          </TabsContent>
+
+          <TabsContent value="account">
+            <AccountSettings />
           </TabsContent>
         </Tabs>
       </main>

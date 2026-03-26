@@ -12,7 +12,10 @@ export default async function AdminPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('session')?.value
   
+  console.log('[v0] Admin page - hasAdmin:', hasAdmin, 'hasToken:', !!token)
+  
   if (!token) {
+    console.log('[v0] No token found, redirecting to login')
     if (!hasAdmin) {
       redirect('/admin/setup')
     }
@@ -20,6 +23,7 @@ export default async function AdminPage() {
   }
   
   const session = await verifySession(token)
+  console.log('[v0] Session verification result:', session ? 'valid' : 'invalid')
   
   if (!session) {
     if (!hasAdmin) {
