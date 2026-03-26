@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json()
-    const { device, process_name, process_title, metadata } = body
+    const { device, process_name, process_title, metadata, report_interval_seconds } = body
     
     if (!device || !process_name) {
       return NextResponse.json(
@@ -91,6 +91,27 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    // 检查是否存在相同 device + process_name 的活动，如果存在则更新时间戳而非创建新记录
+    const existing = await prisma.activityLog.findFirst({
+      where: { device, processName: process_name, endedAt: null },
+      orderBy: { startedAt: 'desc' }
+    })
+    
+    if (existing) {
+      // 更新现有活动的时间戳和上报间隔
+      const log = await prisma.activityLog.update({
+        where: { id: existing.id },
+        data: {
+          processTitle: process_title || existing.processTitle,
+          metadata: metadata || existing.metadata,
+          reportIntervalSeconds: report_interval_seconds || existing.reportIntervalSeconds,
+          // 使用 updatedAt 字段来追踪最后上报时间
+        }
+      })
+      return NextResponse.json({ success: true, data: log, updated: true }, { status: 200 })
+    }
+    
+    // 结束该设备上其他进程的活动
     await prisma.activityLog.updateMany({
       where: { device, endedAt: null },
       data: { endedAt: new Date() },
@@ -103,7 +124,8 @@ export async function POST(request: NextRequest) {
         processTitle: process_title || null,
         startedAt: new Date(),
         endedAt: null,
-        metadata: metadata || null
+        metadata: metadata || null,
+        reportIntervalSeconds: report_interval_seconds || null
       }
     })
     

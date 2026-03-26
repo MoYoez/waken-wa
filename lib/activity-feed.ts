@@ -46,43 +46,58 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
   const historyWindowHintText =
     String(config?.historyWindowHintText ?? '').trim() ||
     '历史窗口：最近 2 小时（可在设置中调整）'
+  // 全局默认过期时间（用于没有设置 reportIntervalSeconds 的活动）
   const staleSecondsRaw = Number(config?.processStaleSeconds ?? 500)
-  const processStaleSeconds = Number.isFinite(staleSecondsRaw)
+  const defaultStaleSeconds = Number.isFinite(staleSecondsRaw)
     ? Math.min(Math.max(Math.round(staleSecondsRaw), 30), 24 * 60 * 60)
     : 500
   const appMessageRules: Array<{ match: string; text: string }> = Array.isArray(config?.appMessageRules)
     ? config.appMessageRules
     : []
   const since = new Date(Date.now() - historyWindowMinutes * 60 * 1000)
-  const staleBefore = new Date(Date.now() - processStaleSeconds * 1000)
 
-  await prisma.activityLog.updateMany({
-    where: {
-      endedAt: null,
-      startedAt: { lt: staleBefore },
-    },
-    data: {
-      endedAt: new Date(),
-    },
+  // 获取所有未结束的活动，然后根据每条活动的 reportIntervalSeconds 判断是否过期
+  const openActivities = await prisma.activityLog.findMany({
+    where: { endedAt: null },
+    orderBy: { startedAt: 'desc' },
   })
 
-  const [recentActivities, openActivities] = await Promise.all([
-    prisma.activityLog.findMany({
-      where: { startedAt: { gte: since } },
-      orderBy: { startedAt: 'desc' },
-      take: Math.min(limit, 100),
-    }),
-    prisma.activityLog.findMany({
-      where: { endedAt: null },
-      orderBy: { startedAt: 'desc' },
-      take: 200,
-    }),
-  ])
+  const now = Date.now()
+  const toClose: number[] = []
+  const stillActive: typeof openActivities = []
 
-  // Keep latest active entry for each device.
+  for (const activity of openActivities) {
+    // 优先使用活动自己的上报间隔，如果没有则使用全局默认值
+    const intervalSeconds = activity.reportIntervalSeconds ?? defaultStaleSeconds
+    // 使用 updatedAt（最后上报时间）来判断是否过期
+    const lastReportTime = activity.updatedAt?.getTime() ?? activity.startedAt.getTime()
+    const isStale = now - lastReportTime > intervalSeconds * 1000
+
+    if (isStale) {
+      toClose.push(activity.id)
+    } else {
+      stillActive.push(activity)
+    }
+  }
+
+  // 批量关闭过期的活动
+  if (toClose.length > 0) {
+    await prisma.activityLog.updateMany({
+      where: { id: { in: toClose } },
+      data: { endedAt: new Date() },
+    })
+  }
+
+  const recentActivities = await prisma.activityLog.findMany({
+    where: { startedAt: { gte: since } },
+    orderBy: { startedAt: 'desc' },
+    take: Math.min(limit, 100),
+  })
+
+  // Keep latest active entry for each device (使用过滤后仍然活跃的活动)
   const activeStatuses: any[] = []
   const seen = new Set<string>()
-  for (const item of openActivities) {
+  for (const item of stillActive) {
     if (seen.has(item.device)) continue
     seen.add(item.device)
     activeStatuses.push({
@@ -108,7 +123,7 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     recentActivities,
     historyWindowMinutes,
     historyWindowHintText,
-    processStaleSeconds,
+    processStaleSeconds: defaultStaleSeconds,
     recentTopApps,
     generatedAt: new Date().toISOString(),
   }
