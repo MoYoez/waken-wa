@@ -9,14 +9,54 @@ async function requireAdmin() {
   return session
 }
 
-// GET - 获取所有 API Token
-export async function GET() {
+// GET - 获取所有 API Token / 指定 Token 接入配置
+export async function GET(request: NextRequest) {
   const session = await requireAdmin()
   if (!session) {
     return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
   }
   
   try {
+    const { searchParams } = new URL(request.url)
+    const bundleId = searchParams.get('bundle_id')
+
+    if (bundleId) {
+      const id = parseInt(bundleId, 10)
+      if (!Number.isFinite(id) || id <= 0) {
+        return NextResponse.json({ success: false, error: '无效的 Token ID' }, { status: 400 })
+      }
+
+      const tokenRecord = await prisma.apiToken.findUnique({
+        where: { id }
+      })
+      if (!tokenRecord) {
+        return NextResponse.json({ success: false, error: 'Token 不存在' }, { status: 404 })
+      }
+
+      const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000'
+      const proto = request.headers.get('x-forwarded-proto') || 'http'
+      const endpoint = `${proto}://${host}/api/activity`
+      const encoded = Buffer.from(
+        JSON.stringify({
+          version: 1,
+          endpoint,
+          apiKey: tokenRecord.token,
+          tokenName: tokenRecord.name,
+        }),
+        'utf8'
+      ).toString('base64')
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: tokenRecord.id,
+          name: tokenRecord.name,
+          endpoint,
+          encoded,
+        },
+      })
+    }
+
     const tokens = await prisma.apiToken.findMany({
       orderBy: { createdAt: 'desc' }
     })

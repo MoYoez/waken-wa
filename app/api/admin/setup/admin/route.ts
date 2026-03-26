@@ -26,8 +26,9 @@ export async function POST(request: NextRequest) {
       themePreset,
       customCss,
       historyWindowMinutes,
-      historyWindowHintText,
       appMessageRules,
+      appBlacklist,
+      appNameOnlyList,
       processStaleSeconds,
       pageLockEnabled,
       pageLockPassword,
@@ -52,10 +53,17 @@ export async function POST(request: NextRequest) {
     const normalizedProcessStaleSeconds = Number.isFinite(parsedStaleSeconds)
       ? Math.min(Math.max(Math.round(parsedStaleSeconds), 30), 24 * 60 * 60)
       : 500
-    const normalizedHistoryWindowHintText =
-      String(historyWindowHintText ?? '').trim() ||
-      '历史窗口：最近 2 小时（可在设置中调整）'
     const normalizedAppMessageRules = Array.isArray(appMessageRules) ? appMessageRules : []
+    const normalizedAppBlacklist = Array.isArray(appBlacklist)
+      ? appBlacklist
+          .map((item: unknown) => String(item ?? '').trim())
+          .filter((item: string) => item.length > 0)
+      : []
+    const normalizedAppNameOnlyList = Array.isArray(appNameOnlyList)
+      ? appNameOnlyList
+          .map((item: unknown) => String(item ?? '').trim())
+          .filter((item: string) => item.length > 0)
+      : []
     const normalizedPageLockEnabled = Boolean(pageLockEnabled)
     const rawPageLockPassword = String(pageLockPassword ?? '').trim()
     const normalizedCurrentlyText = String(currentlyText ?? '').trim() || 'currently'
@@ -128,8 +136,9 @@ export async function POST(request: NextRequest) {
           themePreset: normalizedThemePreset,
           customCss: normalizedCustomCss,
           historyWindowMinutes: normalizedHistoryWindowMinutes,
-          historyWindowHintText: normalizedHistoryWindowHintText,
           appMessageRules: normalizedAppMessageRules,
+          appBlacklist: normalizedAppBlacklist,
+          appNameOnlyList: normalizedAppNameOnlyList,
           processStaleSeconds: normalizedProcessStaleSeconds,
           pageLockEnabled: normalizedPageLockEnabled,
           pageLockPasswordHash,
@@ -147,8 +156,9 @@ export async function POST(request: NextRequest) {
           themePreset: normalizedThemePreset,
           customCss: normalizedCustomCss,
           historyWindowMinutes: normalizedHistoryWindowMinutes,
-          historyWindowHintText: normalizedHistoryWindowHintText,
           appMessageRules: normalizedAppMessageRules,
+          appBlacklist: normalizedAppBlacklist,
+          appNameOnlyList: normalizedAppNameOnlyList,
           processStaleSeconds: normalizedProcessStaleSeconds,
           pageLockEnabled: normalizedPageLockEnabled,
           pageLockPasswordHash,

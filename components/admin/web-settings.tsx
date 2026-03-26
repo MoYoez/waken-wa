@@ -31,9 +31,10 @@ interface SiteConfig {
   themePreset: string
   customCss: string
   historyWindowMinutes: number
-  historyWindowHintText: string
   processStaleSeconds: number
   appMessageRules: Array<{ match: string; text: string }>
+  appBlacklist: string[]
+  appNameOnlyList: string[]
   pageLockEnabled: boolean
   pageLockPassword: string
   currentlyText: string
@@ -47,6 +48,8 @@ export function WebSettings() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string>('')
   const [rulesText, setRulesText] = useState('[]')
+  const [blacklistText, setBlacklistText] = useState('')
+  const [nameOnlyListText, setNameOnlyListText] = useState('')
   // 裁剪弹窗状态
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
@@ -63,9 +66,10 @@ export function WebSettings() {
     themePreset: 'basic',
     customCss: '',
     historyWindowMinutes: 120,
-    historyWindowHintText: '历史窗口：最近 2 小时（可在设置中调整）',
     processStaleSeconds: 500,
     appMessageRules: [],
+    appBlacklist: [],
+    appNameOnlyList: [],
     pageLockEnabled: false,
     pageLockPassword: '',
     currentlyText: 'currently',
@@ -81,6 +85,16 @@ export function WebSettings() {
         const data = await res.json()
         if (data?.success && data?.data) {
           const rules = Array.isArray(data.data.appMessageRules) ? data.data.appMessageRules : []
+          const blacklist = Array.isArray(data.data.appBlacklist)
+            ? data.data.appBlacklist
+                .map((item: unknown) => String(item ?? '').trim())
+                .filter((item: string) => item.length > 0)
+            : []
+          const nameOnlyList = Array.isArray(data.data.appNameOnlyList)
+            ? data.data.appNameOnlyList
+                .map((item: unknown) => String(item ?? '').trim())
+                .filter((item: string) => item.length > 0)
+            : []
           setForm({
             userName: data.data.userName ?? '',
             userBio: data.data.userBio ?? '',
@@ -89,10 +103,10 @@ export function WebSettings() {
             themePreset: data.data.themePreset ?? 'basic',
             customCss: data.data.customCss ?? '',
             historyWindowMinutes: Number(data.data.historyWindowMinutes ?? 120),
-            historyWindowHintText:
-              data.data.historyWindowHintText ?? '历史窗口：最近 2 小时（可在设置中调整）',
             processStaleSeconds: Number(data.data.processStaleSeconds ?? 500),
             appMessageRules: rules,
+            appBlacklist: blacklist,
+            appNameOnlyList: nameOnlyList,
             pageLockEnabled: Boolean(data.data.pageLockEnabled),
             pageLockPassword: '',
             currentlyText: data.data.currentlyText ?? 'currently',
@@ -101,6 +115,8 @@ export function WebSettings() {
             adminText: data.data.adminText ?? 'admin',
           })
           setRulesText(JSON.stringify(rules, null, 2))
+          setBlacklistText(blacklist.join('\n'))
+          setNameOnlyListText(nameOnlyList.join('\n'))
         }
       } finally {
         setLoading(false)
@@ -178,6 +194,19 @@ export function WebSettings() {
     setSaving(true)
     try {
       let parsedRules: Array<{ match: string; text: string }> = []
+      const parseLineList = (text: string): string[] => {
+        const output: string[] = []
+        const seen = new Set<string>()
+        for (const rawLine of text.split(/\r?\n/)) {
+          const value = rawLine.trim()
+          if (!value) continue
+          const key = value.toLowerCase()
+          if (seen.has(key)) continue
+          seen.add(key)
+          output.push(value)
+        }
+        return output
+      }
       try {
         const parsed = JSON.parse(rulesText)
         if (!Array.isArray(parsed)) throw new Error()
@@ -189,6 +218,8 @@ export function WebSettings() {
         setMessage('应用匹配规则 JSON 格式错误')
         return
       }
+      const parsedBlacklist = parseLineList(blacklistText)
+      const parsedNameOnlyList = parseLineList(nameOnlyListText)
 
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
@@ -196,6 +227,8 @@ export function WebSettings() {
         body: JSON.stringify({
           ...form,
           appMessageRules: parsedRules,
+          appBlacklist: parsedBlacklist,
+          appNameOnlyList: parsedNameOnlyList,
         }),
       })
       const data = await res.json()
@@ -421,13 +454,6 @@ export function WebSettings() {
         />
       </div>
       <div className="space-y-2">
-        <Label>历史窗口提示文案</Label>
-        <Input
-          value={form.historyWindowHintText}
-          onChange={(e) => patch('historyWindowHintText', e.target.value)}
-        />
-      </div>
-      <div className="space-y-2">
         <Label>进程超时判定（秒）</Label>
         <Input
           type="number"
@@ -473,6 +499,34 @@ export function WebSettings() {
         />
         <p className="text-xs text-muted-foreground">
           示例：[{`{"match":"WindowsTerminal.exe","text":"正在编码：{title}"}`}]。支持 {'{process}'}、{'{title}'} 占位符。
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>应用黑名单（每行一个应用名）</Label>
+        <textarea
+          rows={4}
+          value={blacklistText}
+          onChange={(e) => setBlacklistText(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md bg-background text-sm font-mono"
+          placeholder={'例如：\nWeChat.exe\nQQ.exe'}
+        />
+        <p className="text-xs text-muted-foreground">
+          命中黑名单的应用不会出现在当前状态和历史列表中（不区分大小写）。
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>仅显示应用名列表（每行一个应用名）</Label>
+        <textarea
+          rows={4}
+          value={nameOnlyListText}
+          onChange={(e) => setNameOnlyListText(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md bg-background text-sm font-mono"
+          placeholder={'例如：\nCode.exe\nchrome.exe'}
+        />
+        <p className="text-xs text-muted-foreground">
+          命中后只显示应用名，不显示窗口标题等详细内容（不区分大小写）。
         </p>
       </div>
 

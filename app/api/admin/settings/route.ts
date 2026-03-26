@@ -55,12 +55,19 @@ export async function PATCH(request: NextRequest) {
     const updatesText =
       String(body.updatesText ?? '').trim() || 'updates every 30 seconds'
     const adminText = String(body.adminText ?? '').trim() || 'admin'
-    const historyWindowHintText =
-      String(body.historyWindowHintText ?? '').trim() ||
-      '历史窗口：最近 2 小时（可在设置中调整）'
     const pageLockEnabled = Boolean(body.pageLockEnabled)
     const rawPageLockPassword = String(body.pageLockPassword ?? '')
     const appMessageRules = Array.isArray(body.appMessageRules) ? body.appMessageRules : []
+    const appBlacklist = Array.isArray(body.appBlacklist)
+      ? body.appBlacklist
+          .map((item: unknown) => String(item ?? '').trim())
+          .filter((item: string) => item.length > 0)
+      : []
+    const appNameOnlyList = Array.isArray(body.appNameOnlyList)
+      ? body.appNameOnlyList
+          .map((item: unknown) => String(item ?? '').trim())
+          .filter((item: string) => item.length > 0)
+      : []
     const parsedWindow = Number(body.historyWindowMinutes ?? 120)
     const historyWindowMinutes = Number.isFinite(parsedWindow)
       ? Math.min(Math.max(Math.round(parsedWindow), 10), 24 * 60)
@@ -100,8 +107,9 @@ export async function PATCH(request: NextRequest) {
         themePreset,
         customCss,
         historyWindowMinutes,
-        historyWindowHintText,
         appMessageRules,
+        appBlacklist,
+        appNameOnlyList,
         processStaleSeconds,
         pageLockEnabled,
         pageLockPasswordHash,
@@ -119,8 +127,9 @@ export async function PATCH(request: NextRequest) {
         themePreset,
         customCss,
         historyWindowMinutes,
-        historyWindowHintText,
         appMessageRules,
+        appBlacklist,
+        appNameOnlyList,
         processStaleSeconds,
         pageLockEnabled,
         pageLockPasswordHash,

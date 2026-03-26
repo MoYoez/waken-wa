@@ -20,3 +20,5 @@ node_modules
 
 # Remove from repo
 dev.db
+.env*.local
+.env

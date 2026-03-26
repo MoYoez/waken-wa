@@ -20,7 +20,6 @@ interface ActivityFeedData {
   activeStatuses: ActivityItem[]
   recentActivities: ActivityItem[]
   historyWindowMinutes: number
-  historyWindowHintText: string
   recentTopApps: ActivityItem[]
   generatedAt: string
 }

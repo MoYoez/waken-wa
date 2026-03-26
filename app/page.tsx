@@ -54,7 +54,7 @@ export default async function Home() {
       </div>
 
       <main className="min-h-screen relative">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-24 space-y-16">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-24 space-y-8">
           {/* Profile */}
           <UserProfile
             name={userName}

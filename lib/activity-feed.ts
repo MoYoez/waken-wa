@@ -4,10 +4,26 @@ export interface ActivityFeedData {
   activeStatuses: any[]
   recentActivities: any[]
   historyWindowMinutes: number
-  historyWindowHintText: string
   processStaleSeconds: number
   recentTopApps: any[]
   generatedAt: string
+}
+
+function normalizeProcessName(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function parseProcessList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const result: string[] = []
+  const seen = new Set<string>()
+  for (const item of value) {
+    const normalized = normalizeProcessName(String(item ?? ''))
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    result.push(normalized)
+  }
+  return result
 }
 
 function asObject(value: unknown): Record<string, unknown> | null {
@@ -56,9 +72,6 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
   const historyWindowMinutes = Number.isFinite(minutes)
     ? Math.min(Math.max(Math.round(minutes), 10), 24 * 60)
     : 120
-  const historyWindowHintText =
-    String(config?.historyWindowHintText ?? '').trim() ||
-    '历史窗口：最近 2 小时（可在设置中调整）'
   // 全局默认过期时间（用于没有设置 reportIntervalSeconds 的活动）
   const staleSecondsRaw = Number(config?.processStaleSeconds ?? 500)
   const defaultStaleSeconds = Number.isFinite(staleSecondsRaw)
@@ -67,6 +80,10 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
   const appMessageRules: Array<{ match: string; text: string }> = Array.isArray(config?.appMessageRules)
     ? config.appMessageRules
     : []
+  const appBlacklist = parseProcessList(config?.appBlacklist)
+  const appNameOnlyList = parseProcessList(config?.appNameOnlyList)
+  const blacklistSet = new Set(appBlacklist)
+  const nameOnlySet = new Set(appNameOnlyList)
   const since = new Date(Date.now() - historyWindowMinutes * 60 * 1000)
 
   // 获取所有未结束的活动，然后根据每条活动的 reportIntervalSeconds 判断是否过期
@@ -107,26 +124,37 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     })
   }
 
-  const recentActivities = await prisma.activityLog.findMany({
+  const recentActivitiesRaw = await prisma.activityLog.findMany({
     where: { startedAt: { gte: since } },
     orderBy: { startedAt: 'desc' },
     take: Math.min(limit, 100),
   })
+  const recentActivities = recentActivitiesRaw
+    .filter((item) => !blacklistSet.has(normalizeProcessName(item.processName)))
+    .map((item) =>
+      nameOnlySet.has(normalizeProcessName(item.processName))
+        ? { ...item, processTitle: null }
+        : item
+    )
 
   // Keep latest active entry for each device (使用过滤后仍然活跃的活动)
   const activeStatuses: any[] = []
   const seen = new Set<string>()
   for (const item of stillActive) {
+    const processKey = normalizeProcessName(item.processName)
+    if (blacklistSet.has(processKey)) continue
     if (seen.has(item.device)) continue
     seen.add(item.device)
     const pushMode = getPushModeFromMetadata(item.metadata)
+    const maskedTitle = nameOnlySet.has(processKey) ? null : item.processTitle
     activeStatuses.push({
       ...item,
+      processTitle: maskedTitle,
       pushMode,
       lastReportAt: (item as any).updatedAt ?? item.startedAt,
       statusText:
-        applyMessageRule(item.processName, item.processTitle, appMessageRules) ||
-        `正在使用 ${item.processName}${item.processTitle ? ` — ${item.processTitle}` : ''}`,
+        applyMessageRule(item.processName, maskedTitle, appMessageRules) ||
+        `正在使用 ${item.processName}${maskedTitle ? ` — ${maskedTitle}` : ''}`,
     })
   }
 
@@ -144,7 +172,6 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     activeStatuses,
     recentActivities,
     historyWindowMinutes,
-    historyWindowHintText,
     processStaleSeconds: defaultStaleSeconds,
     recentTopApps,
     generatedAt: new Date().toISOString(),

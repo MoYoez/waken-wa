@@ -73,6 +73,7 @@ export function CurrentStatus() {
           0,
           Math.round((Date.now() - new Date(activity.startedAt).getTime()) / 1000)
         )
+        const timestampFormat = 'MM/dd HH:mm:ss'
         const batteryLabel = getBatteryLabel(activity.metadata)
         const pushMode = getPushMode(activity.metadata, activity.pushMode)
         const deviceType = getDeviceType(activity.device, activity.metadata)
@@ -88,12 +89,6 @@ export function CurrentStatus() {
             className="border border-border rounded-sm p-6 sm:p-8 bg-card hover:border-foreground/30 transition-colors"
           >
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-online animate-pulse"></div>
-                <span className="text-xs text-online font-medium">
-                  {pushMode === 'active' ? '主动推送' : '实时推送'}
-                </span>
-              </div>
 
               <div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
@@ -114,45 +109,33 @@ export function CurrentStatus() {
                 )}
               </div>
 
-              <div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                  Process
-                </div>
+              <div className="flex items-center gap-2">
+                {activity.processTitle && (
+                  <>
+                    <div className="text-sm font-light text-foreground/80">
+                      {activity.processTitle}
+                    </div>
+                    <span className="mx-2 text-muted-foreground/40 select-none">|</span>
+                  </>
+                )}
                 <div className="text-sm font-light">{activity.processName}</div>
               </div>
 
-              {activity.processTitle && (
-                <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                    Details
-                  </div>
-                  <div className="text-sm font-light text-foreground/80">
-                    {activity.processTitle}
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-2 border-t border-border grid grid-cols-2 gap-4 mt-4">
+              <div className="pt-2 border-t border-border flex items-end mt-4 justify-between">
                 <div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Started
                   </div>
                   <div className="text-xs font-light">
-                    {format(new Date(activity.startedAt), 'HH:mm', { locale: zhCN })}
+                    {format(new Date(activity.startedAt), timestampFormat, { locale: zhCN })}
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                    Duration
-                  </div>
-                  <div className="text-xs font-light">{durationStr}</div>
-                </div>
-                <div className="col-span-2">
+                <div className="text-right">
                   <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
                     Last Update
                   </div>
                   <div className="text-xs font-light">
-                    {format(new Date(lastReportAt), 'MM/dd HH:mm:ss', { locale: zhCN })}
+                    {format(new Date(lastReportAt), timestampFormat, { locale: zhCN })}
                   </div>
                 </div>
               </div>

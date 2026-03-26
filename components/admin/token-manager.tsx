@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { Plus, Trash2, Copy, Check } from 'lucide-react'
+import { Plus, Trash2, Copy, Check, QrCode, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -49,6 +49,11 @@ export function TokenManager() {
   const [copied, setCopied] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [qrDialogOpen, setQrDialogOpen] = useState(false)
+  const [qrLoading, setQrLoading] = useState(false)
+  const [qrTitle, setQrTitle] = useState('')
+  const [qrEndpoint, setQrEndpoint] = useState('')
+  const [qrEncoded, setQrEncoded] = useState('')
 
   const fetchTokens = useCallback(async () => {
     try {
@@ -129,6 +134,30 @@ export function TokenManager() {
     setNewEndpoint(null)
   }
 
+  const openTokenQr = async (token: ApiToken) => {
+    setQrLoading(true)
+    setQrTitle(token.name)
+    setQrEndpoint('')
+    setQrEncoded('')
+    setQrDialogOpen(true)
+    try {
+      const res = await fetch(`/api/admin/tokens?bundle_id=${token.id}`)
+      const data = await res.json()
+      if (!res.ok || !data?.success || !data?.data?.encoded) {
+        return
+      }
+      setQrEndpoint(String(data.data.endpoint || ''))
+      setQrEncoded(String(data.data.encoded || ''))
+    } catch {
+      // ignore
+    } finally {
+      setQrLoading(false)
+    }
+  }
+
+  const getQrImageUrl = (text: string) =>
+    `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(text)}`
+
   const safeFormat = (value: string | null, fmt: string) => {
     if (!value) return null
     const date = new Date(value)
@@ -197,6 +226,22 @@ export function TokenManager() {
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     </div>
+                    <div className="pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setQrTitle(newTokenName || '新 Token')
+                          setQrEndpoint(newEndpoint || '')
+                          setQrEncoded(newTokenBundle)
+                          setQrDialogOpen(true)
+                        }}
+                      >
+                        <QrCode className="h-4 w-4 mr-1" />
+                        显示接入二维码
+                      </Button>
+                    </div>
                   </div>
                 )}
                 <DialogFooter>
@@ -247,6 +292,15 @@ export function TokenManager() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{token.name}</CardTitle>
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground"
+                      onClick={() => openTokenQr(token)}
+                      title="显示接入二维码"
+                    >
+                      <QrCode className="h-4 w-4" />
+                    </Button>
                     <Switch
                       checked={token.isActive}
                       onCheckedChange={(checked) => handleToggle(token.id, checked)}
@@ -297,6 +351,51 @@ export function TokenManager() {
           ))
         )}
       </div>
+
+      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>接入二维码</DialogTitle>
+            <DialogDescription>
+              扫码可获取该 Token 的 Base64 接入配置。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm">
+              Token: <span className="font-medium">{qrTitle || '-'}</span>
+            </p>
+            {qrEndpoint && (
+              <p className="text-xs text-muted-foreground break-all">Endpoint: {qrEndpoint}</p>
+            )}
+            <div className="rounded-lg border p-4 flex items-center justify-center min-h-[280px]">
+              {qrLoading ? (
+                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  生成中...
+                </div>
+              ) : qrEncoded ? (
+                <img
+                  src={getQrImageUrl(qrEncoded)}
+                  alt="token qrcode"
+                  className="h-[260px] w-[260px]"
+                />
+              ) : (
+                <div className="text-sm text-muted-foreground">暂无二维码数据</div>
+              )}
+            </div>
+            {qrEncoded && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => copyToClipboard(qrEncoded)}
+              >
+                <Copy className="h-4 w-4 mr-1" />
+                复制接入配置
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 使用说明 */}
       <Card>

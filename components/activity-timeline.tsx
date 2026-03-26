@@ -55,9 +55,6 @@ export function ActivityTimeline() {
 
   return (
     <div className="space-y-5">
-      <div className="text-xs text-muted-foreground">
-        {feed?.historyWindowHintText || '历史窗口：最近 2 小时（可在设置中调整）'}
-      </div>
       <div className="space-y-2">
         {activities.map((activity) => {
           const batteryLabel = getBatteryLabel(activity.metadata)
