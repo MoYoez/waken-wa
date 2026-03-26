@@ -47,9 +47,8 @@ export function WebSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string>('')
-  const [rulesText, setRulesText] = useState('[]')
-  const [blacklistText, setBlacklistText] = useState('')
-  const [nameOnlyListText, setNameOnlyListText] = useState('')
+  const [blacklistInput, setBlacklistInput] = useState('')
+  const [nameOnlyListInput, setNameOnlyListInput] = useState('')
   // 裁剪弹窗状态
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
@@ -114,9 +113,6 @@ export function WebSettings() {
             updatesText: data.data.updatesText ?? 'updates every 30 seconds',
             adminText: data.data.adminText ?? 'admin',
           })
-          setRulesText(JSON.stringify(rules, null, 2))
-          setBlacklistText(blacklist.join('\n'))
-          setNameOnlyListText(nameOnlyList.join('\n'))
         }
       } finally {
         setLoading(false)
@@ -193,12 +189,11 @@ export function WebSettings() {
     setMessage('')
     setSaving(true)
     try {
-      let parsedRules: Array<{ match: string; text: string }> = []
-      const parseLineList = (text: string): string[] => {
+      const normalizeStringList = (items: string[]) => {
         const output: string[] = []
         const seen = new Set<string>()
-        for (const rawLine of text.split(/\r?\n/)) {
-          const value = rawLine.trim()
+        for (const raw of items) {
+          const value = String(raw ?? '').trim()
           if (!value) continue
           const key = value.toLowerCase()
           if (seen.has(key)) continue
@@ -207,19 +202,19 @@ export function WebSettings() {
         }
         return output
       }
-      try {
-        const parsed = JSON.parse(rulesText)
-        if (!Array.isArray(parsed)) throw new Error()
-        parsedRules = parsed.map((r) => ({
-          match: String(r?.match ?? ''),
-          text: String(r?.text ?? ''),
-        }))
-      } catch {
-        setMessage('应用匹配规则 JSON 格式错误')
-        return
+
+      const normalizeRules = (rules: Array<{ match: string; text: string }>) => {
+        return rules
+          .map((r) => ({
+            match: String(r?.match ?? '').trim(),
+            text: String(r?.text ?? '').trim(),
+          }))
+          .filter((r) => r.match.length > 0 && r.text.length > 0)
       }
-      const parsedBlacklist = parseLineList(blacklistText)
-      const parsedNameOnlyList = parseLineList(nameOnlyListText)
+
+      const parsedRules = normalizeRules(form.appMessageRules)
+      const parsedBlacklist = normalizeStringList(form.appBlacklist)
+      const parsedNameOnlyList = normalizeStringList(form.appNameOnlyList)
 
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
@@ -490,41 +485,178 @@ export function WebSettings() {
       </div>
 
       <div className="space-y-2">
-        <Label>应用匹配文案规则（JSON）</Label>
-        <textarea
-          rows={6}
-          value={rulesText}
-          onChange={(e) => setRulesText(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md bg-background text-sm font-mono"
-        />
+        <Label>应用匹配文案规则</Label>
+        <div className="space-y-3">
+          {form.appMessageRules.length === 0 ? (
+            <p className="text-xs text-muted-foreground">暂无规则</p>
+          ) : (
+            <div className="space-y-3">
+              {form.appMessageRules.map((rule, idx) => (
+                <div key={idx} className="rounded-md border bg-background/50 p-3 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">规则 {idx + 1}</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => patch('appMessageRules', form.appMessageRules.filter((_, i) => i !== idx))}
+                    >
+                      删除
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`rule-match-${idx}`}>match（进程/应用名）</Label>
+                    <Input
+                      id={`rule-match-${idx}`}
+                      value={rule.match}
+                      onChange={(e) => {
+                        const next = [...form.appMessageRules]
+                        next[idx] = { ...next[idx], match: e.target.value }
+                        patch('appMessageRules', next)
+                      }}
+                      placeholder="例如：WindowsTerminal.exe"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`rule-text-${idx}`}>text（替换文案）</Label>
+                    <textarea
+                      id={`rule-text-${idx}`}
+                      rows={3}
+                      value={rule.text}
+                      onChange={(e) => {
+                        const next = [...form.appMessageRules]
+                        next[idx] = { ...next[idx], text: e.target.value }
+                        patch('appMessageRules', next)
+                      }}
+                      className="w-full px-3 py-2 border rounded-md bg-background text-sm font-mono"
+                      placeholder="例如：正在编码：{title}"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => patch('appMessageRules', [...form.appMessageRules, { match: '', text: '' }])}
+          >
+            添加规则
+          </Button>
+        </div>
+
         <p className="text-xs text-muted-foreground">
-          示例：[{`{"match":"WindowsTerminal.exe","text":"正在编码：{title}"}`}]。支持 {'{process}'}、{'{title}'} 占位符。
+          示例：match 为 `WindowsTerminal.exe`，text 为 {'正在编码：{title}'}。支持 {'{process}'}、{'{title}'} 占位符。
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label>应用黑名单（每行一个应用名）</Label>
-        <textarea
-          rows={4}
-          value={blacklistText}
-          onChange={(e) => setBlacklistText(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md bg-background text-sm font-mono"
-          placeholder={'例如：\nWeChat.exe\nQQ.exe'}
-        />
+        <Label>应用黑名单</Label>
+
+        <div className="flex items-end gap-2 flex-wrap">
+          <div className="flex-1 min-w-[240px]">
+            <Label htmlFor="blacklist-input">输入应用名（不区分大小写）</Label>
+            <Input
+              id="blacklist-input"
+              value={blacklistInput}
+              onChange={(e) => setBlacklistInput(e.target.value)}
+              placeholder="例如：WeChat.exe"
+            />
+          </div>
+          <Button
+            type="button"
+            onClick={() => {
+              const value = blacklistInput.trim()
+              if (!value) return
+              const exists = form.appBlacklist.some((x) => x.toLowerCase() === value.toLowerCase())
+              if (exists) return
+              patch('appBlacklist', [...form.appBlacklist, value])
+              setBlacklistInput('')
+            }}
+          >
+            添加
+          </Button>
+        </div>
+
+        {form.appBlacklist.length === 0 ? (
+          <p className="text-xs text-muted-foreground">暂无黑名单</p>
+        ) : (
+          <ul className="space-y-2">
+            {form.appBlacklist.map((app, idx) => (
+              <li key={`${app}-${idx}`} className="flex items-center justify-between gap-3 rounded-md border bg-background/50 p-2">
+                <code className="text-sm font-mono text-foreground break-all">{app}</code>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => patch('appBlacklist', form.appBlacklist.filter((_, i) => i !== idx))}
+                >
+                  删除
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <p className="text-xs text-muted-foreground">
           命中黑名单的应用不会出现在当前状态和历史列表中（不区分大小写）。
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label>仅显示应用名列表（每行一个应用名）</Label>
-        <textarea
-          rows={4}
-          value={nameOnlyListText}
-          onChange={(e) => setNameOnlyListText(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md bg-background text-sm font-mono"
-          placeholder={'例如：\nCode.exe\nchrome.exe'}
-        />
+        <Label>仅显示应用名</Label>
+
+        <div className="flex items-end gap-2 flex-wrap">
+          <div className="flex-1 min-w-[240px]">
+            <Label htmlFor="nameOnly-input">输入应用名（不区分大小写）</Label>
+            <Input
+              id="nameOnly-input"
+              value={nameOnlyListInput}
+              onChange={(e) => setNameOnlyListInput(e.target.value)}
+              placeholder="例如：Code.exe"
+            />
+          </div>
+          <Button
+              type="button"
+              onClick={() => {
+                const value = nameOnlyListInput.trim()
+                if (!value) return
+                const exists = form.appNameOnlyList.some((x) => x.toLowerCase() === value.toLowerCase())
+                if (exists) return
+                patch('appNameOnlyList', [...form.appNameOnlyList, value])
+                setNameOnlyListInput('')
+              }}
+            >
+              添加
+            </Button>
+        </div>
+
+        {form.appNameOnlyList.length === 0 ? (
+          <p className="text-xs text-muted-foreground">暂无“仅显示应用名”配置</p>
+        ) : (
+          <ul className="space-y-2">
+            {form.appNameOnlyList.map((app, idx) => (
+              <li
+                key={`${app}-${idx}`}
+                className="flex items-center justify-between gap-3 rounded-md border bg-background/50 p-2"
+              >
+                <code className="text-sm font-mono text-foreground break-all">{app}</code>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => patch('appNameOnlyList', form.appNameOnlyList.filter((_, i) => i !== idx))}
+                >
+                  删除
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <p className="text-xs text-muted-foreground">
           命中后只显示应用名，不显示窗口标题等详细内容（不区分大小写）。
         </p>

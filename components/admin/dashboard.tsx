@@ -11,7 +11,8 @@ import {
   LogOut,
   Clock,
   Home,
-  UserCog
+  UserCog,
+  Lightbulb
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -20,6 +21,7 @@ import { TokenManager } from './token-manager'
 import { AddActivityForm } from './add-activity-form'
 import { WebSettings } from './web-settings'
 import { AccountSettings } from './account-settings'
+import { InspirationManager } from './inspiration-manager'
 
 interface DashboardProps {
   username: string
@@ -72,6 +74,10 @@ export function AdminDashboard({ username }: DashboardProps) {
               <LayoutDashboard className="h-4 w-4" />
               概览
             </TabsTrigger>
+            <TabsTrigger value="inspiration" className="gap-2">
+              <Lightbulb className="h-4 w-4" />
+              灵感随想录
+            </TabsTrigger>
             <TabsTrigger value="activities" className="gap-2">
               <List className="h-4 w-4" />
               活动日志
@@ -98,6 +104,9 @@ export function AdminDashboard({ username }: DashboardProps) {
               </h3>
               <AddActivityForm onSuccess={() => setRefreshKey((k) => k + 1)} />
             </div>
+          </TabsContent>
+          <TabsContent value="inspiration">
+            <InspirationManager />
           </TabsContent>
 
           <TabsContent value="activities">

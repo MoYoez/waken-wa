@@ -64,3 +64,18 @@ model SiteConfig {
 
   @@map("site_config")
 }
+
+model InspirationEntry {
+  id Int @id @default(autoincrement())
+
+  title   String? @map("title")
+  content String  @map("content")
+
+  // Store dataURL directly (e.g. image/png;base64,...)
+  imageDataUrl String? @map("image_data_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("inspiration_entries")
+}
