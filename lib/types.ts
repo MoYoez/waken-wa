@@ -2,8 +2,8 @@
 export type { ActivityLog, ApiToken, AdminUser } from '@prisma/client'
 
 export interface ActivityInput {
+  generatedHashKey: string
   device: string
-  device_name?: string
   device_type?: 'desktop' | 'tablet' | 'mobile'
   process_name: string
   process_title?: string

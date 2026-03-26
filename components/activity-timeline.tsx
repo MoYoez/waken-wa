@@ -58,7 +58,8 @@ export function ActivityTimeline() {
       <div className="space-y-2">
         {activities.map((activity) => {
           const batteryLabel = getBatteryLabel(activity.metadata)
-          const deviceType = getDeviceType(activity.device, activity.metadata)
+          const deviceName = activity.device || `device-${activity.generatedHashKey?.slice(0, 8)}`
+          const deviceType = getDeviceType(deviceName, activity.metadata)
           const duration = activity.endedAt
             ? Math.round(
                 (new Date(activity.endedAt).getTime() -
@@ -101,7 +102,7 @@ export function ActivityTimeline() {
                       ) : (
                         <Laptop className="h-3.5 w-3.5" />
                       )}
-                      {activity.device}
+                      {deviceName}
                       {batteryLabel ? ` · 电量 ${batteryLabel}` : ''}
                     </span>
                     <span>

@@ -41,6 +41,7 @@ interface SiteConfig {
   earlierText: string
   updatesText: string
   adminText: string
+  autoAcceptNewDevices: boolean
 }
 
 export function WebSettings() {
@@ -75,6 +76,7 @@ export function WebSettings() {
     earlierText: 'earlier',
     updatesText: 'updates every 30 seconds',
     adminText: 'admin',
+    autoAcceptNewDevices: false,
   })
 
   useEffect(() => {
@@ -112,6 +114,7 @@ export function WebSettings() {
             earlierText: data.data.earlierText ?? 'earlier',
             updatesText: data.data.updatesText ?? 'updates every 30 seconds',
             adminText: data.data.adminText ?? 'admin',
+            autoAcceptNewDevices: Boolean(data.data.autoAcceptNewDevices),
           })
         }
       } finally {
@@ -471,6 +474,20 @@ export function WebSettings() {
           <Label>历史区块标题</Label>
           <Input value={form.earlierText} onChange={(e) => patch('earlierText', e.target.value)} />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={form.autoAcceptNewDevices}
+            onChange={(e) => patch('autoAcceptNewDevices', e.target.checked)}
+          />
+          自动接收本地新设备（GeneratedHashKey）
+        </Label>
+        <p className="text-xs text-muted-foreground">
+          关闭后，未知 GeneratedHashKey 首次上报会进入待审核状态，需要在“设备管理”中手动通过。
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

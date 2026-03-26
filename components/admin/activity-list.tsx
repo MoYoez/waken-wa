@@ -29,6 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 interface ActivityLog {
   id: number
+  generatedHashKey: string
   device: string
   processName: string
   processTitle: string | null
@@ -123,6 +124,7 @@ export function ActivityList() {
           <TableHeader>
             <TableRow>
               <TableHead>设备</TableHead>
+              <TableHead className="hidden lg:table-cell">HashKey</TableHead>
               <TableHead>进程</TableHead>
               <TableHead className="hidden md:table-cell">标题</TableHead>
               <TableHead>时间</TableHead>
@@ -134,6 +136,7 @@ export function ActivityList() {
               [...Array(5)].map((_, i) => (
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-28" /></TableCell>
@@ -142,7 +145,7 @@ export function ActivityList() {
               ))
             ) : activities.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   暂无活动记录
                 </TableCell>
               </TableRow>
@@ -150,6 +153,9 @@ export function ActivityList() {
               activities.map((activity) => (
                 <TableRow key={activity.id}>
                   <TableCell className="font-medium">{activity.device}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-xs font-mono text-muted-foreground">
+                    {activity.generatedHashKey?.slice(0, 10) || '-'}
+                  </TableCell>
                   <TableCell>{activity.processName}</TableCell>
                   <TableCell className="hidden md:table-cell max-w-xs truncate text-muted-foreground">
                     {activity.processTitle || '-'}

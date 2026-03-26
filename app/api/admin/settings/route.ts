@@ -56,6 +56,7 @@ export async function PATCH(request: NextRequest) {
       String(body.updatesText ?? '').trim() || 'updates every 30 seconds'
     const adminText = String(body.adminText ?? '').trim() || 'admin'
     const pageLockEnabled = Boolean(body.pageLockEnabled)
+    const autoAcceptNewDevices = Boolean(body.autoAcceptNewDevices)
     const rawPageLockPassword = String(body.pageLockPassword ?? '')
     const appMessageRules = Array.isArray(body.appMessageRules) ? body.appMessageRules : []
     const appBlacklist = Array.isArray(body.appBlacklist)
@@ -117,6 +118,7 @@ export async function PATCH(request: NextRequest) {
         earlierText,
         updatesText,
         adminText,
+        autoAcceptNewDevices,
       },
       create: {
         id: 1,
@@ -137,6 +139,7 @@ export async function PATCH(request: NextRequest) {
         earlierText,
         updatesText,
         adminText,
+        autoAcceptNewDevices,
       },
     })
 

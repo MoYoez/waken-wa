@@ -11,6 +11,7 @@ interface AddActivityFormProps {
 }
 
 export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
+  const [generatedHashKey, setGeneratedHashKey] = useState('')
   const [device, setDevice] = useState('')
   const [processName, setProcessName] = useState('')
   const [processTitle, setProcessTitle] = useState('')
@@ -27,6 +28,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          generatedHashKey,
           device,
           process_name: processName,
           process_title: processTitle || undefined,
@@ -37,6 +39,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
 
       if (data.success) {
         setMessage({ type: 'success', text: '活动已添加' })
+        setGeneratedHashKey('')
         setDevice('')
         setProcessName('')
         setProcessTitle('')
@@ -53,6 +56,16 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="hashKey">GeneratedHashKey</Label>
+        <Input
+          id="hashKey"
+          placeholder="设备唯一标识（必填）"
+          value={generatedHashKey}
+          onChange={(e) => setGeneratedHashKey(e.target.value)}
+          required
+        />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="device">设备名称</Label>

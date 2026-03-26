@@ -20,32 +20,47 @@
 
 必填字段：
 
-- `device`: 设备名称（如 `MacBook Pro`）
+- `generatedHashKey`: 设备唯一标识（由后台 `设备管理` 创建后获得）
 - `process_name`: 进程名称（如 `VS Code`）
 
 可选字段：
 
+- `device`: 设备显示名（如 `MacBook Pro`，仅用于展示，不参与唯一识别）
 - `process_title`: 进程标题
 - `battery_level`: 当前设备电量（0-100，若设备/浏览器支持）
 - `device_type`: 设备类型（`desktop` / `tablet` / `mobile`）
 - `push_mode`: 推送模式（`realtime` / `active`）
 - `metadata`: 扩展 JSON 对象
-- `device_name`: `device` 的别名字段（兼容旧客户端）
 
 说明：
 
 - `started_at` / `ended_at` 无需上传，由服务端自动处理时间。
-- 同一设备上报新事件时，服务端会自动结束该设备上一条未结束状态。
+- 同一 `generatedHashKey` 上报新事件时，服务端会自动结束该设备上一条未结束状态。
 - `push_mode = realtime`：按超时规则自动判定离线。
 - `push_mode = active`：长期显示，不按超时自动结束，并展示最后更新时间。
 
-## 3. curl 示例
+## 3. 设备管理与 GeneratedHashKey
+
+1. 访问后台：`/admin`
+2. 进入 `设备管理` Tab
+3. 点击“新增设备”创建一条设备记录
+4. 在设备列表复制对应的 `GeneratedHashKey`
+5. 客户端上报时把该值放到 `generatedHashKey`
+
+注意：
+
+- `GeneratedHashKey` 是设备唯一标识，必须保持稳定。
+- 如果设备被停用（`revoked`），该 key 的上报会被拒绝。
+- 如果设备绑定了指定 Token，需要使用对应 Token 上报。
+
+## 4. curl 示例
 
 ```bash
 curl -X POST "http://localhost:3000/api/activity" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
+    "generatedHashKey": "YOUR_DEVICE_HASH_KEY",
     "device": "MacBook Pro",
     "device_type": "desktop",
     "process_name": "VS Code",
@@ -58,7 +73,7 @@ curl -X POST "http://localhost:3000/api/activity" \
   }'
 ```
 
-## 4. Node.js 示例
+## 5. Node.js 示例
 
 ```ts
 const battery = await navigator.getBattery?.().catch(() => null)
@@ -71,6 +86,7 @@ await fetch('http://localhost:3000/api/activity', {
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
+    generatedHashKey: deviceHashKey, // required
     device: navigator.platform || 'My PC',
     device_type: 'desktop',
     process_name: 'Chrome',
@@ -81,7 +97,7 @@ await fetch('http://localhost:3000/api/activity', {
 })
 ```
 
-## 5. 返回与错误
+## 6. 返回与错误
 
 成功返回：
 
@@ -91,19 +107,21 @@ await fetch('http://localhost:3000/api/activity', {
 常见错误：
 
 - `401`: Token 无效或未启用
-- `400`: 缺少必填字段（`device`、`process_name`）
+- `400`: 缺少必填字段（`generatedHashKey`、`process_name`）
+- `403`: 设备不存在、被停用，或与当前 Token 绑定不匹配
 - `500`: 服务端异常
 
-## 6. 快速检查
+## 7. 快速检查
 
 如果上报失败，请按顺序检查：
 
 1. Token 是否为完整值（不是截断值）
 2. 是否带了 `Bearer ` 前缀
-3. `device` 与 `process_name` 是否存在
+3. `generatedHashKey` 与 `process_name` 是否存在
 4. Token 是否处于启用状态（后台可切换）
+5. 设备是否存在且处于 `active` 状态（后台 `设备管理` 可查看）
 
-## 7. 一键复制接入配置（Base64）
+## 8. 一键复制接入配置（Base64）
 
 后台 `设置` 页面提供 **一键复制接入配置（Base64）** 按钮。
 

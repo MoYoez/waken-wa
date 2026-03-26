@@ -137,14 +137,16 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
         : item
     )
 
-  // Keep latest active entry for each device (使用过滤后仍然活跃的活动)
+  // Keep latest active entry for each device
   const activeStatuses: any[] = []
   const seen = new Set<string>()
   for (const item of stillActive) {
     const processKey = normalizeProcessName(item.processName)
     if (blacklistSet.has(processKey)) continue
-    if (seen.has(item.device)) continue
-    seen.add(item.device)
+    const key = String((item as any).generatedHashKey ?? '')
+    if (!key) continue
+    if (seen.has(key)) continue
+    seen.add(key)
     const pushMode = getPushModeFromMetadata(item.metadata)
     const maskedTitle = nameOnlySet.has(processKey) ? null : item.processTitle
     activeStatuses.push({

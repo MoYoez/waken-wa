@@ -63,6 +63,7 @@ export async function GET(request: Request) {
         earlierText: siteConfig.earlierText,
         updatesText: siteConfig.updatesText,
         adminText: siteConfig.adminText,
+        autoAcceptNewDevices: Boolean(siteConfig.autoAcceptNewDevices),
       },
       token: {
         reportEndpoint: `${baseUrl}/api/activity`,

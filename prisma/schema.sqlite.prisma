@@ -23,6 +23,7 @@ model ApiToken {
   isActive   Boolean   @default(true) @map("is_active")
   createdAt  DateTime  @default(now()) @map("created_at")
   lastUsedAt DateTime? @map("last_used_at")
+  devices    Device[]
 
   @@map("api_tokens")
 }
@@ -30,14 +31,32 @@ model ApiToken {
 model ActivityLog {
   id           Int       @id @default(autoincrement())
   device       String
+  generatedHashKey String @map("generated_hash_key")
+  deviceId     Int?      @map("device_id")
   processName  String    @map("process_name")
   processTitle String?   @map("process_title")
   startedAt    DateTime  @default(now()) @map("started_at")
   endedAt      DateTime? @map("ended_at")
   metadata     Json?
   createdAt    DateTime  @default(now()) @map("created_at")
+  deviceRef    Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@map("activity_logs")
+}
+
+model Device {
+  id               Int           @id @default(autoincrement())
+  displayName      String        @map("display_name")
+  generatedHashKey String        @unique @map("generated_hash_key")
+  status           String        @default("active")
+  apiTokenId       Int?          @map("api_token_id")
+  lastSeenAt       DateTime?     @map("last_seen_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  apiToken         ApiToken?     @relation(fields: [apiTokenId], references: [id], onDelete: SetNull)
+  activityLogs     ActivityLog[]
+
+  @@map("devices")
 }
 
 model SiteConfig {
@@ -59,6 +78,7 @@ model SiteConfig {
   earlierText   String   @map("earlier_text") @default("earlier")
   updatesText   String   @map("updates_text") @default("updates every 30 seconds")
   adminText     String   @map("admin_text") @default("admin")
+  autoAcceptNewDevices Boolean @map("auto_accept_new_devices") @default(false)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

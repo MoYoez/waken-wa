@@ -410,6 +410,7 @@ export function TokenManager() {
   -H "Authorization: Bearer YOUR_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{
+    "generatedHashKey": "YOUR_DEVICE_HASH_KEY",
     "device": "MacBook Pro",
     "device_type": "desktop",
     "process_name": "VS Code",

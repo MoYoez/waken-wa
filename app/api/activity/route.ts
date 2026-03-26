@@ -8,10 +8,10 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 // 验证 API Token
-async function validateToken(request: NextRequest): Promise<boolean> {
+async function validateToken(request: NextRequest): Promise<{ id: number } | null> {
   const authHeader = request.headers.get('authorization')
   if (!authHeader?.startsWith('Bearer ')) {
-    return false
+    return null
   }
   
   const token = authHeader.slice(7)
@@ -27,7 +27,7 @@ async function validateToken(request: NextRequest): Promise<boolean> {
     })
   }
   
-  return result !== null
+  return result ? { id: result.id } : null
 }
 
 // GET - 获取活动日志（公开）
@@ -36,22 +36,22 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
     const offset = parseInt(searchParams.get('offset') || '0')
-    const device = searchParams.get('device')
+    const generatedHashKey = String(searchParams.get('generatedHashKey') ?? '').trim()
     const historyWindowMinutes = await getHistoryWindowMinutes()
     const since = new Date(Date.now() - historyWindowMinutes * 60 * 1000)
 
-    const where = device
-      ? { device, startedAt: { gte: since } }
+    const where = generatedHashKey
+      ? { generatedHashKey, startedAt: { gte: since } }
       : { startedAt: { gte: since } }
 
     const [logs, total] = await Promise.all([
-      prisma.activityLog.findMany({
+      (prisma as any).activityLog.findMany({
         where,
         orderBy: { startedAt: 'desc' },
         take: limit,
         skip: offset
       }),
-      prisma.activityLog.count({ where })
+      (prisma as any).activityLog.count({ where })
     ])
 
     const feed = await getActivityFeedData(limit)
@@ -74,8 +74,8 @@ export async function GET(request: NextRequest) {
 // POST - 上报活动（需要 API Token）
 export async function POST(request: NextRequest) {
   try {
-    const isValid = await validateToken(request)
-    if (!isValid) {
+    const tokenInfo = await validateToken(request)
+    if (!tokenInfo) {
       return NextResponse.json(
         { success: false, error: '无效的 API Token' },
         { status: 401 }
@@ -83,7 +83,8 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json()
-    const deviceRaw = body?.device ?? body?.device_name
+    const generatedHashKeyRaw = body?.generatedHashKey
+    const deviceRaw = body?.device
     const processNameRaw = body?.process_name
     const processTitleRaw = body?.process_title
     const batteryRaw = body?.battery_level ?? body?.device_battery
@@ -91,10 +92,14 @@ export async function POST(request: NextRequest) {
     const pushModeRaw = body?.push_mode
     const metadataRaw = body?.metadata
 
+    const generatedHashKey =
+      typeof generatedHashKeyRaw === 'string'
+        ? generatedHashKeyRaw.trim()
+        : ''
     const device =
       typeof deviceRaw === 'string'
         ? deviceRaw.trim()
-        : ''
+        : 'Unknown Device'
     const process_name =
       typeof processNameRaw === 'string'
         ? processNameRaw.trim()
@@ -136,16 +141,62 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    if (!device || !process_name) {
+    if (!generatedHashKey || !process_name) {
       return NextResponse.json(
-        { success: false, error: '缺少必要字段: device, process_name' },
+        { success: false, error: '缺少必要字段: generatedHashKey, process_name' },
         { status: 400 }
       )
     }
+
+    let deviceRecord = await (prisma as any).device.findUnique({
+      where: { generatedHashKey },
+    })
+
+    if (!deviceRecord) {
+      const config = await (prisma as any).siteConfig.findUnique({ where: { id: 1 } })
+      const autoAccept = Boolean(config?.autoAcceptNewDevices)
+      const createdStatus = autoAccept ? 'active' : 'pending'
+      deviceRecord = await (prisma as any).device.create({
+        data: {
+          generatedHashKey,
+          displayName: device || 'Unknown Device',
+          status: createdStatus,
+          apiTokenId: tokenInfo.id,
+          lastSeenAt: autoAccept ? new Date() : null,
+        },
+      })
+
+      if (!autoAccept) {
+        return NextResponse.json(
+          { success: false, error: '设备待后台审核后可用', pending: true },
+          { status: 202 }
+        )
+      }
+    }
+
+    if (deviceRecord.status === 'pending') {
+      return NextResponse.json(
+        { success: false, error: '设备待后台审核后可用', pending: true },
+        { status: 202 }
+      )
+    }
+
+    if (deviceRecord.status !== 'active') {
+      return NextResponse.json(
+        { success: false, error: '设备不可用或不存在' },
+        { status: 403 }
+      )
+    }
+    if (deviceRecord.apiTokenId && deviceRecord.apiTokenId !== tokenInfo.id) {
+      return NextResponse.json(
+        { success: false, error: '该设备未绑定当前 Token' },
+        { status: 403 }
+      )
+    }
     
-    // 检查是否存在相同 device + process_name 的活动，如果存在则更新时间戳而非创建新记录
-    const existing = await prisma.activityLog.findFirst({
-      where: { device, processName: process_name, endedAt: null },
+    // 检查是否存在相同 generatedHashKey + process_name 的活动，如果存在则更新时间戳而非创建新记录
+    const existing = await (prisma as any).activityLog.findFirst({
+      where: { generatedHashKey, processName: process_name, endedAt: null },
       orderBy: { startedAt: 'desc' }
     })
     
@@ -171,29 +222,38 @@ export async function POST(request: NextRequest) {
         } as Prisma.InputJsonValue
       }
       // 更新现有活动的时间戳和上报间隔
-      const log = await prisma.activityLog.update({
+      const log = await (prisma as any).activityLog.update({
         where: { id: existing.id },
-        // 使用 updatedAt 字段来追踪最后上报时间
         data: updateData
+      })
+      await (prisma as any).device.update({
+        where: { id: deviceRecord.id },
+        data: { displayName: device || deviceRecord.displayName, lastSeenAt: new Date() },
       })
       return NextResponse.json({ success: true, data: log, updated: true }, { status: 200 })
     }
     
     // 结束该设备上其他进程的活动
-    await prisma.activityLog.updateMany({
-      where: { device, endedAt: null },
+    await (prisma as any).activityLog.updateMany({
+      where: { generatedHashKey, endedAt: null },
       data: { endedAt: new Date() },
     })
 
-    const log = await prisma.activityLog.create({
+    const log = await (prisma as any).activityLog.create({
       data: {
         device,
+        generatedHashKey,
+        deviceId: deviceRecord.id,
         processName: process_name,
         processTitle: process_title || null,
         startedAt: new Date(),
         endedAt: null,
         metadata: metadataInput
       }
+    })
+    await (prisma as any).device.update({
+      where: { id: deviceRecord.id },
+      data: { displayName: device || deviceRecord.displayName, lastSeenAt: new Date() },
     })
     
     return NextResponse.json({ success: true, data: log }, { status: 201 })

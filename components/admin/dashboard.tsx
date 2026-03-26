@@ -12,7 +12,8 @@ import {
   Clock,
   Home,
   UserCog,
-  Lightbulb
+  Lightbulb,
+  MonitorSmartphone
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -22,6 +23,7 @@ import { AddActivityForm } from './add-activity-form'
 import { WebSettings } from './web-settings'
 import { AccountSettings } from './account-settings'
 import { InspirationManager } from './inspiration-manager'
+import { DeviceManager } from './device-manager'
 
 interface DashboardProps {
   username: string
@@ -82,6 +84,10 @@ export function AdminDashboard({ username }: DashboardProps) {
               <List className="h-4 w-4" />
               活动日志
             </TabsTrigger>
+            <TabsTrigger value="devices" className="gap-2">
+              <MonitorSmartphone className="h-4 w-4" />
+              设备管理
+            </TabsTrigger>
             <TabsTrigger value="tokens" className="gap-2">
               <Key className="h-4 w-4" />
               API Token
@@ -111,6 +117,10 @@ export function AdminDashboard({ username }: DashboardProps) {
 
           <TabsContent value="activities">
             <ActivityList key={refreshKey} />
+          </TabsContent>
+
+          <TabsContent value="devices">
+            <DeviceManager />
           </TabsContent>
 
           <TabsContent value="tokens">

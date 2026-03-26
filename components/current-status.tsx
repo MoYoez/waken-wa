@@ -76,7 +76,8 @@ export function CurrentStatus() {
         const timestampFormat = 'MM/dd HH:mm:ss'
         const batteryLabel = getBatteryLabel(activity.metadata)
         const pushMode = getPushMode(activity.metadata, activity.pushMode)
-        const deviceType = getDeviceType(activity.device, activity.metadata)
+        const deviceName = activity.device || `device-${activity.generatedHashKey?.slice(0, 8)}`
+        const deviceType = getDeviceType(deviceName, activity.metadata)
         const lastReportAt = activity.lastReportAt || activity.updatedAt || activity.startedAt
         const durationStr =
           duration < 60
@@ -85,7 +86,7 @@ export function CurrentStatus() {
 
         return (
           <div
-            key={`${activity.device}-${activity.id}`}
+            key={`${activity.generatedHashKey}-${activity.id}`}
             className="border border-border rounded-sm p-6 sm:p-8 bg-card hover:border-foreground/30 transition-colors"
           >
             <div className="space-y-4">
@@ -102,7 +103,7 @@ export function CurrentStatus() {
                   ) : (
                     <Laptop className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <span>{activity.device}</span>
+                  <span>{deviceName}</span>
                 </div>
                 {batteryLabel && (
                   <div className="text-xs text-muted-foreground mt-1">电量 {batteryLabel}</div>

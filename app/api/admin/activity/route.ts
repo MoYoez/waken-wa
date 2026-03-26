@@ -25,13 +25,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
     const offset = parseInt(searchParams.get('offset') || '0')
-    const device = searchParams.get('device')
+    const generatedHashKey = String(searchParams.get('generatedHashKey') ?? '').trim()
     const search = searchParams.get('search')
     
     const where: Prisma.ActivityLogWhereInput = {}
     
-    if (device) {
-      where.device = device
+    if (generatedHashKey) {
+      ;(where as any).generatedHashKey = generatedHashKey
     }
     
     if (search) {
@@ -42,13 +42,13 @@ export async function GET(request: NextRequest) {
     }
     
     const [logs, total] = await Promise.all([
-      prisma.activityLog.findMany({
+      (prisma as any).activityLog.findMany({
         where,
         orderBy: { startedAt: 'desc' },
         take: limit,
         skip: offset
       }),
-      prisma.activityLog.count({ where })
+      (prisma as any).activityLog.count({ where })
     ])
     
     return NextResponse.json({
@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const deviceRaw = body?.device ?? body?.device_name
+    const generatedHashKeyRaw = body?.generatedHashKey
+    const deviceRaw = body?.device
     const processNameRaw = body?.process_name
     const processTitleRaw = body?.process_title
     const batteryRaw = body?.battery_level ?? body?.device_battery
@@ -79,10 +80,14 @@ export async function POST(request: NextRequest) {
     const pushModeRaw = body?.push_mode
     const metadataRaw = body?.metadata
 
+    const generatedHashKey =
+      typeof generatedHashKeyRaw === 'string'
+        ? generatedHashKeyRaw.trim()
+        : ''
     const device =
       typeof deviceRaw === 'string'
         ? deviceRaw.trim()
-        : ''
+        : 'Unknown Device'
     const process_name =
       typeof processNameRaw === 'string'
         ? processNameRaw.trim()
@@ -125,27 +130,43 @@ export async function POST(request: NextRequest) {
     }
     const metadataInput = metadata as Prisma.InputJsonValue | undefined
     
-    if (!device || !process_name) {
+    if (!generatedHashKey || !process_name) {
       return NextResponse.json(
-        { success: false, error: '缺少必要字段' },
+        { success: false, error: '缺少必要字段: generatedHashKey, process_name' },
         { status: 400 }
       )
     }
+
+    const deviceRecord = await (prisma as any).device.findUnique({
+      where: { generatedHashKey },
+    })
+    if (!deviceRecord || deviceRecord.status !== 'active') {
+      return NextResponse.json(
+        { success: false, error: '设备不可用或不存在' },
+        { status: 403 }
+      )
+    }
     
-    await prisma.activityLog.updateMany({
-      where: { device, endedAt: null },
+    await (prisma as any).activityLog.updateMany({
+      where: { generatedHashKey, endedAt: null },
       data: { endedAt: new Date() }
     })
 
-    const log = await prisma.activityLog.create({
+    const log = await (prisma as any).activityLog.create({
       data: {
         device,
+        generatedHashKey,
+        deviceId: deviceRecord.id,
         processName: process_name,
         processTitle: process_title || null,
         startedAt: new Date(),
         endedAt: null,
         metadata: metadataInput
       }
+    })
+    await (prisma as any).device.update({
+      where: { id: deviceRecord.id },
+      data: { displayName: device || deviceRecord.displayName, lastSeenAt: new Date() },
     })
     
     return NextResponse.json({ success: true, data: log }, { status: 201 })
