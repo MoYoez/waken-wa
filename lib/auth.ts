@@ -5,6 +5,14 @@ import bcrypt from 'bcryptjs'
 import { findActiveApiTokenBySecret, resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import prisma from './prisma'
 
+let _dummyHash: Promise<string> | null = null
+function getDummyHash(): Promise<string> {
+  if (!_dummyHash) {
+    _dummyHash = bcrypt.hash('timing-safe-dummy-' + randomBytes(8).toString('hex'), 12)
+  }
+  return _dummyHash
+}
+
 const JWT_SECRET_DB_KEY = 'jwt_secret'
 let cachedJwtSecret: Uint8Array | null = null
 
@@ -77,7 +85,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export async function createSession(userId: number, username: string): Promise<string> {
-  const token = await new SignJWT({ userId, username })
+  const token = await new SignJWT({ userId, username, type: 'admin_session' })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('7d')
     .sign(await getJwtSecretBytes())
@@ -88,6 +96,8 @@ export async function createSession(userId: number, username: string): Promise<s
 export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, await getJwtSecretBytes())
+    // Reject site-lock tokens being used as admin sessions
+    if ((payload as Record<string, unknown>).type === 'site_lock') return null
     return payload as unknown as SessionPayload
   } catch {
     return null
@@ -143,6 +153,13 @@ export async function getBearerApiTokenRecord(
   return resolveActiveApiTokenFromPlainSecret(secret)
 }
 
+export function validatePasswordStrength(password: string): string | null {
+  if (password.length < 8) return '密码长度至少 8 位'
+  if (!/[a-zA-Z]/.test(password)) return '密码须包含至少一个字母'
+  if (!/\d/.test(password)) return '密码须包含至少一个数字'
+  return null
+}
+
 export async function authenticateAdmin(
   username: string,
   password: string
@@ -151,7 +168,11 @@ export async function authenticateAdmin(
     where: { username }
   })
   
-  if (!user) return null
+  if (!user) {
+    // Perform a dummy bcrypt compare to prevent timing-based user enumeration
+    await bcrypt.compare(password, await getDummyHash())
+    return null
+  }
   
   const isValid = await verifyPassword(password, user.passwordHash)
   if (!isValid) return null

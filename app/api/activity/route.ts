@@ -111,6 +111,13 @@ export async function POST(request: NextRequest) {
     let metadata: Record<string, unknown> | null = null
     if (metadataRaw && typeof metadataRaw === 'object' && !Array.isArray(metadataRaw)) {
       metadata = { ...(metadataRaw as Record<string, unknown>) }
+      const metaKeys = Object.keys(metadata)
+      if (metaKeys.length > 50 || JSON.stringify(metadata).length > 10240) {
+        return NextResponse.json(
+          { success: false, error: 'metadata 数据过大' },
+          { status: 400 },
+        )
+      }
     }
 
     if (typeof batteryRaw === 'number' && Number.isFinite(batteryRaw)) {

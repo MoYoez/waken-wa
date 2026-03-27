@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { hashPassword } from '@/lib/auth'
+import { hashPassword, validatePasswordStrength } from '@/lib/auth'
 import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
@@ -113,11 +113,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!hasAdmin && rawPassword.length < 6) {
-      return NextResponse.json(
-        { success: false, error: '密码长度至少 6 位' },
-        { status: 400 }
-      )
+    if (!hasAdmin) {
+      const pwError = validatePasswordStrength(rawPassword)
+      if (pwError) {
+        return NextResponse.json(
+          { success: false, error: pwError },
+          { status: 400 }
+        )
+      }
     }
 
     if (
@@ -208,7 +211,18 @@ export async function POST(request: NextRequest) {
       { success: true, data: result, adminCreated: !hasAdmin },
       { status: hasAdmin ? 200 : 201 }
     )
-  } catch (error) {
+  } catch (error: unknown) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code: string }).code === 'P2002'
+    ) {
+      return NextResponse.json(
+        { success: false, error: '该用户名已被使用，请选择其他用户名' },
+        { status: 409 },
+      )
+    }
     console.error('初始化管理员失败:', error)
     return NextResponse.json(
       { success: false, error: '初始化管理员失败' },

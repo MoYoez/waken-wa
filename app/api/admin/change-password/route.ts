@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
+import { getSession, createSession, validatePasswordStrength } from '@/lib/auth'
+import { cookies } from 'next/headers'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
@@ -17,8 +18,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '缺少必要参数' }, { status: 400 })
   }
 
-  if (newPassword.length < 6) {
-    return NextResponse.json({ success: false, error: '新密码长度至少 6 位' }, { status: 400 })
+  const pwError = validatePasswordStrength(newPassword)
+  if (pwError) {
+    return NextResponse.json({ success: false, error: pwError }, { status: 400 })
   }
 
   const admin = await prisma.adminUser.findUnique({
@@ -38,6 +40,18 @@ export async function POST(request: NextRequest) {
   await prisma.adminUser.update({
     where: { id: session.userId },
     data: { passwordHash: newHash },
+  })
+
+  // Issue a fresh session token; the old token on other devices remains valid
+  // until it expires (7d). Full revocation would require a token blacklist.
+  const newToken = await createSession(session.userId, session.username)
+  const cookieStore = await cookies()
+  cookieStore.set('session', newToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
   })
 
   return NextResponse.json({ success: true })

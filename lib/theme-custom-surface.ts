@@ -60,7 +60,7 @@ export function isSafeCssUrl(inner: string): boolean {
  * Replace disallowed url(...) with `none`.
  * Allowed URLs are re-emitted as url("...") so spaces before `)`, quotes in paths, and parser quirks are avoided.
  */
-function sanitizeCssUrls(css: string): string {
+export function sanitizeCssUrls(css: string): string {
   const re = /url\s*\(/gi
   let last = 0
   let out = ''

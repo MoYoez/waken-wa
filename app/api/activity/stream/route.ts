@@ -6,25 +6,41 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const MAX_CONCURRENT_STREAMS = 100
+const MAX_STREAM_DURATION_MS = 30 * 60 * 1000
+
+let activeStreams = 0
+
 function toSseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
 }
 
 export async function GET() {
+  if (activeStreams >= MAX_CONCURRENT_STREAMS) {
+    return NextResponse.json(
+      { success: false, error: '连接数已达上限，请稍后再试' },
+      { status: 503 },
+    )
+  }
+
   if (!(await isSiteLockSatisfied())) {
     return NextResponse.json({ success: false, error: '页面已锁定' }, { status: 403 })
   }
 
+  activeStreams++
+
   const encoder = new TextEncoder()
   let timer: ReturnType<typeof setInterval> | null = null
+  let autoCloseTimer: ReturnType<typeof setTimeout> | null = null
   let closed = false
 
   const cleanup = () => {
-    if (timer) {
-      clearInterval(timer)
-      timer = null
+    if (timer) { clearInterval(timer); timer = null }
+    if (autoCloseTimer) { clearTimeout(autoCloseTimer); autoCloseTimer = null }
+    if (!closed) {
+      closed = true
+      activeStreams = Math.max(0, activeStreams - 1)
     }
-    closed = true
   }
 
   const stream = new ReadableStream<Uint8Array>({
@@ -67,6 +83,11 @@ export async function GET() {
       timer = setInterval(() => {
         void push()
       }, 5000)
+
+      autoCloseTimer = setTimeout(() => {
+        cleanup()
+        try { controller.close() } catch { /* already closed */ }
+      }, MAX_STREAM_DURATION_MS)
     },
     cancel() {
       cleanup()

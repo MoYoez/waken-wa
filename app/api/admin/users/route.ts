@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession, hashPassword } from '@/lib/auth'
+import { getSession, hashPassword, validatePasswordStrength } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
 async function requireAdmin() {
@@ -33,8 +33,9 @@ export async function POST(request: NextRequest) {
     if (!name || !rawPassword) {
       return NextResponse.json({ success: false, error: '请填写用户名和密码' }, { status: 400 })
     }
-    if (rawPassword.length < 6) {
-      return NextResponse.json({ success: false, error: '密码至少 6 位' }, { status: 400 })
+    const pwError = validatePasswordStrength(rawPassword)
+    if (pwError) {
+      return NextResponse.json({ success: false, error: pwError }, { status: 400 })
     }
 
     const passwordHash = await hashPassword(rawPassword)

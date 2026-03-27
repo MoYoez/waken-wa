@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma'
 import { getBearerApiTokenRecord, getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { gateInspirationApiForDevice } from '@/lib/inspiration-device-allowlist'
-import { linkInspirationAssetsToEntry } from '@/lib/inspiration-inline-images'
+import { linkInspirationAssetsToEntry, validateInlineImageDataUrl } from '@/lib/inspiration-inline-images'
 
 function formatStatusSnapshotFromFeed(feed: Awaited<ReturnType<typeof getActivityFeedData>>): string | null {
   const lines = feed.activeStatuses
@@ -115,6 +115,13 @@ export async function POST(request: NextRequest) {
       typeof imageDataUrlRaw === 'string' && imageDataUrlRaw.trim().length > 0
         ? imageDataUrlRaw.trim()
         : null
+
+    if (imageDataUrl) {
+      const imgCheck = validateInlineImageDataUrl(imageDataUrl)
+      if (!imgCheck.ok) {
+        return NextResponse.json({ success: false, error: imgCheck.error }, { status: 400 })
+      }
+    }
 
     let statusSnapshot: string | null = null
     if (attachCurrentStatus && session) {

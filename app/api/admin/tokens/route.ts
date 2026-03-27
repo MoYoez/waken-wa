@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     ) =>
       tokens.map((t, i) => ({
         ...t,
-        token: t.token.slice(0, 8) + '...',
+        token: t.token.startsWith('h$') ? '••••••••' : t.token.slice(0, 8) + '...',
         recentDevices: (recentByToken[i] as DeviceRow[]).map((d) => ({
           displayName: d.displayName,
           generatedHashKey: d.generatedHashKey,
@@ -164,8 +164,11 @@ export async function PATCH(request: NextRequest) {
   try {
     const { id, is_active } = await request.json()
     
-    if (!id) {
-      return NextResponse.json({ success: false, error: '缺少 ID' }, { status: 400 })
+    if (typeof id !== 'number' || !Number.isFinite(id)) {
+      return NextResponse.json({ success: false, error: '无效的 ID' }, { status: 400 })
+    }
+    if (typeof is_active !== 'boolean') {
+      return NextResponse.json({ success: false, error: '无效的状态值' }, { status: 400 })
     }
     
     await prisma.apiToken.update({
@@ -192,11 +195,15 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id')
     
     if (!id) {
-      return NextResponse.json({ success: false, error: '缺少 ID' }, { status: 400 })
+      return NextResponse.json({ success: false, error: '缺少有效的 ID' }, { status: 400 })
+    }
+    const idNum = parseInt(id, 10)
+    if (isNaN(idNum)) {
+      return NextResponse.json({ success: false, error: '无效的 ID' }, { status: 400 })
     }
     
     await prisma.apiToken.delete({
-      where: { id: parseInt(id) }
+      where: { id: idNum }
     })
     
     return NextResponse.json({ success: true })

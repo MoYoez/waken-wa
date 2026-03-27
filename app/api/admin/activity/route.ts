@@ -102,6 +102,13 @@ export async function POST(request: NextRequest) {
     let metadata: Record<string, unknown> | null = null
     if (metadataRaw && typeof metadataRaw === 'object' && !Array.isArray(metadataRaw)) {
       metadata = { ...(metadataRaw as Record<string, unknown>) }
+      const metaKeys = Object.keys(metadata)
+      if (metaKeys.length > 50 || JSON.stringify(metadata).length > 10240) {
+        return NextResponse.json(
+          { success: false, error: 'metadata 数据过大' },
+          { status: 400 },
+        )
+      }
     }
     if (typeof batteryRaw === 'number' && Number.isFinite(batteryRaw)) {
       const batteryLevel = Math.min(Math.max(Math.round(batteryRaw), 0), 100)
@@ -231,11 +238,15 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id')
     
     if (!id) {
-      return NextResponse.json({ success: false, error: '缺少 ID' }, { status: 400 })
+      return NextResponse.json({ success: false, error: '缺少有效的 ID' }, { status: 400 })
+    }
+    const idNum = parseInt(id, 10)
+    if (isNaN(idNum)) {
+      return NextResponse.json({ success: false, error: '无效的 ID' }, { status: 400 })
     }
     
     await prisma.activityLog.delete({
-      where: { id: parseInt(id) }
+      where: { id: idNum }
     })
     
     return NextResponse.json({ success: true })

@@ -2,7 +2,6 @@ import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
-import { isStoredApiTokenHashed } from '@/lib/api-token-secret'
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
@@ -12,10 +11,11 @@ async function requireAdmin() {
   return session ?? null
 }
 
-function getBaseUrl(headers: Headers): string {
-  const host = headers.get('x-forwarded-host') || headers.get('host') || 'localhost:3000'
-  const proto = headers.get('x-forwarded-proto') || 'http'
-  return `${proto}://${host}`
+function getBaseUrl(request: Request): string {
+  const envUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim()
+  if (envUrl) return envUrl.replace(/\/+$/, '')
+  const url = new URL(request.url)
+  return `${url.protocol}//${url.host}`
 }
 
 export async function GET(request: Request) {
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
       )
     }
 
-    const baseUrl = getBaseUrl(request.headers)
+    const baseUrl = getBaseUrl(request)
     const payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
           isActive: t.isActive,
           createdAt: t.createdAt,
           lastUsedAt: t.lastUsedAt,
-          token: isStoredApiTokenHashed(t.token) ? null : t.token,
+          token: null,
         })),
       },
     }
