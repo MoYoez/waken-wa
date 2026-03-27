@@ -242,7 +242,7 @@ export function InspirationManager() {
         <CardHeader>
           <h3 className="text-base font-semibold">API 提交（可从脚本/设备直接上报）</h3>
           <p className="text-sm text-muted-foreground">
-            使用与“活动上报”相同的 `API Token`（在管理后台 -> API Token 查看/复制）
+            使用与“活动上报”相同的 `API Token`（在管理后台 -&gt; API Token 查看/复制）
           </p>
         </CardHeader>
         <CardContent>
