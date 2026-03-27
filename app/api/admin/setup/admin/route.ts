@@ -120,7 +120,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existingConfig = await (prisma as any).siteConfig.findUnique({ where: { id: 1 } })
     if (
       normalizedPageLockEnabled &&
       !rawPageLockPassword &&
