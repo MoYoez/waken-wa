@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { getActivityFeedData, getHistoryWindowMinutes } from '@/lib/activity-feed'
 import { Prisma } from '@prisma/client'
@@ -30,9 +31,14 @@ async function validateToken(request: NextRequest): Promise<{ id: number } | nul
   return result ? { id: result.id } : null
 }
 
-// GET - 获取活动日志（公开）
+// GET - activity log listing (admin session only; home page uses /api/activity/stream)
 export async function GET(request: NextRequest) {
   try {
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
     const offset = parseInt(searchParams.get('offset') || '0')

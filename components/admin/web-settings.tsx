@@ -267,6 +267,17 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   if ('autoAcceptNewDevices' in web && typeof web.autoAcceptNewDevices === 'boolean') {
     patch.autoAcceptNewDevices = web.autoAcceptNewDevices
   }
+  if ('inspirationAllowedDeviceHashes' in web) {
+    if (web.inspirationAllowedDeviceHashes === null) {
+      patch.inspirationDeviceRestrictionEnabled = false
+      patch.inspirationAllowedDeviceHashes = []
+    } else if (Array.isArray(web.inspirationAllowedDeviceHashes)) {
+      patch.inspirationDeviceRestrictionEnabled = true
+      patch.inspirationAllowedDeviceHashes = web.inspirationAllowedDeviceHashes
+        .map((item: unknown) => String(item ?? '').trim())
+        .filter((item: string) => item.length > 0)
+    }
+  }
   if ('scheduleSlotMinutes' in web) {
     const s = Number(web.scheduleSlotMinutes)
     if (isAllowedSlotMinutes(s)) patch.scheduleSlotMinutes = s
@@ -323,6 +334,9 @@ interface SiteConfig {
   earlierText: string
   adminText: string
   autoAcceptNewDevices: boolean
+  /** When true, PATCH sends inspirationAllowedDeviceHashes array; when false, sends null (no restriction). */
+  inspirationDeviceRestrictionEnabled: boolean
+  inspirationAllowedDeviceHashes: string[]
   scheduleSlotMinutes: number
   scheduleCourses: ScheduleCourse[]
   scheduleIcs: string
@@ -354,6 +368,10 @@ export function WebSettings() {
   const [dragStart, setDragStart] = useState<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null)
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 })
   const cropImageRef = useRef<HTMLImageElement | null>(null)
+  const [inspirationDevices, setInspirationDevices] = useState<
+    Array<{ id: number; displayName: string; generatedHashKey: string; status: string }>
+  >([])
+
   const [form, setForm] = useState<SiteConfig>({
     pageTitle: DEFAULT_PAGE_TITLE,
     userName: '',
@@ -379,6 +397,8 @@ export function WebSettings() {
     earlierText: '最近的随想录',
     adminText: 'admin',
     autoAcceptNewDevices: false,
+    inspirationDeviceRestrictionEnabled: false,
+    inspirationAllowedDeviceHashes: [],
     scheduleSlotMinutes: 30,
     scheduleCourses: [],
     scheduleIcs: '',
@@ -439,6 +459,14 @@ export function WebSettings() {
             earlierText: data.data.earlierText ?? '最近的随想录',
             adminText: data.data.adminText ?? 'admin',
             autoAcceptNewDevices: Boolean(data.data.autoAcceptNewDevices),
+            inspirationDeviceRestrictionEnabled: Array.isArray(
+              data.data.inspirationAllowedDeviceHashes,
+            ),
+            inspirationAllowedDeviceHashes: Array.isArray(data.data.inspirationAllowedDeviceHashes)
+              ? (data.data.inspirationAllowedDeviceHashes as unknown[])
+                  .map((item) => String(item ?? '').trim())
+                  .filter((item) => item.length > 0)
+              : [],
             scheduleSlotMinutes: isAllowedSlotMinutes(Number(data.data.scheduleSlotMinutes))
               ? Number(data.data.scheduleSlotMinutes)
               : 30,
@@ -461,6 +489,20 @@ export function WebSettings() {
       }
     }
     void load()
+  }, [])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/admin/devices?limit=200')
+        const data = await res.json()
+        if (data?.success && Array.isArray(data.data)) {
+          setInspirationDevices(data.data)
+        }
+      } catch {
+        // ignore
+      }
+    })()
   }, [])
 
   useEffect(() => {
@@ -585,15 +627,24 @@ export function WebSettings() {
       const parsedWhitelist = normalizeStringList(form.appWhitelist)
       const parsedNameOnlyList = normalizeStringList(form.appNameOnlyList)
 
+      const {
+        inspirationDeviceRestrictionEnabled,
+        inspirationAllowedDeviceHashes: inspirationHashSelection,
+        ...formRest
+      } = form
+
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
+          ...formRest,
           appMessageRules: parsedRules,
           appBlacklist: parsedBlacklist,
           appWhitelist: parsedWhitelist,
           appNameOnlyList: parsedNameOnlyList,
+          inspirationAllowedDeviceHashes: inspirationDeviceRestrictionEnabled
+            ? normalizeStringList(inspirationHashSelection)
+            : null,
         }),
       })
       const data = await res.json()
@@ -1153,6 +1204,54 @@ export function WebSettings() {
         <p className="text-xs text-muted-foreground">
           关闭后，未知 GeneratedHashKey 首次上报会进入待审核状态，需要在“设备管理”中手动通过。
         </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={form.inspirationDeviceRestrictionEnabled}
+            onChange={(e) => patch('inspirationDeviceRestrictionEnabled', e.target.checked)}
+          />
+          仅允许所选设备通过 API Token 提交「灵感随想录」
+        </Label>
+        <p className="text-xs text-muted-foreground">
+          关闭时：任意已绑定且激活、并使用同一 Token 的设备均可调用随想录接口。开启后：仅下方勾选的设备可提交；客户端请求需携带请求头{' '}
+          <code className="rounded bg-muted px-1 py-0.5 text-[11px]">X-Device-Key</code>
+          （值为该设备在后台的 GeneratedHashKey），或在 JSON 中传{' '}
+          <code className="rounded bg-muted px-1 py-0.5 text-[11px]">generatedHashKey</code>
+          。管理员在后台网页里提交不受此限制。
+        </p>
+        {form.inspirationDeviceRestrictionEnabled && (
+          <div className="max-h-52 space-y-2 overflow-y-auto rounded-md border bg-background/50 p-3">
+            {inspirationDevices.length === 0 ? (
+              <p className="text-xs text-muted-foreground">暂无设备，请先在「设备管理」中添加。</p>
+            ) : (
+              inspirationDevices.map((d) => (
+                <label key={d.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.inspirationAllowedDeviceHashes.includes(d.generatedHashKey)}
+                    onChange={(e) => {
+                      const key = d.generatedHashKey
+                      const next = e.target.checked
+                        ? Array.from(new Set([...form.inspirationAllowedDeviceHashes, key]))
+                        : form.inspirationAllowedDeviceHashes.filter((k) => k !== key)
+                      patch('inspirationAllowedDeviceHashes', next)
+                    }}
+                  />
+                  <span className="min-w-0 flex-1 truncate font-medium">{d.displayName}</span>
+                  <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                    {d.generatedHashKey.slice(0, 10)}…
+                  </span>
+                  {d.status !== 'active' ? (
+                    <span className="shrink-0 text-xs text-amber-600">({d.status})</span>
+                  ) : null}
+                </label>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/40 p-4 sm:flex-row sm:items-center sm:justify-between">

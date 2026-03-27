@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { getBearerApiTokenRecord, getSession } from '@/lib/auth'
 import { getActivityFeedData } from '@/lib/activity-feed'
+import { gateInspirationApiForDevice } from '@/lib/inspiration-device-allowlist'
 import { linkInspirationAssetsToEntry } from '@/lib/inspiration-inline-images'
 
 function formatStatusSnapshotFromFeed(feed: Awaited<ReturnType<typeof getActivityFeedData>>): string | null {
@@ -15,25 +16,6 @@ function formatStatusSnapshotFromFeed(feed: Awaited<ReturnType<typeof getActivit
 // Force dynamic rendering, disable caching
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-async function validateApiToken(request: NextRequest): Promise<boolean> {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader?.startsWith('Bearer ')) return false
-
-  const token = authHeader.slice(7)
-  const result = await prisma.apiToken.findFirst({
-    where: { token, isActive: true },
-  })
-
-  if (!result) return false
-
-  await prisma.apiToken.update({
-    where: { id: result.id },
-    data: { lastUsedAt: new Date() },
-  })
-
-  return true
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -84,14 +66,25 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getSession()
-  const tokenOk = await validateApiToken(request)
+  const apiToken = await getBearerApiTokenRecord(request.headers.get('authorization'))
 
-  if (!session && !tokenOk) {
+  if (!session && !apiToken) {
     return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
   }
 
   try {
     const body = await request.json()
+    if (!session && apiToken) {
+      const gate = await gateInspirationApiForDevice(
+        prisma,
+        apiToken.id,
+        request,
+        body && typeof body === 'object' ? (body as Record<string, unknown>) : null,
+      )
+      if (!gate.ok) {
+        return NextResponse.json({ success: false, error: gate.error }, { status: gate.status })
+      }
+    }
     const attachCurrentStatus = Boolean(body?.attachCurrentStatus)
 
     if (attachCurrentStatus && !session) {

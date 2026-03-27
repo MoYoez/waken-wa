@@ -1,11 +1,41 @@
+import { randomBytes } from 'node:crypto'
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
 import prisma from './prisma'
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-)
+let cachedJwtSecret: Uint8Array | null = null
+let loggedDevEphemeralWarning = false
+
+/** HS256 key: env in all environments when set; otherwise ephemeral random bytes in non-production only. */
+function getJwtSecretBytes(): Uint8Array {
+  if (cachedJwtSecret) {
+    return cachedJwtSecret
+  }
+
+  const fromEnv = process.env.JWT_SECRET?.trim()
+  if (fromEnv) {
+    cachedJwtSecret = new TextEncoder().encode(fromEnv)
+    return cachedJwtSecret
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    console.error(
+      '[auth] JWT_SECRET is required in production. Set a long random value in the environment.',
+    )
+    throw new Error('JWT_SECRET is required in production')
+  }
+
+  if (!loggedDevEphemeralWarning) {
+    loggedDevEphemeralWarning = true
+    console.warn(
+      '[auth] WARN: JWT_SECRET is not set. Using an ephemeral secret for this Node process only (sessions reset on restart). Set JWT_SECRET in .env for stable local sessions.',
+    )
+  }
+
+  cachedJwtSecret = randomBytes(32)
+  return cachedJwtSecret
+}
 
 export interface SessionPayload {
   userId: number
@@ -30,14 +60,14 @@ export async function createSession(userId: number, username: string): Promise<s
   const token = await new SignJWT({ userId, username })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('7d')
-    .sign(JWT_SECRET)
-  
+    .sign(getJwtSecretBytes())
+
   return token
 }
 
 export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, getJwtSecretBytes())
     return payload as unknown as SessionPayload
   } catch {
     return null
@@ -48,12 +78,12 @@ export async function createSiteLockSession(): Promise<string> {
   return new SignJWT({ type: 'site_lock' })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('1d')
-    .sign(JWT_SECRET)
+    .sign(getJwtSecretBytes())
 }
 
 export async function verifySiteLockSession(token: string): Promise<SiteLockPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, getJwtSecretBytes())
     if ((payload as any).type !== 'site_lock') return null
     return payload as unknown as SiteLockPayload
   } catch {
@@ -73,6 +103,23 @@ export async function validateApiToken(token: string): Promise<boolean> {
     where: { token, isActive: true }
   })
   return result !== null
+}
+
+/** Validates Bearer token and returns token id (updates lastUsedAt). For inspiration device allowlist. */
+export async function getBearerApiTokenRecord(
+  authHeader: string | null,
+): Promise<{ id: number } | null> {
+  if (!authHeader?.startsWith('Bearer ')) return null
+  const token = authHeader.slice(7)
+  const result = await prisma.apiToken.findFirst({
+    where: { token, isActive: true },
+  })
+  if (!result) return null
+  await prisma.apiToken.update({
+    where: { id: result.id },
+    data: { lastUsedAt: new Date() },
+  })
+  return { id: result.id }
 }
 
 export async function authenticateAdmin(

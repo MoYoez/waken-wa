@@ -375,11 +375,16 @@ export function InspirationManager() {
             使用与「活动上报」相同的 `API Token`。字段 `content` 为 Markdown；`imageDataUrl` 为可选封面图
             DataURL。正文内嵌图请先 `POST /api/inspiration/assets`（JSON 字段 `imageDataUrl`），再在 `content` 里写
             `![](/api/inspiration/img/…)`（路径取上传接口返回的 `url`）；提交条目后会自动绑定到该条记录。
+            若在「网站设置」中开启了「仅允许所选设备提交随想录」，请在两个请求上都加请求头{' '}
+            <code className="rounded bg-muted px-1">X-Device-Key: {'<GeneratedHashKey>'}</code>
+            （与设备管理中的值一致）。
           </p>
         </CardHeader>
         <CardContent>
           <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">
-            {`# Inline image: upload first, then reference url in content.
+            {`# If site setting restricts inspiration by device, add:
+#   -H "X-Device-Key: YOUR_DEVICE_GENERATED_HASH_KEY"
+
 curl -X POST /api/inspiration/assets \\
   -H "Authorization: Bearer YOUR_TOKEN" \\
   -H "Content-Type: application/json" \\

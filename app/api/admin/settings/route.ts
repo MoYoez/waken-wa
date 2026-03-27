@@ -15,6 +15,7 @@ import {
   MAX_SCHEDULE_ICS_BYTES,
   parseScheduleCoursesJson,
 } from '@/lib/schedule-courses'
+import { normalizeInspirationAllowedHashes } from '@/lib/inspiration-device-allowlist'
 
 const SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX = 40
 const DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL = '正在摸鱼'
@@ -101,6 +102,18 @@ export async function PATCH(request: NextRequest) {
       : 500
 
     const existing = await (prisma as any).siteConfig.findUnique({ where: { id: 1 } })
+
+    let inspirationAllowedDeviceHashes: string[] | null = normalizeInspirationAllowedHashes(
+      existing?.inspirationAllowedDeviceHashes ?? null,
+    )
+    if ('inspirationAllowedDeviceHashes' in body) {
+      if (body.inspirationAllowedDeviceHashes === null) {
+        inspirationAllowedDeviceHashes = null
+      } else if (Array.isArray(body.inspirationAllowedDeviceHashes)) {
+        inspirationAllowedDeviceHashes =
+          normalizeInspirationAllowedHashes(body.inspirationAllowedDeviceHashes) ?? []
+      }
+    }
 
     let scheduleSlotMinutes =
       typeof existing?.scheduleSlotMinutes === 'number' ? existing.scheduleSlotMinutes : 30
@@ -237,6 +250,7 @@ export async function PATCH(request: NextRequest) {
         earlierText,
         adminText,
         autoAcceptNewDevices,
+        inspirationAllowedDeviceHashes,
         scheduleSlotMinutes,
         scheduleCourses,
         scheduleIcs,
@@ -271,6 +285,7 @@ export async function PATCH(request: NextRequest) {
         earlierText,
         adminText,
         autoAcceptNewDevices,
+        inspirationAllowedDeviceHashes,
         scheduleSlotMinutes,
         scheduleCourses,
         scheduleIcs,

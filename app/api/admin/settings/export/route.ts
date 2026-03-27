@@ -76,6 +76,11 @@ export async function GET(request: Request) {
         earlierText: siteConfig.earlierText,
         adminText: siteConfig.adminText,
         autoAcceptNewDevices: Boolean(siteConfig.autoAcceptNewDevices),
+        inspirationAllowedDeviceHashes:
+          siteConfig.inspirationAllowedDeviceHashes === null ||
+          siteConfig.inspirationAllowedDeviceHashes === undefined
+            ? null
+            : siteConfig.inspirationAllowedDeviceHashes,
         scheduleSlotMinutes: siteConfig.scheduleSlotMinutes ?? 30,
         scheduleCourses: siteConfig.scheduleCourses ?? [],
         scheduleIcs: siteConfig.scheduleIcs ?? null,

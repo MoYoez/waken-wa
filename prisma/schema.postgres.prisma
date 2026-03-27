@@ -91,6 +91,8 @@ model SiteConfig {
   earlierText          String   @map("earlier_text") @db.VarChar(60) @default("最近的随想录")
   adminText            String   @map("admin_text") @db.VarChar(30) @default("admin")
   autoAcceptNewDevices Boolean  @map("auto_accept_new_devices") @default(false)
+  /// null = any device with a valid Bearer token may use inspiration APIs; non-null array = only these `Device.generatedHashKey` values (must match token-bound device).
+  inspirationAllowedDeviceHashes Json? @map("inspiration_allowed_device_hashes")
   scheduleSlotMinutes       Int      @map("schedule_slot_minutes") @default(30)
   scheduleCourses           Json?    @map("schedule_courses")
   scheduleIcs               String?  @map("schedule_ics")

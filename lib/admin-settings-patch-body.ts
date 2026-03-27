@@ -36,6 +36,10 @@ export function buildAdminSettingsPatchBody(
     earlierText: data.earlierText ?? '最近的随想录',
     adminText: data.adminText ?? 'admin',
     autoAcceptNewDevices: data.autoAcceptNewDevices ?? false,
+    inspirationAllowedDeviceHashes:
+      'inspirationAllowedDeviceHashes' in data
+        ? (data.inspirationAllowedDeviceHashes as string[] | null)
+        : null,
     scheduleInClassOnHome: Boolean(data.scheduleInClassOnHome),
     scheduleHomeShowLocation: Boolean(data.scheduleHomeShowLocation),
     scheduleHomeShowTeacher: Boolean(data.scheduleHomeShowTeacher),
