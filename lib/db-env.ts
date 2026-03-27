@@ -9,12 +9,15 @@ export function isPostgresConnectionUrl(value: string | undefined): boolean {
 }
 
 /**
- * First standard postgres URL among env vars (priority: DATABASE_URL, POSTGRES_URL, POSTGRES_PRISMA_URL).
+ * First standard postgres URL among env vars.
+ * Priority: POSTGRES_URL_NON_POOLING (direct), then DATABASE_URL, POSTGRES_URL, POSTGRES_PRISMA_URL.
  */
 export function pickPostgresUrlFromEnv(): string | null {
+  const np = process.env.POSTGRES_URL_NON_POOLING?.trim()
   const a = process.env.DATABASE_URL?.trim()
   const b = process.env.POSTGRES_URL?.trim()
   const c = process.env.POSTGRES_PRISMA_URL?.trim()
+  if (isPostgresConnectionUrl(np)) return np!
   if (isPostgresConnectionUrl(a)) return a!
   if (isPostgresConnectionUrl(b)) return b!
   if (isPostgresConnectionUrl(c)) return c!
@@ -33,7 +36,7 @@ function prismaClientSchemaIsPostgresql(): boolean {
 
 /**
  * When Client was generated with schema.postgres.prisma, ensure DATABASE_URL is a postgres URL
- * (copy from POSTGRES_URL / POSTGRES_PRISMA_URL if needed).
+ * (copy from POSTGRES_URL_NON_POOLING / POSTGRES_URL / etc. if needed).
  */
 export function applyDatabaseUrlAliases(): void {
   if (!prismaClientSchemaIsPostgresql()) return
