@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,7 +28,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          generatedHashKey,
+          generatedHashKey: generatedHashKey.trim(),
           device,
           process_name: processName,
           process_title: processTitle || undefined,
@@ -57,14 +57,35 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="hashKey">GeneratedHashKey</Label>
-        <Input
-          id="hashKey"
-          placeholder="设备唯一标识（必填）"
-          value={generatedHashKey}
-          onChange={(e) => setGeneratedHashKey(e.target.value)}
-          required
-        />
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex-1 min-w-[200px] space-y-2">
+            <Label htmlFor="hashKey">GeneratedHashKey（Web 可不填）</Label>
+            <Input
+              id="hashKey"
+              placeholder="留空则使用后台 Web 预留设备"
+              value={generatedHashKey}
+              onChange={(e) => setGeneratedHashKey(e.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => {
+              const bytes = new Uint8Array(32)
+              crypto.getRandomValues(bytes)
+              const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+              setGeneratedHashKey(hex)
+            }}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            生成随机 Key
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          留空时活动会记到 Web 预留设备。若填写 Key，须与「设备管理」中已启用设备的 Key 一致；生成后可在设备管理中用该 Key 新增设备。
+        </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">

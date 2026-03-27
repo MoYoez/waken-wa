@@ -58,15 +58,37 @@ export async function GET(request: NextRequest) {
     }
 
     const tokens = await prisma.apiToken.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     })
-    
-    // 隐藏完整 token，只显示前8位
-    const maskedTokens = tokens.map(t => ({
+
+    const recentLimit = 5
+    const recentByToken = await Promise.all(
+      tokens.map((t) =>
+        (prisma as any).device.findMany({
+          where: { apiTokenId: t.id },
+          orderBy: [{ lastSeenAt: 'desc' }, { updatedAt: 'desc' }],
+          take: recentLimit,
+          select: {
+            displayName: true,
+            generatedHashKey: true,
+            lastSeenAt: true,
+          },
+        })
+      )
+    )
+
+    const maskedTokens = tokens.map((t, i) => ({
       ...t,
-      token: t.token.slice(0, 8) + '...'
+      token: t.token.slice(0, 8) + '...',
+      recentDevices: (recentByToken[i] as { displayName: string; generatedHashKey: string; lastSeenAt: Date | null }[]).map(
+        (d) => ({
+          displayName: d.displayName,
+          generatedHashKey: d.generatedHashKey,
+          lastSeenAt: d.lastSeenAt,
+        })
+      ),
     }))
-    
+
     return NextResponse.json({ success: true, data: maskedTokens })
   } catch (error) {
     console.error('获取 Token 失败:', error)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -129,33 +130,61 @@ export async function POST(request: NextRequest) {
       }
     }
     const metadataInput = metadata as Prisma.InputJsonValue | undefined
-    
-    if (!generatedHashKey || !process_name) {
+
+    if (!process_name) {
       return NextResponse.json(
-        { success: false, error: '缺少必要字段: generatedHashKey, process_name' },
+        { success: false, error: '缺少必要字段: process_name' },
         { status: 400 }
       )
     }
 
+    const effectiveHashKey =
+      generatedHashKey.length > 0 ? generatedHashKey : WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY
+
+    if (generatedHashKey.length > 128) {
+      return NextResponse.json(
+        { success: false, error: 'GeneratedHashKey 长度不能超过 128' },
+        { status: 400 }
+      )
+    }
+
+    if (!generatedHashKey) {
+      await (prisma as any).device.upsert({
+        where: { generatedHashKey: WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY },
+        create: {
+          generatedHashKey: WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY,
+          displayName: 'Web (后台快速添加)',
+          status: 'active',
+        },
+        update: {
+          status: 'active',
+        },
+      })
+    }
+
     const deviceRecord = await (prisma as any).device.findUnique({
-      where: { generatedHashKey },
+      where: { generatedHashKey: effectiveHashKey },
     })
     if (!deviceRecord || deviceRecord.status !== 'active') {
       return NextResponse.json(
-        { success: false, error: '设备不可用或不存在' },
+        {
+          success: false,
+          error:
+            '设备不可用或不存在。请在「设备管理」中创建设备并复制 GeneratedHashKey，或使用留空以使用 Web 预留设备。',
+        },
         { status: 403 }
       )
     }
-    
+
     await (prisma as any).activityLog.updateMany({
-      where: { generatedHashKey, endedAt: null },
-      data: { endedAt: new Date() }
+      where: { generatedHashKey: effectiveHashKey, endedAt: null },
+      data: { endedAt: new Date() },
     })
 
     const log = await (prisma as any).activityLog.create({
       data: {
         device,
-        generatedHashKey,
+        generatedHashKey: effectiveHashKey,
         deviceId: deviceRecord.id,
         processName: process_name,
         processTitle: process_title || null,

@@ -32,6 +32,7 @@ interface DashboardProps {
 export function AdminDashboard({ username }: DashboardProps) {
   const router = useRouter()
   const [refreshKey, setRefreshKey] = useState(0)
+  const [activeTab, setActiveTab] = useState('overview')
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -70,7 +71,7 @@ export function AdminDashboard({ username }: DashboardProps) {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
@@ -103,11 +104,20 @@ export function AdminDashboard({ username }: DashboardProps) {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="rounded-xl border bg-card p-6">
-              <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                快速添加活动
-              </h3>
+            <div className="rounded-xl border bg-card p-6 space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  快速添加活动
+                </h3>
+                <Button type="button" variant="outline" size="sm" onClick={() => setActiveTab('devices')}>
+                  <MonitorSmartphone className="h-4 w-4 mr-1" />
+                  打开设备管理
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                GeneratedHashKey 可留空以使用 Web 预留设备；若使用实体设备，请先在「设备管理」创建或绑定 Key。
+              </p>
               <AddActivityForm onSuccess={() => setRefreshKey((k) => k + 1)} />
             </div>
           </TabsContent>

@@ -46,6 +46,7 @@ export function DeviceManager() {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newTokenId, setNewTokenId] = useState('')
+  const [newHashKey, setNewHashKey] = useState('')
   const [message, setMessage] = useState('')
 
   const limit = 20
@@ -100,13 +101,17 @@ export function DeviceManager() {
     setMessage('')
     try {
       const apiTokenId = newTokenId ? Number(newTokenId) : undefined
+      const body: Record<string, unknown> = {
+        displayName: newName.trim(),
+        apiTokenId: Number.isFinite(apiTokenId) ? apiTokenId : undefined,
+      }
+      const hk = newHashKey.trim()
+      if (hk) body.generatedHashKey = hk
+
       const res = await fetch('/api/admin/devices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          displayName: newName.trim(),
-          apiTokenId: Number.isFinite(apiTokenId) ? apiTokenId : undefined,
-        }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok || !data?.success) {
@@ -115,6 +120,7 @@ export function DeviceManager() {
       }
       setNewName('')
       setNewTokenId('')
+      setNewHashKey('')
       setMessage('设备已创建')
       setPage(0)
       await fetchDevices()
@@ -175,6 +181,19 @@ export function DeviceManager() {
               ))}
             </select>
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="new-device-hash">自定义 GeneratedHashKey（可选）</Label>
+          <Input
+            id="new-device-hash"
+            value={newHashKey}
+            onChange={(e) => setNewHashKey(e.target.value)}
+            placeholder="留空则系统自动生成；可与「快速添加活动」中生成的 Key 一致"
+            className="font-mono text-xs"
+          />
+          <p className="text-xs text-muted-foreground">
+            8～128 字符，须唯一。可与概览中「生成随机 Key」结果一致后在此粘贴创建设备。
+          </p>
         </div>
 
         <div className="flex items-center gap-3">

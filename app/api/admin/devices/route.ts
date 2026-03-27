@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -86,12 +87,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let generatedHashKey = generateHashKey(displayName)
-    // very low collision chance, but keep a bounded retry for safety
-    for (let i = 0; i < 3; i++) {
-      const exists = await (prisma as any).device.findUnique({ where: { generatedHashKey } })
-      if (!exists) break
-      generatedHashKey = generateHashKey(`${displayName}:${i}`)
+    const customKeyRaw = body?.generatedHashKey
+    const customKey =
+      typeof customKeyRaw === 'string' ? customKeyRaw.trim() : ''
+    if (customKey) {
+      if (customKey === WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY) {
+        return NextResponse.json(
+          { success: false, error: '该 Key 为系统预留（Web 后台快速添加），不可手动占用' },
+          { status: 400 }
+        )
+      }
+      if (customKey.length > 128 || customKey.length < 8) {
+        return NextResponse.json(
+          { success: false, error: '自定义 GeneratedHashKey 长度需在 8～128 之间' },
+          { status: 400 }
+        )
+      }
+      const taken = await (prisma as any).device.findUnique({ where: { generatedHashKey: customKey } })
+      if (taken) {
+        return NextResponse.json({ success: false, error: '该 GeneratedHashKey 已被使用' }, { status: 400 })
+      }
+    }
+
+    let generatedHashKey = customKey || generateHashKey(displayName)
+    if (!customKey) {
+      // very low collision chance, but keep a bounded retry for safety
+      for (let i = 0; i < 3; i++) {
+        const exists = await (prisma as any).device.findUnique({ where: { generatedHashKey } })
+        if (!exists) break
+        generatedHashKey = generateHashKey(`${displayName}:${i}`)
+      }
     }
 
     const item = await (prisma as any).device.create({

@@ -30,6 +30,12 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+interface RecentDeviceRow {
+  displayName: string
+  generatedHashKey: string
+  lastSeenAt: string | null
+}
+
 interface ApiToken {
   id: number
   name: string
@@ -37,6 +43,7 @@ interface ApiToken {
   isActive: boolean
   createdAt: string
   lastUsedAt: string | null
+  recentDevices?: RecentDeviceRow[]
 }
 
 export function TokenManager() {
@@ -332,8 +339,8 @@ export function TokenManager() {
                   Token: {token.token}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                   <span>
                     创建于 {safeFormat(token.createdAt, 'yyyy-MM-dd') ?? '—'}
                   </span>
@@ -345,6 +352,33 @@ export function TokenManager() {
                   <span className={token.isActive ? 'text-emerald-500' : 'text-muted-foreground'}>
                     {token.isActive ? '已启用' : '已禁用'}
                   </span>
+                </div>
+                <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+                  <p className="text-xs font-medium text-foreground mb-2">最近使用设备（按最后在线）</p>
+                  {!token.recentDevices || token.recentDevices.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">暂无关联设备（上报过且绑定此 Token 的设备会出现在此）</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {token.recentDevices.map((d) => (
+                        <li
+                          key={`${token.id}-${d.generatedHashKey}`}
+                          className="text-xs space-y-1 border-b border-border/40 pb-2 last:border-0 last:pb-0"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-medium text-foreground">{d.displayName}</span>
+                            <span className="text-muted-foreground shrink-0">
+                              {d.lastSeenAt
+                                ? safeFormat(d.lastSeenAt, 'yyyy-MM-dd HH:mm') ?? '—'
+                                : '从未在线'}
+                            </span>
+                          </div>
+                          <code className="block font-mono break-all text-muted-foreground">
+                            {d.generatedHashKey}
+                          </code>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </CardContent>
             </Card>
