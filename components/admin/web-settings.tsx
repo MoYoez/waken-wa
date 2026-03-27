@@ -13,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import {
   parseThemeCustomSurface,
@@ -31,6 +38,7 @@ function getMinZoom(naturalW: number, naturalH: number): number {
 
 type ThemeCustomSurfaceForm = {
   background: string
+  bodyBackground: string
   animatedBg: string
   primary: string
   foreground: string
@@ -39,11 +47,13 @@ type ThemeCustomSurfaceForm = {
   mutedForeground: string
   radius: string
   hideFloatingOrbs: boolean
+  transparentAnimatedBg: boolean
 }
 
 function emptyThemeCustomSurfaceForm(): ThemeCustomSurfaceForm {
   return {
     background: '',
+    bodyBackground: '',
     animatedBg: '',
     primary: '',
     foreground: '',
@@ -52,6 +62,7 @@ function emptyThemeCustomSurfaceForm(): ThemeCustomSurfaceForm {
     mutedForeground: '',
     radius: '',
     hideFloatingOrbs: THEME_CUSTOM_SURFACE_DEFAULTS.hideFloatingOrbs,
+    transparentAnimatedBg: false,
   }
 }
 
@@ -59,6 +70,7 @@ function themeCustomSurfaceFromApi(raw: unknown): ThemeCustomSurfaceForm {
   const p = parseThemeCustomSurface(raw)
   return {
     background: p.background || '',
+    bodyBackground: p.bodyBackground || '',
     animatedBg: p.animatedBg || '',
     primary: p.primary || '',
     foreground: p.foreground || '',
@@ -70,7 +82,112 @@ function themeCustomSurfaceFromApi(raw: unknown): ThemeCustomSurfaceForm {
       p.hideFloatingOrbs !== undefined
         ? p.hideFloatingOrbs
         : THEME_CUSTOM_SURFACE_DEFAULTS.hideFloatingOrbs,
+    transparentAnimatedBg: p.transparentAnimatedBg === true,
   }
+}
+
+function base64ToUtf8(b64: string): string {
+  const s = b64.replace(/\s/g, '')
+  const bin = atob(s)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i)
+  return new TextDecoder('utf-8').decode(bytes)
+}
+
+function parseExportPayload(encoded: string): { web: Record<string, unknown> } | null {
+  let json: unknown
+  try {
+    json = JSON.parse(base64ToUtf8(encoded))
+  } catch {
+    return null
+  }
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return null
+  const o = json as Record<string, unknown>
+  if (typeof o.version === 'number' && o.version !== 1) return null
+  const web = o.web
+  if (!web || typeof web !== 'object' || Array.isArray(web)) return null
+  return { web: web as Record<string, unknown> }
+}
+
+function normalizeRulesImport(rules: unknown): Array<{ match: string; text: string }> {
+  if (!Array.isArray(rules)) return []
+  return rules
+    .map((r) => ({
+      match: String((r as { match?: unknown })?.match ?? '').trim(),
+      text: String((r as { text?: unknown })?.text ?? '').trim(),
+    }))
+    .filter((r) => r.match.length > 0 && r.text.length > 0)
+}
+
+function normalizeStringListImport(items: unknown): string[] {
+  if (!Array.isArray(items)) return []
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const raw of items) {
+    const value = String(raw ?? '').trim()
+    if (!value) continue
+    const key = value.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(value)
+  }
+  return out
+}
+
+/** Maps export `web` object into form fields (same shape as GET /api/admin/settings). */
+function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig> {
+  const patch: Partial<SiteConfig> = {}
+  if ('pageTitle' in web && typeof web.pageTitle === 'string') {
+    const t = web.pageTitle.trim()
+    patch.pageTitle = t ? t.slice(0, PAGE_TITLE_MAX_LEN) : DEFAULT_PAGE_TITLE
+  }
+  if ('userName' in web && typeof web.userName === 'string') patch.userName = web.userName.trim()
+  if ('userBio' in web && typeof web.userBio === 'string') patch.userBio = web.userBio.trim()
+  if ('avatarUrl' in web && typeof web.avatarUrl === 'string') patch.avatarUrl = web.avatarUrl.trim()
+  if ('userNote' in web && typeof web.userNote === 'string') patch.userNote = web.userNote.trim()
+  if ('themePreset' in web && typeof web.themePreset === 'string') {
+    patch.themePreset = web.themePreset.trim() || 'basic'
+  }
+  if ('themeCustomSurface' in web) {
+    patch.themeCustomSurface = themeCustomSurfaceFromApi(web.themeCustomSurface)
+  }
+  if ('customCss' in web && typeof web.customCss === 'string') patch.customCss = web.customCss
+  if ('historyWindowMinutes' in web) {
+    const hw = Number(web.historyWindowMinutes)
+    if (Number.isFinite(hw)) {
+      patch.historyWindowMinutes = Math.min(Math.max(Math.round(hw), 10), 24 * 60)
+    }
+  }
+  if ('processStaleSeconds' in web) {
+    const st = Number(web.processStaleSeconds)
+    if (Number.isFinite(st)) {
+      patch.processStaleSeconds = Math.min(Math.max(Math.round(st), 30), 24 * 60 * 60)
+    }
+  }
+  if ('appMessageRules' in web) patch.appMessageRules = normalizeRulesImport(web.appMessageRules)
+  if ('appBlacklist' in web) patch.appBlacklist = normalizeStringListImport(web.appBlacklist)
+  if ('appWhitelist' in web) patch.appWhitelist = normalizeStringListImport(web.appWhitelist)
+  if ('appFilterMode' in web) {
+    const mode = String(web.appFilterMode ?? '').toLowerCase()
+    patch.appFilterMode = mode === 'whitelist' ? 'whitelist' : 'blacklist'
+  }
+  if ('appNameOnlyList' in web) patch.appNameOnlyList = normalizeStringListImport(web.appNameOnlyList)
+  if ('pageLockEnabled' in web && typeof web.pageLockEnabled === 'boolean') {
+    patch.pageLockEnabled = web.pageLockEnabled
+  }
+  if ('currentlyText' in web && typeof web.currentlyText === 'string') {
+    patch.currentlyText = web.currentlyText.trim() || '当前状态'
+  }
+  if ('earlierText' in web && typeof web.earlierText === 'string') {
+    patch.earlierText = web.earlierText.trim() || '最近的随想录'
+  }
+  if ('adminText' in web && typeof web.adminText === 'string') {
+    patch.adminText = web.adminText.trim() || 'admin'
+  }
+  if ('autoAcceptNewDevices' in web && typeof web.autoAcceptNewDevices === 'boolean') {
+    patch.autoAcceptNewDevices = web.autoAcceptNewDevices
+  }
+  return patch
 }
 
 interface SiteConfig {
@@ -338,6 +455,45 @@ export function WebSettings() {
     }
   }
 
+  const applyImportConfig = async () => {
+    setMessage('')
+    let raw = ''
+    try {
+      raw = (await navigator.clipboard.readText()).trim()
+    } catch {
+      raw = ''
+    }
+    if (!raw) {
+      raw = (window.prompt('请粘贴 Base64 接入配置（与「一键复制接入配置」导出格式相同）') ?? '').trim()
+    }
+    if (!raw) {
+      setMessage('未获取到内容')
+      return
+    }
+    const parsed = parseExportPayload(raw)
+    if (!parsed) {
+      setMessage('格式无效：请确认是本站「一键复制接入配置」导出的 Base64 全文')
+      return
+    }
+    if (
+      !window.confirm(
+        '将用导入包中的「网页配置」覆盖当前表单（不含页面锁密码、不含 API Token）。确定继续？',
+      )
+    ) {
+      return
+    }
+    const partial = webPayloadToFormPatch(parsed.web)
+    setForm((prev) => ({
+      ...prev,
+      ...partial,
+      pageLockPassword: '',
+    }))
+    setBlacklistInput('')
+    setWhitelistInput('')
+    setNameOnlyListInput('')
+    setMessage('已写入表单，请核对后点击「保存配置」。API Token 需在原站点单独管理或重新创建。')
+  }
+
   if (loading) {
     return <div className="text-sm text-muted-foreground">加载配置中...</div>
   }
@@ -373,27 +529,28 @@ export function WebSettings() {
       </div>
 
       <div className="space-y-2">
-        <Label>主题预设</Label>
-        <select
-          value={form.themePreset}
-          onChange={(e) => patch('themePreset', e.target.value)}
-          className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-        >
-          <option value="basic">Basic - 默认主题</option>
-          <option value="obsidian">Obsidian - 纯黑极简</option>
-          <option value="mono">Mono - 纯白极简</option>
-          <option value="midnight">Midnight - 深邃蓝紫</option>
-          <option value="ocean">Ocean - 深海蓝绿</option>
-          <option value="nord">Nord - 北欧冷淡</option>
-          <option value="forest">Forest - 自然森林</option>
-          <option value="sakura">Sakura - 柔和樱花</option>
-          <option value="lavender">Lavender - 淡雅薰衣草</option>
-          <option value="amber">Amber - 温暖琥珀</option>
-          <option value="customSurface">Custom surface - 自定义背景 / 圆角 / 配色</option>
-        </select>
+        <Label htmlFor="theme-preset">主题预设</Label>
+        <Select value={form.themePreset} onValueChange={(v) => patch('themePreset', v)}>
+          <SelectTrigger id="theme-preset" className="w-full">
+            <SelectValue placeholder="选择主题预设" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="basic">Basic - 默认主题</SelectItem>
+            <SelectItem value="obsidian">Obsidian - 纯黑极简</SelectItem>
+            <SelectItem value="mono">Mono - 纯白极简</SelectItem>
+            <SelectItem value="midnight">Midnight - 深邃蓝紫</SelectItem>
+            <SelectItem value="ocean">Ocean - 深海蓝绿</SelectItem>
+            <SelectItem value="nord">Nord - 北欧冷淡</SelectItem>
+            <SelectItem value="forest">Forest - 自然森林</SelectItem>
+            <SelectItem value="sakura">Sakura - 柔和樱花</SelectItem>
+            <SelectItem value="lavender">Lavender - 淡雅薰衣草</SelectItem>
+            <SelectItem value="amber">Amber - 温暖琥珀</SelectItem>
+            <SelectItem value="customSurface">Custom surface - 自定义背景 / 圆角 / 配色</SelectItem>
+          </SelectContent>
+        </Select>
         <p className="text-xs text-muted-foreground">
           深色系：Obsidian、Midnight、Ocean、Nord | 浅色系：Mono、Forest、Sakura、Lavender、Amber |
-          Custom surface：可配页面色、渐变背景、圆角与是否显示光斑（偏个人站 / lemonkoi 式柔和布局）
+          Custom surface：可配页面色、渐变背景、圆角与是否显示光斑
         </p>
       </div>
 
@@ -413,16 +570,25 @@ export function WebSettings() {
             上面列出的多行是「各字段示例」，请分别填进对应输入框，不要把整段粘进某一个框。
             <code className="rounded bg-muted px-1">url(&quot;…&quot;)</code> 与后面的渐变要写在「动效背景层」里，用英文逗号连成一条{' '}
             <code className="rounded bg-muted px-1">background</code> 值（第一层画在最上）。
+            「整页 background」写在 <code className="rounded bg-muted px-1">body</code> 上，与「页面底色」分开。
             主题预设必须选 Custom surface，保存后才会注入首页。
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>页面底色 (--background)</Label>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>页面底色（仅 background-color / 令牌）</Label>
+              <p className="text-xs text-muted-foreground">
+                对应 <code className="rounded bg-muted px-1">--background</code>、
+                <code className="rounded bg-muted px-1">--color-background</code>
+                ，供 Tailwind <code className="rounded bg-muted px-1">bg-background</code> 等使用；不会生成{' '}
+                <code className="rounded bg-muted px-1">background:</code> 简写。
+                全屏的 <code className="rounded bg-muted px-1">.animated-bg</code> 叠在{' '}
+                <code className="rounded bg-muted px-1">body</code> 上面：若下面「动效背景层」留空，仍会使用内置暖色渐变盖住这里，看起来像「没改底色」——请勾选「关闭动效渐变层」或改写下方的动效层。
+              </p>
               <Input
                 value={form.themeCustomSurface.background}
                 onChange={(e) => patchThemeSurface('background', e.target.value)}
                 placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.background}
-                className="font-mono text-xs"
+                className="font-mono text-xs max-w-xl"
               />
             </div>
             <div className="space-y-2">
@@ -481,13 +647,42 @@ export function WebSettings() {
             </div>
           </div>
           <div className="space-y-2">
+            <Label>整页 background（body）</Label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              注入为 <code className="rounded bg-muted px-1">body</code> 的{' '}
+              <code className="rounded bg-muted px-1">background:</code> 简写（渐变、
+              <code className="rounded bg-muted px-1">url()</code>、多图层）。与上一项「页面底色」独立；留空则不写，页面仍只用令牌上的{' '}
+              <code className="rounded bg-muted px-1">background-color</code>。
+              若未关闭下方的动效渐变层，<code className="rounded bg-muted px-1">.animated-bg</code> 仍会铺在全屏最底层之上，可能挡住你在这里设的图/渐变。
+            </p>
+            <textarea
+              rows={4}
+              value={form.themeCustomSurface.bodyBackground}
+              onChange={(e) => patchThemeSurface('bodyBackground', e.target.value)}
+              placeholder='e.g. url("https://…") center/cover no-repeat, linear-gradient(168deg, oklch(0.98 0.01 82), oklch(0.94 0.02 78))'
+              className="w-full px-3 py-2 border rounded-md bg-background text-xs font-mono leading-relaxed"
+            />
+          </div>
+          <div className="space-y-2">
             <Label>动效背景层 (.animated-bg)</Label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              固定全屏、在正文后面；留空时使用内置默认渐变（不是透明）。只想让「页面底色」或「整页 background」露出来请勾选下一项。
+            </p>
+            <Label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.themeCustomSurface.transparentAnimatedBg}
+                onChange={(e) => patchThemeSurface('transparentAnimatedBg', e.target.checked)}
+              />
+              <span className="text-sm">关闭动效渐变层（本层透明，只见页面底色 / body 背景）</span>
+            </Label>
             <textarea
               rows={5}
               value={form.themeCustomSurface.animatedBg}
               onChange={(e) => patchThemeSurface('animatedBg', e.target.value)}
               placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.animatedBg}
-              className="w-full px-3 py-2 border rounded-md bg-background text-xs font-mono leading-relaxed"
+              disabled={form.themeCustomSurface.transparentAnimatedBg}
+              className="w-full px-3 py-2 border rounded-md bg-background text-xs font-mono leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <Label className="flex items-center gap-2 cursor-pointer">
@@ -984,10 +1179,17 @@ export function WebSettings() {
         <Button onClick={save} disabled={saving}>
           {saving ? '保存中...' : '保存配置'}
         </Button>
-        <Button type="button" variant="outline" onClick={copyExportConfig}>
+        <Button type="button" variant="outline" onClick={() => void copyExportConfig()}>
           一键复制接入配置（Base64）
         </Button>
+        <Button type="button" variant="outline" onClick={() => void applyImportConfig()}>
+          一键写入配置
+        </Button>
       </div>
+      <p className="text-xs text-muted-foreground">
+        「一键写入配置」会尝试从剪贴板读取 Base64；若无权限或剪贴板为空，将弹出粘贴框。仅合并导出包中的网页字段到本页表单，不包含
+        Token；写入后需手动保存。
+      </p>
     </div>
   )
 }

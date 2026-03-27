@@ -8,6 +8,7 @@ import { verifySiteLockSession } from '@/lib/auth'
 import { SiteLockForm } from '@/components/site-lock-form'
 import { getThemePresetCss } from '@/lib/theme-css'
 import { LayoutFooter } from '@/components/layout-footer'
+import { ContentReadingPanel } from '@/components/content-reading-panel'
 
 // 强制动态渲染，确保每次请求都获取最新数据
 export const dynamic = 'force-dynamic'
@@ -75,35 +76,37 @@ export default async function Home() {
 
       <main className="min-h-screen relative">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-24">
-          {/* Profile + current: tighter vertical rhythm */}
-          <div className="flex flex-col gap-4">
-            <UserProfile
-              name={userName}
-              bio={userBio}
-              avatarUrl={avatarUrl}
-              note={userNote}
-            />
+          <ContentReadingPanel className="p-5 sm:p-6">
+            {/* Profile + current: tighter vertical rhythm */}
+            <div className="flex flex-col gap-4">
+              <UserProfile
+                name={userName}
+                bio={userBio}
+                avatarUrl={avatarUrl}
+                note={userNote}
+              />
 
-            <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-            <section>
-              <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
-                {currentlyText}
+              <section>
+                <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
+                  {currentlyText}
+                </h2>
+                <CurrentStatus />
+              </section>
+            </div>
+
+            {/* Timeline */}
+            <section className="mt-8">
+              <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
+                {earlierText}
               </h2>
-              <CurrentStatus />
+              <InspirationHomeSection
+                entries={inspirationHomeEntries}
+                showArchiveLink={inspirationTotal > 3}
+              />
             </section>
-          </div>
-
-          {/* Timeline */}
-          <section className="mt-8">
-            <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
-              {earlierText}
-            </h2>
-            <InspirationHomeSection
-              entries={inspirationHomeEntries}
-              showArchiveLink={inspirationTotal > 3}
-            />
-          </section>
+          </ContentReadingPanel>
         </div>
 
         <LayoutFooter adminText={adminText} />

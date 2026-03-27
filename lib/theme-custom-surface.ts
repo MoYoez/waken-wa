@@ -5,6 +5,7 @@
 
 export type ThemeCustomSurfaceFields = {
   background?: string
+  bodyBackground?: string
   animatedBg?: string
   primary?: string
   foreground?: string
@@ -13,6 +14,8 @@ export type ThemeCustomSurfaceFields = {
   mutedForeground?: string
   radius?: string
   hideFloatingOrbs?: boolean
+  /** When true, `.animated-bg` is transparent so body / 页面底色 shows through (default gradient is skipped). */
+  transparentAnimatedBg?: boolean
 }
 
 const MAX_SHORT = 2400
@@ -106,9 +109,10 @@ function sanitizeCssUrls(css: string): string {
 
 /** Defaults inspired by soft personal / “paper + warm gradient” landing pages. */
 export const THEME_CUSTOM_SURFACE_DEFAULTS: Required<
-  Omit<ThemeCustomSurfaceFields, 'hideFloatingOrbs'>
+  Omit<ThemeCustomSurfaceFields, 'hideFloatingOrbs' | 'transparentAnimatedBg'>
 > & { hideFloatingOrbs: boolean } = {
   background: 'oklch(0.97 0.018 85)',
+  bodyBackground: '',
   animatedBg:
     'radial-gradient(ellipse 120% 70% at 50% -25%, oklch(0.9 0.05 72 / 0.42), transparent), radial-gradient(ellipse 75% 55% at 100% 100%, oklch(0.86 0.06 55 / 0.22), transparent), linear-gradient(168deg, oklch(0.98 0.014 82) 0%, oklch(0.936 0.022 78) 100%)',
   primary: 'oklch(0.46 0.085 52)',
@@ -134,6 +138,16 @@ export function sanitizeThemeCssValue(input: unknown, maxLen: number): string {
   return s
 }
 
+function readBackgroundField(o: Record<string, unknown>): unknown {
+  const v =
+    o.background ??
+    o.backendColor ??
+    o.backend_color ??
+    o['backend-color'] ??
+    o['--backend-color']
+  return v
+}
+
 /** Normalizes client/API payload for DB and CSS generation. */
 export function parseThemeCustomSurface(raw: unknown): ThemeCustomSurfaceFields {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -141,7 +155,8 @@ export function parseThemeCustomSurface(raw: unknown): ThemeCustomSurfaceFields 
   }
   const o = raw as Record<string, unknown>
   return {
-    background: sanitizeThemeCssValue(o.background, MAX_SHORT),
+    background: sanitizeThemeCssValue(readBackgroundField(o), MAX_SHORT),
+    bodyBackground: sanitizeThemeCssValue(o.bodyBackground, MAX_ANIMATED),
     animatedBg: sanitizeThemeCssValue(o.animatedBg, MAX_ANIMATED),
     primary: sanitizeThemeCssValue(o.primary, MAX_SHORT),
     foreground: sanitizeThemeCssValue(o.foreground, MAX_SHORT),
@@ -151,12 +166,19 @@ export function parseThemeCustomSurface(raw: unknown): ThemeCustomSurfaceFields 
     radius: sanitizeThemeCssValue(o.radius, MAX_RADIUS),
     hideFloatingOrbs:
       typeof o.hideFloatingOrbs === 'boolean' ? o.hideFloatingOrbs : undefined,
+    transparentAnimatedBg:
+      typeof o.transparentAnimatedBg === 'boolean'
+        ? o.transparentAnimatedBg
+        : undefined,
   }
 }
 
 function pick(
   parsed: ThemeCustomSurfaceFields,
-  key: keyof Omit<typeof THEME_CUSTOM_SURFACE_DEFAULTS, 'hideFloatingOrbs'>,
+  key: keyof Omit<
+    typeof THEME_CUSTOM_SURFACE_DEFAULTS,
+    'hideFloatingOrbs'
+  >,
 ): string {
   const v = parsed[key]
   const s = typeof v === 'string' ? v.trim() : ''
@@ -170,11 +192,18 @@ function resolveHideOrbs(parsed: ThemeCustomSurfaceFields): boolean {
   return THEME_CUSTOM_SURFACE_DEFAULTS.hideFloatingOrbs
 }
 
+function resolveTransparentAnimatedBg(parsed: ThemeCustomSurfaceFields): boolean {
+  return parsed.transparentAnimatedBg === true
+}
+
 /** Emits CSS for preset `customSurface`. */
 export function buildCustomSurfaceCss(themeCustomSurface: unknown): string {
   const parsed = parseThemeCustomSurface(themeCustomSurface)
   const background = pick(parsed, 'background')
+  const bodyBackground = pick(parsed, 'bodyBackground')
   const animatedBg = pick(parsed, 'animatedBg')
+  const transparentAnimatedBg = resolveTransparentAnimatedBg(parsed)
+  const animatedBgPaint = transparentAnimatedBg ? 'transparent' : animatedBg
   const primary = pick(parsed, 'primary')
   const foreground = pick(parsed, 'foreground')
   const card = pick(parsed, 'card')
@@ -187,12 +216,21 @@ export function buildCustomSurfaceCss(themeCustomSurface: unknown): string {
     ? '.floating-orb{display:none!important;}'
     : ''
 
+  const bodyBackgroundTrimmed = bodyBackground.trim()
+  // After `background` shorthand, set longhands so images scale like object-fit: cover (fill viewport, crop if aspect mismatch).
+  const bodyBackgroundCss = bodyBackgroundTrimmed
+    ? `body {\n  background: ${bodyBackgroundTrimmed};\n  background-position: 50% 50%;\n  background-size: cover;\n  background-repeat: no-repeat;\n}\n`
+    : ''
+
   return `
 /* customSurface: ensure these rules win over globals.css :root (same specificity, later in DOM) */
 :root {
   --radius: ${radius};
+  /* Page surface color only (Tailwind bg-background → background-color). */
   --background: ${background};
+  --color-background: ${background};
   --foreground: ${foreground};
+  --color-foreground: ${foreground};
   --card: ${card};
   --card-foreground: ${foreground};
   --popover: ${card};
@@ -210,8 +248,9 @@ export function buildCustomSurfaceCss(themeCustomSurface: unknown): string {
   --ring: ${primary};
   --online: oklch(0.58 0.15 150);
 }
+${bodyBackgroundCss}
 .animated-bg {
-  background: ${animatedBg};
+  background: ${animatedBgPaint};
   animation: none;
 }
 ${hideOrbsCss}

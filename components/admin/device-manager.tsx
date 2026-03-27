@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -188,19 +195,23 @@ export function DeviceManager({
           </div>
           <div className="space-y-2">
             <Label htmlFor="new-device-token">绑定 Token（可选）</Label>
-            <select
-              id="new-device-token"
-              value={newTokenId}
-              onChange={(e) => setNewTokenId(e.target.value)}
-              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            <Select
+              value={newTokenId || 'none'}
+              onValueChange={(v) => setNewTokenId(v === 'none' ? '' : v)}
             >
-              <option value="">不绑定</option>
-              {tokens.map((t) => (
-                <option key={t.id} value={String(t.id)}>
-                  {t.name} {t.isActive ? '' : '(disabled)'}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="new-device-token" className="w-full">
+                <SelectValue placeholder="不绑定" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">不绑定</SelectItem>
+                {tokens.map((t) => (
+                  <SelectItem key={t.id} value={String(t.id)}>
+                    {t.name}
+                    {!t.isActive ? ' (disabled)' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="space-y-2">
@@ -246,20 +257,23 @@ export function DeviceManager({
           </div>
           <div className="space-y-2">
             <Label htmlFor="device-status">状态</Label>
-            <select
-              id="device-status"
-              value={status}
-              onChange={(e) => {
-                setStatus(e.target.value)
+            <Select
+              value={status || 'all'}
+              onValueChange={(v) => {
+                setStatus(v === 'all' ? '' : v)
                 setPage(0)
               }}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="">全部</option>
-              <option value="active">active</option>
-              <option value="pending">pending</option>
-              <option value="revoked">revoked</option>
-            </select>
+              <SelectTrigger id="device-status" className="w-full min-w-[10rem] sm:w-[11rem]">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部</SelectItem>
+                <SelectItem value="active">active</SelectItem>
+                <SelectItem value="pending">pending</SelectItem>
+                <SelectItem value="revoked">revoked</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

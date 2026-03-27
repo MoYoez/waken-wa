@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import prisma from '@/lib/prisma'
 import { MarkdownContent } from '@/components/admin/markdown-content'
+import { ContentReadingPanel } from '@/components/content-reading-panel'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,45 +44,47 @@ export default async function InspirationDetailPage({
   return (
     <main className="min-h-screen relative">
       <article className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-24">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground mb-8">
-          <Link href="/" className="hover:text-foreground transition-colors">
-            ← 首页
-          </Link>
-          <Link href="/inspiration" className="hover:text-foreground transition-colors">
-            全部随想录
-          </Link>
-        </div>
-
-        {row.imageDataUrl ? (
-          <div className="mb-6 rounded-md overflow-hidden border border-border bg-muted/30">
-            <img
-              src={row.imageDataUrl}
-              alt=""
-              className="w-full max-h-[min(70vh,28rem)] object-cover object-center"
-            />
+        <ContentReadingPanel className="p-5 sm:p-6">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground mb-8">
+            <Link href="/" className="hover:text-foreground transition-colors">
+              ← 首页
+            </Link>
+            <Link href="/inspiration" className="hover:text-foreground transition-colors">
+              全部随想录
+            </Link>
           </div>
-        ) : null}
 
-        <header className="space-y-2 mb-6">
-          <h1 className="text-lg font-semibold text-foreground">
-            {row.title?.trim() ? row.title : '（无标题）'}
-          </h1>
-          <time className="text-xs text-muted-foreground tabular-nums block">
-            {format(new Date(createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
-          </time>
-        </header>
+          {row.imageDataUrl ? (
+            <div className="mb-6 rounded-md overflow-hidden border border-border bg-muted/30">
+              <img
+                src={row.imageDataUrl}
+                alt=""
+                className="w-full max-h-[min(70vh,28rem)] object-cover object-center"
+              />
+            </div>
+          ) : null}
 
-        {row.statusSnapshot ? (
-          <div className="mb-6 rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap">
-            {row.statusSnapshot}
-          </div>
-        ) : null}
+          <header className="space-y-2 mb-6">
+            <h1 className="text-lg font-semibold text-foreground">
+              {row.title?.trim() ? row.title : '（无标题）'}
+            </h1>
+            <time className="text-xs text-muted-foreground tabular-nums block">
+              {format(new Date(createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
+            </time>
+          </header>
 
-        <MarkdownContent
-          markdown={row.content}
-          className="text-sm text-muted-foreground"
-          imageClassName="max-h-[min(70vh,24rem)] w-auto rounded-md border border-border/60 my-4"
-        />
+          {row.statusSnapshot ? (
+            <div className="mb-6 rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap">
+              {row.statusSnapshot}
+            </div>
+          ) : null}
+
+          <MarkdownContent
+            markdown={row.content}
+            className="text-sm text-muted-foreground"
+            imageClassName="max-h-[min(70vh,24rem)] w-auto rounded-md border border-border/60 my-4"
+          />
+        </ContentReadingPanel>
       </article>
     </main>
   )

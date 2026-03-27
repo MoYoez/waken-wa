@@ -19,6 +19,7 @@ export function InspirationArchiveList() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [initialDone, setInitialDone] = useState(false)
+  const [reachedEnd, setReachedEnd] = useState(false)
 
   const itemsRef = useRef<InspirationHomeItem[]>([])
   const totalRef = useRef(0)
@@ -35,6 +36,7 @@ export function InspirationArchiveList() {
     const t = totalRef.current
     if (t > 0 && len >= t) {
       doneRef.current = true
+      if (len > 0) setReachedEnd(true)
       return
     }
 
@@ -46,6 +48,7 @@ export function InspirationArchiveList() {
       const data = await res.json()
       if (!data?.success) {
         doneRef.current = true
+        if (len > 0) setReachedEnd(true)
         return
       }
 
@@ -60,12 +63,13 @@ export function InspirationArchiveList() {
 
       if (batch.length === 0) {
         doneRef.current = true
+        if (len > 0) setReachedEnd(true)
         return
       }
 
       setItems((prev) => {
         const merged = [...prev, ...batch]
-        if (merged.length >= nextTotal) doneRef.current = true
+        if (nextTotal > 0 && merged.length >= nextTotal) doneRef.current = true
         return merged
       })
     } finally {
@@ -78,6 +82,12 @@ export function InspirationArchiveList() {
   useEffect(() => {
     void loadNext()
   }, [loadNext])
+
+  useEffect(() => {
+    if (!initialDone || loading) return
+    if (items.length === 0 || total <= 0) return
+    if (items.length >= total) setReachedEnd(true)
+  }, [initialDone, loading, items.length, total])
 
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
@@ -158,6 +168,12 @@ export function InspirationArchiveList() {
         <div className="flex justify-center py-4 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" aria-label="Loading more" />
         </div>
+      ) : null}
+
+      {reachedEnd ? (
+        <p className="text-center text-xs text-muted-foreground pt-2 pb-1" role="status">
+          到底了！
+        </p>
       ) : null}
     </div>
   )

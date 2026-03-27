@@ -23,7 +23,7 @@ function GitHubMark({ className }: { className?: string }) {
 
 export function LayoutFooter({ adminText }: { adminText: string }) {
   return (
-    <footer className="layout-footer border-t border-border/50 mt-16 backdrop-blur-sm">
+    <footer className="layout-footer border-t border-border/50 mt-16 bg-card/90 backdrop-blur-md">
       <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground">
           <p className="flex flex-wrap items-center justify-center gap-x-1 gap-y-1 text-center sm:justify-start sm:text-left">
