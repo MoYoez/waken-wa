@@ -12,17 +12,15 @@ export function isPostgresConnectionUrl(value: string | undefined): boolean {
 
 /**
  * First standard postgres URL among env vars.
- * Priority: POSTGRES_URL_NON_POOLING (direct), then DATABASE_URL, POSTGRES_URL, POSTGRES_PRISMA_URL.
+ * Priority: POSTGRES_PRISMA_URL, then DATABASE_URL, then POSTGRES_URL.
  */
 export function pickPostgresUrlFromEnv(): string | null {
-  const np = process.env.POSTGRES_URL_NON_POOLING?.trim()
+  const prisma = process.env.POSTGRES_PRISMA_URL?.trim()
   const a = process.env.DATABASE_URL?.trim()
   const b = process.env.POSTGRES_URL?.trim()
-  const c = process.env.POSTGRES_PRISMA_URL?.trim()
-  if (isPostgresConnectionUrl(np)) return np!
+  if (isPostgresConnectionUrl(prisma)) return prisma!
   if (isPostgresConnectionUrl(a)) return a!
   if (isPostgresConnectionUrl(b)) return b!
-  if (isPostgresConnectionUrl(c)) return c!
   return null
 }
 
@@ -60,7 +58,7 @@ function readGeneratedDatasourceProvider(): 'postgresql' | 'sqlite' | null {
 
 /**
  * When Client was generated with schema.postgres.prisma, ensure DATABASE_URL is a postgres URL
- * (copy from POSTGRES_URL_NON_POOLING / POSTGRES_URL / etc. if needed).
+ * (copy from POSTGRES_PRISMA_URL / POSTGRES_URL / etc. if needed).
  */
 export function applyDatabaseUrlAliases(): void {
   const picked = pickPostgresUrlFromEnv()

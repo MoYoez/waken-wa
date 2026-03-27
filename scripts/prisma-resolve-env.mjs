@@ -42,14 +42,12 @@ export function isPostgresUrl(s) {
 }
 
 export function pickPostgresUrl() {
-  const np = process.env.POSTGRES_URL_NON_POOLING?.trim()
+  const prisma = process.env.POSTGRES_PRISMA_URL?.trim()
   const a = process.env.DATABASE_URL?.trim()
   const b = process.env.POSTGRES_URL?.trim()
-  const c = process.env.POSTGRES_PRISMA_URL?.trim()
-  if (isPostgresUrl(np)) return np
+  if (isPostgresUrl(prisma)) return prisma
   if (isPostgresUrl(a)) return a
   if (isPostgresUrl(b)) return b
-  if (isPostgresUrl(c)) return c
   return null
 }
 
@@ -80,7 +78,7 @@ export function resolvePrismaEnv() {
     const pgUrl = pickPostgresUrl()
     if (!pgUrl) {
       throw new Error(
-        'PostgreSQL: set POSTGRES_URL_NON_POOLING, DATABASE_URL, or POSTGRES_URL (postgres:// or postgresql://...)',
+        'PostgreSQL: set POSTGRES_PRISMA_URL, DATABASE_URL, or POSTGRES_URL (postgres:// or postgresql://...)',
       )
     }
     process.env.DATABASE_URL = pgUrl

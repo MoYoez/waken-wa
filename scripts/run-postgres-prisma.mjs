@@ -1,6 +1,6 @@
 /**
- * Runs `npx prisma ...` with DATABASE_URL set from env (priority: POSTGRES_URL_NON_POOLING,
- * then DATABASE_URL, POSTGRES_URL, POSTGRES_PRISMA_URL).
+ * Runs `npx prisma ...` with DATABASE_URL set from env (priority: POSTGRES_PRISMA_URL,
+ * then DATABASE_URL, then POSTGRES_URL).
  */
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -39,14 +39,12 @@ function isPostgresUrl(s) {
 }
 
 function pickPostgresUrl() {
-  const np = process.env.POSTGRES_URL_NON_POOLING?.trim()
+  const prisma = process.env.POSTGRES_PRISMA_URL?.trim()
   const a = process.env.DATABASE_URL?.trim()
   const b = process.env.POSTGRES_URL?.trim()
-  const c = process.env.POSTGRES_PRISMA_URL?.trim()
-  if (isPostgresUrl(np)) return np
+  if (isPostgresUrl(prisma)) return prisma
   if (isPostgresUrl(a)) return a
   if (isPostgresUrl(b)) return b
-  if (isPostgresUrl(c)) return c
   return null
 }
 
@@ -59,7 +57,7 @@ if (prismaArgs.length === 0) {
 const picked = pickPostgresUrl()
 if (!picked) {
   console.error(
-    '[prisma-postgres] Set POSTGRES_URL_NON_POOLING, DATABASE_URL, or POSTGRES_URL (postgresql://... or postgres://...)',
+    '[prisma-postgres] Set POSTGRES_PRISMA_URL, DATABASE_URL, or POSTGRES_URL (postgresql://... or postgres://...)',
   )
   process.exit(1)
 }
