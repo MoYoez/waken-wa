@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
+import { getActivityFeedData } from '@/lib/activity-feed'
+
+function formatStatusSnapshotFromFeed(feed: Awaited<ReturnType<typeof getActivityFeedData>>): string | null {
+  const lines = feed.activeStatuses
+    .map((s: { statusText?: string }) => String(s?.statusText ?? '').trim())
+    .filter(Boolean)
+  if (lines.length === 0) return null
+  return lines.join('\n')
+}
 
 // Force dynamic rendering, disable caching
 export const dynamic = 'force-dynamic'
@@ -72,6 +81,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
+    const attachCurrentStatus = Boolean(body?.attachCurrentStatus)
+
+    if (attachCurrentStatus && !session) {
+      return NextResponse.json(
+        { success: false, error: '仅登录管理员可附带当前状态' },
+        { status: 403 }
+      )
+    }
 
     const titleRaw = body?.title ?? body?.heading
     const title =
@@ -91,11 +108,18 @@ export async function POST(request: NextRequest) {
         ? imageDataUrlRaw.trim()
         : null
 
+    let statusSnapshot: string | null = null
+    if (attachCurrentStatus && session) {
+      const feed = await getActivityFeedData(50)
+      statusSnapshot = formatStatusSnapshotFromFeed(feed)
+    }
+
     const entry = await (prisma as any).inspirationEntry.create({
       data: {
         title: titleFinal,
         content,
         imageDataUrl,
+        statusSnapshot,
       },
     })
 

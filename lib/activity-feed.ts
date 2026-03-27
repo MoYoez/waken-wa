@@ -81,9 +81,22 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     ? config.appMessageRules
     : []
   const appBlacklist = parseProcessList(config?.appBlacklist)
+  const appWhitelist = parseProcessList(config?.appWhitelist)
+  const appFilterModeRaw = String(config?.appFilterMode ?? 'blacklist').trim().toLowerCase()
+  const appFilterMode = appFilterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
   const appNameOnlyList = parseProcessList(config?.appNameOnlyList)
   const blacklistSet = new Set(appBlacklist)
+  const whitelistSet = new Set(appWhitelist)
   const nameOnlySet = new Set(appNameOnlyList)
+
+  const passesAppFilter = (processName: string): boolean => {
+    const key = normalizeProcessName(processName)
+    if (appFilterMode === 'whitelist') {
+      if (whitelistSet.size === 0) return false
+      return whitelistSet.has(key)
+    }
+    return !blacklistSet.has(key)
+  }
   const since = new Date(Date.now() - historyWindowMinutes * 60 * 1000)
 
   // 获取所有未结束的活动，然后根据每条活动的 reportIntervalSeconds 判断是否过期
@@ -130,7 +143,7 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     take: Math.min(limit, 100),
   })
   const recentActivities = recentActivitiesRaw
-    .filter((item) => !blacklistSet.has(normalizeProcessName(item.processName)))
+    .filter((item) => passesAppFilter(item.processName))
     .map((item) =>
       nameOnlySet.has(normalizeProcessName(item.processName))
         ? { ...item, processTitle: null }
@@ -142,7 +155,7 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
   const seen = new Set<string>()
   for (const item of stillActive) {
     const processKey = normalizeProcessName(item.processName)
-    if (blacklistSet.has(processKey)) continue
+    if (!passesAppFilter(item.processName)) continue
     const key = String((item as any).generatedHashKey ?? '')
     if (!key) continue
     if (seen.has(key)) continue

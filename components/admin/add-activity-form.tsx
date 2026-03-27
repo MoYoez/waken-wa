@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +11,6 @@ interface AddActivityFormProps {
 }
 
 export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
-  const [generatedHashKey, setGeneratedHashKey] = useState('')
   const [device, setDevice] = useState('')
   const [processName, setProcessName] = useState('')
   const [processTitle, setProcessTitle] = useState('')
@@ -28,7 +27,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          generatedHashKey: generatedHashKey.trim(),
+          generatedHashKey: '',
           device,
           process_name: processName,
           process_title: processTitle || undefined,
@@ -39,7 +38,6 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
 
       if (data.success) {
         setMessage({ type: 'success', text: '活动已添加' })
-        setGeneratedHashKey('')
         setDevice('')
         setProcessName('')
         setProcessTitle('')
@@ -56,37 +54,6 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex-1 min-w-[200px] space-y-2">
-            <Label htmlFor="hashKey">GeneratedHashKey（Web 可不填）</Label>
-            <Input
-              id="hashKey"
-              placeholder="留空则使用后台 Web 预留设备"
-              value={generatedHashKey}
-              onChange={(e) => setGeneratedHashKey(e.target.value)}
-            />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() => {
-              const bytes = new Uint8Array(32)
-              crypto.getRandomValues(bytes)
-              const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-              setGeneratedHashKey(hex)
-            }}
-          >
-            <RefreshCw className="h-4 w-4 mr-1" />
-            生成随机 Key
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          留空时活动会记到 Web 预留设备。若填写 Key，须与「设备管理」中已启用设备的 Key 一致；生成后可在设备管理中用该 Key 新增设备。
-        </p>
-      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="device">设备名称</Label>
@@ -109,7 +76,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
           />
         </div>
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="title">进程标题（可选）</Label>
         <Input

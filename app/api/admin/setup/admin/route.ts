@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
       historyWindowMinutes,
       appMessageRules,
       appBlacklist,
+      appWhitelist,
+      appFilterMode,
       appNameOnlyList,
       processStaleSeconds,
       pageLockEnabled,
@@ -59,6 +61,14 @@ export async function POST(request: NextRequest) {
           .map((item: unknown) => String(item ?? '').trim())
           .filter((item: string) => item.length > 0)
       : []
+    const normalizedAppWhitelist = Array.isArray(appWhitelist)
+      ? appWhitelist
+          .map((item: unknown) => String(item ?? '').trim())
+          .filter((item: string) => item.length > 0)
+      : []
+    const normalizedAppFilterModeRaw = String(appFilterMode ?? 'blacklist').trim().toLowerCase()
+    const normalizedAppFilterMode =
+      normalizedAppFilterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
     const normalizedAppNameOnlyList = Array.isArray(appNameOnlyList)
       ? appNameOnlyList
           .map((item: unknown) => String(item ?? '').trim())
@@ -67,7 +77,7 @@ export async function POST(request: NextRequest) {
     const normalizedPageLockEnabled = Boolean(pageLockEnabled)
     const rawPageLockPassword = String(pageLockPassword ?? '').trim()
     const normalizedCurrentlyText = String(currentlyText ?? '').trim() || 'currently'
-    const normalizedEarlierText = String(earlierText ?? '').trim() || 'earlier'
+    const normalizedEarlierText = String(earlierText ?? '').trim() || '最近的随想录'
     const normalizedUpdatesText =
       String(updatesText ?? '').trim() || 'updates every 30 seconds'
     const normalizedAdminText = String(adminText ?? '').trim() || 'admin'
@@ -138,6 +148,8 @@ export async function POST(request: NextRequest) {
           historyWindowMinutes: normalizedHistoryWindowMinutes,
           appMessageRules: normalizedAppMessageRules,
           appBlacklist: normalizedAppBlacklist,
+          appWhitelist: normalizedAppWhitelist,
+          appFilterMode: normalizedAppFilterMode,
           appNameOnlyList: normalizedAppNameOnlyList,
           processStaleSeconds: normalizedProcessStaleSeconds,
           pageLockEnabled: normalizedPageLockEnabled,
@@ -158,6 +170,8 @@ export async function POST(request: NextRequest) {
           historyWindowMinutes: normalizedHistoryWindowMinutes,
           appMessageRules: normalizedAppMessageRules,
           appBlacklist: normalizedAppBlacklist,
+          appWhitelist: normalizedAppWhitelist,
+          appFilterMode: normalizedAppFilterMode,
           appNameOnlyList: normalizedAppNameOnlyList,
           processStaleSeconds: normalizedProcessStaleSeconds,
           pageLockEnabled: normalizedPageLockEnabled,

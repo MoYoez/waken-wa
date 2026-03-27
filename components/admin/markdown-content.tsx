@@ -1,10 +1,13 @@
 'use client'
 
+import { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Components } from 'react-markdown'
 
-const markdownComponents: Components = {
+const DEFAULT_IMG_CLASS = 'max-h-48 rounded-md border border-border my-2'
+
+const baseMarkdownComponents: Omit<Components, 'img'> = {
   h1: ({ children }) => (
     <h3 className="text-base font-semibold mt-3 mb-1 first:mt-0">{children}</h3>
   ),
@@ -47,13 +50,6 @@ const markdownComponents: Components = {
       </pre>
     )
   },
-  img: ({ src, alt }) => (
-    <img
-      src={src}
-      alt={alt || ''}
-      className="max-h-48 rounded-md border border-border my-2"
-    />
-  ),
   blockquote: ({ children }) => (
     <blockquote className="border-l-2 border-border pl-3 text-muted-foreground text-sm my-2">
       {children}
@@ -70,16 +66,29 @@ const markdownComponents: Components = {
   td: ({ children }) => <td className="border border-border px-2 py-1">{children}</td>,
 }
 
+function buildComponents(imageClassName: string): Components {
+  return {
+    ...baseMarkdownComponents,
+    img: ({ src, alt }) => (
+      <img src={src} alt={alt || ''} className={imageClassName} />
+    ),
+  }
+}
+
 export function MarkdownContent({
   markdown,
   className,
+  imageClassName = DEFAULT_IMG_CLASS,
 }: {
   markdown: string
   className?: string
+  /** Tailwind classes for rendered markdown images */
+  imageClassName?: string
 }) {
+  const components = useMemo(() => buildComponents(imageClassName), [imageClassName])
   return (
     <div className={className}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {markdown}
       </ReactMarkdown>
     </div>

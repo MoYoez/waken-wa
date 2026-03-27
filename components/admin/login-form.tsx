@@ -1,10 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+
+function safeNextPath(raw: string | null): string {
+  if (!raw) return '/admin'
+  try {
+    const u = new URL(raw, 'http://local.invalid')
+    if (u.pathname !== '/admin') return '/admin'
+    return `/admin${u.search}`
+  } catch {
+    return '/admin'
+  }
+}
 
 export function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -25,7 +37,8 @@ export function LoginForm() {
       const data = await res.json()
 
       if (data.success) {
-        router.push('/admin')
+        const next = safeNextPath(searchParams.get('next'))
+        router.push(next)
         router.refresh()
       } else {
         setError(data.error || 'Login failed')

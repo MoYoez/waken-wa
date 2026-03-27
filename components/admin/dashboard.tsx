@@ -25,14 +25,28 @@ import { AccountSettings } from './account-settings'
 import { InspirationManager } from './inspiration-manager'
 import { DeviceManager } from './device-manager'
 
+const VALID_TABS = new Set([
+  'overview',
+  'inspiration',
+  'activities',
+  'devices',
+  'tokens',
+  'account',
+  'settings',
+])
+
 interface DashboardProps {
   username: string
+  initialTab?: string
+  initialDeviceHash?: string
 }
 
-export function AdminDashboard({ username }: DashboardProps) {
+export function AdminDashboard({ username, initialTab, initialDeviceHash }: DashboardProps) {
   const router = useRouter()
   const [refreshKey, setRefreshKey] = useState(0)
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(() =>
+    initialTab && VALID_TABS.has(initialTab) ? initialTab : 'overview'
+  )
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -115,9 +129,6 @@ export function AdminDashboard({ username }: DashboardProps) {
                   打开设备管理
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                GeneratedHashKey 可留空以使用 Web 预留设备；若使用实体设备，请先在「设备管理」创建或绑定 Key。
-              </p>
               <AddActivityForm onSuccess={() => setRefreshKey((k) => k + 1)} />
             </div>
           </TabsContent>
@@ -130,7 +141,7 @@ export function AdminDashboard({ username }: DashboardProps) {
           </TabsContent>
 
           <TabsContent value="devices">
-            <DeviceManager />
+            <DeviceManager initialHashKey={initialDeviceHash} highlightHashKey={initialDeviceHash} />
           </TabsContent>
 
           <TabsContent value="tokens">

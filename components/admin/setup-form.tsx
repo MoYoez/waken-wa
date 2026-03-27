@@ -286,7 +286,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">“当前”区块标���</label>
+                  <label className="text-xs font-medium text-foreground">“当前”区块标题</label>
                   <p className="text-[11px] text-muted-foreground">首页活动详情区域的标题文案。</p>
                   <input
                     type="text"
@@ -297,13 +297,13 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">“更早”区块标题</label>
-                  <p className="text-[11px] text-muted-foreground">首页时间线区域的标题文案。</p>
+                  <label className="text-xs font-medium text-foreground">随想录区块标题</label>
+                  <p className="text-[11px] text-muted-foreground">首页第二区块（最近随想录列表）的标题文案。</p>
                   <input
                     type="text"
                     value={earlierText}
                     onChange={(e) => setEarlierText(e.target.value)}
-                    placeholder="例如：earlier / 更早"
+                    placeholder="例如：最近的随想录"
                     className="w-full px-3 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 </div>
@@ -358,6 +358,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
           }
         }}
         sourceUrl={cropSourceUrl}
+        aspectMode="square"
         outputSize={64}
         title="裁剪头像"
         description="请在图片上拖拽框选区域，确认后将生成 64x64 头像。"

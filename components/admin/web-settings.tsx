@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Dialog,
   DialogContent,
@@ -33,7 +34,9 @@ interface SiteConfig {
   historyWindowMinutes: number
   processStaleSeconds: number
   appMessageRules: Array<{ match: string; text: string }>
+  appFilterMode: 'blacklist' | 'whitelist'
   appBlacklist: string[]
+  appWhitelist: string[]
   appNameOnlyList: string[]
   pageLockEnabled: boolean
   pageLockPassword: string
@@ -49,6 +52,7 @@ export function WebSettings() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string>('')
   const [blacklistInput, setBlacklistInput] = useState('')
+  const [whitelistInput, setWhitelistInput] = useState('')
   const [nameOnlyListInput, setNameOnlyListInput] = useState('')
   // 裁剪弹窗状态
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)
@@ -68,12 +72,14 @@ export function WebSettings() {
     historyWindowMinutes: 120,
     processStaleSeconds: 500,
     appMessageRules: [],
+    appFilterMode: 'blacklist',
     appBlacklist: [],
+    appWhitelist: [],
     appNameOnlyList: [],
     pageLockEnabled: false,
     pageLockPassword: '',
     currentlyText: 'currently',
-    earlierText: 'earlier',
+    earlierText: '最近的随想录',
     updatesText: 'updates every 30 seconds',
     adminText: 'admin',
     autoAcceptNewDevices: false,
@@ -91,6 +97,13 @@ export function WebSettings() {
                 .map((item: unknown) => String(item ?? '').trim())
                 .filter((item: string) => item.length > 0)
             : []
+          const whitelist = Array.isArray(data.data.appWhitelist)
+            ? data.data.appWhitelist
+                .map((item: unknown) => String(item ?? '').trim())
+                .filter((item: string) => item.length > 0)
+            : []
+          const filterModeRaw = String(data.data.appFilterMode ?? 'blacklist').toLowerCase()
+          const appFilterMode = filterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
           const nameOnlyList = Array.isArray(data.data.appNameOnlyList)
             ? data.data.appNameOnlyList
                 .map((item: unknown) => String(item ?? '').trim())
@@ -106,12 +119,14 @@ export function WebSettings() {
             historyWindowMinutes: Number(data.data.historyWindowMinutes ?? 120),
             processStaleSeconds: Number(data.data.processStaleSeconds ?? 500),
             appMessageRules: rules,
+            appFilterMode,
             appBlacklist: blacklist,
+            appWhitelist: whitelist,
             appNameOnlyList: nameOnlyList,
             pageLockEnabled: Boolean(data.data.pageLockEnabled),
             pageLockPassword: '',
             currentlyText: data.data.currentlyText ?? 'currently',
-            earlierText: data.data.earlierText ?? 'earlier',
+            earlierText: data.data.earlierText ?? '最近的随想录',
             updatesText: data.data.updatesText ?? 'updates every 30 seconds',
             adminText: data.data.adminText ?? 'admin',
             autoAcceptNewDevices: Boolean(data.data.autoAcceptNewDevices),
@@ -217,6 +232,7 @@ export function WebSettings() {
 
       const parsedRules = normalizeRules(form.appMessageRules)
       const parsedBlacklist = normalizeStringList(form.appBlacklist)
+      const parsedWhitelist = normalizeStringList(form.appWhitelist)
       const parsedNameOnlyList = normalizeStringList(form.appNameOnlyList)
 
       const res = await fetch('/api/admin/settings', {
@@ -226,6 +242,7 @@ export function WebSettings() {
           ...form,
           appMessageRules: parsedRules,
           appBlacklist: parsedBlacklist,
+          appWhitelist: parsedWhitelist,
           appNameOnlyList: parsedNameOnlyList,
         }),
       })
@@ -471,8 +488,12 @@ export function WebSettings() {
           <Input value={form.currentlyText} onChange={(e) => patch('currentlyText', e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>历史区块标题</Label>
-          <Input value={form.earlierText} onChange={(e) => patch('earlierText', e.target.value)} />
+          <Label>随想录区块标题</Label>
+          <Input
+            value={form.earlierText}
+            onChange={(e) => patch('earlierText', e.target.value)}
+            placeholder="例如：最近的随想录"
+          />
         </div>
       </div>
 
@@ -570,65 +591,152 @@ export function WebSettings() {
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label>应用黑名单</Label>
-
-        <div className="flex items-end gap-2 flex-wrap">
-          <div className="flex-1 min-w-[240px]">
-            <Label htmlFor="blacklist-input">输入应用名（不区分大小写）</Label>
-            <Input
-              id="blacklist-input"
-              value={blacklistInput}
-              onChange={(e) => setBlacklistInput(e.target.value)}
-              placeholder="例如：WeChat.exe"
-            />
+      <div className="space-y-4 rounded-lg border border-border/60 bg-card/30 p-4">
+        <Label className="text-base">应用显示筛选</Label>
+        <RadioGroup
+          value={form.appFilterMode}
+          onValueChange={(v) => patch('appFilterMode', v as 'blacklist' | 'whitelist')}
+          className="gap-3"
+        >
+          <div className="flex items-start gap-3">
+            <RadioGroupItem value="blacklist" id="filter-blacklist" className="mt-0.5" />
+            <div className="space-y-1">
+              <Label htmlFor="filter-blacklist" className="font-medium cursor-pointer">
+                黑名单模式
+              </Label>
+              <p className="text-xs text-muted-foreground">列表中的应用将从当前状态与历史记录中隐藏。</p>
+            </div>
           </div>
-          <Button
-            type="button"
-            onClick={() => {
-              const value = blacklistInput.trim()
-              if (!value) return
-              const exists = form.appBlacklist.some((x) => x.toLowerCase() === value.toLowerCase())
-              if (exists) return
-              patch('appBlacklist', [...form.appBlacklist, value])
-              setBlacklistInput('')
-            }}
-          >
-            添加
-          </Button>
-        </div>
+          <div className="flex items-start gap-3">
+            <RadioGroupItem value="whitelist" id="filter-whitelist" className="mt-0.5" />
+            <div className="space-y-1">
+              <Label htmlFor="filter-whitelist" className="font-medium cursor-pointer">
+                白名单模式
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                仅列表中的应用会显示；白名单为空时不展示任何活动记录。
+              </p>
+            </div>
+          </div>
+        </RadioGroup>
 
-        {form.appBlacklist.length === 0 ? (
-          <p className="text-xs text-muted-foreground">暂无黑名单</p>
+        {form.appFilterMode === 'blacklist' ? (
+          <div className="space-y-3 pt-2 border-t border-border/50">
+            <Label htmlFor="blacklist-input">黑名单应用名</Label>
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="flex-1 min-w-[240px] space-y-2">
+                <p className="text-xs text-muted-foreground">不区分大小写，每行添加一个应用名。</p>
+                <Input
+                  id="blacklist-input"
+                  value={blacklistInput}
+                  onChange={(e) => setBlacklistInput(e.target.value)}
+                  placeholder="例如：WeChat.exe"
+                />
+              </div>
+              <Button
+                type="button"
+                className="shrink-0"
+                onClick={() => {
+                  const value = blacklistInput.trim()
+                  if (!value) return
+                  const exists = form.appBlacklist.some((x) => x.toLowerCase() === value.toLowerCase())
+                  if (exists) return
+                  patch('appBlacklist', [...form.appBlacklist, value])
+                  setBlacklistInput('')
+                }}
+              >
+                添加
+              </Button>
+            </div>
+
+            {form.appBlacklist.length === 0 ? (
+              <p className="text-xs text-muted-foreground">暂无黑名单条目</p>
+            ) : (
+              <ul className="space-y-3">
+                {form.appBlacklist.map((app, idx) => (
+                  <li
+                    key={`${app}-${idx}`}
+                    className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
+                  >
+                    <span className="text-sm text-foreground break-all">{app}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => patch('appBlacklist', form.appBlacklist.filter((_, i) => i !== idx))}
+                    >
+                      删除
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         ) : (
-          <ul className="space-y-2">
-            {form.appBlacklist.map((app, idx) => (
-              <li key={`${app}-${idx}`} className="flex items-center justify-between gap-3 rounded-md border bg-background/50 p-2">
-                <code className="text-sm font-mono text-foreground break-all">{app}</code>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => patch('appBlacklist', form.appBlacklist.filter((_, i) => i !== idx))}
-                >
-                  删除
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+          <div className="space-y-3 pt-2 border-t border-border/50">
+            <Label htmlFor="whitelist-input">白名单应用名</Label>
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="flex-1 min-w-[240px] space-y-2">
+                <p className="text-xs text-muted-foreground">不区分大小写；仅这些应用会出现在前台。</p>
+                <Input
+                  id="whitelist-input"
+                  value={whitelistInput}
+                  onChange={(e) => setWhitelistInput(e.target.value)}
+                  placeholder="例如：Code.exe"
+                />
+              </div>
+              <Button
+                type="button"
+                className="shrink-0"
+                onClick={() => {
+                  const value = whitelistInput.trim()
+                  if (!value) return
+                  const exists = form.appWhitelist.some((x) => x.toLowerCase() === value.toLowerCase())
+                  if (exists) return
+                  patch('appWhitelist', [...form.appWhitelist, value])
+                  setWhitelistInput('')
+                }}
+              >
+                添加
+              </Button>
+            </div>
 
-        <p className="text-xs text-muted-foreground">
-          命中黑名单的应用不会出现在当前状态和历史列表中（不区分大小写）。
-        </p>
+            {form.appWhitelist.length === 0 ? (
+              <p className="text-xs text-muted-foreground">白名单为空：前台不显示任何活动</p>
+            ) : (
+              <ul className="space-y-3">
+                {form.appWhitelist.map((app, idx) => (
+                  <li
+                    key={`${app}-${idx}`}
+                    className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
+                  >
+                    <span className="text-sm text-foreground break-all">{app}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => patch('appWhitelist', form.appWhitelist.filter((_, i) => i !== idx))}
+                    >
+                      删除
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <Label>仅显示应用名</Label>
 
-        <div className="flex items-end gap-2 flex-wrap">
-          <div className="flex-1 min-w-[240px]">
-            <Label htmlFor="nameOnly-input">输入应用名（不区分大小写）</Label>
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="flex-1 min-w-[240px] space-y-2">
+            <Label htmlFor="nameOnly-input" className="text-xs font-normal text-muted-foreground">
+              输入应用名（不区分大小写）
+            </Label>
             <Input
               id="nameOnly-input"
               value={nameOnlyListInput}
@@ -637,34 +745,36 @@ export function WebSettings() {
             />
           </div>
           <Button
-              type="button"
-              onClick={() => {
-                const value = nameOnlyListInput.trim()
-                if (!value) return
-                const exists = form.appNameOnlyList.some((x) => x.toLowerCase() === value.toLowerCase())
-                if (exists) return
-                patch('appNameOnlyList', [...form.appNameOnlyList, value])
-                setNameOnlyListInput('')
-              }}
-            >
-              添加
-            </Button>
+            type="button"
+            className="shrink-0"
+            onClick={() => {
+              const value = nameOnlyListInput.trim()
+              if (!value) return
+              const exists = form.appNameOnlyList.some((x) => x.toLowerCase() === value.toLowerCase())
+              if (exists) return
+              patch('appNameOnlyList', [...form.appNameOnlyList, value])
+              setNameOnlyListInput('')
+            }}
+          >
+            添加
+          </Button>
         </div>
 
         {form.appNameOnlyList.length === 0 ? (
           <p className="text-xs text-muted-foreground">暂无“仅显示应用名”配置</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {form.appNameOnlyList.map((app, idx) => (
               <li
                 key={`${app}-${idx}`}
-                className="flex items-center justify-between gap-3 rounded-md border bg-background/50 p-2"
+                className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
               >
-                <code className="text-sm font-mono text-foreground break-all">{app}</code>
+                <span className="text-sm text-foreground break-all">{app}</span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
+                  className="shrink-0"
                   onClick={() => patch('appNameOnlyList', form.appNameOnlyList.filter((_, i) => i !== idx))}
                 >
                   删除

@@ -1,18 +1,19 @@
-// Default: SQLite (local dev). Env: DATABASE_URL="file:./prisma/dev.db"
-// For PostgreSQL use prisma/schema.postgres.prisma and POSTGRES_PRISMA_URL.
+// PostgreSQL schema (Vercel / Supabase / self-hosted Postgres).
+// Use: prisma generate --schema prisma/schema.postgres.prisma
+// Env: POSTGRES_PRISMA_URL
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL")
 }
 
 model AdminUser {
   id           Int      @id @default(autoincrement())
-  username     String   @unique
+  username     String   @unique @db.VarChar(100)
   passwordHash String   @map("password_hash")
   createdAt    DateTime @default(now()) @map("created_at")
 
@@ -21,8 +22,8 @@ model AdminUser {
 
 model ApiToken {
   id         Int       @id @default(autoincrement())
-  name       String
-  token      String    @unique
+  name       String    @db.VarChar(200)
+  token      String    @unique @db.VarChar(64)
   isActive   Boolean   @default(true) @map("is_active")
   createdAt  DateTime  @default(now()) @map("created_at")
   lastUsedAt DateTime? @map("last_used_at")
@@ -33,10 +34,10 @@ model ApiToken {
 
 model ActivityLog {
   id                    Int       @id @default(autoincrement())
-  device                String
-  generatedHashKey      String    @map("generated_hash_key")
+  device                String    @db.VarChar(200)
+  generatedHashKey      String    @map("generated_hash_key") @db.VarChar(128)
   deviceId              Int?      @map("device_id")
-  processName           String    @map("process_name")
+  processName           String    @map("process_name") @db.VarChar(200)
   processTitle          String?   @map("process_title")
   startedAt             DateTime  @default(now()) @map("started_at")
   endedAt               DateTime? @map("ended_at")
@@ -51,9 +52,9 @@ model ActivityLog {
 
 model Device {
   id               Int           @id @default(autoincrement())
-  displayName      String        @map("display_name")
-  generatedHashKey String        @unique @map("generated_hash_key")
-  status           String        @default("active")
+  displayName      String        @map("display_name") @db.VarChar(200)
+  generatedHashKey String        @unique @map("generated_hash_key") @db.VarChar(128)
+  status           String        @default("active") @db.VarChar(20)
   apiTokenId       Int?          @map("api_token_id")
   lastSeenAt       DateTime?     @map("last_seen_at")
   createdAt        DateTime      @default(now()) @map("created_at")
@@ -66,25 +67,25 @@ model Device {
 
 model SiteConfig {
   id                   Int      @id @default(1)
-  userName             String   @map("user_name")
+  userName             String   @map("user_name") @db.VarChar(120)
   userBio              String   @map("user_bio")
   avatarUrl            String   @map("avatar_url")
   userNote             String   @map("user_note")
-  themePreset          String   @map("theme_preset") @default("basic")
+  themePreset          String   @map("theme_preset") @default("basic") @db.VarChar(50)
   customCss            String?  @map("custom_css")
   historyWindowMinutes Int      @map("history_window_minutes") @default(120)
   appMessageRules      Json?    @map("app_message_rules")
   appBlacklist         Json?    @map("app_blacklist")
   appWhitelist         Json?    @map("app_whitelist")
-  appFilterMode        String   @map("app_filter_mode") @default("blacklist")
+  appFilterMode        String   @map("app_filter_mode") @default("blacklist") @db.VarChar(20)
   appNameOnlyList      Json?    @map("app_name_only_list")
   processStaleSeconds  Int      @map("process_stale_seconds") @default(500)
   pageLockEnabled      Boolean  @map("page_lock_enabled") @default(false)
   pageLockPasswordHash String?  @map("page_lock_password_hash")
-  currentlyText        String   @map("currently_text") @default("currently")
-  earlierText          String   @map("earlier_text") @default("最近的随想录")
-  updatesText          String   @map("updates_text") @default("updates every 30 seconds")
-  adminText            String   @map("admin_text") @default("admin")
+  currentlyText        String   @map("currently_text") @db.VarChar(60) @default("currently")
+  earlierText          String   @map("earlier_text") @db.VarChar(60) @default("最近的随想录")
+  updatesText          String   @map("updates_text") @db.VarChar(120) @default("updates every 30 seconds")
+  adminText            String   @map("admin_text") @db.VarChar(30) @default("admin")
   autoAcceptNewDevices Boolean  @map("auto_accept_new_devices") @default(false)
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
@@ -95,11 +96,11 @@ model SiteConfig {
 model InspirationEntry {
   id Int @id @default(autoincrement())
 
-  title   String? @map("title")
-  content String  @map("content")
+  title   String? @map("title") @db.VarChar(200)
+  content String  @map("content") @db.Text
 
-  imageDataUrl String? @map("image_data_url")
-  statusSnapshot String? @map("status_snapshot")
+  imageDataUrl String? @map("image_data_url") @db.Text
+  statusSnapshot String? @map("status_snapshot") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Copy, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Copy, Link2, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,12 +34,18 @@ interface TokenOption {
   isActive: boolean
 }
 
-export function DeviceManager() {
+export function DeviceManager({
+  initialHashKey,
+  highlightHashKey,
+}: {
+  initialHashKey?: string
+  highlightHashKey?: string
+} = {}) {
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<DeviceItem[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(() => initialHashKey?.trim() ?? '')
   const [status, setStatus] = useState('')
   const [tokens, setTokens] = useState<TokenOption[]>([])
 
@@ -95,6 +101,14 @@ export function DeviceManager() {
     void fetchDevices()
   }, [fetchDevices])
 
+  useEffect(() => {
+    if (!highlightHashKey?.trim() || items.length === 0) return
+    const match = items.find((i) => i.generatedHashKey === highlightHashKey.trim())
+    if (!match) return
+    const el = document.getElementById(`device-row-${match.id}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [highlightHashKey, items])
+
   const createDevice = async () => {
     if (!newName.trim()) return
     setCreating(true)
@@ -148,6 +162,13 @@ export function DeviceManager() {
   const copyHash = async (hash: string) => {
     await navigator.clipboard.writeText(hash)
     setMessage('GeneratedHashKey 已复制')
+  }
+
+  const copyApprovalLink = async (hash: string) => {
+    const path = `/admin?tab=devices&hash=${encodeURIComponent(hash)}`
+    const url = typeof window !== 'undefined' ? `${window.location.origin}${path}` : path
+    await navigator.clipboard.writeText(url)
+    setMessage('审核链接已复制（登录后台后可直达该设备）')
   }
 
   return (
@@ -249,7 +270,15 @@ export function DeviceManager() {
         ) : (
           <div className="space-y-3">
             {items.map((item) => (
-              <div key={item.id} className="rounded-md border p-3 space-y-2">
+              <div
+                key={item.id}
+                id={`device-row-${item.id}`}
+                className={
+                  highlightHashKey?.trim() && item.generatedHashKey === highlightHashKey.trim()
+                    ? 'rounded-md border p-3 space-y-2 ring-2 ring-primary ring-offset-2 ring-offset-background'
+                    : 'rounded-md border p-3 space-y-2'
+                }
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-medium">{item.displayName}</p>
@@ -272,6 +301,15 @@ export function DeviceManager() {
                     </Button>
                     {item.status === 'pending' ? (
                       <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void copyApprovalLink(item.generatedHashKey)}
+                        >
+                          <Link2 className="h-4 w-4 mr-1" />
+                          复制审核链接
+                        </Button>
                         <Button
                           type="button"
                           variant="outline"

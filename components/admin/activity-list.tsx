@@ -97,25 +97,34 @@ export function ActivityList() {
 
   return (
     <div className="space-y-4">
-      {/* 搜索和刷新 */}
-      <div className="flex items-center gap-4">
-        <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="搜索进程名或标题..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Button type="submit" variant="secondary">
-            搜索
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-foreground">搜索活动</h3>
+        <div className="flex flex-wrap items-start gap-4">
+          <form onSubmit={handleSearch} className="flex flex-1 min-w-[240px] flex-wrap items-end gap-2">
+            <div className="flex-1 min-w-[200px] max-w-sm space-y-2">
+              <label htmlFor="activity-search" className="text-sm font-medium text-foreground">
+                关键字
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="activity-search"
+                  placeholder="搜索进程名或标题..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                  aria-label="按进程名或标题搜索活动"
+                />
+              </div>
+            </div>
+            <Button type="submit" variant="secondary" className="shrink-0">
+              搜索
+            </Button>
+          </form>
+          <Button variant="outline" size="icon" onClick={fetchActivities} className="shrink-0" aria-label="刷新列表">
+            <RefreshCw className="h-4 w-4" />
           </Button>
-        </form>
-        <Button variant="outline" size="icon" onClick={fetchActivities}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        </div>
       </div>
 
       {/* 表格 */}

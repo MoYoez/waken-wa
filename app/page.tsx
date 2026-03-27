@@ -1,6 +1,6 @@
 import { UserProfile } from '@/components/user-profile'
 import { CurrentStatus } from '@/components/current-status'
-import { ActivityTimeline } from '@/components/activity-timeline'
+import { InspirationHomeSection } from '@/components/inspiration-home-section'
 import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
@@ -37,6 +37,23 @@ export default async function Home() {
   const themePresetCss = getThemePresetCss(config.themePreset)
   const customCss = String(config.customCss ?? '')
   const themeCss = `${themePresetCss}\n${customCss}`.trim()
+
+  const inspirationRows = await (prisma as any).inspirationEntry.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 8,
+    select: {
+      id: true,
+      title: true,
+      content: true,
+      imageDataUrl: true,
+      statusSnapshot: true,
+      createdAt: true,
+    },
+  })
+  const inspirationHomeEntries = inspirationRows.map((row: { createdAt: Date; [k: string]: unknown }) => ({
+    ...row,
+    createdAt: row.createdAt.toISOString(),
+  }))
 
   return (
     <>
@@ -79,7 +96,7 @@ export default async function Home() {
             <h2 className="text-xs text-muted-foreground uppercase tracking-widest mb-6">
               {earlierText}
             </h2>
-            <ActivityTimeline />
+            <InspirationHomeSection entries={inspirationHomeEntries} />
           </section>
         </div>
 

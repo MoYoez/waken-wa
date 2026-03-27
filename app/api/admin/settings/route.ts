@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest) {
     const themePreset = String(body.themePreset ?? 'basic').trim() || 'basic'
     const customCss = normalizeCustomCss(body.customCss)
     const currentlyText = String(body.currentlyText ?? '').trim() || 'currently'
-    const earlierText = String(body.earlierText ?? '').trim() || 'earlier'
+    const earlierText = String(body.earlierText ?? '').trim() || '最近的随想录'
     const updatesText =
       String(body.updatesText ?? '').trim() || 'updates every 30 seconds'
     const adminText = String(body.adminText ?? '').trim() || 'admin'
@@ -64,6 +64,13 @@ export async function PATCH(request: NextRequest) {
           .map((item: unknown) => String(item ?? '').trim())
           .filter((item: string) => item.length > 0)
       : []
+    const appWhitelist = Array.isArray(body.appWhitelist)
+      ? body.appWhitelist
+          .map((item: unknown) => String(item ?? '').trim())
+          .filter((item: string) => item.length > 0)
+      : []
+    const appFilterModeRaw = String(body.appFilterMode ?? 'blacklist').trim().toLowerCase()
+    const appFilterMode = appFilterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
     const appNameOnlyList = Array.isArray(body.appNameOnlyList)
       ? body.appNameOnlyList
           .map((item: unknown) => String(item ?? '').trim())
@@ -110,6 +117,8 @@ export async function PATCH(request: NextRequest) {
         historyWindowMinutes,
         appMessageRules,
         appBlacklist,
+        appWhitelist,
+        appFilterMode,
         appNameOnlyList,
         processStaleSeconds,
         pageLockEnabled,
@@ -131,6 +140,8 @@ export async function PATCH(request: NextRequest) {
         historyWindowMinutes,
         appMessageRules,
         appBlacklist,
+        appWhitelist,
+        appFilterMode,
         appNameOnlyList,
         processStaleSeconds,
         pageLockEnabled,

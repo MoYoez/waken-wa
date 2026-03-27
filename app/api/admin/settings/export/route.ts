@@ -57,6 +57,8 @@ export async function GET(request: Request) {
         processStaleSeconds: siteConfig.processStaleSeconds ?? 500,
         appMessageRules: siteConfig.appMessageRules,
         appBlacklist: siteConfig.appBlacklist,
+        appWhitelist: siteConfig.appWhitelist,
+        appFilterMode: siteConfig.appFilterMode,
         appNameOnlyList: siteConfig.appNameOnlyList,
         pageLockEnabled: siteConfig.pageLockEnabled,
         currentlyText: siteConfig.currentlyText,

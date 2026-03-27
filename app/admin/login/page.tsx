@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { LoginForm } from '@/components/admin/login-form'
@@ -8,5 +9,9 @@ export default async function LoginPage() {
     redirect('/admin/setup')
   }
 
-  return <LoginForm />
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <LoginForm />
+    </Suspense>
+  )
 }

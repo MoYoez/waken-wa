@@ -1,9 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { Loader2, Trash2 } from 'lucide-react'
+import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,12 +30,13 @@ interface InspirationEntry {
   title: string | null
   content: string
   imageDataUrl: string | null
+  statusSnapshot: string | null
   createdAt: string
 }
 
 const LIMIT = 20
-/** Square PNG output for inspiration images (matches Setup-style crop, larger for inline display). */
-const INSPIRATION_IMAGE_OUTPUT_SIZE = 800
+/** Max long edge (px) for cropped PNG DataURL (cover + inline body images). */
+const INSPIRATION_MAX_OUTPUT_EDGE = 1200
 
 export function InspirationManager() {
   const [loading, setLoading] = useState(true)
@@ -49,9 +50,12 @@ export function InspirationManager() {
   const [imageDataUrl, setImageDataUrl] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string>('')
+  const [attachCurrentStatus, setAttachCurrentStatus] = useState(false)
 
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
+  const [cropTarget, setCropTarget] = useState<'cover' | 'body'>('cover')
+  const bodyImageInputRef = useRef<HTMLInputElement>(null)
 
   const totalPages = useMemo(() => Math.ceil(total / LIMIT), [total])
 
@@ -87,9 +91,10 @@ export function InspirationManager() {
     fetchEntries()
   }, [fetchEntries])
 
-  const onImageFile = (file?: File) => {
+  const openCropForFile = (file: File | undefined, target: 'cover' | 'body') => {
     if (!file) return
     setMessage('')
+    setCropTarget(target)
     if (cropSourceUrl) URL.revokeObjectURL(cropSourceUrl)
     const objectUrl = URL.createObjectURL(file)
     setCropSourceUrl(objectUrl)
@@ -109,6 +114,7 @@ export function InspirationManager() {
           title: title.trim() || undefined,
           content: content.trim(),
           imageDataUrl: imageDataUrl.trim() || undefined,
+          attachCurrentStatus,
         }),
       })
 
@@ -121,6 +127,7 @@ export function InspirationManager() {
       setTitle('')
       setContent('')
       setImageDataUrl('')
+      setAttachCurrentStatus(false)
       setMessage('提交成功')
       setPage(0)
       setTimeout(() => void fetchEntries(), 0)
@@ -148,7 +155,7 @@ export function InspirationManager() {
             <div>
               <h3 className="text-lg font-semibold">灵感随想录</h3>
               <p className="text-sm text-muted-foreground">
-                正文为 Markdown；图片与站点初始化相同：选择文件后在弹窗中裁剪，导出为 PNG DataURL 写入数据库
+                正文支持 Markdown 与内联图片；封面图与正文配图均在弹窗中自由比例裁剪，导出 PNG DataURL
               </p>
             </div>
           </div>
@@ -171,12 +178,25 @@ export function InspirationManager() {
                   id="insp-file"
                   type="file"
                   accept="image/*"
-                  onChange={(e) => onImageFile(e.target.files?.[0])}
+                  onChange={(e) => openCropForFile(e.target.files?.[0], 'cover')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  输出约 {INSPIRATION_IMAGE_OUTPUT_SIZE}×{INSPIRATION_IMAGE_OUTPUT_SIZE} 正方形 PNG
+                  长边上限约 {INSPIRATION_MAX_OUTPUT_EDGE}px，比例可任意调整
                 </p>
               </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="insp-attach-status"
+                type="checkbox"
+                checked={attachCurrentStatus}
+                onChange={(e) => setAttachCurrentStatus(e.target.checked)}
+                className="rounded border-input"
+              />
+              <Label htmlFor="insp-attach-status" className="font-normal text-sm cursor-pointer">
+                附上提交时首页「当前」状态快照（仅管理员提交有效）
+              </Label>
             </div>
 
             <div className="space-y-2">
@@ -186,7 +206,26 @@ export function InspirationManager() {
                   <TabsTrigger value="edit">编辑</TabsTrigger>
                   <TabsTrigger value="preview">预览</TabsTrigger>
                 </TabsList>
-                <TabsContent value="edit" className="mt-0">
+                <TabsContent value="edit" className="mt-0 space-y-2">
+                  <input
+                    ref={bodyImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => {
+                      openCropForFile(e.target.files?.[0], 'body')
+                      e.target.value = ''
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => bodyImageInputRef.current?.click()}
+                  >
+                    <ImagePlus className="h-4 w-4 mr-1" />
+                    插入正文配图
+                  </Button>
                   <Textarea
                     id="insp-content"
                     rows={12}
@@ -199,7 +238,7 @@ export function InspirationManager() {
                 <TabsContent value="preview" className="mt-0">
                   <div className="rounded-md border border-border bg-muted/20 p-3 min-h-[220px] max-h-[360px] overflow-y-auto">
                     {content.trim() ? (
-                      <MarkdownContent markdown={content} />
+                      <MarkdownContent markdown={content} imageClassName="max-h-72 w-auto rounded-md border border-border my-2" />
                     ) : (
                       <p className="text-sm text-muted-foreground">暂无内容</p>
                     )}
@@ -249,6 +288,7 @@ export function InspirationManager() {
                   setTitle('')
                   setContent('')
                   setImageDataUrl('')
+                  setAttachCurrentStatus(false)
                   setMessage('')
                 }}
               >
@@ -271,11 +311,19 @@ export function InspirationManager() {
           }
         }}
         sourceUrl={cropSourceUrl}
-        outputSize={INSPIRATION_IMAGE_OUTPUT_SIZE}
-        title="裁剪灵感配图"
-        description="拖动与缩放选取区域，确认后生成正方形配图（与 Setup 头像流程一致）。"
+        aspectMode="free"
+        outputSize={INSPIRATION_MAX_OUTPUT_EDGE}
+        title={cropTarget === 'body' ? '裁剪正文配图' : '裁剪封面配图'}
+        description="拖动图片平移，滑块缩放，拖角点调整裁剪框；确认后导出 PNG。"
         onComplete={(dataUrl) => {
-          setImageDataUrl(dataUrl)
+          if (cropTarget === 'body') {
+            setContent((c) => {
+              const line = c.trim().length > 0 ? '\n\n' : ''
+              return `${c}${line}![](${dataUrl})`
+            })
+          } else {
+            setImageDataUrl(dataUrl)
+          }
         }}
       />
 
@@ -297,10 +345,12 @@ export function InspirationManager() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-[220px]">
-          <Label htmlFor="insp-search">搜索</Label>
-          <Input
+      <div className="mt-8 space-y-3">
+        <h3 className="text-sm font-semibold text-foreground">搜索记录</h3>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-[220px] space-y-2">
+            <Label htmlFor="insp-search">关键字</Label>
+            <Input
             id="insp-search"
             value={q}
             onChange={(e) => {
@@ -309,6 +359,7 @@ export function InspirationManager() {
             }}
             placeholder="按标题或正文关键字过滤"
           />
+          </div>
         </div>
       </div>
 
@@ -340,8 +391,17 @@ export function InspirationManager() {
                           {format(new Date(entry.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                         </span>
                       </div>
+                      {entry.statusSnapshot ? (
+                        <div className="mt-2 rounded-md border border-dashed border-border/70 bg-muted/15 px-2 py-1.5 text-xs text-muted-foreground whitespace-pre-wrap max-h-32 overflow-y-auto">
+                          {entry.statusSnapshot}
+                        </div>
+                      ) : null}
                       <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-border/60 bg-background/50 p-2">
-                        <MarkdownContent markdown={entry.content} className="text-muted-foreground" />
+                        <MarkdownContent
+                          markdown={entry.content}
+                          className="text-muted-foreground"
+                          imageClassName="max-h-56 w-auto rounded-md border border-border my-2"
+                        />
                       </div>
                     </div>
                     <AlertDialog>
