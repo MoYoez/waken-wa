@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { AppWindow, Battery, Clock, Laptop, Smartphone, Tablet } from 'lucide-react'
+import { AppWindow, Battery, Clock, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
+import { getMediaDisplay } from '@/lib/activity-media'
 import { useActivityFeed } from '@/hooks/use-activity-feed'
 
 function getBatteryLabel(metadata: Record<string, unknown> | null | undefined): string | null {
@@ -67,6 +68,7 @@ export function CurrentStatus() {
         const deviceType = getDeviceType(deviceName, activity.metadata)
         const lastReportAt = activity.lastReportAt || activity.updatedAt || activity.startedAt
         const statusLine = typeof activity.statusText === 'string' ? activity.statusText.trim() : ''
+        const media = getMediaDisplay(activity.metadata)
 
         return (
           <div
@@ -114,6 +116,18 @@ export function CurrentStatus() {
                   )}
                 </div>
               </div>
+
+              {media ? (
+                <div className="flex items-start gap-2">
+                  <Music className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="text-sm font-medium text-foreground/90 break-words">{media.title}</div>
+                    {media.singer ? (
+                      <div className="text-xs text-muted-foreground break-words">{media.singer}</div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">

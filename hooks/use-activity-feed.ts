@@ -10,6 +10,7 @@ interface ActivityItem {
   processTitle: string | null
   startedAt: string
   endedAt: string | null
+  /** Includes optional `media: { title?: string; singer?: string }` for now-playing. */
   metadata?: Record<string, unknown> | null
   statusText?: string
   pushMode?: 'realtime' | 'active'

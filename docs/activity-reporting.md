@@ -32,6 +32,28 @@
 - `push_mode`: 推送模式（`realtime` / `active`）
 - `metadata`: 扩展 JSON 对象
 
+#### `metadata.media`（正在播放，可选）
+
+用于在首页「当前状态」与「最近活动」中展示**正在播放**的曲目信息（需配合非空的 `metadata.media.title` 才会显示整块媒体区域）。
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `title` | 是（若要展示） | 曲目标题；trim 后非空才会展示媒体块 |
+| `singer` | 否 | 歌手/演唱者；有则与标题一起展示 |
+
+示例：
+
+```json
+"metadata": {
+  "media": {
+    "title": "Song Title",
+    "singer": "Artist Name"
+  }
+}
+```
+
+**合并规则（同一进程重复上报、更新同一条活动）**：`metadata` 顶层为浅合并；`metadata.media` 为**一层对象合并**（`{ ...已有 media, ...本次 media }`）。因此可只上报部分 `media` 字段，未出现的键会尽量保留（例如先上报 `title` 再单独上报 `singer`）。
+
 说明：
 
 - `started_at` / `ended_at` 无需上传，由服务端自动处理时间。
@@ -73,7 +95,11 @@ curl -X POST "http://localhost:3000/api/activity" \
     "battery_level": 82,
     "push_mode": "realtime",
     "metadata": {
-      "source": "manual-test"
+      "source": "manual-test",
+      "media": {
+        "title": "Example Track",
+        "singer": "Example Artist"
+      }
     }
   }'
 ```
@@ -98,6 +124,12 @@ await fetch('http://localhost:3000/api/activity', {
     process_title: 'Dashboard',
     battery_level: batteryLevel,
     push_mode: 'active', // 主动推送：长期展示，显示最后更新时间
+    metadata: {
+      media: {
+        title: 'Example Track',
+        singer: 'Example Artist', // optional
+      },
+    },
   }),
 })
 ```

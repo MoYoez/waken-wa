@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { Laptop, Smartphone, Tablet } from 'lucide-react'
+import { Laptop, Music, Smartphone, Tablet } from 'lucide-react'
+import { getMediaDisplay } from '@/lib/activity-media'
 import { useActivityFeed } from '@/hooks/use-activity-feed'
 
 function getBatteryLabel(metadata: Record<string, unknown> | null | undefined): string | null {
@@ -62,6 +63,7 @@ export function ActivityTimeline() {
             activity.device ||
             (activity.deviceId != null ? `device #${activity.deviceId}` : `activity #${activity.id}`)
           const deviceType = getDeviceType(deviceName, activity.metadata)
+          const media = getMediaDisplay(activity.metadata)
           const duration = activity.endedAt
             ? Math.round(
                 (new Date(activity.endedAt).getTime() -
@@ -98,6 +100,18 @@ export function ActivityTimeline() {
                       {activity.processTitle}
                     </div>
                   )}
+
+                  {media ? (
+                    <div className="flex items-start gap-1.5 text-xs text-muted-foreground mb-2 min-w-0">
+                      <Music className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden />
+                      <span className="min-w-0 break-words">
+                        {media.title}
+                        {media.singer ? (
+                          <span className="text-muted-foreground/80"> · {media.singer}</span>
+                        ) : null}
+                      </span>
+                    </div>
+                  ) : null}
 
                   <div className="flex items-center gap-3 text-xs text-muted-foreground/70">
                     <span className="inline-flex items-center gap-1.5">

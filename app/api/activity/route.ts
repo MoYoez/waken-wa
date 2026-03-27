@@ -8,6 +8,7 @@ import {
   redactGeneratedHashKeyForClient,
 } from '@/lib/activity-feed'
 import { Prisma } from '@prisma/client'
+import { mergeActivityMetadata } from '@/lib/activity-media'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -223,10 +224,7 @@ export async function POST(request: NextRequest) {
           existing.metadata && typeof existing.metadata === 'object' && !Array.isArray(existing.metadata)
             ? (existing.metadata as Record<string, unknown>)
             : {}
-        updateData.metadata = {
-          ...existingMeta,
-          ...metadata,
-        } as Prisma.InputJsonValue
+        updateData.metadata = mergeActivityMetadata(existingMeta, metadata) as Prisma.InputJsonValue
       }
       // 更新现有活动的时间戳和上报间隔
       const log = await (prisma as any).activityLog.update({
