@@ -43,6 +43,10 @@ import {
   resolveScheduleGridByWeekday,
   type ScheduleDayGrid,
 } from '@/lib/schedule-grid-by-weekday'
+import {
+  ACTIVITY_LOG_RETENTION_MAX,
+  ACTIVITY_LOG_RETENTION_MIN,
+} from '@/lib/activity-log-retention'
 
 const CROP_VIEW_SIZE = 320
 const CROP_FRAME_SIZE = 220
@@ -337,6 +341,22 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   if ('globalMouseTiltEnabled' in web && typeof web.globalMouseTiltEnabled === 'boolean') {
     patch.globalMouseTiltEnabled = web.globalMouseTiltEnabled
   }
+  if ('hideActivityMedia' in web && typeof web.hideActivityMedia === 'boolean') {
+    patch.hideActivityMedia = web.hideActivityMedia
+  }
+  if ('activityLogRetentionMax' in web) {
+    if (web.activityLogRetentionMax === null) {
+      patch.activityLogRetentionMax = null
+    } else {
+      const n = Number(web.activityLogRetentionMax)
+      if (Number.isFinite(n)) {
+        const r = Math.round(n)
+        if (r >= ACTIVITY_LOG_RETENTION_MIN && r <= ACTIVITY_LOG_RETENTION_MAX) {
+          patch.activityLogRetentionMax = r
+        }
+      }
+    }
+  }
   return patch
 }
 
@@ -383,6 +403,9 @@ interface SiteConfig {
   scheduleHomeShowNextUpcoming: boolean
   scheduleHomeAfterClassesLabel: string
   globalMouseTiltEnabled: boolean
+  hideActivityMedia: boolean
+  /** null = unlimited activity log rows (site-wide). */
+  activityLogRetentionMax: number | null
 }
 
 export function WebSettings() {
@@ -453,6 +476,8 @@ export function WebSettings() {
     scheduleHomeShowNextUpcoming: false,
     scheduleHomeAfterClassesLabel: '正在摸鱼',
     globalMouseTiltEnabled: false,
+    hideActivityMedia: false,
+    activityLogRetentionMax: null,
   })
 
   useEffect(() => {
@@ -542,6 +567,18 @@ export function WebSettings() {
                 ? data.data.scheduleHomeAfterClassesLabel.trim().slice(0, 40)
                 : '正在摸鱼',
             globalMouseTiltEnabled: data.data.globalMouseTiltEnabled === true,
+            hideActivityMedia: data.data.hideActivityMedia === true,
+            activityLogRetentionMax:
+              data.data.activityLogRetentionMax != null &&
+              Number.isFinite(Number(data.data.activityLogRetentionMax))
+                ? Math.min(
+                    ACTIVITY_LOG_RETENTION_MAX,
+                    Math.max(
+                      ACTIVITY_LOG_RETENTION_MIN,
+                      Math.round(Number(data.data.activityLogRetentionMax)),
+                    ),
+                  )
+                : null,
           })
         }
       } finally {
@@ -1245,6 +1282,68 @@ export function WebSettings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+        <div className="space-y-0.5 min-w-0">
+          <Label htmlFor="hide-activity-media" className="font-normal cursor-pointer">
+            不显示媒体播放
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            开启后首页「当前状态」卡片不再展示正在播放的曲目与歌手（上报数据仍会保存）。
+          </p>
+        </div>
+        <Switch
+          id="hide-activity-media"
+          checked={form.hideActivityMedia}
+          onCheckedChange={(v) => patch('hideActivityMedia', v)}
+          className="shrink-0"
+        />
+      </div>
+
+      <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-0.5 min-w-0">
+            <Label htmlFor="activity-retention-unlimited" className="font-normal cursor-pointer">
+              活动记录无上限
+            </Label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              关闭后全站仅保留最近 N 条活动记录（所有设备合计）；超出后每次新增会自动删除最旧记录。范围{' '}
+              {ACTIVITY_LOG_RETENTION_MIN}–{ACTIVITY_LOG_RETENTION_MAX}。
+            </p>
+          </div>
+          <Switch
+            id="activity-retention-unlimited"
+            checked={form.activityLogRetentionMax === null}
+            onCheckedChange={(unlimited) => {
+              if (unlimited) patch('activityLogRetentionMax', null)
+              else patch('activityLogRetentionMax', 500)
+            }}
+            className="shrink-0"
+          />
+        </div>
+        {form.activityLogRetentionMax !== null ? (
+          <div className="space-y-1">
+            <Label htmlFor="activity-retention-max">保留条数</Label>
+            <Input
+              id="activity-retention-max"
+              type="number"
+              min={ACTIVITY_LOG_RETENTION_MIN}
+              max={ACTIVITY_LOG_RETENTION_MAX}
+              value={form.activityLogRetentionMax}
+              onChange={(e) => {
+                const n = Math.round(Number(e.target.value))
+                if (!Number.isFinite(n)) return
+                const clamped = Math.min(
+                  ACTIVITY_LOG_RETENTION_MAX,
+                  Math.max(ACTIVITY_LOG_RETENTION_MIN, n),
+                )
+                patch('activityLogRetentionMax', clamped)
+              }}
+              className="max-w-[12rem]"
+            />
+          </div>
+        ) : null}
+      </div>
 
       <div className="space-y-2">
         <Label>历史窗口（分钟）</Label>

@@ -26,7 +26,7 @@ function getDeviceType(
   return 'desktop'
 }
 
-export function ActivityTimeline() {
+export function ActivityTimeline({ hideActivityMedia = false }: { hideActivityMedia?: boolean }) {
   const { feed, error } = useActivityFeed()
   const [mounted, setMounted] = useState(false)
 
@@ -63,7 +63,7 @@ export function ActivityTimeline() {
             activity.device ||
             (activity.deviceId != null ? `device #${activity.deviceId}` : `activity #${activity.id}`)
           const deviceType = getDeviceType(deviceName, activity.metadata)
-          const media = getMediaDisplay(activity.metadata)
+          const media = hideActivityMedia ? null : getMediaDisplay(activity.metadata)
           const duration = activity.endedAt
             ? Math.round(
                 (new Date(activity.endedAt).getTime() -

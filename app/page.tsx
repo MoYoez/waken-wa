@@ -94,6 +94,7 @@ export default async function Home() {
     scheduleInClassOnHome && scheduleCoursesForHome.length > 0
 
   const cfg = config as Record<string, unknown>
+  const hideActivityMedia = Boolean(cfg.hideActivityMedia)
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
@@ -161,7 +162,7 @@ export default async function Home() {
                 <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
                   {currentlyText}
                 </h2>
-                <CurrentStatus />
+                <CurrentStatus hideActivityMedia={hideActivityMedia} />
               </section>
             </div>
 

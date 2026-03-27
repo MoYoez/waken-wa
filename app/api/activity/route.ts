@@ -9,6 +9,7 @@ import {
 } from '@/lib/activity-feed'
 import { Prisma } from '@prisma/client'
 import { mergeActivityMetadata } from '@/lib/activity-media'
+import { pruneActivityLogsAfterInsert } from '@/lib/activity-log-retention'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -260,7 +261,8 @@ export async function POST(request: NextRequest) {
       where: { id: deviceRecord.id },
       data: { displayName: device || deviceRecord.displayName, lastSeenAt: new Date() },
     })
-    
+    await pruneActivityLogsAfterInsert(prisma as any)
+
     return NextResponse.json({ success: true, data: log }, { status: 201 })
   } catch (error) {
     console.error('上报活动失败:', error)

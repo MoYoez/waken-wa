@@ -25,6 +25,7 @@ import {
   normalizeScheduleGridByWeekday,
 } from '@/lib/schedule-grid-by-weekday'
 import { normalizeInspirationAllowedHashes } from '@/lib/inspiration-device-allowlist'
+import { parseActivityLogRetentionMaxInput } from '@/lib/activity-log-retention'
 
 const SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX = 40
 const DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL = '正在摸鱼'
@@ -320,6 +321,20 @@ export async function PATCH(request: NextRequest) {
       globalMouseTiltEnabled = Boolean(body.globalMouseTiltEnabled)
     }
 
+    let hideActivityMedia = existing?.hideActivityMedia === true
+    if (body.hideActivityMedia !== undefined && body.hideActivityMedia !== null) {
+      hideActivityMedia = Boolean(body.hideActivityMedia)
+    }
+
+    let activityLogRetentionMax: number | null = existing?.activityLogRetentionMax ?? null
+    const retentionParsed = parseActivityLogRetentionMaxInput(body.activityLogRetentionMax)
+    if (retentionParsed.kind === 'error') {
+      return NextResponse.json({ success: false, error: retentionParsed.error }, { status: 400 })
+    }
+    if (retentionParsed.kind === 'set') {
+      activityLogRetentionMax = retentionParsed.value
+    }
+
     const config = await safeSiteConfigUpsert(prisma as any, {
       where: { id: 1 },
       update: {
@@ -360,6 +375,8 @@ export async function PATCH(request: NextRequest) {
         scheduleHomeShowNextUpcoming,
         scheduleHomeAfterClassesLabel,
         globalMouseTiltEnabled,
+        hideActivityMedia,
+        activityLogRetentionMax,
         hcaptchaEnabled,
         hcaptchaSiteKey,
         hcaptchaSecretKey,
@@ -403,6 +420,8 @@ export async function PATCH(request: NextRequest) {
         scheduleHomeShowNextUpcoming,
         scheduleHomeAfterClassesLabel,
         globalMouseTiltEnabled,
+        hideActivityMedia,
+        activityLogRetentionMax,
         hcaptchaEnabled,
         hcaptchaSiteKey,
         hcaptchaSecretKey,

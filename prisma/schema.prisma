@@ -111,6 +111,10 @@ model SiteConfig {
   scheduleHomeAfterClassesLabel String @map("schedule_home_after_classes_label") @default("正在摸鱼")
   /// Whole-page mouse parallax tilt (GlobalMouseTilt in root layout). Default off.
   globalMouseTiltEnabled Boolean @map("global_mouse_tilt_enabled") @default(false)
+  /// When true, homepage activity cards do not show now-playing media (title / artist).
+  hideActivityMedia    Boolean  @map("hide_activity_media") @default(false)
+  /// Max rows in activity_logs (site-wide); null = unlimited. When over limit, oldest rows are deleted after each new insert.
+  activityLogRetentionMax Int?   @map("activity_log_retention_max")
   hcaptchaEnabled      Boolean  @map("hcaptcha_enabled") @default(false)
   hcaptchaSiteKey      String?  @map("hcaptcha_site_key")
   hcaptchaSecretKey    String?  @map("hcaptcha_secret_key")

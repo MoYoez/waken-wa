@@ -27,7 +27,7 @@ function getDeviceType(
   return 'desktop'
 }
 
-export function CurrentStatus() {
+export function CurrentStatus({ hideActivityMedia = false }: { hideActivityMedia?: boolean }) {
   const { feed, error } = useActivityFeed()
   const [mounted, setMounted] = useState(false)
 
@@ -68,7 +68,7 @@ export function CurrentStatus() {
         const deviceType = getDeviceType(deviceName, activity.metadata)
         const lastReportAt = activity.lastReportAt || activity.updatedAt || activity.startedAt
         const statusLine = typeof activity.statusText === 'string' ? activity.statusText.trim() : ''
-        const media = getMediaDisplay(activity.metadata)
+        const media = hideActivityMedia ? null : getMediaDisplay(activity.metadata)
 
         return (
           <div
