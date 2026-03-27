@@ -169,6 +169,13 @@ export async function PATCH(request: NextRequest) {
     if (body.scheduleHomeShowTeacher !== undefined && body.scheduleHomeShowTeacher !== null) {
       scheduleHomeShowTeacher = Boolean(body.scheduleHomeShowTeacher)
     }
+    let scheduleHomeShowNextUpcoming = Boolean(existing?.scheduleHomeShowNextUpcoming)
+    if (
+      body.scheduleHomeShowNextUpcoming !== undefined &&
+      body.scheduleHomeShowNextUpcoming !== null
+    ) {
+      scheduleHomeShowNextUpcoming = Boolean(body.scheduleHomeShowNextUpcoming)
+    }
 
     let scheduleHomeAfterClassesLabel = DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL
     const existingLabel = existing?.scheduleHomeAfterClassesLabel
@@ -296,6 +303,7 @@ export async function PATCH(request: NextRequest) {
         scheduleInClassOnHome,
         scheduleHomeShowLocation,
         scheduleHomeShowTeacher,
+        scheduleHomeShowNextUpcoming,
         scheduleHomeAfterClassesLabel,
         globalMouseTiltEnabled,
         hcaptchaEnabled,
@@ -336,6 +344,7 @@ export async function PATCH(request: NextRequest) {
         scheduleInClassOnHome,
         scheduleHomeShowLocation,
         scheduleHomeShowTeacher,
+        scheduleHomeShowNextUpcoming,
         scheduleHomeAfterClassesLabel,
         globalMouseTiltEnabled,
         hcaptchaEnabled,

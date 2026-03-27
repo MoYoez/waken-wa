@@ -101,6 +101,8 @@ model SiteConfig {
   scheduleInClassOnHome     Boolean  @map("schedule_in_class_on_home") @default(false)
   scheduleHomeShowLocation  Boolean  @map("schedule_home_show_location") @default(false)
   scheduleHomeShowTeacher   Boolean  @map("schedule_home_show_teacher") @default(false)
+  /** When true, home schedule card shows the next class preview between sessions (「下一节」). */
+  scheduleHomeShowNextUpcoming Boolean @map("schedule_home_show_next_upcoming") @default(false)
   /** Home schedule card left label when all of today’s sessions have ended. */
   scheduleHomeAfterClassesLabel String @map("schedule_home_after_classes_label") @default("正在摸鱼")
   /// Whole-page mouse parallax tilt (GlobalMouseTilt in root layout). Default off.

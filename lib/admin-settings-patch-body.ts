@@ -44,6 +44,7 @@ export function buildAdminSettingsPatchBody(
     scheduleInClassOnHome: Boolean(data.scheduleInClassOnHome),
     scheduleHomeShowLocation: Boolean(data.scheduleHomeShowLocation),
     scheduleHomeShowTeacher: Boolean(data.scheduleHomeShowTeacher),
+    scheduleHomeShowNextUpcoming: Boolean(data.scheduleHomeShowNextUpcoming),
     scheduleHomeAfterClassesLabel:
       typeof data.scheduleHomeAfterClassesLabel === 'string' &&
       data.scheduleHomeAfterClassesLabel.trim().length > 0

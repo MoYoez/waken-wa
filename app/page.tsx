@@ -70,6 +70,7 @@ export default async function Home() {
   const scheduleInClassOnHome = Boolean(config.scheduleInClassOnHome)
   const scheduleHomeShowLocation = Boolean(config.scheduleHomeShowLocation)
   const scheduleHomeShowTeacher = Boolean(config.scheduleHomeShowTeacher)
+  const scheduleHomeShowNextUpcoming = Boolean(config.scheduleHomeShowNextUpcoming)
   const scheduleHomeAfterClassesLabelRaw = String(
     (config as Record<string, unknown>).scheduleHomeAfterClassesLabel ?? '',
   ).trim()
@@ -139,6 +140,7 @@ export default async function Home() {
                     courses={scheduleCoursesForHome}
                     showLocation={scheduleHomeShowLocation}
                     showTeacher={scheduleHomeShowTeacher}
+                    showNextUpcoming={scheduleHomeShowNextUpcoming}
                     afterClassesLabel={scheduleHomeAfterClassesLabel}
                     className="w-full sm:w-1/3 sm:min-w-0 sm:shrink-0 sm:basis-1/3"
                   />

@@ -101,6 +101,7 @@ model SiteConfig {
   scheduleInClassOnHome     Boolean  @map("schedule_in_class_on_home") @default(false)
   scheduleHomeShowLocation  Boolean  @map("schedule_home_show_location") @default(false)
   scheduleHomeShowTeacher   Boolean  @map("schedule_home_show_teacher") @default(false)
+  scheduleHomeShowNextUpcoming Boolean @map("schedule_home_show_next_upcoming") @default(false)
   scheduleHomeAfterClassesLabel String @map("schedule_home_after_classes_label") @db.VarChar(40) @default("正在摸鱼")
   globalMouseTiltEnabled Boolean @map("global_mouse_tilt_enabled") @default(false)
   hcaptchaEnabled      Boolean  @map("hcaptcha_enabled") @default(false)

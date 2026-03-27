@@ -11,6 +11,8 @@ type ScheduleHomeInClassBannerProps = {
   courses: ScheduleCourse[]
   showLocation: boolean
   showTeacher: boolean
+  /** When true, show the between-sessions “下一节” preview. Default false. */
+  showNextUpcoming?: boolean
   /** Shown in the top-left when today’s classes are all over (default 正在摸鱼). */
   afterClassesLabel: string
   className?: string
@@ -57,6 +59,7 @@ export function ScheduleHomeInClassBanner({
   courses,
   showLocation,
   showTeacher,
+  showNextUpcoming = false,
   afterClassesLabel,
   className,
 }: ScheduleHomeInClassBannerProps) {
@@ -75,6 +78,10 @@ export function ScheduleHomeInClassBanner({
   }, [courses])
 
   if (courses.length === 0) return null
+
+  if (cardState.kind === 'upcoming_today' && !showNextUpcoming) {
+    return null
+  }
 
   const occ = cardState.kind === 'in_class' ? cardState.occ : null
   const hasLocation = Boolean(showLocation && occ?.location)

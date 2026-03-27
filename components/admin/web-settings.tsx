@@ -303,6 +303,12 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
     patch.scheduleHomeShowTeacher = web.scheduleHomeShowTeacher
   }
   if (
+    'scheduleHomeShowNextUpcoming' in web &&
+    typeof web.scheduleHomeShowNextUpcoming === 'boolean'
+  ) {
+    patch.scheduleHomeShowNextUpcoming = web.scheduleHomeShowNextUpcoming
+  }
+  if (
     'scheduleHomeAfterClassesLabel' in web &&
     typeof web.scheduleHomeAfterClassesLabel === 'string'
   ) {
@@ -353,6 +359,7 @@ interface SiteConfig {
   scheduleInClassOnHome: boolean
   scheduleHomeShowLocation: boolean
   scheduleHomeShowTeacher: boolean
+  scheduleHomeShowNextUpcoming: boolean
   scheduleHomeAfterClassesLabel: string
   globalMouseTiltEnabled: boolean
 }
@@ -420,6 +427,7 @@ export function WebSettings() {
     scheduleInClassOnHome: false,
     scheduleHomeShowLocation: false,
     scheduleHomeShowTeacher: false,
+    scheduleHomeShowNextUpcoming: false,
     scheduleHomeAfterClassesLabel: '正在摸鱼',
     globalMouseTiltEnabled: false,
   })
@@ -497,6 +505,7 @@ export function WebSettings() {
             scheduleInClassOnHome: Boolean(data.data.scheduleInClassOnHome),
             scheduleHomeShowLocation: Boolean(data.data.scheduleHomeShowLocation),
             scheduleHomeShowTeacher: Boolean(data.data.scheduleHomeShowTeacher),
+            scheduleHomeShowNextUpcoming: Boolean(data.data.scheduleHomeShowNextUpcoming),
             scheduleHomeAfterClassesLabel:
               typeof data.data.scheduleHomeAfterClassesLabel === 'string' &&
               data.data.scheduleHomeAfterClassesLabel.trim().length > 0

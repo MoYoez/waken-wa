@@ -94,6 +94,7 @@ export function ScheduleManager() {
   const [inClassOnHome, setInClassOnHome] = useState(false)
   const [homeShowLocation, setHomeShowLocation] = useState(false)
   const [homeShowTeacher, setHomeShowTeacher] = useState(false)
+  const [homeShowNextUpcoming, setHomeShowNextUpcoming] = useState(false)
   const [homeAfterClassesLabel, setHomeAfterClassesLabel] = useState('正在摸鱼')
 
   const load = useCallback(async () => {
@@ -116,6 +117,7 @@ export function ScheduleManager() {
       setInClassOnHome(Boolean(d.scheduleInClassOnHome))
       setHomeShowLocation(Boolean(d.scheduleHomeShowLocation))
       setHomeShowTeacher(Boolean(d.scheduleHomeShowTeacher))
+      setHomeShowNextUpcoming(Boolean(d.scheduleHomeShowNextUpcoming))
       setHomeAfterClassesLabel(
         typeof d.scheduleHomeAfterClassesLabel === 'string' &&
           d.scheduleHomeAfterClassesLabel.trim().length > 0
@@ -153,6 +155,7 @@ export function ScheduleManager() {
         scheduleInClassOnHome: inClassOnHome,
         scheduleHomeShowLocation: homeShowLocation,
         scheduleHomeShowTeacher: homeShowTeacher,
+        scheduleHomeShowNextUpcoming: homeShowNextUpcoming,
         scheduleHomeAfterClassesLabel: homeAfterClassesLabel.trim() || '正在摸鱼',
       })
       const res = await fetch('/api/admin/settings', {
@@ -342,6 +345,17 @@ export function ScheduleManager() {
             id="sched-in-class"
             checked={inClassOnHome}
             onCheckedChange={setInClassOnHome}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="sched-home-next" className="font-normal cursor-pointer">
+            在课间显示「下一节」课程预告
+          </Label>
+          <Switch
+            id="sched-home-next"
+            checked={homeShowNextUpcoming}
+            onCheckedChange={setHomeShowNextUpcoming}
+            disabled={!inClassOnHome}
           />
         </div>
         <div className="flex items-center justify-between gap-3">

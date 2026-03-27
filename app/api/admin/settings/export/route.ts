@@ -89,6 +89,7 @@ export async function GET(request: Request) {
         scheduleInClassOnHome: Boolean(siteConfig.scheduleInClassOnHome),
         scheduleHomeShowLocation: Boolean(siteConfig.scheduleHomeShowLocation),
         scheduleHomeShowTeacher: Boolean(siteConfig.scheduleHomeShowTeacher),
+        scheduleHomeShowNextUpcoming: Boolean(siteConfig.scheduleHomeShowNextUpcoming),
         scheduleHomeAfterClassesLabel:
           typeof siteConfig.scheduleHomeAfterClassesLabel === 'string' &&
           siteConfig.scheduleHomeAfterClassesLabel.trim().length > 0
