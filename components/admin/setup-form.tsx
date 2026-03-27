@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 
-interface SetupInitialConfig {
+export interface SetupInitialConfig {
   pageTitle?: string
   userName: string
   userBio: string

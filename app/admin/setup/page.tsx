@@ -1,34 +1,18 @@
 import { redirect } from 'next/navigation'
-import prisma from '@/lib/prisma'
+import { getAdminSetupSnapshot } from '@/lib/is-config-ok'
 import { SetupForm } from '@/components/admin/setup-form'
 
-export default async function AdminSetupPage() {
-  const hasAdmin = (await prisma.adminUser.count()) > 0
-  const config = await (prisma as any).siteConfig.findUnique({ where: { id: 1 } })
-  const hasConfig = config !== null
+// Always re-check DB; do not cache a stale “still in setup” shell from build/ISR.
+export const dynamic = 'force-dynamic'
 
-  if (hasAdmin && hasConfig) {
+export default async function AdminSetupPage() {
+  const { isConfigOK, hasAdmin, initialConfig } = await getAdminSetupSnapshot()
+
+  if (isConfigOK) {
     redirect('/admin')
   }
 
   return (
-    <SetupForm
-      needAdminSetup={!hasAdmin}
-      initialConfig={
-        config
-          ? {
-              pageTitle: config.pageTitle,
-              userName: config.userName,
-              userBio: config.userBio,
-              avatarUrl: config.avatarUrl,
-              userNote: config.userNote,
-              historyWindowMinutes: config.historyWindowMinutes,
-              currentlyText: config.currentlyText,
-              earlierText: config.earlierText,
-              adminText: config.adminText,
-            }
-          : undefined
-      }
-    />
+    <SetupForm needAdminSetup={!hasAdmin} initialConfig={initialConfig} />
   )
 }
