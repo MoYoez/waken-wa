@@ -107,6 +107,13 @@ model SiteConfig {
   @@map("site_config")
 }
 
+model SystemSecret {
+  key   String @id
+  value String
+
+  @@map("system_secrets")
+}
+
 model InspirationEntry {
   id Int @id @default(autoincrement())
 

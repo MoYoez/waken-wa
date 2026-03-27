@@ -5,17 +5,19 @@ import bcrypt from 'bcryptjs'
 import { findActiveApiTokenBySecret, resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import prisma from './prisma'
 
+const JWT_SECRET_DB_KEY = 'jwt_secret'
 let cachedJwtSecret: Uint8Array | null = null
-let loggedEphemeralJwtWarning = false
 
 /**
- * HS256 key: use JWT_SECRET when set; otherwise 32 random bytes for this Node process only.
- * Ephemeral mode: sessions break after restart/redeploy; multiple instances do not share the same key unless JWT_SECRET is set.
+ * HS256 key resolution order:
+ *   1. JWT_SECRET env var (explicit config, highest priority)
+ *   2. DB-persisted secret in `system_secrets` table (shared across all serverless instances)
+ *   3. Generate a new random secret → persist to DB so other instances reuse it
+ *
+ * The resolved value is cached in-memory per process to avoid repeated DB queries.
  */
-function getJwtSecretBytes(): Uint8Array {
-  if (cachedJwtSecret) {
-    return cachedJwtSecret
-  }
+async function getJwtSecretBytes(): Promise<Uint8Array> {
+  if (cachedJwtSecret) return cachedJwtSecret
 
   const fromEnv = process.env.JWT_SECRET?.trim()
   if (fromEnv) {
@@ -23,19 +25,36 @@ function getJwtSecretBytes(): Uint8Array {
     return cachedJwtSecret
   }
 
-  if (!loggedEphemeralJwtWarning) {
-    loggedEphemeralJwtWarning = true
-    const msg =
-      '[auth] JWT_SECRET is not set. Using an ephemeral per-process secret (sessions reset on restart; set JWT_SECRET for stable sessions and for multiple app instances).'
-    if (process.env.NODE_ENV === 'production') {
-      console.error(msg)
-    } else {
-      console.warn(msg)
+  try {
+    const row = await prisma.systemSecret.findUnique({
+      where: { key: JWT_SECRET_DB_KEY },
+    })
+    if (row) {
+      cachedJwtSecret = new TextEncoder().encode(row.value)
+      return cachedJwtSecret
     }
-  }
 
-  cachedJwtSecret = randomBytes(32)
-  return cachedJwtSecret
+    const generated = randomBytes(48).toString('base64url')
+    await prisma.systemSecret.upsert({
+      where: { key: JWT_SECRET_DB_KEY },
+      update: {},
+      create: { key: JWT_SECRET_DB_KEY, value: generated },
+    })
+
+    // Re-read: another instance may have won the race and inserted a different value.
+    const saved = await prisma.systemSecret.findUnique({
+      where: { key: JWT_SECRET_DB_KEY },
+    })
+    const finalValue = saved?.value ?? generated
+    cachedJwtSecret = new TextEncoder().encode(finalValue)
+    return cachedJwtSecret
+  } catch (err) {
+    // DB not yet migrated / unreachable — fall back to ephemeral secret so the app
+    // can still boot (setup / migration pages won't break).
+    console.warn('[auth] Failed to load JWT secret from DB, using ephemeral secret:', err)
+    cachedJwtSecret = randomBytes(32)
+    return cachedJwtSecret
+  }
 }
 
 export interface SessionPayload {
@@ -61,14 +80,14 @@ export async function createSession(userId: number, username: string): Promise<s
   const token = await new SignJWT({ userId, username })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('7d')
-    .sign(getJwtSecretBytes())
+    .sign(await getJwtSecretBytes())
 
   return token
 }
 
 export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, getJwtSecretBytes())
+    const { payload } = await jwtVerify(token, await getJwtSecretBytes())
     return payload as unknown as SessionPayload
   } catch {
     return null
@@ -79,12 +98,12 @@ export async function createSiteLockSession(): Promise<string> {
   return new SignJWT({ type: 'site_lock' })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('1d')
-    .sign(getJwtSecretBytes())
+    .sign(await getJwtSecretBytes())
 }
 
 export async function verifySiteLockSession(token: string): Promise<SiteLockPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, getJwtSecretBytes())
+    const { payload } = await jwtVerify(token, await getJwtSecretBytes())
     if ((payload as any).type !== 'site_lock') return null
     return payload as unknown as SiteLockPayload
   } catch {
