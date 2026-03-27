@@ -113,13 +113,15 @@ export default async function Home() {
               <div
                 className={
                   showScheduleHomeColumn
-                    ? 'flex flex-row flex-nowrap items-start gap-3 sm:gap-4'
+                    ? 'flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-start sm:gap-4'
                     : 'flex flex-col gap-4'
                 }
               >
                 <div
                   className={
-                    showScheduleHomeColumn ? 'min-w-0 flex-1 basis-0 overflow-hidden' : 'min-w-0 w-full'
+                    showScheduleHomeColumn
+                      ? 'min-w-0 w-full sm:flex-1 sm:basis-0 sm:overflow-hidden'
+                      : 'min-w-0 w-full'
                   }
                 >
                   <UserProfile
@@ -138,7 +140,7 @@ export default async function Home() {
                     showLocation={scheduleHomeShowLocation}
                     showTeacher={scheduleHomeShowTeacher}
                     afterClassesLabel={scheduleHomeAfterClassesLabel}
-                    className="shrink-0 w-1/3 min-w-0 basis-1/3"
+                    className="w-full sm:w-1/3 sm:min-w-0 sm:shrink-0 sm:basis-1/3"
                   />
                 ) : null}
               </div>
