@@ -195,7 +195,7 @@ export function InspirationManager() {
                 className="rounded border-input"
               />
               <Label htmlFor="insp-attach-status" className="font-normal text-sm cursor-pointer">
-                附上提交时首页「当前」状态快照（仅管理员提交有效）
+                附上提交时首页「当前」状态快照
               </Label>
             </div>
 
