@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node scripts/prisma-generate-by-env.mjs && next build",
     "build:postgres": "node scripts/run-postgres-prisma.mjs generate --schema prisma/schema.postgres.prisma && next build",
     "start": "next start",
     "lint": "eslint .",
-    "postinstall": "prisma generate && prisma db push",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
+    "postinstall": "node scripts/init-db.mjs",
+    "db:generate": "node scripts/prisma-generate-by-env.mjs",
+    "db:push": "node scripts/prisma-push-by-env.mjs",
     "db:generate:postgres": "node scripts/run-postgres-prisma.mjs generate --schema prisma/schema.postgres.prisma",
     "db:push:postgres": "node scripts/run-postgres-prisma.mjs db push --schema prisma/schema.postgres.prisma",
     "db:init": "node scripts/init-db.mjs"
