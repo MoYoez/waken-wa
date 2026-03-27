@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
     const deviceTypeRaw = body?.device_type
     const pushModeRaw = body?.push_mode
     const metadataRaw = body?.metadata
+    const persistMinutesRaw = body?.persist_minutes ?? body?.persistMinutes
 
     const generatedHashKey =
       typeof generatedHashKeyRaw === 'string'
@@ -130,6 +131,18 @@ export async function POST(request: NextRequest) {
       }
     }
     const metadataInput = metadata as Prisma.InputJsonValue | undefined
+
+    /** How long this row stays “active” without further reports (same rule as /api/activity). */
+    const STALE_MIN_SEC = 30
+    const STALE_MAX_SEC = 24 * 60 * 60
+    let reportIntervalSeconds: number | undefined
+    if (persistMinutesRaw !== undefined && persistMinutesRaw !== null) {
+      const mins = Number(persistMinutesRaw)
+      if (Number.isFinite(mins) && mins > 0) {
+        const sec = Math.round(mins * 60)
+        reportIntervalSeconds = Math.min(Math.max(sec, STALE_MIN_SEC), STALE_MAX_SEC)
+      }
+    }
 
     if (!process_name) {
       return NextResponse.json(
@@ -190,7 +203,8 @@ export async function POST(request: NextRequest) {
         processTitle: process_title || null,
         startedAt: new Date(),
         endedAt: null,
-        metadata: metadataInput
+        metadata: metadataInput,
+        ...(reportIntervalSeconds != null ? { reportIntervalSeconds } : {}),
       }
     })
     await (prisma as any).device.update({

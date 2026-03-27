@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Dialog,
@@ -25,9 +27,78 @@ import {
   parseThemeCustomSurface,
   THEME_CUSTOM_SURFACE_DEFAULTS,
 } from '@/lib/theme-custom-surface'
+import {
+  HITOKOTO_CATEGORY_OPTIONS,
+  normalizeHitokotoCategories,
+  normalizeHitokotoEncode,
+  type UserNoteHitokotoEncode,
+} from '@/lib/hitokoto'
+import {
+  isAllowedSlotMinutes,
+  type ScheduleCourse,
+} from '@/lib/schedule-courses'
 
 const CROP_VIEW_SIZE = 320
 const CROP_FRAME_SIZE = 220
+/** Paginate tall “规则” cards */
+const SETTINGS_RULES_PAGE_SIZE = 5
+/** Paginate compact app-name rows */
+const SETTINGS_APP_LIST_PAGE_SIZE = 10
+
+function listMaxPage(total: number, pageSize: number): number {
+  if (total <= 0) return 0
+  return Math.max(0, Math.ceil(total / pageSize) - 1)
+}
+
+function ListPaginationBar({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+}: {
+  page: number
+  pageSize: number
+  total: number
+  onPageChange: (next: number) => void
+}) {
+  if (total <= pageSize) return null
+  const maxPage = listMaxPage(total, pageSize)
+  const safePage = Math.min(page, maxPage)
+  const start = safePage * pageSize + 1
+  const end = Math.min((safePage + 1) * pageSize, total)
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+      <span>
+        已保存 {total} 条 · 本页 {start}–{end}
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8"
+          disabled={safePage <= 0}
+          onClick={() => onPageChange(Math.max(0, safePage - 1))}
+        >
+          上一页
+        </Button>
+        <span className="tabular-nums">
+          {safePage + 1} / {maxPage + 1}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8"
+          disabled={safePage >= maxPage}
+          onClick={() => onPageChange(Math.min(maxPage, safePage + 1))}
+        >
+          下一页
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 function getMinZoom(naturalW: number, naturalH: number): number {
   if (!naturalW || !naturalH) return 0.2
@@ -145,6 +216,15 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   if ('userBio' in web && typeof web.userBio === 'string') patch.userBio = web.userBio.trim()
   if ('avatarUrl' in web && typeof web.avatarUrl === 'string') patch.avatarUrl = web.avatarUrl.trim()
   if ('userNote' in web && typeof web.userNote === 'string') patch.userNote = web.userNote.trim()
+  if ('userNoteHitokotoEnabled' in web && typeof web.userNoteHitokotoEnabled === 'boolean') {
+    patch.userNoteHitokotoEnabled = web.userNoteHitokotoEnabled
+  }
+  if ('userNoteHitokotoCategories' in web) {
+    patch.userNoteHitokotoCategories = normalizeHitokotoCategories(web.userNoteHitokotoCategories)
+  }
+  if ('userNoteHitokotoEncode' in web) {
+    patch.userNoteHitokotoEncode = normalizeHitokotoEncode(web.userNoteHitokotoEncode)
+  }
   if ('themePreset' in web && typeof web.themePreset === 'string') {
     patch.themePreset = web.themePreset.trim() || 'basic'
   }
@@ -187,6 +267,34 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   if ('autoAcceptNewDevices' in web && typeof web.autoAcceptNewDevices === 'boolean') {
     patch.autoAcceptNewDevices = web.autoAcceptNewDevices
   }
+  if ('scheduleSlotMinutes' in web) {
+    const s = Number(web.scheduleSlotMinutes)
+    if (isAllowedSlotMinutes(s)) patch.scheduleSlotMinutes = s
+  }
+  if ('scheduleCourses' in web && Array.isArray(web.scheduleCourses)) {
+    patch.scheduleCourses = web.scheduleCourses as ScheduleCourse[]
+  }
+  if ('scheduleIcs' in web && web.scheduleIcs === null) {
+    patch.scheduleIcs = ''
+  } else if ('scheduleIcs' in web && typeof web.scheduleIcs === 'string') {
+    patch.scheduleIcs = web.scheduleIcs
+  }
+  if ('scheduleInClassOnHome' in web && typeof web.scheduleInClassOnHome === 'boolean') {
+    patch.scheduleInClassOnHome = web.scheduleInClassOnHome
+  }
+  if ('scheduleHomeShowLocation' in web && typeof web.scheduleHomeShowLocation === 'boolean') {
+    patch.scheduleHomeShowLocation = web.scheduleHomeShowLocation
+  }
+  if ('scheduleHomeShowTeacher' in web && typeof web.scheduleHomeShowTeacher === 'boolean') {
+    patch.scheduleHomeShowTeacher = web.scheduleHomeShowTeacher
+  }
+  if (
+    'scheduleHomeAfterClassesLabel' in web &&
+    typeof web.scheduleHomeAfterClassesLabel === 'string'
+  ) {
+    const t = web.scheduleHomeAfterClassesLabel.trim()
+    patch.scheduleHomeAfterClassesLabel = (t.length > 0 ? t : '正在摸鱼').slice(0, 40)
+  }
   return patch
 }
 
@@ -196,6 +304,9 @@ interface SiteConfig {
   userBio: string
   avatarUrl: string
   userNote: string
+  userNoteHitokotoEnabled: boolean
+  userNoteHitokotoCategories: string[]
+  userNoteHitokotoEncode: UserNoteHitokotoEncode
   themePreset: string
   themeCustomSurface: ThemeCustomSurfaceForm
   customCss: string
@@ -212,6 +323,13 @@ interface SiteConfig {
   earlierText: string
   adminText: string
   autoAcceptNewDevices: boolean
+  scheduleSlotMinutes: number
+  scheduleCourses: ScheduleCourse[]
+  scheduleIcs: string
+  scheduleInClassOnHome: boolean
+  scheduleHomeShowLocation: boolean
+  scheduleHomeShowTeacher: boolean
+  scheduleHomeAfterClassesLabel: string
 }
 
 export function WebSettings() {
@@ -221,6 +339,13 @@ export function WebSettings() {
   const [blacklistInput, setBlacklistInput] = useState('')
   const [whitelistInput, setWhitelistInput] = useState('')
   const [nameOnlyListInput, setNameOnlyListInput] = useState('')
+  const [rulesListPage, setRulesListPage] = useState(0)
+  const [blacklistListPage, setBlacklistListPage] = useState(0)
+  const [whitelistListPage, setWhitelistListPage] = useState(0)
+  const [nameOnlyListPage, setNameOnlyListPage] = useState(0)
+  const [dialogAppRulesOpen, setDialogAppRulesOpen] = useState(false)
+  const [dialogAppFilterOpen, setDialogAppFilterOpen] = useState(false)
+  const [dialogNameOnlyOpen, setDialogNameOnlyOpen] = useState(false)
   // 裁剪弹窗状态
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
@@ -235,6 +360,9 @@ export function WebSettings() {
     userBio: '',
     avatarUrl: '',
     userNote: '',
+    userNoteHitokotoEnabled: false,
+    userNoteHitokotoCategories: [],
+    userNoteHitokotoEncode: 'json',
     themePreset: 'basic',
     themeCustomSurface: emptyThemeCustomSurfaceForm(),
     customCss: '',
@@ -251,6 +379,13 @@ export function WebSettings() {
     earlierText: '最近的随想录',
     adminText: 'admin',
     autoAcceptNewDevices: false,
+    scheduleSlotMinutes: 30,
+    scheduleCourses: [],
+    scheduleIcs: '',
+    scheduleInClassOnHome: false,
+    scheduleHomeShowLocation: false,
+    scheduleHomeShowTeacher: false,
+    scheduleHomeAfterClassesLabel: '正在摸鱼',
   })
 
   useEffect(() => {
@@ -283,6 +418,11 @@ export function WebSettings() {
             userBio: data.data.userBio ?? '',
             avatarUrl: data.data.avatarUrl ?? '',
             userNote: data.data.userNote ?? '',
+            userNoteHitokotoEnabled: Boolean(data.data.userNoteHitokotoEnabled),
+            userNoteHitokotoCategories: normalizeHitokotoCategories(
+              data.data.userNoteHitokotoCategories,
+            ),
+            userNoteHitokotoEncode: normalizeHitokotoEncode(data.data.userNoteHitokotoEncode),
             themePreset: data.data.themePreset ?? 'basic',
             themeCustomSurface: themeCustomSurfaceFromApi(data.data.themeCustomSurface),
             customCss: data.data.customCss ?? '',
@@ -299,6 +439,21 @@ export function WebSettings() {
             earlierText: data.data.earlierText ?? '最近的随想录',
             adminText: data.data.adminText ?? 'admin',
             autoAcceptNewDevices: Boolean(data.data.autoAcceptNewDevices),
+            scheduleSlotMinutes: isAllowedSlotMinutes(Number(data.data.scheduleSlotMinutes))
+              ? Number(data.data.scheduleSlotMinutes)
+              : 30,
+            scheduleCourses: Array.isArray(data.data.scheduleCourses)
+              ? (data.data.scheduleCourses as ScheduleCourse[])
+              : [],
+            scheduleIcs: typeof data.data.scheduleIcs === 'string' ? data.data.scheduleIcs : '',
+            scheduleInClassOnHome: Boolean(data.data.scheduleInClassOnHome),
+            scheduleHomeShowLocation: Boolean(data.data.scheduleHomeShowLocation),
+            scheduleHomeShowTeacher: Boolean(data.data.scheduleHomeShowTeacher),
+            scheduleHomeAfterClassesLabel:
+              typeof data.data.scheduleHomeAfterClassesLabel === 'string' &&
+              data.data.scheduleHomeAfterClassesLabel.trim().length > 0
+                ? data.data.scheduleHomeAfterClassesLabel.trim().slice(0, 40)
+                : '正在摸鱼',
           })
         }
       } finally {
@@ -307,6 +462,22 @@ export function WebSettings() {
     }
     void load()
   }, [])
+
+  useEffect(() => {
+    setRulesListPage((p) => Math.min(p, listMaxPage(form.appMessageRules.length, SETTINGS_RULES_PAGE_SIZE)))
+  }, [form.appMessageRules.length])
+
+  useEffect(() => {
+    setBlacklistListPage((p) => Math.min(p, listMaxPage(form.appBlacklist.length, SETTINGS_APP_LIST_PAGE_SIZE)))
+  }, [form.appBlacklist.length])
+
+  useEffect(() => {
+    setWhitelistListPage((p) => Math.min(p, listMaxPage(form.appWhitelist.length, SETTINGS_APP_LIST_PAGE_SIZE)))
+  }, [form.appWhitelist.length])
+
+  useEffect(() => {
+    setNameOnlyListPage((p) => Math.min(p, listMaxPage(form.appNameOnlyList.length, SETTINGS_APP_LIST_PAGE_SIZE)))
+  }, [form.appNameOnlyList.length])
 
   const patch = <K extends keyof SiteConfig>(key: K, value: SiteConfig[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -491,8 +662,32 @@ export function WebSettings() {
     setBlacklistInput('')
     setWhitelistInput('')
     setNameOnlyListInput('')
+    setRulesListPage(0)
+    setBlacklistListPage(0)
+    setWhitelistListPage(0)
+    setNameOnlyListPage(0)
     setMessage('已写入表单，请核对后点击「保存配置」。API Token 需在原站点单独管理或重新创建。')
   }
+
+  const rulesTotal = form.appMessageRules.length
+  const rulesMaxPage = listMaxPage(rulesTotal, SETTINGS_RULES_PAGE_SIZE)
+  const rulesPage = Math.min(rulesListPage, rulesMaxPage)
+  const rulesStart = rulesPage * SETTINGS_RULES_PAGE_SIZE
+
+  const blTotal = form.appBlacklist.length
+  const blMaxPage = listMaxPage(blTotal, SETTINGS_APP_LIST_PAGE_SIZE)
+  const blPage = Math.min(blacklistListPage, blMaxPage)
+  const blStart = blPage * SETTINGS_APP_LIST_PAGE_SIZE
+
+  const wlTotal = form.appWhitelist.length
+  const wlMaxPage = listMaxPage(wlTotal, SETTINGS_APP_LIST_PAGE_SIZE)
+  const wlPage = Math.min(whitelistListPage, wlMaxPage)
+  const wlStart = wlPage * SETTINGS_APP_LIST_PAGE_SIZE
+
+  const noTotal = form.appNameOnlyList.length
+  const noMaxPage = listMaxPage(noTotal, SETTINGS_APP_LIST_PAGE_SIZE)
+  const noPage = Math.min(nameOnlyListPage, noMaxPage)
+  const noStart = noPage * SETTINGS_APP_LIST_PAGE_SIZE
 
   if (loading) {
     return <div className="text-sm text-muted-foreground">加载配置中...</div>
@@ -526,6 +721,71 @@ export function WebSettings() {
       <div className="space-y-2">
         <Label>首页备注</Label>
         <Input value={form.userNote} onChange={(e) => patch('userNote', e.target.value)} />
+      </div>
+
+      <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="hitokoto-home-note" className="font-normal cursor-pointer">
+            首页备注使用一言（hitokoto.cn）
+          </Label>
+          <Switch
+            id="hitokoto-home-note"
+            checked={form.userNoteHitokotoEnabled}
+            onCheckedChange={(v) => patch('userNoteHitokotoEnabled', v)}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          开启后由访客浏览器请求 <code className="rounded bg-muted px-1">v1.hitokoto.cn</code>；
+          请求失败时显示上方静态备注。句子类型可多选；不选表示不限制类型（与官方默认一致）。
+        </p>
+        {form.userNoteHitokotoEnabled ? (
+          <div className="space-y-4 pt-1">
+            <div className="space-y-2">
+              <Label htmlFor="hitokoto-encode">返回编码 encode</Label>
+              <Select
+                value={form.userNoteHitokotoEncode}
+                onValueChange={(v) =>
+                  patch('userNoteHitokotoEncode', v === 'text' ? 'text' : 'json')
+                }
+              >
+                <SelectTrigger id="hitokoto-encode" className="w-full max-w-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="json">json（可带 uuid 跳转出处）</SelectItem>
+                  <SelectItem value="text">text（纯文本）</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>句子类型 c（可多选）</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {HITOKOTO_CATEGORY_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.id}
+                    className="flex items-center gap-2 text-sm font-normal cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={form.userNoteHitokotoCategories.includes(opt.id)}
+                      onCheckedChange={() => {
+                        setForm((prev) => {
+                          const cur = prev.userNoteHitokotoCategories
+                          const next = cur.includes(opt.id)
+                            ? cur.filter((x) => x !== opt.id)
+                            : [...cur, opt.id]
+                          return { ...prev, userNoteHitokotoCategories: next }
+                        })
+                      }}
+                    />
+                    <span>
+                      {opt.id} · {opt.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -895,77 +1155,142 @@ export function WebSettings() {
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label>应用匹配文案规则</Label>
-        <div className="space-y-3">
-          {form.appMessageRules.length === 0 ? (
-            <p className="text-xs text-muted-foreground">暂无规则</p>
-          ) : (
-            <div className="space-y-3">
-              {form.appMessageRules.map((rule, idx) => (
-                <div key={idx} className="rounded-md border bg-background/50 p-3 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs text-muted-foreground">规则 {idx + 1}</p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => patch('appMessageRules', form.appMessageRules.filter((_, i) => i !== idx))}
-                    >
-                      删除
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor={`rule-match-${idx}`}>match（进程/应用名）</Label>
-                    <Input
-                      id={`rule-match-${idx}`}
-                      value={rule.match}
-                      onChange={(e) => {
-                        const next = [...form.appMessageRules]
-                        next[idx] = { ...next[idx], match: e.target.value }
-                        patch('appMessageRules', next)
-                      }}
-                      placeholder="例如：WindowsTerminal.exe"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor={`rule-text-${idx}`}>text（替换文案）</Label>
-                    <textarea
-                      id={`rule-text-${idx}`}
-                      rows={3}
-                      value={rule.text}
-                      onChange={(e) => {
-                        const next = [...form.appMessageRules]
-                        next[idx] = { ...next[idx], text: e.target.value }
-                        patch('appMessageRules', next)
-                      }}
-                      className="w-full px-3 py-2 border rounded-md bg-background text-sm font-mono"
-                      placeholder="例如：正在编码：{title}"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => patch('appMessageRules', [...form.appMessageRules, { match: '', text: '' }])}
-          >
-            添加规则
-          </Button>
+      <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <Label className="text-base">应用匹配文案规则</Label>
+          <p className="text-xs text-muted-foreground">已保存 {rulesTotal} 条</p>
         </div>
-
-        <p className="text-xs text-muted-foreground">
-          示例：match 为 `WindowsTerminal.exe`，text 为 {'正在编码：{title}'}。支持 {'{process}'}、{'{title}'} 占位符。
-        </p>
+        <Button type="button" variant="secondary" className="shrink-0" onClick={() => setDialogAppRulesOpen(true)}>
+          在弹窗中编辑
+        </Button>
       </div>
 
-      <div className="space-y-4 rounded-lg border border-border/60 bg-card/30 p-4">
-        <Label className="text-base">应用显示筛选</Label>
+      <Dialog open={dialogAppRulesOpen} onOpenChange={setDialogAppRulesOpen}>
+        <DialogContent
+          className="flex max-h-[min(90vh,56rem)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
+          showCloseButton
+        >
+          <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 text-left">
+            <DialogTitle>应用匹配文案规则</DialogTitle>
+            <DialogDescription>
+              match 为进程/应用名，text 为展示文案；支持 {'{process}'}、{'{title}'} 占位符。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <div className="space-y-3">
+              {form.appMessageRules.length === 0 ? (
+                <p className="text-xs text-muted-foreground">暂无规则</p>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">已有规则（分页浏览）</p>
+                  {form.appMessageRules.slice(rulesStart, rulesStart + SETTINGS_RULES_PAGE_SIZE).map((rule, localIdx) => {
+                    const idx = rulesStart + localIdx
+                    return (
+                      <div key={idx} className="space-y-3 rounded-md border bg-background/50 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs text-muted-foreground">
+                            规则 {idx + 1} / 共 {rulesTotal} 条
+                          </p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              patch(
+                                'appMessageRules',
+                                form.appMessageRules.filter((_, i) => i !== idx),
+                              )
+                            }
+                          >
+                            删除
+                          </Button>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={`rule-match-${idx}`}>match（进程/应用名）</Label>
+                          <Input
+                            id={`rule-match-${idx}`}
+                            value={rule.match}
+                            onChange={(e) => {
+                              const next = [...form.appMessageRules]
+                              next[idx] = { ...next[idx], match: e.target.value }
+                              patch('appMessageRules', next)
+                            }}
+                            placeholder="例如：WindowsTerminal.exe"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={`rule-text-${idx}`}>text（替换文案）</Label>
+                          <textarea
+                            id={`rule-text-${idx}`}
+                            rows={3}
+                            value={rule.text}
+                            onChange={(e) => {
+                              const next = [...form.appMessageRules]
+                              next[idx] = { ...next[idx], text: e.target.value }
+                              patch('appMessageRules', next)
+                            }}
+                            className="w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
+                            placeholder="例如：正在编码：{title}"
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <ListPaginationBar
+                    page={rulesListPage}
+                    pageSize={SETTINGS_RULES_PAGE_SIZE}
+                    total={rulesTotal}
+                    onPageChange={setRulesListPage}
+                  />
+                </div>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const next = [...form.appMessageRules, { match: '', text: '' }]
+                  patch('appMessageRules', next)
+                  const last = listMaxPage(next.length, SETTINGS_RULES_PAGE_SIZE)
+                  setRulesListPage(last)
+                }}
+              >
+                添加规则
+              </Button>
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              示例：match 为 `WindowsTerminal.exe`，text 为 {'正在编码：{title}'}。
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <Label className="text-base">应用显示筛选</Label>
+          <p className="text-xs text-muted-foreground">
+            {form.appFilterMode === 'blacklist' ? '黑名单' : '白名单'}模式 · 黑 {form.appBlacklist.length} / 白{' '}
+            {form.appWhitelist.length} 条
+          </p>
+        </div>
+        <Button type="button" variant="secondary" className="shrink-0" onClick={() => setDialogAppFilterOpen(true)}>
+          在弹窗中编辑
+        </Button>
+      </div>
+
+      <Dialog open={dialogAppFilterOpen} onOpenChange={setDialogAppFilterOpen}>
+        <DialogContent
+          className="flex max-h-[min(90vh,56rem)] w-[calc(100vw-1.5rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl"
+          showCloseButton
+        >
+          <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 text-left">
+            <DialogTitle>应用显示筛选</DialogTitle>
+            <DialogDescription>选择黑名单或白名单，并维护应用名列表（不区分大小写）。</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <div className="space-y-4 rounded-lg border border-border/60 bg-card/30 p-4">
         <RadioGroup
           value={form.appFilterMode}
           onValueChange={(v) => patch('appFilterMode', v as 'blacklist' | 'whitelist')}
@@ -1013,8 +1338,10 @@ export function WebSettings() {
                   if (!value) return
                   const exists = form.appBlacklist.some((x) => x.toLowerCase() === value.toLowerCase())
                   if (exists) return
-                  patch('appBlacklist', [...form.appBlacklist, value])
+                  const next = [...form.appBlacklist, value]
+                  patch('appBlacklist', next)
                   setBlacklistInput('')
+                  setBlacklistListPage(listMaxPage(next.length, SETTINGS_APP_LIST_PAGE_SIZE))
                 }}
               >
                 添加
@@ -1024,25 +1351,44 @@ export function WebSettings() {
             {form.appBlacklist.length === 0 ? (
               <p className="text-xs text-muted-foreground">暂无黑名单条目</p>
             ) : (
-              <ul className="space-y-3">
-                {form.appBlacklist.map((app, idx) => (
-                  <li
-                    key={`${app}-${idx}`}
-                    className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
-                  >
-                    <span className="text-sm text-foreground break-all">{app}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0"
-                      onClick={() => patch('appBlacklist', form.appBlacklist.filter((_, i) => i !== idx))}
-                    >
-                      删除
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">已有条目（分页）</p>
+                <ul className="space-y-3">
+                  {form.appBlacklist
+                    .slice(blStart, blStart + SETTINGS_APP_LIST_PAGE_SIZE)
+                    .map((app, localIdx) => {
+                      const idx = blStart + localIdx
+                      return (
+                        <li
+                          key={`${app}-${idx}`}
+                          className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
+                        >
+                          <span className="text-sm text-foreground break-all">{app}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={() =>
+                              patch(
+                                'appBlacklist',
+                                form.appBlacklist.filter((_, i) => i !== idx),
+                              )
+                            }
+                          >
+                            删除
+                          </Button>
+                        </li>
+                      )
+                    })}
+                </ul>
+                <ListPaginationBar
+                  page={blacklistListPage}
+                  pageSize={SETTINGS_APP_LIST_PAGE_SIZE}
+                  total={blTotal}
+                  onPageChange={setBlacklistListPage}
+                />
+              </div>
             )}
           </div>
         ) : (
@@ -1065,8 +1411,10 @@ export function WebSettings() {
                   if (!value) return
                   const exists = form.appWhitelist.some((x) => x.toLowerCase() === value.toLowerCase())
                   if (exists) return
-                  patch('appWhitelist', [...form.appWhitelist, value])
+                  const next = [...form.appWhitelist, value]
+                  patch('appWhitelist', next)
                   setWhitelistInput('')
+                  setWhitelistListPage(listMaxPage(next.length, SETTINGS_APP_LIST_PAGE_SIZE))
                 }}
               >
                 添加
@@ -1076,85 +1424,148 @@ export function WebSettings() {
             {form.appWhitelist.length === 0 ? (
               <p className="text-xs text-muted-foreground">白名单为空：前台不显示任何活动</p>
             ) : (
-              <ul className="space-y-3">
-                {form.appWhitelist.map((app, idx) => (
-                  <li
-                    key={`${app}-${idx}`}
-                    className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
-                  >
-                    <span className="text-sm text-foreground break-all">{app}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0"
-                      onClick={() => patch('appWhitelist', form.appWhitelist.filter((_, i) => i !== idx))}
-                    >
-                      删除
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">已有条目（分页）</p>
+                <ul className="space-y-3">
+                  {form.appWhitelist
+                    .slice(wlStart, wlStart + SETTINGS_APP_LIST_PAGE_SIZE)
+                    .map((app, localIdx) => {
+                      const idx = wlStart + localIdx
+                      return (
+                        <li
+                          key={`${app}-${idx}`}
+                          className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
+                        >
+                          <span className="text-sm text-foreground break-all">{app}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={() =>
+                              patch(
+                                'appWhitelist',
+                                form.appWhitelist.filter((_, i) => i !== idx),
+                              )
+                            }
+                          >
+                            删除
+                          </Button>
+                        </li>
+                      )
+                    })}
+                </ul>
+                <ListPaginationBar
+                  page={whitelistListPage}
+                  pageSize={SETTINGS_APP_LIST_PAGE_SIZE}
+                  total={wlTotal}
+                  onPageChange={setWhitelistListPage}
+                />
+              </div>
             )}
           </div>
         )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <Label className="text-base">仅显示应用名</Label>
+          <p className="text-xs text-muted-foreground">已配置 {noTotal} 个应用</p>
+        </div>
+        <Button type="button" variant="secondary" className="shrink-0" onClick={() => setDialogNameOnlyOpen(true)}>
+          在弹窗中编辑
+        </Button>
       </div>
 
-      <div className="space-y-3">
-        <Label htmlFor="nameOnly-input">仅显示应用名</Label>
-        <p className="text-xs text-muted-foreground">输入应用名（不区分大小写）</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            id="nameOnly-input"
-            className="flex-1 min-w-[240px]"
-            value={nameOnlyListInput}
-            onChange={(e) => setNameOnlyListInput(e.target.value)}
-            placeholder="例如：Code.exe"
-          />
-          <Button
-            type="button"
-            className="shrink-0"
-            onClick={() => {
-              const value = nameOnlyListInput.trim()
-              if (!value) return
-              const exists = form.appNameOnlyList.some((x) => x.toLowerCase() === value.toLowerCase())
-              if (exists) return
-              patch('appNameOnlyList', [...form.appNameOnlyList, value])
-              setNameOnlyListInput('')
-            }}
-          >
-            添加
-          </Button>
-        </div>
-
-        {form.appNameOnlyList.length === 0 ? (
-          <p className="text-xs text-muted-foreground">暂无“仅显示应用名”配置</p>
-        ) : (
-          <ul className="space-y-3">
-            {form.appNameOnlyList.map((app, idx) => (
-              <li
-                key={`${app}-${idx}`}
-                className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
-              >
-                <span className="text-sm text-foreground break-all">{app}</span>
+      <Dialog open={dialogNameOnlyOpen} onOpenChange={setDialogNameOnlyOpen}>
+        <DialogContent
+          className="flex max-h-[min(90vh,48rem)] w-[calc(100vw-1.5rem)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
+          showCloseButton
+        >
+          <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 text-left">
+            <DialogTitle>仅显示应用名</DialogTitle>
+            <DialogDescription>
+              命中后只显示应用名，不显示窗口标题等详细内容（不区分大小写）。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">输入应用名（不区分大小写）</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  id="nameOnly-input"
+                  className="flex-1 min-w-[240px]"
+                  value={nameOnlyListInput}
+                  onChange={(e) => setNameOnlyListInput(e.target.value)}
+                  placeholder="例如：Code.exe"
+                />
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   className="shrink-0"
-                  onClick={() => patch('appNameOnlyList', form.appNameOnlyList.filter((_, i) => i !== idx))}
+                  onClick={() => {
+                    const value = nameOnlyListInput.trim()
+                    if (!value) return
+                    const exists = form.appNameOnlyList.some((x) => x.toLowerCase() === value.toLowerCase())
+                    if (exists) return
+                    const next = [...form.appNameOnlyList, value]
+                    patch('appNameOnlyList', next)
+                    setNameOnlyListInput('')
+                    setNameOnlyListPage(listMaxPage(next.length, SETTINGS_APP_LIST_PAGE_SIZE))
+                  }}
                 >
-                  删除
+                  添加
                 </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+              </div>
 
-        <p className="text-xs text-muted-foreground">
-          命中后只显示应用名，不显示窗口标题等详细内容（不区分大小写）。
-        </p>
-      </div>
+              {form.appNameOnlyList.length === 0 ? (
+                <p className="text-xs text-muted-foreground">暂无“仅显示应用名”配置</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">已有条目（分页）</p>
+                  <ul className="space-y-3">
+                    {form.appNameOnlyList
+                      .slice(noStart, noStart + SETTINGS_APP_LIST_PAGE_SIZE)
+                      .map((app, localIdx) => {
+                        const idx = noStart + localIdx
+                        return (
+                          <li
+                            key={`${app}-${idx}`}
+                            className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
+                          >
+                            <span className="text-sm text-foreground break-all">{app}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="shrink-0"
+                              onClick={() =>
+                                patch(
+                                  'appNameOnlyList',
+                                  form.appNameOnlyList.filter((_, i) => i !== idx),
+                                )
+                              }
+                            >
+                              删除
+                            </Button>
+                          </li>
+                        )
+                      })}
+                  </ul>
+                  <ListPaginationBar
+                    page={nameOnlyListPage}
+                    pageSize={SETTINGS_APP_LIST_PAGE_SIZE}
+                    total={noTotal}
+                    onPageChange={setNameOnlyListPage}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-2">
         <Label className="flex items-center gap-2">

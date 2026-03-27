@@ -57,11 +57,68 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    const rawLimit = searchParams.get('limit')
+    const usePagination = rawLimit !== null && rawLimit !== ''
+
+    const recentLimit = 5
+    type DeviceRow = { displayName: string; generatedHashKey: string; lastSeenAt: Date | null }
+
+    const maskWithRecent = (
+      tokens: { id: number; name: string; token: string; isActive: boolean; createdAt: Date; lastUsedAt: Date | null }[],
+      recentByToken: DeviceRow[][],
+    ) =>
+      tokens.map((t, i) => ({
+        ...t,
+        token: t.token.slice(0, 8) + '...',
+        recentDevices: (recentByToken[i] as DeviceRow[]).map((d) => ({
+          displayName: d.displayName,
+          generatedHashKey: d.generatedHashKey,
+          lastSeenAt: d.lastSeenAt,
+        })),
+      }))
+
+    if (usePagination) {
+      const limit = Math.min(Math.max(parseInt(rawLimit, 10) || 10, 1), 100)
+      const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0)
+
+      const [tokens, total] = await Promise.all([
+        prisma.apiToken.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+        }),
+        prisma.apiToken.count(),
+      ])
+
+      const recentByToken = await Promise.all(
+        tokens.map((t) =>
+          (prisma as any).device.findMany({
+            where: { apiTokenId: t.id },
+            orderBy: [{ lastSeenAt: 'desc' }, { updatedAt: 'desc' }],
+            take: recentLimit,
+            select: {
+              displayName: true,
+              generatedHashKey: true,
+              lastSeenAt: true,
+            },
+          })
+        )
+      )
+
+      const maskedTokens = maskWithRecent(tokens, recentByToken)
+
+      return NextResponse.json({
+        success: true,
+        data: maskedTokens,
+        pagination: { limit, offset, total },
+      })
+    }
+
+    // Full list (no limit): used by device binding dropdown etc.
     const tokens = await prisma.apiToken.findMany({
       orderBy: { createdAt: 'desc' },
     })
 
-    const recentLimit = 5
     const recentByToken = await Promise.all(
       tokens.map((t) =>
         (prisma as any).device.findMany({
@@ -77,17 +134,7 @@ export async function GET(request: NextRequest) {
       )
     )
 
-    const maskedTokens = tokens.map((t, i) => ({
-      ...t,
-      token: t.token.slice(0, 8) + '...',
-      recentDevices: (recentByToken[i] as { displayName: string; generatedHashKey: string; lastSeenAt: Date | null }[]).map(
-        (d) => ({
-          displayName: d.displayName,
-          generatedHashKey: d.generatedHashKey,
-          lastSeenAt: d.lastSeenAt,
-        })
-      ),
-    }))
+    const maskedTokens = maskWithRecent(tokens, recentByToken)
 
     return NextResponse.json({ success: true, data: maskedTokens })
   } catch (error) {

@@ -2,18 +2,19 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  Activity, 
-  LayoutDashboard, 
-  List, 
-  Key, 
+import {
+  Activity,
+  LayoutDashboard,
+  List,
+  Key,
   Settings,
   LogOut,
   Clock,
   Home,
   UserCog,
   Lightbulb,
-  MonitorSmartphone
+  MonitorSmartphone,
+  CalendarDays,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -24,6 +25,7 @@ import { WebSettings } from './web-settings'
 import { AccountSettings } from './account-settings'
 import { InspirationManager } from './inspiration-manager'
 import { DeviceManager } from './device-manager'
+import { ScheduleManager } from './schedule-manager'
 
 const VALID_TABS = new Set([
   'overview',
@@ -33,6 +35,7 @@ const VALID_TABS = new Set([
   'tokens',
   'account',
   'settings',
+  'schedule',
 ])
 
 interface DashboardProps {
@@ -45,7 +48,7 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
   const router = useRouter()
   const [refreshKey, setRefreshKey] = useState(0)
   const [activeTab, setActiveTab] = useState(() =>
-    initialTab && VALID_TABS.has(initialTab) ? initialTab : 'overview'
+    initialTab && VALID_TABS.has(initialTab) ? initialTab : 'overview',
   )
 
   const handleLogout = async () => {
@@ -56,7 +59,6 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
 
   return (
     <div className="min-h-screen bg-background">
-      {/* 顶部导航 */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -69,7 +71,7 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
                 <p className="text-xs text-muted-foreground">欢迎, {username}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => router.push('/')}>
                 <Home className="h-4 w-4 mr-1" />
@@ -111,10 +113,15 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
               <UserCog className="h-4 w-4" />
               账户
             </TabsTrigger>
+            <TabsTrigger value="schedule" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              课表
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" />
               设置
             </TabsTrigger>
+
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -154,6 +161,10 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
 
           <TabsContent value="settings">
             <WebSettings />
+          </TabsContent>
+
+          <TabsContent value="schedule">
+            <ScheduleManager />
           </TabsContent>
         </Tabs>
       </main>

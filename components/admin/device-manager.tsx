@@ -41,6 +41,11 @@ interface TokenOption {
   isActive: boolean
 }
 
+/** Server page size; smaller pages keep the admin panel from growing too tall. */
+const DEVICE_LIST_PAGE_SIZE = 10
+/** Max scroll height for the device list block inside the card. */
+const DEVICE_LIST_MAX_HEIGHT = 'min(70vh,48rem)'
+
 export function DeviceManager({
   initialHashKey,
   highlightHashKey,
@@ -62,8 +67,16 @@ export function DeviceManager({
   const [newHashKey, setNewHashKey] = useState('')
   const [message, setMessage] = useState('')
 
-  const limit = 20
-  const totalPages = useMemo(() => Math.ceil(total / limit), [total])
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(total / DEVICE_LIST_PAGE_SIZE)),
+    [total],
+  )
+
+  useEffect(() => {
+    if (loading || total <= 0) return
+    const maxPage = Math.max(0, Math.ceil(total / DEVICE_LIST_PAGE_SIZE) - 1)
+    if (page > maxPage) setPage(maxPage)
+  }, [loading, total, page])
 
   const fetchTokens = useCallback(async () => {
     try {
@@ -81,8 +94,8 @@ export function DeviceManager({
     setLoading(true)
     try {
       const params = new URLSearchParams({
-        limit: String(limit),
-        offset: String(page * limit),
+        limit: String(DEVICE_LIST_PAGE_SIZE),
+        offset: String(page * DEVICE_LIST_PAGE_SIZE),
       })
       if (q.trim()) params.set('q', q.trim())
       if (status) params.set('status', status)
@@ -279,10 +292,15 @@ export function DeviceManager({
 
         {loading ? (
           <p className="text-sm text-muted-foreground">加载中...</p>
+        ) : items.length === 0 && total > 0 ? (
+          <p className="text-sm text-muted-foreground">正在同步页码…</p>
         ) : items.length === 0 ? (
           <p className="text-sm text-muted-foreground">暂无设备</p>
         ) : (
-          <div className="space-y-3">
+          <div
+            className="space-y-3 overflow-y-auto overscroll-contain pr-1"
+            style={{ maxHeight: DEVICE_LIST_MAX_HEIGHT }}
+          >
             {items.map((item) => (
               <div
                 key={item.id}
@@ -374,26 +392,44 @@ export function DeviceManager({
           </div>
         )}
 
-        {totalPages > 1 ? (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">共 {total} 条</p>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
-                上一页
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {page + 1} / {totalPages}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page >= totalPages - 1}
-              >
-                下一页
-              </Button>
-            </div>
+        {total > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+            <span>
+              共 {total} 条
+              {items.length > 0 ? (
+                <>
+                  {' '}
+                  · 本页 {page * DEVICE_LIST_PAGE_SIZE + 1}–{page * DEVICE_LIST_PAGE_SIZE + items.length}
+                </>
+              ) : null}
+            </span>
+            {total > DEVICE_LIST_PAGE_SIZE ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page <= 0}
+                >
+                  上一页
+                </Button>
+                <span className="tabular-nums text-sm">
+                  {page + 1} / {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page >= totalPages - 1}
+                >
+                  下一页
+                </Button>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

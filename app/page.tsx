@@ -9,6 +9,12 @@ import { SiteLockForm } from '@/components/site-lock-form'
 import { getThemePresetCss } from '@/lib/theme-css'
 import { LayoutFooter } from '@/components/layout-footer'
 import { ContentReadingPanel } from '@/components/content-reading-panel'
+import { ScheduleHomeInClassBanner } from '@/components/schedule-home-in-class-banner'
+import {
+  normalizeHitokotoCategories,
+  normalizeHitokotoEncode,
+} from '@/lib/hitokoto'
+import { parseScheduleCoursesJson, type ScheduleCourse } from '@/lib/schedule-courses'
 
 // 强制动态渲染，确保每次请求都获取最新数据
 export const dynamic = 'force-dynamic'
@@ -59,6 +65,29 @@ export default async function Home() {
     createdAt: row.createdAt.toISOString(),
   }))
 
+  const scheduleInClassOnHome = Boolean(config.scheduleInClassOnHome)
+  const scheduleHomeShowLocation = Boolean(config.scheduleHomeShowLocation)
+  const scheduleHomeShowTeacher = Boolean(config.scheduleHomeShowTeacher)
+  const scheduleHomeAfterClassesLabelRaw = String(
+    (config as Record<string, unknown>).scheduleHomeAfterClassesLabel ?? '',
+  ).trim()
+  const scheduleHomeAfterClassesLabel =
+    scheduleHomeAfterClassesLabelRaw.slice(0, 40) || '正在摸鱼'
+  let scheduleCoursesForHome: ScheduleCourse[] = []
+  if (scheduleInClassOnHome) {
+    const parsed = parseScheduleCoursesJson(config.scheduleCourses ?? null)
+    if (parsed.ok) {
+      scheduleCoursesForHome = parsed.data
+    }
+  }
+  const showScheduleHomeColumn =
+    scheduleInClassOnHome && scheduleCoursesForHome.length > 0
+
+  const cfg = config as Record<string, unknown>
+  const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
+  const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
+  const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
+
   return (
     <>
       {themeCss && (
@@ -79,12 +108,38 @@ export default async function Home() {
           <ContentReadingPanel className="p-5 sm:p-6">
             {/* Profile + current: tighter vertical rhythm */}
             <div className="flex flex-col gap-4">
-              <UserProfile
-                name={userName}
-                bio={userBio}
-                avatarUrl={avatarUrl}
-                note={userNote}
-              />
+              <div
+                className={
+                  showScheduleHomeColumn
+                    ? 'flex flex-row flex-nowrap items-start gap-3 sm:gap-4'
+                    : 'flex flex-col gap-4'
+                }
+              >
+                <div
+                  className={
+                    showScheduleHomeColumn ? 'min-w-0 flex-1 basis-0 overflow-hidden' : 'min-w-0 w-full'
+                  }
+                >
+                  <UserProfile
+                    name={userName}
+                    bio={userBio}
+                    avatarUrl={avatarUrl}
+                    note={userNote}
+                    noteHitokotoEnabled={noteHitokotoEnabled}
+                    noteHitokotoCategories={noteHitokotoCategories}
+                    noteHitokotoEncode={noteHitokotoEncode}
+                  />
+                </div>
+                {showScheduleHomeColumn ? (
+                  <ScheduleHomeInClassBanner
+                    courses={scheduleCoursesForHome}
+                    showLocation={scheduleHomeShowLocation}
+                    showTeacher={scheduleHomeShowTeacher}
+                    afterClassesLabel={scheduleHomeAfterClassesLabel}
+                    className="shrink-0 w-1/3 min-w-0 basis-1/3"
+                  />
+                ) : null}
+              </div>
 
               <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 

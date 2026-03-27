@@ -10,10 +10,14 @@ interface AddActivityFormProps {
   onSuccess?: () => void
 }
 
+const PERSIST_MIN_MINUTES = 1
+const PERSIST_MAX_MINUTES = 24 * 60
+
 export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
   const [device, setDevice] = useState('')
   const [processName, setProcessName] = useState('')
   const [processTitle, setProcessTitle] = useState('')
+  const [persistMinutes, setPersistMinutes] = useState('30')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -23,6 +27,12 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
     setMessage(null)
 
     try {
+      const parsedPersist = Math.round(Number(persistMinutes))
+      const safePersist =
+        Number.isFinite(parsedPersist) && parsedPersist > 0
+          ? Math.min(Math.max(parsedPersist, PERSIST_MIN_MINUTES), PERSIST_MAX_MINUTES)
+          : 30
+
       const res = await fetch('/api/admin/activity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -31,6 +41,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
           device,
           process_name: processName,
           process_title: processTitle || undefined,
+          persist_minutes: safePersist,
         }),
       })
 
@@ -85,6 +96,22 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
           value={processTitle}
           onChange={(e) => setProcessTitle(e.target.value)}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="persist">常驻时长（分钟）</Label>
+        <Input
+          id="persist"
+          type="number"
+          inputMode="numeric"
+          min={PERSIST_MIN_MINUTES}
+          max={PERSIST_MAX_MINUTES}
+          value={persistMinutes}
+          onChange={(e) => setPersistMinutes(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          无客户端上报时，超过该时间后活动会从首页「当前状态」自动结束（1–1440 分钟，与站点「进程无上报判定间隔」规则一致）。
+        </p>
       </div>
 
       {message && (

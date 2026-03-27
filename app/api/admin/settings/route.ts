@@ -6,6 +6,18 @@ import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
+import {
+  normalizeHitokotoCategories,
+  normalizeHitokotoEncode,
+} from '@/lib/hitokoto'
+import {
+  isAllowedSlotMinutes,
+  MAX_SCHEDULE_ICS_BYTES,
+  parseScheduleCoursesJson,
+} from '@/lib/schedule-courses'
+
+const SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX = 40
+const DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL = '正在摸鱼'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -88,6 +100,97 @@ export async function PATCH(request: NextRequest) {
       ? Math.min(Math.max(Math.round(parsedStaleSeconds), 30), 24 * 60 * 60)
       : 500
 
+    const existing = await (prisma as any).siteConfig.findUnique({ where: { id: 1 } })
+
+    let scheduleSlotMinutes =
+      typeof existing?.scheduleSlotMinutes === 'number' ? existing.scheduleSlotMinutes : 30
+    if (body.scheduleSlotMinutes !== undefined && body.scheduleSlotMinutes !== null) {
+      const s = Number(body.scheduleSlotMinutes)
+      if (!isAllowedSlotMinutes(s)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid schedule slot (use 15, 30, 45, or 60 minutes)' },
+          { status: 400 },
+        )
+      }
+      scheduleSlotMinutes = s
+    }
+
+    let scheduleCoursesParsed = parseScheduleCoursesJson(existing?.scheduleCourses ?? null)
+    if (!scheduleCoursesParsed.ok) {
+      scheduleCoursesParsed = { ok: true, data: [] }
+    }
+    let scheduleCourses = scheduleCoursesParsed.data
+    if (body.scheduleCourses !== undefined) {
+      const parsed = parseScheduleCoursesJson(body.scheduleCourses)
+      if (!parsed.ok) {
+        return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
+      }
+      scheduleCourses = parsed.data
+    }
+
+    let scheduleIcs: string | null =
+      typeof existing?.scheduleIcs === 'string' && existing.scheduleIcs.length > 0
+        ? existing.scheduleIcs
+        : null
+    if (body.scheduleIcs !== undefined) {
+      const raw = body.scheduleIcs === null || body.scheduleIcs === undefined ? '' : String(body.scheduleIcs)
+      if (raw.length > MAX_SCHEDULE_ICS_BYTES) {
+        return NextResponse.json(
+          { success: false, error: `scheduleIcs exceeds ${MAX_SCHEDULE_ICS_BYTES} bytes` },
+          { status: 400 },
+        )
+      }
+      scheduleIcs = raw.length > 0 ? raw : null
+    }
+
+    let scheduleInClassOnHome = Boolean(existing?.scheduleInClassOnHome)
+    if (body.scheduleInClassOnHome !== undefined && body.scheduleInClassOnHome !== null) {
+      scheduleInClassOnHome = Boolean(body.scheduleInClassOnHome)
+    }
+    let scheduleHomeShowLocation = Boolean(existing?.scheduleHomeShowLocation)
+    if (body.scheduleHomeShowLocation !== undefined && body.scheduleHomeShowLocation !== null) {
+      scheduleHomeShowLocation = Boolean(body.scheduleHomeShowLocation)
+    }
+    let scheduleHomeShowTeacher = Boolean(existing?.scheduleHomeShowTeacher)
+    if (body.scheduleHomeShowTeacher !== undefined && body.scheduleHomeShowTeacher !== null) {
+      scheduleHomeShowTeacher = Boolean(body.scheduleHomeShowTeacher)
+    }
+
+    let scheduleHomeAfterClassesLabel = DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL
+    const existingLabel = existing?.scheduleHomeAfterClassesLabel
+    if (typeof existingLabel === 'string' && existingLabel.trim().length > 0) {
+      scheduleHomeAfterClassesLabel = existingLabel.trim().slice(
+        0,
+        SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX,
+      )
+    }
+    if (
+      body.scheduleHomeAfterClassesLabel !== undefined &&
+      body.scheduleHomeAfterClassesLabel !== null
+    ) {
+      const raw = String(body.scheduleHomeAfterClassesLabel).trim()
+      scheduleHomeAfterClassesLabel = (
+        raw.length > 0 ? raw : DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL
+      ).slice(0, SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX)
+    }
+
+    let userNoteHitokotoEnabled = Boolean(existing?.userNoteHitokotoEnabled)
+    if (body.userNoteHitokotoEnabled !== undefined && body.userNoteHitokotoEnabled !== null) {
+      userNoteHitokotoEnabled = Boolean(body.userNoteHitokotoEnabled)
+    }
+
+    let userNoteHitokotoCategories = normalizeHitokotoCategories(
+      existing?.userNoteHitokotoCategories ?? [],
+    )
+    if (body.userNoteHitokotoCategories !== undefined) {
+      userNoteHitokotoCategories = normalizeHitokotoCategories(body.userNoteHitokotoCategories)
+    }
+
+    let userNoteHitokotoEncode = normalizeHitokotoEncode(existing?.userNoteHitokotoEncode)
+    if (body.userNoteHitokotoEncode !== undefined && body.userNoteHitokotoEncode !== null) {
+      userNoteHitokotoEncode = normalizeHitokotoEncode(body.userNoteHitokotoEncode)
+    }
+
     if (!userName || !userBio || !avatarUrl) {
       return NextResponse.json(
         { success: false, error: '请填写首页必填信息' },
@@ -95,7 +198,6 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const existing = await (prisma as any).siteConfig.findUnique({ where: { id: 1 } })
     const pageLockPasswordHash =
       rawPageLockPassword.trim().length > 0
         ? await bcrypt.hash(rawPageLockPassword.trim(), 12)
@@ -116,6 +218,9 @@ export async function PATCH(request: NextRequest) {
         userBio,
         avatarUrl,
         userNote,
+        userNoteHitokotoEnabled,
+        userNoteHitokotoCategories,
+        userNoteHitokotoEncode,
         themePreset,
         themeCustomSurface,
         customCss,
@@ -132,6 +237,13 @@ export async function PATCH(request: NextRequest) {
         earlierText,
         adminText,
         autoAcceptNewDevices,
+        scheduleSlotMinutes,
+        scheduleCourses,
+        scheduleIcs,
+        scheduleInClassOnHome,
+        scheduleHomeShowLocation,
+        scheduleHomeShowTeacher,
+        scheduleHomeAfterClassesLabel,
       },
       create: {
         id: 1,
@@ -140,6 +252,9 @@ export async function PATCH(request: NextRequest) {
         userBio,
         avatarUrl,
         userNote,
+        userNoteHitokotoEnabled,
+        userNoteHitokotoCategories,
+        userNoteHitokotoEncode,
         themePreset,
         themeCustomSurface,
         customCss,
@@ -156,6 +271,13 @@ export async function PATCH(request: NextRequest) {
         earlierText,
         adminText,
         autoAcceptNewDevices,
+        scheduleSlotMinutes,
+        scheduleCourses,
+        scheduleIcs,
+        scheduleInClassOnHome,
+        scheduleHomeShowLocation,
+        scheduleHomeShowTeacher,
+        scheduleHomeAfterClassesLabel,
       },
     })
 

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ['ical.js'],
   typescript: {
     ignoreBuildErrors: true,
   },

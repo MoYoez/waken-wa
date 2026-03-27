@@ -1,3 +1,7 @@
+import {
+  normalizeHitokotoCategories,
+  normalizeHitokotoEncode,
+} from '@/lib/hitokoto'
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
@@ -52,6 +56,11 @@ export async function GET(request: Request) {
         userBio: siteConfig.userBio,
         avatarUrl: siteConfig.avatarUrl,
         userNote: siteConfig.userNote,
+        userNoteHitokotoEnabled: Boolean(siteConfig.userNoteHitokotoEnabled),
+        userNoteHitokotoCategories: normalizeHitokotoCategories(
+          siteConfig.userNoteHitokotoCategories,
+        ),
+        userNoteHitokotoEncode: normalizeHitokotoEncode(siteConfig.userNoteHitokotoEncode),
         themePreset: siteConfig.themePreset,
         themeCustomSurface: siteConfig.themeCustomSurface,
         customCss: siteConfig.customCss,
@@ -67,6 +76,17 @@ export async function GET(request: Request) {
         earlierText: siteConfig.earlierText,
         adminText: siteConfig.adminText,
         autoAcceptNewDevices: Boolean(siteConfig.autoAcceptNewDevices),
+        scheduleSlotMinutes: siteConfig.scheduleSlotMinutes ?? 30,
+        scheduleCourses: siteConfig.scheduleCourses ?? [],
+        scheduleIcs: siteConfig.scheduleIcs ?? null,
+        scheduleInClassOnHome: Boolean(siteConfig.scheduleInClassOnHome),
+        scheduleHomeShowLocation: Boolean(siteConfig.scheduleHomeShowLocation),
+        scheduleHomeShowTeacher: Boolean(siteConfig.scheduleHomeShowTeacher),
+        scheduleHomeAfterClassesLabel:
+          typeof siteConfig.scheduleHomeAfterClassesLabel === 'string' &&
+          siteConfig.scheduleHomeAfterClassesLabel.trim().length > 0
+            ? siteConfig.scheduleHomeAfterClassesLabel.trim().slice(0, 40)
+            : '正在摸鱼',
       },
       token: {
         reportEndpoint: `${baseUrl}/api/activity`,

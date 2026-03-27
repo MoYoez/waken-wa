@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Plus, Trash2, Copy, Check, QrCode, Loader2 } from 'lucide-react'
@@ -46,14 +46,25 @@ interface ApiToken {
   recentDevices?: RecentDeviceRow[]
 }
 
+/** Paginated list page size for the token grid (API supports limit when this query is sent). */
+const TOKEN_LIST_PAGE_SIZE = 10
+/** Max scroll height for the token card list. */
+const TOKEN_LIST_MAX_HEIGHT = 'min(70vh,48rem)'
+
 export function TokenManager() {
   const [tokens, setTokens] = useState<ApiToken[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(0)
+  /** Bumps to refetch the current page when mutations do not change `page` (e.g. create while on page 0). */
+  const [listTick, setListTick] = useState(0)
   const [loading, setLoading] = useState(true)
   const [newTokenName, setNewTokenName] = useState('')
   const [newToken, setNewToken] = useState<string | null>(null)
   const [newTokenBundle, setNewTokenBundle] = useState<string | null>(null)
   const [newEndpoint, setNewEndpoint] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  /** Which copy control last succeeded (avoid sharing one flag across multiple buttons). */
+  const [copiedTarget, setCopiedTarget] = useState<string | null>(null)
+  const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [qrDialogOpen, setQrDialogOpen] = useState(false)
@@ -62,23 +73,44 @@ export function TokenManager() {
   const [qrEndpoint, setQrEndpoint] = useState('')
   const [qrEncoded, setQrEncoded] = useState('')
 
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(total / TOKEN_LIST_PAGE_SIZE)),
+    [total],
+  )
+
+  useEffect(() => {
+    if (loading) return
+    if (total <= 0) {
+      if (page !== 0) setPage(0)
+      return
+    }
+    const maxPage = Math.max(0, Math.ceil(total / TOKEN_LIST_PAGE_SIZE) - 1)
+    if (page > maxPage) setPage(maxPage)
+  }, [loading, total, page])
+
   const fetchTokens = useCallback(async () => {
+    setLoading(true)
     try {
-      const res = await fetch('/api/admin/tokens')
+      const params = new URLSearchParams({
+        limit: String(TOKEN_LIST_PAGE_SIZE),
+        offset: String(page * TOKEN_LIST_PAGE_SIZE),
+      })
+      const res = await fetch(`/api/admin/tokens?${params}`)
       const data = await res.json()
       if (data.success) {
-        setTokens(data.data)
+        setTokens(data.data || [])
+        setTotal(typeof data.pagination?.total === 'number' ? data.pagination.total : (data.data?.length ?? 0))
       }
     } catch {
-      // 忽略
+      // ignore
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [page])
 
   useEffect(() => {
-    fetchTokens()
-  }, [fetchTokens])
+    void fetchTokens()
+  }, [fetchTokens, listTick])
 
   const handleCreate = async () => {
     if (!newTokenName.trim()) return
@@ -96,7 +128,8 @@ export function TokenManager() {
         setNewToken(data.data.token)
         setNewTokenBundle(data.tokenBundleBase64 || null)
         setNewEndpoint(data.endpoint || null)
-        fetchTokens()
+        setPage(0)
+        setListTick((t) => t + 1)
       }
     } catch {
       // 忽略
@@ -112,25 +145,33 @@ export function TokenManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, is_active }),
       })
-      fetchTokens()
+      setListTick((t) => t + 1)
     } catch {
-      // 忽略
+      // ignore
     }
   }
 
   const handleDelete = async (id: number) => {
     try {
       await fetch(`/api/admin/tokens?id=${id}`, { method: 'DELETE' })
-      fetchTokens()
+      setListTick((t) => t + 1)
     } catch {
-      // 忽略
+      // ignore
     }
   }
 
-  const copyToClipboard = async (text: string) => {
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const copyToClipboard = async (text: string, target: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      return
+    }
+    if (copyFeedbackTimerRef.current) clearTimeout(copyFeedbackTimerRef.current)
+    setCopiedTarget(target)
+    copyFeedbackTimerRef.current = setTimeout(() => {
+      setCopiedTarget(null)
+      copyFeedbackTimerRef.current = null
+    }, 2000)
   }
 
   const closeDialog = () => {
@@ -139,6 +180,11 @@ export function TokenManager() {
     setNewToken(null)
     setNewTokenBundle(null)
     setNewEndpoint(null)
+    setCopiedTarget(null)
+    if (copyFeedbackTimerRef.current) {
+      clearTimeout(copyFeedbackTimerRef.current)
+      copyFeedbackTimerRef.current = null
+    }
   }
 
   const openTokenQr = async (token: ApiToken) => {
@@ -207,9 +253,13 @@ export function TokenManager() {
                     <Button 
                       variant="outline" 
                       size="icon"
-                      onClick={() => copyToClipboard(newToken)}
+                      onClick={() => void copyToClipboard(newToken, 'create-raw-token')}
                     >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {copiedTarget === 'create-raw-token' ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -228,9 +278,13 @@ export function TokenManager() {
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => copyToClipboard(newTokenBundle)}
+                        onClick={() => void copyToClipboard(newTokenBundle, 'create-token-bundle')}
                       >
-                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {copiedTarget === 'create-token-bundle' ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                     <div className="pt-1">
@@ -278,12 +332,18 @@ export function TokenManager() {
         </Dialog>
       </div>
 
-      {/* Token 列表 */}
-      <div className="grid gap-4">
+      {/* Token list (paginated + scroll) */}
+      <div className="space-y-3">
         {loading ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
               加载中...
+            </CardContent>
+          </Card>
+        ) : tokens.length === 0 && total > 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              正在同步页码…
             </CardContent>
           </Card>
         ) : tokens.length === 0 ? (
@@ -293,7 +353,11 @@ export function TokenManager() {
             </CardContent>
           </Card>
         ) : (
-          tokens.map((token) => (
+          <div
+            className="grid gap-4 overflow-y-auto overscroll-contain pr-1"
+            style={{ maxHeight: TOKEN_LIST_MAX_HEIGHT }}
+          >
+            {tokens.map((token) => (
             <Card key={token.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -382,8 +446,50 @@ export function TokenManager() {
                 </div>
               </CardContent>
             </Card>
-          ))
+            ))}
+          </div>
         )}
+
+        {total > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+            <span>
+              共 {total} 条
+              {tokens.length > 0 ? (
+                <>
+                  {' '}
+                  · 本页 {page * TOKEN_LIST_PAGE_SIZE + 1}–{page * TOKEN_LIST_PAGE_SIZE + tokens.length}
+                </>
+              ) : null}
+            </span>
+            {total > TOKEN_LIST_PAGE_SIZE ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page <= 0 || loading}
+                >
+                  上一页
+                </Button>
+                <span className="tabular-nums text-sm">
+                  {page + 1} / {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page >= totalPages - 1 || loading}
+                >
+                  下一页
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
@@ -421,10 +527,14 @@ export function TokenManager() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => copyToClipboard(qrEncoded)}
+                onClick={() => void copyToClipboard(qrEncoded, 'qr-encoded')}
               >
-                <Copy className="h-4 w-4 mr-1" />
-                复制接入配置
+                {copiedTarget === 'qr-encoded' ? (
+                  <Check className="h-4 w-4 mr-1" />
+                ) : (
+                  <Copy className="h-4 w-4 mr-1" />
+                )}
+                {copiedTarget === 'qr-encoded' ? '已复制' : '复制接入配置'}
               </Button>
             )}
           </div>

@@ -42,11 +42,21 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
     const q = searchParams.get('q')?.trim()
 
+    const dbUrl = process.env.DATABASE_URL ?? ''
+    const useInsensitive =
+      dbUrl.startsWith('postgresql:') || dbUrl.startsWith('postgres:')
+
+    const textContains = (value: string) =>
+      useInsensitive
+        ? ({ contains: value, mode: 'insensitive' as const } as const)
+        : ({ contains: value } as const)
+
     const where: any = q
       ? {
           OR: [
-            { title: { contains: q, mode: 'insensitive' } },
-            { content: { contains: q, mode: 'insensitive' } },
+            { title: textContains(q) },
+            { content: textContains(q) },
+            { statusSnapshot: textContains(q) },
           ],
         }
       : {}

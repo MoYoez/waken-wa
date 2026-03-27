@@ -34,7 +34,10 @@ interface InspirationEntry {
   createdAt: string
 }
 
-const LIMIT = 20
+/** Server page size; keep small so tall markdown cards do not overflow the viewport. */
+const INSPIRATION_LIST_PAGE_SIZE = 8
+/** Max scroll height for the entry list inside the card (viewport-relative). */
+const INSPIRATION_LIST_MAX_HEIGHT = 'min(75vh,56rem)'
 /** Max long edge (px) for cropped PNG DataURL (cover + inline body images). */
 const INSPIRATION_MAX_OUTPUT_EDGE = 1200
 
@@ -58,7 +61,16 @@ export function InspirationManager() {
   const [cropTarget, setCropTarget] = useState<'cover' | 'body'>('cover')
   const bodyImageInputRef = useRef<HTMLInputElement>(null)
 
-  const totalPages = useMemo(() => Math.ceil(total / LIMIT), [total])
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(total / INSPIRATION_LIST_PAGE_SIZE)),
+    [total],
+  )
+
+  useEffect(() => {
+    if (loading || total <= 0) return
+    const maxPage = Math.max(0, Math.ceil(total / INSPIRATION_LIST_PAGE_SIZE) - 1)
+    if (page > maxPage) setPage(maxPage)
+  }, [loading, total, page])
 
   useEffect(() => {
     return () => {
@@ -70,8 +82,8 @@ export function InspirationManager() {
     setLoading(true)
     try {
       const params = new URLSearchParams({
-        limit: String(LIMIT),
-        offset: String(page * LIMIT),
+        limit: String(INSPIRATION_LIST_PAGE_SIZE),
+        offset: String(page * INSPIRATION_LIST_PAGE_SIZE),
       })
       if (q.trim()) params.set('q', q.trim())
 
@@ -156,7 +168,7 @@ export function InspirationManager() {
             <div>
               <h3 className="text-lg font-semibold">灵感随想录</h3>
               <p className="text-sm text-muted-foreground">
-                正文支持 Markdown；正文配图经裁剪后上传到服务器，正文中仅插入图片地址（不写入 Data URL）。封面图仍为可选 Data URL。
+                正文支持 Markdown；正文配图经裁剪后上传到服务器。
               </p>
             </div>
           </div>
@@ -393,7 +405,7 @@ curl -X POST /api/inspiration/entries \\
               setQ(e.target.value)
               setPage(0)
             }}
-            placeholder="按标题或正文关键字过滤"
+            placeholder="搜索标题、正文或状态快照"
           />
           </div>
         </div>
@@ -414,7 +426,10 @@ curl -X POST /api/inspiration/entries \\
           ) : entries.length === 0 ? (
             <div className="py-10 text-center text-muted-foreground">暂无灵感记录</div>
           ) : (
-            <div className="divide-y">
+            <div
+              className="divide-y overflow-y-auto overscroll-contain"
+              style={{ maxHeight: INSPIRATION_LIST_MAX_HEIGHT }}
+            >
               {entries.map((entry) => (
                 <div key={entry.id} className="p-4 sm:p-5 space-y-3">
                   <div className="flex items-start justify-between gap-4">
@@ -483,25 +498,45 @@ curl -X POST /api/inspiration/entries \\
         </CardContent>
       </Card>
 
-      {totalPages > 1 ? (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">共 {total} 条记录</p>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={page === 0}>
-              上一页
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {page + 1} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page >= totalPages - 1}
-            >
-              下一页
-            </Button>
-          </div>
+      {total > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          <span>
+            共 {total} 条
+            {entries.length > 0 ? (
+              <>
+                {' '}
+                · 本页 {page * INSPIRATION_LIST_PAGE_SIZE + 1}–
+                {page * INSPIRATION_LIST_PAGE_SIZE + entries.length}
+              </>
+            ) : null}
+          </span>
+          {total > INSPIRATION_LIST_PAGE_SIZE ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page <= 0}
+              >
+                上一页
+              </Button>
+              <span className="tabular-nums text-sm">
+                {page + 1} / {totalPages}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages - 1}
+              >
+                下一页
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
