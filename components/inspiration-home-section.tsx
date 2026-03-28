@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
+
 import { MarkdownContent } from '@/components/admin/markdown-content'
 import { Card } from '@/components/ui/card'
 import { FormattedTime } from '@/components/formatted-time'
