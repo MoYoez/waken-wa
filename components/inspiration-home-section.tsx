@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -19,6 +20,22 @@ export type InspirationHomeItem = {
 }
 
 const PREVIEW_CHARS = 220
+
+/** 客户端格式化时间，避免服务端/客户端时区差异导致的水合错误 */
+function ClientTime({ dateString }: { dateString: string }) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // 服务端渲染时使用原始 ISO 字符串的日期部分，避免时区问题
+  if (!mounted) {
+    return <span suppressHydrationWarning>--</span>
+  }
+
+  return <>{format(new Date(dateString), 'yyyy-MM-dd HH:mm', { locale: zhCN })}</>
+}
 
 /** Matches site Card primitive: solid surface, clear elevation (not just rounded corners). */
 const inspirationCardClassName = cn(
@@ -48,7 +65,7 @@ function EntryBody({
           {entry.title?.trim() ? entry.title : '（无标题）'}
         </Link>
         <time className="text-[0.65rem] text-muted-foreground tabular-nums shrink-0 leading-none">
-          {format(new Date(entry.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
+          <ClientTime dateString={entry.createdAt} />
         </time>
       </div>
 

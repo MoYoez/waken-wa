@@ -23,15 +23,30 @@ async function validateToken(request: NextRequest): Promise<{ id: number } | nul
   return resolveActiveApiTokenFromPlainSecret(authHeader.slice(7))
 }
 
-// GET - activity log listing (admin session only; home page uses /api/activity/stream)
+// GET - activity log listing
+// 支持两种模式：
+// 1. 管理员模式（需要 session）- 返回详细日志和分页
+// 2. 公开模式（?public=1）- 只返回 feed 数据，供客户端轮询使用
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const isPublicMode = searchParams.get('public') === '1'
+
+    // 公开模式：只返回 feed 数据，不需要认证
+    if (isPublicMode) {
+      const feed = await getActivityFeedData(50)
+      return NextResponse.json({
+        success: true,
+        data: feed,
+      })
+    }
+
+    // 管理员模式：需要认证
     const session = await getSession()
     if (!session) {
       return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
     }
 
-    const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
     const offset = parseInt(searchParams.get('offset') || '0')
     const generatedHashKey = String(searchParams.get('generatedHashKey') ?? '').trim()
