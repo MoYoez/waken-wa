@@ -66,10 +66,6 @@ export function buildAdminSettingsPatchBody(
         : '正在摸鱼',
     globalMouseTiltEnabled: Boolean(data.globalMouseTiltEnabled),
     hideActivityMedia: Boolean(data.hideActivityMedia),
-    activityLogRetentionMax:
-      data.activityLogRetentionMax != null && Number.isFinite(Number(data.activityLogRetentionMax))
-        ? Number(data.activityLogRetentionMax)
-        : null,
     scheduleSlotMinutes,
     schedulePeriodTemplate,
     scheduleGridByWeekday: resolveScheduleGridByWeekday(

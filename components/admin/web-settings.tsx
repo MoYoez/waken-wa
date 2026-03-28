@@ -402,6 +402,8 @@ interface SiteConfig {
   steamEnabled: boolean
   /** Steam 64-bit ID */
   steamId: string
+  /** Steam Web API key (submit non-empty to replace stored key) */
+  steamApiKey: string
 }
 
 export function WebSettings() {
@@ -477,6 +479,7 @@ export function WebSettings() {
     activityUpdateMode: DEFAULT_ACTIVITY_UPDATE_MODE,
     steamEnabled: false,
     steamId: '',
+    steamApiKey: '',
   })
 
   useEffect(() => {
@@ -568,10 +571,11 @@ export function WebSettings() {
             globalMouseTiltEnabled: data.data.globalMouseTiltEnabled === true,
             hideActivityMedia: data.data.hideActivityMedia === true,
             displayTimezone: normalizeTimezone(data.data.displayTimezone),
-  activityUpdateMode: normalizeActivityUpdateMode(data.data.activityUpdateMode),
-  steamEnabled: Boolean(data.data.steamEnabled),
-  steamId: String(data.data.steamId ?? ''),
-  })
+            activityUpdateMode: normalizeActivityUpdateMode(data.data.activityUpdateMode),
+            steamEnabled: Boolean(data.data.steamEnabled),
+            steamId: String(data.data.steamId ?? ''),
+            steamApiKey: '',
+          })
         }
       } finally {
         setLoading(false)
@@ -720,6 +724,7 @@ export function WebSettings() {
         inspirationDeviceRestrictionEnabled,
         inspirationAllowedDeviceHashes: inspirationHashSelection,
         hcaptchaSecretKey: hcaptchaSecretKeyForm,
+        steamApiKey: steamApiKeyForm,
         ...formRest
       } = form
 
@@ -729,6 +734,11 @@ export function WebSettings() {
       }
       if (hcaptchaSecretKeyForm.trim()) {
         hcaptchaPatch.hcaptchaSecretKey = hcaptchaSecretKeyForm.trim()
+      }
+
+      const steamPatch: Record<string, unknown> = {}
+      if (steamApiKeyForm.trim()) {
+        steamPatch.steamApiKey = steamApiKeyForm.trim()
       }
 
       const res = await fetch('/api/admin/settings', {
@@ -744,6 +754,7 @@ export function WebSettings() {
             ? normalizeStringList(inspirationHashSelection)
             : null,
           ...hcaptchaPatch,
+          ...steamPatch,
         }),
       })
       const data = await res.json()
@@ -981,7 +992,7 @@ export function WebSettings() {
             <code className="rounded bg-muted px-1">url(&quot;…&quot;)</code> 与后面的渐变要写在「动效背景层」里，用英文逗号连成一条{' '}
             <code className="rounded bg-muted px-1">background</code> 值（第一层画在最上）。
             「整页 background」写在 <code className="rounded bg-muted px-1">body</code> 上，与「页面底色」分开。
-            主题预设必须选 Custom surface，保��后才会注入首页。
+            主题预设必须选 Custom surface，保存后才会注入首页。
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
@@ -1116,7 +1127,7 @@ export function WebSettings() {
           placeholder="示例：:root { --primary: oklch(0.5 0.2 30); }"
         />
         <p className="text-xs text-muted-foreground">
-          保存后会注入��页并覆盖默认样式，可用于快速主题定制。
+          保存后会注入页面并覆盖默认样式，可用于快速主题定制。
         </p>
       </div>
 
@@ -1126,7 +1137,7 @@ export function WebSettings() {
             全站页面视差倾斜
           </Label>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            开启后整页随鼠标轻微 3D 倾斜；默认关闭。后台路由不受此影响；系统「减少动效」时自动���启用。
+            开启后整页随鼠标轻微 3D 倾斜；默认关闭。后台路由不受此影响；系统「减少动效」时自动启用。
           </p>
         </div>
         <Switch
@@ -1374,16 +1385,39 @@ export function WebSettings() {
                 placeholder="例如: 76561198000000000"
               />
               <p className="text-xs text-muted-foreground">
-                你的 Steam 64-bit ID，可以在 
-                <a 
-                  href="https://steamid.io/" 
-                  target="_blank" 
+                你的 Steam 64-bit ID，可以在
+                <a
+                  href="https://steamid.io/"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline mx-1"
                 >
                   steamid.io
                 </a>
-                查询。Steam API Key 需要在环境变量 STEAM_API_KEY 中配置。
+                查询。
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="steam-api-key">Steam Web API Key（留空则不修改已保存的值）</Label>
+              <Input
+                id="steam-api-key"
+                type="password"
+                autoComplete="off"
+                value={form.steamApiKey}
+                onChange={(e) => patch('steamApiKey', e.target.value)}
+                placeholder="在 Steam 开发者申请；也可使用环境变量 STEAM_API_KEY 作为后备"
+              />
+              <p className="text-xs text-muted-foreground">
+                在{' '}
+                <a
+                  href="https://steamcommunity.com/dev/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  steamcommunity.com/dev/apikey
+                </a>{' '}
+                申请。保存后仅服务端使用，不会下发到前台。
               </p>
             </div>
           </div>
@@ -1449,7 +1483,7 @@ export function WebSettings() {
           自动接收本地新设备（GeneratedHashKey）
         </Label>
         <p className="text-xs text-muted-foreground">
-          关闭后，未�� GeneratedHashKey 首次上报会进入待审核状态，需要在“设备管理”中手动通过。
+          关闭后，未授权 GeneratedHashKey 首次上报会进入待审核状态，需要在“设备管理”中手动通过。
         </p>
       </div>
 

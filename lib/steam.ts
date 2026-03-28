@@ -1,9 +1,9 @@
 /**
  * Steam Web API integration
- * 
- * Uses the ISteamUser/GetPlayerSummaries API to get player status.
- * API Key should be stored in STEAM_API_KEY environment variable.
- * 
+ *
+ * Uses ISteamUser/GetPlayerSummaries for player status.
+ * API key: SiteConfig.steamApiKey (admin) or env STEAM_API_KEY as fallback.
+ *
  * @see https://developer.valvesoftware.com/wiki/Steam_Web_API
  */
 

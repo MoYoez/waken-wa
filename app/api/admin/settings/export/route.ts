@@ -116,11 +116,6 @@ export async function GET(request: Request) {
             : '正在摸鱼',
         globalMouseTiltEnabled: siteConfig.globalMouseTiltEnabled === true,
         hideActivityMedia: siteConfig.hideActivityMedia === true,
-        activityLogRetentionMax:
-          siteConfig.activityLogRetentionMax != null &&
-          Number.isFinite(Number(siteConfig.activityLogRetentionMax))
-            ? Number(siteConfig.activityLogRetentionMax)
-            : null,
       },
       token: {
         reportEndpoint: `${baseUrl}/api/activity`,

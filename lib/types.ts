@@ -1,5 +1,5 @@
 // 重新导出 Prisma 生成的类型
-export type { ActivityLog, ApiToken, AdminUser } from '@prisma/client'
+export type { ApiToken, AdminUser } from '@prisma/client'
 
 export interface ActivityInput {
   generatedHashKey: string

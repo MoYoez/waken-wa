@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
 import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
-import { pruneActivityLogsAfterInsert } from '@/lib/activity-log-retention'
+import {
+  ADMIN_PERSIST_SECONDS_METADATA_KEY,
+  USER_ACTIVITY_DB_SYNCED_METADATA_KEY,
+  USER_PERSIST_EXPIRES_AT_METADATA_KEY,
+  upsertActivity,
+  redactGeneratedHashKeyForClient,
+} from '@/lib/activity-store'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -16,61 +21,13 @@ async function requireAdmin() {
   return session
 }
 
-// GET - 获取活动日志（管理员）
-export async function GET(request: NextRequest) {
-  const session = await requireAdmin()
-  if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
-  }
-  
-  try {
-    const { searchParams } = new URL(request.url)
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
-    const offset = parseInt(searchParams.get('offset') || '0')
-    const generatedHashKey = String(searchParams.get('generatedHashKey') ?? '').trim()
-    const search = searchParams.get('search')
-    
-    const where: Prisma.ActivityLogWhereInput = {}
-    
-    if (generatedHashKey) {
-      ;(where as any).generatedHashKey = generatedHashKey
-    }
-    
-    if (search) {
-      where.OR = [
-        { processName: { contains: search, mode: 'insensitive' } },
-        { processTitle: { contains: search, mode: 'insensitive' } }
-      ]
-    }
-    
-    const [logs, total] = await Promise.all([
-      (prisma as any).activityLog.findMany({
-        where,
-        orderBy: { startedAt: 'desc' },
-        take: limit,
-        skip: offset
-      }),
-      (prisma as any).activityLog.count({ where })
-    ])
-    
-    return NextResponse.json({
-      success: true,
-      data: logs,
-      pagination: { limit, offset, total }
-    })
-  } catch (error) {
-    console.error('获取活动日志失败:', error)
-    return NextResponse.json({ success: false, error: '获取失败' }, { status: 500 })
-  }
-}
-
-// POST - 手动添加活动
+// POST - 手动添加活动（写入内存 activity-store，与公开上报一致）
 export async function POST(request: NextRequest) {
   const session = await requireAdmin()
   if (!session) {
     return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
   }
-  
+
   try {
     const body = await request.json()
     const generatedHashKeyRaw = body?.generatedHashKey
@@ -103,6 +60,9 @@ export async function POST(request: NextRequest) {
     let metadata: Record<string, unknown> | null = null
     if (metadataRaw && typeof metadataRaw === 'object' && !Array.isArray(metadataRaw)) {
       metadata = { ...(metadataRaw as Record<string, unknown>) }
+      delete metadata[ADMIN_PERSIST_SECONDS_METADATA_KEY]
+      delete metadata[USER_PERSIST_EXPIRES_AT_METADATA_KEY]
+      delete metadata[USER_ACTIVITY_DB_SYNCED_METADATA_KEY]
       const metaKeys = Object.keys(metadata)
       if (metaKeys.length > 50 || JSON.stringify(metadata).length > 10240) {
         return NextResponse.json(
@@ -138,17 +98,27 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    const metadataInput = metadata as Prisma.InputJsonValue | undefined
 
-    /** How long this row stays “active” without further reports (same rule as /api/activity). */
     const STALE_MIN_SEC = 30
     const STALE_MAX_SEC = 24 * 60 * 60
-    let reportIntervalSeconds: number | undefined
+    let adminPersistSeconds: number | undefined
     if (persistMinutesRaw !== undefined && persistMinutesRaw !== null) {
       const mins = Number(persistMinutesRaw)
       if (Number.isFinite(mins) && mins > 0) {
         const sec = Math.round(mins * 60)
-        reportIntervalSeconds = Math.min(Math.max(sec, STALE_MIN_SEC), STALE_MAX_SEC)
+        adminPersistSeconds = Math.min(Math.max(sec, STALE_MIN_SEC), STALE_MAX_SEC)
+      }
+    }
+    let finalMetadata = metadata
+    let adminExpiresAt: Date | undefined
+    if (adminPersistSeconds != null) {
+      adminExpiresAt = new Date(Date.now() + adminPersistSeconds * 1000)
+      finalMetadata = {
+        ...(finalMetadata || {}),
+        [ADMIN_PERSIST_SECONDS_METADATA_KEY]: adminPersistSeconds,
+        pushMode: 'active',
+        [USER_PERSIST_EXPIRES_AT_METADATA_KEY]: adminExpiresAt.toISOString(),
+        [USER_ACTIVITY_DB_SYNCED_METADATA_KEY]: true,
       }
     }
 
@@ -197,63 +167,58 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    await (prisma as any).activityLog.updateMany({
-      where: { generatedHashKey: effectiveHashKey, endedAt: null },
-      data: { endedAt: new Date() },
+    if (adminPersistSeconds != null && adminExpiresAt) {
+      await (prisma as any).userActivity.upsert({
+        where: {
+          deviceId_processName: {
+            deviceId: deviceRecord.id,
+            processName: process_name,
+          },
+        },
+        create: {
+          deviceId: deviceRecord.id,
+          generatedHashKey: effectiveHashKey,
+          processName: process_name,
+          processTitle: process_title,
+          metadata: finalMetadata ?? undefined,
+          expiresAt: adminExpiresAt,
+        },
+        update: {
+          generatedHashKey: effectiveHashKey,
+          processTitle: process_title,
+          metadata: finalMetadata ?? undefined,
+          expiresAt: adminExpiresAt,
+        },
+      })
+    } else {
+      await (prisma as any).userActivity.deleteMany({
+        where: { deviceId: deviceRecord.id, processName: process_name },
+      })
+    }
+
+    const entry = upsertActivity({
+      device,
+      generatedHashKey: effectiveHashKey,
+      deviceId: deviceRecord.id,
+      processName: process_name,
+      processTitle: process_title,
+      metadata: finalMetadata,
     })
 
-    const log = await (prisma as any).activityLog.create({
-      data: {
-        device,
-        generatedHashKey: effectiveHashKey,
-        deviceId: deviceRecord.id,
-        processName: process_name,
-        processTitle: process_title || null,
-        startedAt: new Date(),
-        endedAt: null,
-        metadata: metadataInput,
-        ...(reportIntervalSeconds != null ? { reportIntervalSeconds } : {}),
-      }
-    })
     await (prisma as any).device.update({
       where: { id: deviceRecord.id },
       data: { displayName: device || deviceRecord.displayName, lastSeenAt: new Date() },
     })
-    await pruneActivityLogsAfterInsert(prisma as any)
 
-    return NextResponse.json({ success: true, data: log }, { status: 201 })
+    return NextResponse.json(
+      {
+        success: true,
+        data: redactGeneratedHashKeyForClient(entry as unknown as Record<string, unknown>),
+      },
+      { status: 200 }
+    )
   } catch (error) {
     console.error('添加活动失败:', error)
     return NextResponse.json({ success: false, error: '添加失败' }, { status: 500 })
-  }
-}
-
-// DELETE - 删除活动
-export async function DELETE(request: NextRequest) {
-  const session = await requireAdmin()
-  if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
-  }
-  
-  try {
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-    
-    if (!id) {
-      return NextResponse.json({ success: false, error: '缺少有效的 ID' }, { status: 400 })
-    }
-    const idNum = parseInt(id, 10)
-    if (isNaN(idNum)) {
-      return NextResponse.json({ success: false, error: '无效的 ID' }, { status: 400 })
-    }
-    
-    await prisma.activityLog.delete({
-      where: { id: idNum }
-    })
-    
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('删除活动失败:', error)
-    return NextResponse.json({ success: false, error: '删除失败' }, { status: 500 })
   }
 }

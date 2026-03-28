@@ -3,8 +3,14 @@ import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { getActivityFeedData } from '@/lib/activity-feed'
-import { upsertActivity, redactGeneratedHashKeyForClient } from '@/lib/activity-store'
+import {
+  upsertActivity,
+  redactGeneratedHashKeyForClient,
+  USER_ACTIVITY_DB_SYNCED_METADATA_KEY,
+  USER_PERSIST_EXPIRES_AT_METADATA_KEY,
+} from '@/lib/activity-store'
 import { mergeActivityMetadata } from '@/lib/activity-media'
+import { persistMinutesToExpiresAt } from '@/lib/user-activity-persist'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -139,7 +145,14 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    
+
+    if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+      delete (metadata as Record<string, unknown>)[USER_PERSIST_EXPIRES_AT_METADATA_KEY]
+      delete (metadata as Record<string, unknown>)[USER_ACTIVITY_DB_SYNCED_METADATA_KEY]
+    }
+
+    const persistMinutesRaw = body?.persist_minutes ?? body?.persistMinutes
+
     if (!generatedHashKey || !process_name) {
       return NextResponse.json(
         { success: false, error: '缺少必要字段: generatedHashKey, process_name' },
@@ -193,15 +206,62 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
-    
-    // 存储到内存（不写入数据库）
+
+    const pushModeNorm = String((metadata as Record<string, unknown> | null)?.pushMode ?? '')
+      .trim()
+      .toLowerCase()
+    const isActivePush = pushModeNorm === 'active' || pushModeNorm === 'persistent'
+    const expiresAt = persistMinutesToExpiresAt(persistMinutesRaw)
+
+    let finalMetadata = metadata
+    if (isActivePush && expiresAt) {
+      finalMetadata = {
+        ...(finalMetadata || {}),
+        pushMode: 'active',
+        [USER_PERSIST_EXPIRES_AT_METADATA_KEY]: expiresAt.toISOString(),
+        [USER_ACTIVITY_DB_SYNCED_METADATA_KEY]: true,
+      }
+      await (prisma as any).userActivity.upsert({
+        where: {
+          deviceId_processName: {
+            deviceId: deviceRecord.id,
+            processName: process_name,
+          },
+        },
+        create: {
+          deviceId: deviceRecord.id,
+          generatedHashKey,
+          processName: process_name,
+          processTitle: process_title,
+          metadata: finalMetadata ?? undefined,
+          expiresAt,
+        },
+        update: {
+          generatedHashKey,
+          processTitle: process_title,
+          metadata: finalMetadata ?? undefined,
+          expiresAt,
+        },
+      })
+    } else {
+      await (prisma as any).userActivity.deleteMany({
+        where: { deviceId: deviceRecord.id, processName: process_name },
+      })
+      finalMetadata = { ...(finalMetadata || {}) }
+      // Non-realtime without persist_minutes would never stale; fall back to realtime.
+      if (isActivePush && !expiresAt) {
+        finalMetadata.pushMode = 'realtime'
+      }
+    }
+
+    // Store in memory (primary cache)
     const entry = upsertActivity({
       device,
       generatedHashKey,
       deviceId: deviceRecord.id,
       processName: process_name,
       processTitle: process_title,
-      metadata,
+      metadata: finalMetadata,
     })
 
     // 更新设备最后在线时间

@@ -5,10 +5,10 @@ import { fetchSteamPlayerStatus, type SteamStatusResponse } from '@/lib/steam'
 
 /**
  * GET /api/steam/status
- * 
+ *
  * Returns the current Steam player status.
  * Requires site lock to be satisfied (if enabled).
- * Steam API key is stored server-side and never exposed to clients.
+ * API key: SiteConfig.steamApiKey (admin) or env STEAM_API_KEY; never sent to browsers.
  */
 export async function GET(): Promise<NextResponse<SteamStatusResponse>> {
   try {
@@ -27,6 +27,7 @@ export async function GET(): Promise<NextResponse<SteamStatusResponse>> {
       select: {
         steamEnabled: true,
         steamId: true,
+        steamApiKey: true,
       },
     })
 
@@ -44,11 +45,15 @@ export async function GET(): Promise<NextResponse<SteamStatusResponse>> {
       )
     }
 
-    // Get API key from environment
-    const apiKey = process.env.STEAM_API_KEY
+    const fromDb =
+      typeof config.steamApiKey === 'string' && config.steamApiKey.trim()
+        ? config.steamApiKey.trim()
+        : ''
+    const fromEnv = process.env.STEAM_API_KEY?.trim() ?? ''
+    const apiKey = fromDb || fromEnv
     if (!apiKey) {
       return NextResponse.json(
-        { success: false, error: '未配置 Steam API Key' },
+        { success: false, error: '未配置 Steam API Key（请在网站设置中填写或使用环境变量 STEAM_API_KEY）' },
         { status: 500 }
       )
     }

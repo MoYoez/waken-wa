@@ -25,7 +25,6 @@ import {
   normalizeScheduleGridByWeekday,
 } from '@/lib/schedule-grid-by-weekday'
 import { normalizeInspirationAllowedHashes } from '@/lib/inspiration-device-allowlist'
-import { parseActivityLogRetentionMaxInput } from '@/lib/activity-log-retention'
 import { normalizeTimezone } from '@/lib/timezone'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 
@@ -56,6 +55,7 @@ export async function GET() {
       ...config,
       pageLockPasswordHash: undefined,
       hcaptchaSecretKey: config.hcaptchaSecretKey ? '••••••••' : null,
+      steamApiKey: config.steamApiKey ? '••••••••' : null,
     }
     return NextResponse.json({ success: true, data: safe })
   } catch (error) {
@@ -328,15 +328,6 @@ export async function PATCH(request: NextRequest) {
       hideActivityMedia = Boolean(body.hideActivityMedia)
     }
 
-    let activityLogRetentionMax: number | null = existing?.activityLogRetentionMax ?? null
-    const retentionParsed = parseActivityLogRetentionMaxInput(body.activityLogRetentionMax)
-    if (retentionParsed.kind === 'error') {
-      return NextResponse.json({ success: false, error: retentionParsed.error }, { status: 400 })
-    }
-    if (retentionParsed.kind === 'set') {
-      activityLogRetentionMax = retentionParsed.value
-    }
-
     // 时区设置
     let displayTimezone = existing?.displayTimezone ?? 'Asia/Shanghai'
     if (body.displayTimezone !== undefined && body.displayTimezone !== null) {
@@ -357,6 +348,15 @@ export async function PATCH(request: NextRequest) {
     let steamId = existing?.steamId ?? null
     if (body.steamId !== undefined) {
       steamId = body.steamId ? String(body.steamId).trim() : null
+    }
+
+    const STEAM_API_KEY_MAX_LEN = 128
+    let steamApiKey: string | null = existing?.steamApiKey ?? null
+    if (body.steamApiKey !== undefined) {
+      steamApiKey =
+        typeof body.steamApiKey === 'string' && body.steamApiKey.trim()
+          ? body.steamApiKey.trim().slice(0, STEAM_API_KEY_MAX_LEN)
+          : null
     }
 
     const config = await safeSiteConfigUpsert(prisma as any, {
@@ -400,7 +400,6 @@ export async function PATCH(request: NextRequest) {
         scheduleHomeAfterClassesLabel,
         globalMouseTiltEnabled,
         hideActivityMedia,
-        activityLogRetentionMax,
         hcaptchaEnabled,
         hcaptchaSiteKey,
         hcaptchaSecretKey,
@@ -408,6 +407,7 @@ export async function PATCH(request: NextRequest) {
         activityUpdateMode,
         steamEnabled,
         steamId,
+        steamApiKey,
       },
       create: {
         id: 1,
@@ -449,7 +449,6 @@ export async function PATCH(request: NextRequest) {
         scheduleHomeAfterClassesLabel,
         globalMouseTiltEnabled,
         hideActivityMedia,
-        activityLogRetentionMax,
         hcaptchaEnabled,
         hcaptchaSiteKey,
         hcaptchaSecretKey,
@@ -457,10 +456,17 @@ export async function PATCH(request: NextRequest) {
         activityUpdateMode,
         steamEnabled,
         steamId,
+        steamApiKey,
       },
     })
 
-    return NextResponse.json({ success: true, data: config })
+    const safeOut = {
+      ...config,
+      pageLockPasswordHash: undefined,
+      hcaptchaSecretKey: config.hcaptchaSecretKey ? '••••••••' : null,
+      steamApiKey: config.steamApiKey ? '••••••••' : null,
+    }
+    return NextResponse.json({ success: true, data: safeOut })
   } catch (error) {
     console.error('更新站点配置失败:', error)
     return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })

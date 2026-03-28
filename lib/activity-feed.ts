@@ -6,6 +6,10 @@ import {
   type ActivityEntry,
   type ActivityFeedData,
 } from '@/lib/activity-store'
+import {
+  hydrateUserActivitiesIntoStoreOnce,
+  purgeExpiredUserActivitiesFromDbAndMemory,
+} from '@/lib/user-activity-hydration'
 
 export { redactGeneratedHashKeyForClient, type ActivityFeedData }
 
@@ -97,6 +101,13 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
       return whitelistSet.has(key)
     }
     return !blacklistSet.has(key)
+  }
+
+  try {
+    await purgeExpiredUserActivitiesFromDbAndMemory(prisma as any)
+    await hydrateUserActivitiesIntoStoreOnce(prisma as any)
+  } catch (error) {
+    console.error('[activity-feed] UserActivity purge/hydrate failed:', error)
   }
 
   // 清理过期活动

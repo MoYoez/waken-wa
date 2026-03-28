@@ -33,24 +33,6 @@ model ApiToken {
   @@map("api_tokens")
 }
 
-model ActivityLog {
-  id                    Int       @id @default(autoincrement())
-  device                String    @db.VarChar(200)
-  generatedHashKey      String    @map("generated_hash_key") @db.VarChar(128)
-  deviceId              Int?      @map("device_id")
-  processName           String    @map("process_name") @db.VarChar(200)
-  processTitle          String?   @map("process_title")
-  startedAt             DateTime  @default(now()) @map("started_at")
-  endedAt               DateTime? @map("ended_at")
-  metadata              Json?
-  reportIntervalSeconds Int?      @map("report_interval_seconds")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at")
-  deviceRef             Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
-
-  @@map("activity_logs")
-}
-
 model Device {
   id               Int           @id @default(autoincrement())
   displayName      String        @map("display_name") @db.VarChar(200)
@@ -61,9 +43,26 @@ model Device {
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at")
   apiToken         ApiToken?     @relation(fields: [apiTokenId], references: [id], onDelete: SetNull)
-  activityLogs     ActivityLog[]
+  userActivities   UserActivity[]
 
   @@map("devices")
+}
+
+model UserActivity {
+  id               Int      @id @default(autoincrement())
+  deviceId         Int      @map("device_id")
+  generatedHashKey String   @map("generated_hash_key") @db.VarChar(128)
+  processName      String   @map("process_name") @db.VarChar(200)
+  processTitle     String?  @map("process_title") @db.Text
+  metadata         Json?
+  startedAt        DateTime @default(now()) @map("started_at")
+  expiresAt        DateTime @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  device           Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, processName])
+  @@map("user_activities")
 }
 
 model SiteConfig {
@@ -108,8 +107,6 @@ model SiteConfig {
   globalMouseTiltEnabled Boolean @map("global_mouse_tilt_enabled") @default(false)
   /// When true, homepage activity cards do not show now-playing media (title / artist).
   hideActivityMedia    Boolean  @map("hide_activity_media") @default(false)
-  /// Max rows in activity_logs (site-wide); null = unlimited. When over limit, oldest rows are deleted after each new insert.
-  activityLogRetentionMax Int?   @map("activity_log_retention_max")
   hcaptchaEnabled      Boolean  @map("hcaptcha_enabled") @default(false)
   hcaptchaSiteKey      String?  @map("hcaptcha_site_key") @db.VarChar(200)
   hcaptchaSecretKey    String?  @map("hcaptcha_secret_key") @db.VarChar(200)
@@ -121,6 +118,8 @@ model SiteConfig {
   steamEnabled         Boolean  @map("steam_enabled") @default(false)
   /// Steam 64-bit ID (e.g. "76561198000000000").
   steamId              String?  @map("steam_id") @db.VarChar(30)
+  /// Steam Web API key. Optional fallback: env STEAM_API_KEY.
+  steamApiKey          String?  @map("steam_api_key") @db.VarChar(128)
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 

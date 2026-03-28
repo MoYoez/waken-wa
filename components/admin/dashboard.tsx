@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import {
   Activity,
   LayoutDashboard,
-  List,
   Key,
   Settings,
   LogOut,
@@ -18,7 +17,6 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ActivityList } from './activity-list'
 import { TokenManager } from './token-manager'
 import { AddActivityForm } from './add-activity-form'
 import { WebSettings } from './web-settings'
@@ -30,7 +28,6 @@ import { ScheduleManager } from './schedule-manager'
 const VALID_TABS = new Set([
   'overview',
   'inspiration',
-  'activities',
   'devices',
   'tokens',
   'account',
@@ -46,7 +43,6 @@ interface DashboardProps {
 
 export function AdminDashboard({ username, initialTab, initialDeviceHash }: DashboardProps) {
   const router = useRouter()
-  const [refreshKey, setRefreshKey] = useState(0)
   const [activeTab, setActiveTab] = useState(() =>
     initialTab && VALID_TABS.has(initialTab) ? initialTab : 'overview',
   )
@@ -97,10 +93,6 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
               <Lightbulb className="h-4 w-4" />
               灵感随想录
             </TabsTrigger>
-            <TabsTrigger value="activities" className="gap-2">
-              <List className="h-4 w-4" />
-              活动日志
-            </TabsTrigger>
             <TabsTrigger value="devices" className="gap-2">
               <MonitorSmartphone className="h-4 w-4" />
               设备管理
@@ -136,15 +128,11 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
                   打开设备管理
                 </Button>
               </div>
-              <AddActivityForm onSuccess={() => setRefreshKey((k) => k + 1)} />
+              <AddActivityForm />
             </div>
           </TabsContent>
           <TabsContent value="inspiration">
             <InspirationManager />
-          </TabsContent>
-
-          <TabsContent value="activities">
-            <ActivityList key={refreshKey} />
           </TabsContent>
 
           <TabsContent value="devices">
