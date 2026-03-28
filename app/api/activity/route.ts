@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
-import { getSession } from '@/lib/auth'
+import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import {
   getActivityFeedData,
@@ -23,15 +23,38 @@ async function validateToken(request: NextRequest): Promise<{ id: number } | nul
   return resolveActiveApiTokenFromPlainSecret(authHeader.slice(7))
 }
 
-// GET - activity log listing (admin session only; home page uses /api/activity/stream)
+// GET - activity log listing
+// 支持两种模式：
+// 1. 管理员模式（需要 session）- 返回详细日志和分页
+// 2. 公开模式（?public=1）- 只返回 feed 数据，供客户端轮询使用
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const isPublicMode = searchParams.get('public') === '1'
+
+    // 公开模式：只返回 feed 数据，但需要检查页面锁
+    if (isPublicMode) {
+      // 检查页面锁：如果启用了页面锁且用户未解锁，拒绝访问
+      const siteLockOk = await isSiteLockSatisfied()
+      if (!siteLockOk) {
+        return NextResponse.json(
+          { success: false, error: '请先解锁页面' },
+          { status: 403 }
+        )
+      }
+      const feed = await getActivityFeedData(50)
+      return NextResponse.json({
+        success: true,
+        data: feed,
+      })
+    }
+
+    // 管理员模式：需要认证
     const session = await getSession()
     if (!session) {
       return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
     }
 
-    const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
     const offset = parseInt(searchParams.get('offset') || '0')
     const generatedHashKey = String(searchParams.get('generatedHashKey') ?? '').trim()

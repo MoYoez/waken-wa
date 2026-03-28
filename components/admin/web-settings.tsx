@@ -47,6 +47,13 @@ import {
   ACTIVITY_LOG_RETENTION_MAX,
   ACTIVITY_LOG_RETENTION_MIN,
 } from '@/lib/activity-log-retention'
+import { TIMEZONE_OPTIONS, DEFAULT_TIMEZONE, normalizeTimezone } from '@/lib/timezone'
+import {
+  ACTIVITY_UPDATE_MODE_OPTIONS,
+  DEFAULT_ACTIVITY_UPDATE_MODE,
+  normalizeActivityUpdateMode,
+  type ActivityUpdateMode,
+} from '@/lib/activity-update-mode'
 
 const CROP_VIEW_SIZE = 320
 const CROP_FRAME_SIZE = 220
@@ -406,6 +413,10 @@ interface SiteConfig {
   hideActivityMedia: boolean
   /** null = unlimited activity log rows (site-wide). */
   activityLogRetentionMax: number | null
+  /** 显示时区，默认 Asia/Shanghai */
+  displayTimezone: string
+  /** 活动状态更新模式 */
+  activityUpdateMode: ActivityUpdateMode
 }
 
 export function WebSettings() {
@@ -478,6 +489,8 @@ export function WebSettings() {
     globalMouseTiltEnabled: false,
     hideActivityMedia: false,
     activityLogRetentionMax: null,
+    displayTimezone: DEFAULT_TIMEZONE,
+    activityUpdateMode: DEFAULT_ACTIVITY_UPDATE_MODE,
   })
 
   useEffect(() => {
@@ -579,6 +592,8 @@ export function WebSettings() {
                     ),
                   )
                 : null,
+            displayTimezone: normalizeTimezone(data.data.displayTimezone),
+            activityUpdateMode: normalizeActivityUpdateMode(data.data.activityUpdateMode),
           })
         }
       } finally {
@@ -989,7 +1004,7 @@ export function WebSettings() {
             <code className="rounded bg-muted px-1">url(&quot;…&quot;)</code> 与后面的渐变要写在「动效背景层」里，用英文逗号连成一条{' '}
             <code className="rounded bg-muted px-1">background</code> 值（第一层画在最上）。
             「整页 background」写在 <code className="rounded bg-muted px-1">body</code> 上，与「页面底色」分开。
-            主题预设必须选 Custom surface，保存后才会注入首页。
+            主题预设必须选 Custom surface，保��后才会注入首页。
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
@@ -1343,6 +1358,59 @@ export function WebSettings() {
             />
           </div>
         ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="display-timezone">显示时区</Label>
+        <p className="text-xs text-muted-foreground">
+          用于显示时间的时区设置，默认为中国标准时间 (GMT+8)。
+        </p>
+        <Select
+          value={form.displayTimezone}
+          onValueChange={(v) => patch('displayTimezone', v)}
+        >
+          <SelectTrigger id="display-timezone" className="w-full max-w-xs">
+            <SelectValue placeholder="选择时区" />
+          </SelectTrigger>
+          <SelectContent>
+            {TIMEZONE_OPTIONS.map((tz) => (
+              <SelectItem key={tz.value} value={tz.value}>
+                {tz.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-3">
+        <Label htmlFor="activity-update-mode">状态更新模式</Label>
+        <p className="text-xs text-muted-foreground">
+          选择用于获取活动状态更新的方式。不同模式在实时性和资源消耗之间有所权衡。
+        </p>
+        <RadioGroup
+          value={form.activityUpdateMode}
+          onValueChange={(v) => patch('activityUpdateMode', v as ActivityUpdateMode)}
+          className="space-y-3"
+        >
+          {ACTIVITY_UPDATE_MODE_OPTIONS.map((option) => (
+            <div key={option.value} className="flex items-start space-x-3">
+              <RadioGroupItem value={option.value} id={`update-mode-${option.value}`} className="mt-1" />
+              <div className="flex-1 space-y-1">
+                <Label htmlFor={`update-mode-${option.value}`} className="font-medium cursor-pointer">
+                  {option.label}
+                </Label>
+                <p className="text-xs text-muted-foreground">{option.description}</p>
+                {option.warning && (
+                  <div className="rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 mt-2">
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      <span className="font-semibold">注意：</span>{option.warning}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </RadioGroup>
       </div>
 
       <div className="space-y-2">

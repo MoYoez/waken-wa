@@ -20,6 +20,9 @@ import {
   resolveSchedulePeriodTemplate,
   type ScheduleCourse,
 } from '@/lib/schedule-courses'
+import { normalizeTimezone } from '@/lib/timezone'
+// Activity update mode configuration
+import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 
 // 强制动态渲染，确保每次请求都获取最新数据
 export const dynamic = 'force-dynamic'
@@ -66,9 +69,11 @@ export default async function Home() {
     }),
     (prisma as any).inspirationEntry.count(),
   ])
+  const displayTimezoneForEntries = normalizeTimezone((config as Record<string, unknown>).displayTimezone)
   const inspirationHomeEntries = inspirationRows.map((row: { createdAt: Date; [k: string]: unknown }) => ({
     ...row,
     createdAt: row.createdAt.toISOString(),
+    displayTimezone: displayTimezoneForEntries,
   }))
 
   const scheduleInClassOnHome = Boolean(config.scheduleInClassOnHome)
@@ -98,6 +103,8 @@ export default async function Home() {
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
+  const displayTimezone = normalizeTimezone(cfg.displayTimezone)
+  const activityUpdateMode = normalizeActivityUpdateMode(cfg.activityUpdateMode)
 
   return (
     <>
@@ -162,7 +169,7 @@ export default async function Home() {
                 <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
                   {currentlyText}
                 </h2>
-                <CurrentStatus hideActivityMedia={hideActivityMedia} />
+                <CurrentStatus hideActivityMedia={hideActivityMedia} activityUpdateMode={activityUpdateMode} />
               </section>
             </div>
 

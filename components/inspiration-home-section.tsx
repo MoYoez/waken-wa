@@ -1,11 +1,11 @@
 'use client'
 
+// Activity feed time display with timezone support
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
 import { ChevronRight } from 'lucide-react'
 import { MarkdownContent } from '@/components/admin/markdown-content'
 import { Card } from '@/components/ui/card'
+import { FormattedTime } from '@/components/formatted-time'
 import { cn } from '@/lib/utils'
 import { inspirationNeedsFullPage, inspirationPlainPreview } from '@/lib/inspiration-preview'
 
@@ -16,6 +16,8 @@ export type InspirationHomeItem = {
   imageDataUrl: string | null
   statusSnapshot: string | null
   createdAt: string
+  /** 可选的时区配置，传入则使用该时区 */
+  displayTimezone?: string
 }
 
 const PREVIEW_CHARS = 220
@@ -47,9 +49,11 @@ function EntryBody({
         >
           {entry.title?.trim() ? entry.title : '（无标题）'}
         </Link>
-        <time className="text-[0.65rem] text-muted-foreground tabular-nums shrink-0 leading-none">
-          {format(new Date(entry.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
-        </time>
+        <FormattedTime 
+          date={entry.createdAt} 
+          timezone={entry.displayTimezone}
+          className="text-[0.65rem] text-muted-foreground tabular-nums shrink-0 leading-none"
+        />
       </div>
 
       {entry.statusSnapshot ? (

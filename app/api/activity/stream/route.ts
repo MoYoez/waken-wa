@@ -6,8 +6,11 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-const MAX_CONCURRENT_STREAMS = 100
-const MAX_STREAM_DURATION_MS = 30 * 60 * 1000
+const MAX_CONCURRENT_STREAMS = 50
+// 缩短 SSE 连接时间以减少 Vercel Serverless 资源消耗
+// 客户端会自动重连，这样可以释放服务器资源
+const MAX_STREAM_DURATION_MS = 2 * 60 * 1000 // 2 分钟
+const POLL_INTERVAL_MS = 15 * 1000 // 15 秒轮询间隔
 
 let activeStreams = 0
 
@@ -82,7 +85,7 @@ export async function GET() {
       void push()
       timer = setInterval(() => {
         void push()
-      }, 5000)
+      }, POLL_INTERVAL_MS)
 
       autoCloseTimer = setTimeout(() => {
         cleanup()
