@@ -8,6 +8,7 @@ if (_pg && !process.env.DATABASE_URL?.trim()) {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   transpilePackages: ['ical.js'],
   typescript: {
     ignoreBuildErrors: false,

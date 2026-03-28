@@ -1,0 +1,42 @@
+# Deploy: create .env next to this file with at least POSTGRES_PASSWORD, JWT_SECRET, NEXT_PUBLIC_BASE_URL.
+#   docker compose up -d --build
+#
+# On each app start, entrypoint runs `prisma db push` for prisma/schema.postgres.prisma.
+# prisma/migrations/ in the repo target SQLite, not this Postgres stack.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-waken}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-waken}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-waken}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-waken}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}
+      # Optional (see .env.example)
+      HCAPTCHA_SITE_KEY: ${HCAPTCHA_SITE_KEY:-}
+      HCAPTCHA_SECRET_KEY: ${HCAPTCHA_SECRET_KEY:-}
+      STEAM_API_KEY: ${STEAM_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

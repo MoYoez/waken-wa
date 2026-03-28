@@ -1,0 +1,35 @@
+# Dependencies & build output
+node_modules
+.next
+out
+dist
+
+# Git & IDE
+.git
+.gitignore
+.cursor
+.idea
+.vscode
+
+# Env (inject at runtime / compose)
+.env
+.env.*
+!.env.example
+
+# Local DB files
+*.db
+*.db-journal
+prisma/dev.db
+prisma/dev.db-journal
+
+# Logs & misc
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+*.md
+!README.md
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
