@@ -244,3 +244,16 @@
     transform: translate(20px, 10px) scale(1.02);
   }
 }
+
+/* Status marquee animation for overflowing text */
+@keyframes status-marquee {
+  0%, 15% {
+    transform: translateX(0);
+  }
+  45%, 55% {
+    transform: translateX(var(--status-marquee-shift, 0));
+  }
+  85%, 100% {
+    transform: translateX(0);
+  }
+}
