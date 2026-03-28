@@ -43,7 +43,15 @@ type SteamNowPlayingClient = {
 }
 
 /** When text is wider than its slot (~half row when paired), run horizontal marquee instead of clipping. */
-function MarqueeIfNeeded({ text, textClassName }: { text: string; textClassName?: string }) {
+function MarqueeIfNeeded({
+  text,
+  textClassName,
+  outerClassName,
+}: {
+  text: string
+  textClassName?: string
+  outerClassName?: string
+}) {
   const outerRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLSpanElement>(null)
   const [overflowPx, setOverflowPx] = useState(0)
@@ -69,7 +77,7 @@ function MarqueeIfNeeded({ text, textClassName }: { text: string; textClassName?
   const durationSec = overflowPx > 0 ? Math.min(14, Math.max(5, overflowPx / 38)) : 0
 
   return (
-    <div ref={outerRef} className="min-w-0 flex-1 overflow-hidden">
+    <div ref={outerRef} className={cn('min-w-0 flex-1 overflow-hidden', outerClassName)}>
       <span
         ref={innerRef}
         className={cn(
@@ -135,8 +143,8 @@ function MediaAndSteamRow({
       {steam ? (
         <div
           className={cn(
-            'flex min-w-0 w-full items-center',
-            pair ? 'flex-1 basis-0' : 'flex-1',
+            'flex min-w-0 justify-end overflow-hidden',
+            pair ? 'flex-1 basis-0' : 'w-full flex-1',
           )}
         >
           <HoverCard openDelay={120}>
@@ -144,11 +152,11 @@ function MediaAndSteamRow({
               <button
                 type="button"
                 className={cn(
-                  'flex min-w-0 w-full items-center gap-2 rounded-md text-left transition-colors',
+                  'flex w-full min-w-0 max-w-full flex-row-reverse items-center justify-start gap-2 rounded-md transition-colors',
                   'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 )}
               >
-                <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                <MarqueeIfNeeded text={steam.name} outerClassName="min-w-0 flex-1" />
                 {!steamImgFailed ? (
                   // eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN header art
                   <img
@@ -159,10 +167,8 @@ function MediaAndSteamRow({
                     className="h-4 w-10 shrink-0 rounded object-cover bg-muted"
                     onError={() => setSteamImgFailed(true)}
                   />
-                ) : (
-                  <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                )}
-                <MarqueeIfNeeded text={steam.name} />
+                ) : null}
+                <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
               </button>
             </HoverCardTrigger>
             <HoverCardContent className="w-72 space-y-3" align="start">
