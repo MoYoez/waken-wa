@@ -8,7 +8,11 @@ COPY package.json pnpm-lock.yaml ./
 COPY drizzle ./drizzle
 COPY drizzle.config.sqlite.ts drizzle.config.pg.ts ./
 COPY scripts ./scripts
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/* \
+  && pnpm install --frozen-lockfile --ignore-scripts \
+  && pnpm rebuild better-sqlite3
 
 FROM base AS builder
 WORKDIR /app
@@ -21,8 +25,9 @@ COPY --from=deps /app/drizzle.config.pg.ts ./drizzle.config.pg.ts
 COPY --from=deps /app/scripts ./scripts
 COPY . .
 
-RUN mkdir -p prisma
-ENV DATABASE_URL=file:./prisma/build.db
+# Ephemeral SQLite file for `next build` only (not the runtime DB under /app/data).
+RUN mkdir -p /tmp/waken-build-db
+ENV DATABASE_URL=file:/tmp/waken-build-db/build.db
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN mkdir -p public
 RUN pnpm run build

@@ -97,7 +97,7 @@ if [ ! -f .env ]; then
   else
     {
       echo 'JWT_SECRET='
-      echo 'DATABASE_URL=file:./prisma/dev.db'
+      echo 'DATABASE_URL=file:/app/data/dev.db'
       echo 'NEXT_PUBLIC_BASE_URL=http://localhost:3000'
     } >.env
     echo "Created minimal .env (no .env.example in repo)."
