@@ -47,10 +47,13 @@ function MarqueeIfNeeded({
   text,
   textClassName,
   outerClassName,
+  /** When false (Steam cluster): width follows text up to max-w-full so the block can sit flush right with `justify-end`. */
+  grow = true,
 }: {
   text: string
   textClassName?: string
   outerClassName?: string
+  grow?: boolean
 }) {
   const outerRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLSpanElement>(null)
@@ -85,7 +88,7 @@ function MarqueeIfNeeded({
   useEffect(() => {
     if (typeof document === 'undefined' || !document.fonts?.ready) return
     void document.fonts.ready.then(() => measure())
-  }, [text, measure])
+  }, [text, measure, grow])
 
   const durationSec = overflowPx > 0 ? Math.min(14, Math.max(5, overflowPx / 38)) : 0
 
@@ -93,8 +96,10 @@ function MarqueeIfNeeded({
     <div
       ref={outerRef}
       className={cn(
-        // w-0 + flex-1 + basis-0: flex allocates remaining width; without this, min-width:auto keeps the slot as wide as text and marquee never triggers
-        'w-0 min-w-0 max-w-full flex-1 basis-0 overflow-hidden',
+        'min-w-0 max-w-full overflow-hidden',
+        grow
+          ? 'w-0 flex-1 basis-0'
+          : 'w-max max-w-full shrink text-right',
         outerClassName,
       )}
     >
@@ -169,11 +174,11 @@ function MediaAndSteamRow({
               <button
                 type="button"
                 className={cn(
-                  'flex w-full min-w-0 max-w-full flex-row-reverse items-center justify-start gap-2 rounded-md transition-colors',
+                  'inline-flex max-w-full min-w-0 items-center gap-2 rounded-md transition-colors',
                   'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 )}
               >
-                <MarqueeIfNeeded text={steam.name} />
+                <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                 {!steamImgFailed ? (
                   // eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN header art
                   <img
@@ -185,7 +190,7 @@ function MediaAndSteamRow({
                     onError={() => setSteamImgFailed(true)}
                   />
                 ) : null}
-                <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                <MarqueeIfNeeded text={steam.name} grow={false} />
               </button>
             </HoverCardTrigger>
             <HoverCardContent className="w-72 space-y-3" align="start">
