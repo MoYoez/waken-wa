@@ -22,9 +22,20 @@ fi
 
 export DATABASE_URL="${DATABASE_URL:-file:/app/data/dev.db}"
 
+DRIZZLE_KIT_CLI=/app/tools/node_modules/drizzle-kit/bin.cjs
+
+case "$DATABASE_URL" in
+  postgres:*|postgresql:*)
+    DRIZZLE_CONFIG=drizzle.config.pg.ts
+    ;;
+  *)
+    DRIZZLE_CONFIG=drizzle.config.sqlite.ts
+    ;;
+esac
+
 start_app() {
-  pnpm exec drizzle-kit push --config drizzle.config.sqlite.ts
-  exec pnpm exec next start -H 0.0.0.0 -p "${PORT:-3000}"
+  node "$DRIZZLE_KIT_CLI" push --config "$DRIZZLE_CONFIG"
+  exec node server.js
 }
 
 if [ "$(id -u)" = 0 ]; then
@@ -34,7 +45,7 @@ if [ "$(id -u)" = 0 ]; then
     PORT="${PORT:-3000}" \
     NODE_ENV="${NODE_ENV:-production}" \
     HOME=/tmp \
-    sh -ec 'cd /app && pnpm exec drizzle-kit push --config drizzle.config.sqlite.ts && exec pnpm exec next start -H 0.0.0.0 -p "${PORT:-3000}"'
+    sh -ec "cd /app && node $DRIZZLE_KIT_CLI push --config $DRIZZLE_CONFIG && exec node server.js"
 else
   start_app
 fi

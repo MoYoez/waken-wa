@@ -1,4 +1,4 @@
-# Production: pnpm tree (pruned), then `drizzle-kit push` + `next start`.
+
 FROM node:22-bookworm-slim AS base
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 WORKDIR /app
@@ -25,18 +25,23 @@ COPY --from=deps /app/drizzle.config.pg.ts ./drizzle.config.pg.ts
 COPY --from=deps /app/scripts ./scripts
 COPY . .
 
-# Ephemeral SQLite file for `next build` only (not the runtime DB under /app/data).
 RUN mkdir -p /tmp/waken-build-db
 ENV DATABASE_URL=file:/tmp/waken-build-db/build.db
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN mkdir -p public
-RUN pnpm run build
+RUN pnpm run build && rm -rf .next/cache
 
-# Drop devDependencies (drizzle-kit stays in dependencies for entrypoint push).
-FROM builder AS runner-prep
-RUN pnpm prune --prod
 
-FROM base AS runner
+FROM base AS drizzle-tools
+WORKDIR /tools
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*# Keep versions aligned with root package.json / lockfile when upgrading Drizzle or drivers.
+RUN printf '%s\n' '{"name":"drizzle-tools","private":true,"version":"1.0.0"}' > package.json \
+  && pnpm add drizzle-kit@0.31.10 drizzle-orm@0.44.7 better-sqlite3@12.8.0 pg@8.20.0 dotenv@16.6.1 \
+  && pnpm rebuild better-sqlite3
+
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -44,16 +49,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-# --chown during COPY avoids a slow `chown -R` over node_modules + .next.
-COPY --chown=nextjs:nodejs --from=runner-prep /app/package.json /app/pnpm-lock.yaml ./
-COPY --chown=nextjs:nodejs --from=runner-prep /app/node_modules ./node_modules
-COPY --chown=nextjs:nodejs --from=runner-prep /app/drizzle ./drizzle
-COPY --chown=nextjs:nodejs --from=runner-prep /app/drizzle.config.sqlite.ts ./drizzle.config.sqlite.ts
-COPY --chown=nextjs:nodejs --from=runner-prep /app/drizzle.config.pg.ts ./drizzle.config.pg.ts
-COPY --chown=nextjs:nodejs --from=runner-prep /app/scripts ./scripts
-COPY --chown=nextjs:nodejs --from=runner-prep /app/public ./public
-COPY --chown=nextjs:nodejs --from=runner-prep /app/.next ./.next
-COPY --chown=nextjs:nodejs --from=runner-prep /app/next.config.mjs ./next.config.mjs
+COPY --chown=nextjs:nodejs --from=builder /app/public ./public
+COPY --chown=nextjs:nodejs --from=builder /app/.next/standalone ./
+COPY --chown=nextjs:nodejs --from=builder /app/.next/static ./.next/static
+
+COPY --chown=nextjs:nodejs --from=builder /app/drizzle ./drizzle
+COPY --chown=nextjs:nodejs --from=builder /app/drizzle.config.sqlite.ts ./drizzle.config.sqlite.ts
+COPY --chown=nextjs:nodejs --from=builder /app/drizzle.config.pg.ts ./drizzle.config.pg.ts
+
+COPY --chown=nextjs:nodejs --from=drizzle-tools /tools ./tools
 
 COPY --chmod=755 docker-entrypoint.sh /docker-entrypoint.sh
 
