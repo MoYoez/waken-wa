@@ -22,6 +22,9 @@ fi
 
 export DATABASE_URL="${DATABASE_URL:-file:/app/data/dev.db}"
 
+# Config lives under /app but CLI deps are in /app/tools; TS config imports `drizzle-kit`.
+export NODE_PATH=/app/tools/node_modules
+
 DRIZZLE_KIT_CLI=/app/tools/node_modules/drizzle-kit/bin.cjs
 
 case "$DATABASE_URL" in
@@ -44,6 +47,7 @@ if [ "$(id -u)" = 0 ]; then
     JWT_SECRET="$JWT_SECRET" \
     PORT="${PORT:-3000}" \
     NODE_ENV="${NODE_ENV:-production}" \
+    NODE_PATH=/app/tools/node_modules \
     HOME=/tmp \
     sh -ec "cd /app && node $DRIZZLE_KIT_CLI push --config $DRIZZLE_CONFIG && exec node server.js"
 else
