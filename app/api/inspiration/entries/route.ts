@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { getBearerApiTokenRecord, getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { inspirationEntries } from '@/lib/drizzle-schema'
 import { gateInspirationApiForDevice } from '@/lib/inspiration-device-allowlist'
 import { linkInspirationAssetsToEntry, validateInlineImageDataUrl } from '@/lib/inspiration-inline-images'
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
       statusSnapshot = formatStatusSnapshotFromFeed(feed)
     }
 
-    const now = new Date()
+    const now = sqlTimestamp()
     const [entry] = await db
       .insert(inspirationEntries)
       .values({

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
+import { sqlTimestamp } from '@/lib/sql-timestamp'
 
 type SiteConfigUpsertArgs = {
   where: { id: number }
@@ -31,7 +32,7 @@ export async function safeSiteConfigUpsert(
   executor: any = db,
 ) {
   const id = args.where.id
-  const now = new Date()
+  const now = sqlTimestamp()
   const update: Record<string, unknown> = { ...args.update, updatedAt: now }
   const create: Record<string, unknown> = { ...args.create, id, updatedAt: now }
 

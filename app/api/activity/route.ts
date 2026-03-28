@@ -12,6 +12,7 @@ import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { devices, siteConfig, userActivities } from '@/lib/drizzle-schema'
+import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { persistMinutesToExpiresAt } from '@/lib/user-activity-persist'
 
 export const dynamic = 'force-dynamic'
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
       const [config] = await db.select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1)
       const autoAccept = Boolean(config?.autoAcceptNewDevices)
       const createdStatus = autoAccept ? 'active' : 'pending'
-      const now = new Date()
+      const now = sqlTimestamp()
       const [created] = await db
         .insert(devices)
         .values({
@@ -222,7 +223,8 @@ export async function POST(request: NextRequest) {
         [USER_PERSIST_EXPIRES_AT_METADATA_KEY]: expiresAt.toISOString(),
         [USER_ACTIVITY_DB_SYNCED_METADATA_KEY]: true,
       }
-      const now = new Date()
+      const now = sqlTimestamp()
+      const expiresAtIso = expiresAt.toISOString()
       await db
         .insert(userActivities)
         .values({
@@ -231,7 +233,7 @@ export async function POST(request: NextRequest) {
           processName: process_name,
           processTitle: process_title,
           metadata: finalMetadata,
-          expiresAt,
+          expiresAt: expiresAtIso,
           updatedAt: now,
         })
         .onConflictDoUpdate({
@@ -240,7 +242,7 @@ export async function POST(request: NextRequest) {
             generatedHashKey,
             processTitle: process_title,
             metadata: finalMetadata,
-            expiresAt,
+            expiresAt: expiresAtIso,
             updatedAt: now,
           },
         })
@@ -265,7 +267,7 @@ export async function POST(request: NextRequest) {
       metadata: finalMetadata,
     })
 
-    const seenAt = new Date()
+    const seenAt = sqlTimestamp()
     await db
       .update(devices)
       .set({

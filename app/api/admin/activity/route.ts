@@ -11,6 +11,7 @@ import {
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
+import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { devices, userActivities } from '@/lib/drizzle-schema'
 
 // 强制动态渲染，禁用缓存
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!generatedHashKey) {
-      const now = new Date()
+      const now = sqlTimestamp()
       await db
         .insert(devices)
         .values({
@@ -175,7 +176,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (adminPersistSeconds != null && adminExpiresAt) {
-      const now = new Date()
+      const now = sqlTimestamp()
+      const expiresAtIso = adminExpiresAt.toISOString()
       await db
         .insert(userActivities)
         .values({
@@ -184,7 +186,7 @@ export async function POST(request: NextRequest) {
           processName: process_name,
           processTitle: process_title,
           metadata: finalMetadata,
-          expiresAt: adminExpiresAt,
+          expiresAt: expiresAtIso,
           updatedAt: now,
         })
         .onConflictDoUpdate({
@@ -193,7 +195,7 @@ export async function POST(request: NextRequest) {
             generatedHashKey: effectiveHashKey,
             processTitle: process_title,
             metadata: finalMetadata,
-            expiresAt: adminExpiresAt,
+            expiresAt: expiresAtIso,
             updatedAt: now,
           },
         })
@@ -214,7 +216,7 @@ export async function POST(request: NextRequest) {
       metadata: finalMetadata,
     })
 
-    const seenAt = new Date()
+    const seenAt = sqlTimestamp()
     await db
       .update(devices)
       .set({

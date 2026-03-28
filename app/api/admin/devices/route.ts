@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
+import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { apiTokens, devices } from '@/lib/drizzle-schema'
 
 export const dynamic = 'force-dynamic'
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const now = new Date()
+    const now = sqlTimestamp()
     const [item] = await db
       .insert(devices)
       .values({
@@ -222,7 +223,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: '没有可更新的字段' }, { status: 400 })
     }
 
-    data.updatedAt = new Date()
+    data.updatedAt = sqlTimestamp()
 
     const [item] = await db
       .update(devices)

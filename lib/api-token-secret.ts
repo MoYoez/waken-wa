@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
+import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { apiTokens } from '@/lib/drizzle-schema'
 
 const STORED_HASH_PREFIX = 'h$'
@@ -57,7 +58,7 @@ export async function findActiveApiTokenBySecret(plainSecret: string) {
 export async function touchApiTokenLastUsed(id: number) {
   await db
     .update(apiTokens)
-    .set({ lastUsedAt: new Date() })
+    .set({ lastUsedAt: sqlTimestamp() })
     .where(eq(apiTokens.id, id))
 }
 

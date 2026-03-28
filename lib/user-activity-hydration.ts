@@ -7,6 +7,7 @@ import {
   USER_PERSIST_EXPIRES_AT_METADATA_KEY,
 } from '@/lib/activity-store'
 import { db } from '@/lib/db'
+import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { devices, userActivities } from '@/lib/drizzle-schema'
 
 let userActivityHydratedFromDb = false
@@ -15,7 +16,7 @@ let userActivityHydratedFromDb = false
  * Delete expired UserActivity rows and remove matching keys from the in-memory store.
  */
 export async function purgeExpiredUserActivitiesFromDbAndMemory(): Promise<void> {
-  const now = new Date()
+  const now = sqlTimestamp()
   const expired = await db
     .select({
       generatedHashKey: userActivities.generatedHashKey,
@@ -53,7 +54,7 @@ function mergeMetadataForHydrate(
 export async function hydrateUserActivitiesIntoStoreOnce(): Promise<void> {
   if (userActivityHydratedFromDb) return
 
-  const now = new Date()
+  const now = sqlTimestamp()
   const [cntRow] = await db
     .select({ c: count() })
     .from(userActivities)
