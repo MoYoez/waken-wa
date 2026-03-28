@@ -1,5 +1,5 @@
 import { ActivityFeedProvider } from '@/components/activity-feed-provider'
-import { UserProfile } from '@/components/user-profile'
+import { UserProfile, UserProfileNoteSection } from '@/components/user-profile'
 import { CurrentStatus } from '@/components/current-status'
 import { InspirationHomeSection } from '@/components/inspiration-home-section'
 import prisma from '@/lib/prisma'
@@ -139,15 +139,7 @@ export default async function Home() {
                         : 'min-w-0 w-full'
                     }
                   >
-                    <UserProfile
-                      name={userName}
-                      bio={userBio}
-                      avatarUrl={avatarUrl}
-                      note={userNote}
-                      noteHitokotoEnabled={noteHitokotoEnabled}
-                      noteHitokotoCategories={noteHitokotoCategories}
-                      noteHitokotoEncode={noteHitokotoEncode}
-                    />
+                    <UserProfile name={userName} bio={userBio} avatarUrl={avatarUrl} />
                   </div>
                   {showScheduleHomeColumn ? (
                     <ScheduleHomeInClassBanner
@@ -161,6 +153,13 @@ export default async function Home() {
                     />
                   ) : null}
                 </div>
+
+                <UserProfileNoteSection
+                  note={userNote}
+                  noteHitokotoEnabled={noteHitokotoEnabled}
+                  noteHitokotoCategories={noteHitokotoCategories}
+                  noteHitokotoEncode={noteHitokotoEncode}
+                />
 
                 <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 

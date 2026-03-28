@@ -123,3 +123,26 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Activity card: music / Steam line — scroll when text overflows half-width cell */
+@keyframes status-marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+  45%,
+  55% {
+    transform: translateX(var(--status-marquee-shift, 0px));
+  }
+  88%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-marquee-animate {
+    animation: none !important;
+    transform: none !important;
+  }
+}

@@ -8,9 +8,11 @@ import {
   type HitokotoJsonBody,
   type UserNoteHitokotoEncode,
 } from '@/lib/hitokoto'
+import { cn } from '@/lib/utils'
 
+/** One step smaller than name (`text-base`); same weight/color as name. */
 const NOTE_BOX_CLASS =
-  'text-sm text-foreground/70 font-light leading-relaxed border-l-2 border-primary pl-4'
+  'block w-full min-w-0 max-w-full break-words text-sm font-semibold text-foreground leading-snug border-l-2 border-primary pl-4 pr-0'
 
 function ProfileHitokotoNote({
   categories,
@@ -68,7 +70,7 @@ function ProfileHitokotoNote({
 
   if (phase === 'loading') {
     return (
-      <p className={`${NOTE_BOX_CLASS} animate-pulse text-muted-foreground`}>加载一言…</p>
+      <p className={`${NOTE_BOX_CLASS} animate-pulse`}>加载一言…</p>
     )
   }
 
@@ -76,9 +78,7 @@ function ProfileHitokotoNote({
     if (fallbackNote.trim()) {
       return <p className={NOTE_BOX_CLASS}>{fallbackNote}</p>
     }
-    return (
-      <p className={`${NOTE_BOX_CLASS} text-muted-foreground`}>一言暂不可用</p>
-    )
+    return <p className={NOTE_BOX_CLASS}>一言暂不可用</p>
   }
 
   if (uuid) {
@@ -88,7 +88,14 @@ function ProfileHitokotoNote({
           href={`https://hitokoto.cn/?uuid=${encodeURIComponent(uuid)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
+          className={cn(
+            'inline-block max-w-full rounded-sm pb-0.5',
+            'bg-gradient-to-r from-primary to-primary bg-left-bottom bg-no-repeat',
+            '[background-size:0%_2px] transition-[background-size] duration-300 ease-out',
+            'hover:[background-size:100%_2px]',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            'focus-visible:[background-size:100%_2px]',
+          )}
         >
           {text}
         </a>
@@ -99,33 +106,54 @@ function ProfileHitokotoNote({
   return <p className={NOTE_BOX_CLASS}>{text}</p>
 }
 
-interface UserProfileProps {
-  name?: string
-  bio?: string
-  avatarUrl?: string
+export interface UserProfileNoteSectionProps {
   note?: string
   noteHitokotoEnabled?: boolean
   noteHitokotoCategories?: string[]
   noteHitokotoEncode?: UserNoteHitokotoEncode
 }
 
-export function UserProfile({
-  name = 'User',
-  bio = 'Building something awesome',
-  avatarUrl = '/avatar.jpg',
+/** Full-width note / 一言 under the profile row so text can reach the card’s right inner edge (spans past the schedule column). */
+export function UserProfileNoteSection({
   note = '',
   noteHitokotoEnabled = false,
   noteHitokotoCategories = [],
   noteHitokotoEncode = 'json',
+}: UserProfileNoteSectionProps) {
+  const showNoteBlock = Boolean(note.trim()) || noteHitokotoEnabled
+  if (!showNoteBlock) return null
+
+  return (
+    <div className="w-full min-w-0 max-w-full">
+      {noteHitokotoEnabled ? (
+        <ProfileHitokotoNote
+          categories={noteHitokotoCategories}
+          encode={noteHitokotoEncode}
+          fallbackNote={note}
+        />
+      ) : (
+        <p className={NOTE_BOX_CLASS}>{note}</p>
+      )}
+    </div>
+  )
+}
+
+interface UserProfileProps {
+  name?: string
+  bio?: string
+  avatarUrl?: string
+}
+
+export function UserProfile({
+  name = 'User',
+  bio = 'Building something awesome',
+  avatarUrl = '/avatar.jpg',
 }: UserProfileProps) {
   const { feed } = useSharedActivityFeed()
   const isOnline = Boolean(feed?.activeStatuses?.length)
 
-  const showNoteBlock = Boolean(note.trim()) || noteHitokotoEnabled
-
   return (
-    <div className="space-y-6">
-      {/* Top Row: avatar + name/bio */}
+    <div className="w-full min-w-0">
       <div className="flex items-center gap-4">
         {/* Avatar — online: green dot, offline: red dot */}
         <div
@@ -155,7 +183,7 @@ export function UserProfile({
         </div>
 
         {/* Name & Bio */}
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-base font-semibold text-foreground leading-snug">
             {name}
           </h1>
@@ -164,18 +192,6 @@ export function UserProfile({
           </p>
         </div>
       </div>
-
-      {showNoteBlock ? (
-        noteHitokotoEnabled ? (
-          <ProfileHitokotoNote
-            categories={noteHitokotoCategories}
-            encode={noteHitokotoEncode}
-            fallbackNote={note}
-          />
-        ) : (
-          <p className={NOTE_BOX_CLASS}>{note}</p>
-        )
-      ) : null}
     </div>
   )
 }

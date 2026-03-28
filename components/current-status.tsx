@@ -1,10 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { AppWindow, Battery, Clock, Gamepad2, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
-import { getMediaDisplay } from '@/lib/activity-media'
+import { getMediaDisplay, type MediaDisplay } from '@/lib/activity-media'
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { cn } from '@/lib/utils'
@@ -35,56 +42,150 @@ type SteamNowPlayingClient = {
   imageUrl: string
 }
 
-function SteamPlayingRow({ steam }: { steam: SteamNowPlayingClient }) {
-  const [imgFailed, setImgFailed] = useState(false)
+/** When text is wider than its slot (~half row when paired), run horizontal marquee instead of clipping. */
+function MarqueeIfNeeded({ text, textClassName }: { text: string; textClassName?: string }) {
+  const outerRef = useRef<HTMLDivElement>(null)
+  const innerRef = useRef<HTMLSpanElement>(null)
+  const [overflowPx, setOverflowPx] = useState(0)
+
+  const measure = useCallback(() => {
+    const outer = outerRef.current
+    const inner = innerRef.current
+    if (!outer || !inner) return
+    setOverflowPx(Math.max(0, inner.scrollWidth - outer.clientWidth))
+  }, [])
+
+  useLayoutEffect(() => {
+    measure()
+    const outer = outerRef.current
+    const inner = innerRef.current
+    if (!outer || !inner) return
+    const ro = new ResizeObserver(measure)
+    ro.observe(outer)
+    ro.observe(inner)
+    return () => ro.disconnect()
+  }, [text, measure])
+
+  const durationSec = overflowPx > 0 ? Math.min(14, Math.max(5, overflowPx / 38)) : 0
 
   return (
-    <HoverCard openDelay={120}>
-      <HoverCardTrigger asChild>
-        <button
-          type="button"
+    <div ref={outerRef} className="min-w-0 flex-1 overflow-hidden">
+      <span
+        ref={innerRef}
+        className={cn(
+          'inline-block max-w-none whitespace-nowrap text-sm font-medium text-foreground/90',
+          overflowPx > 0 && 'status-marquee-animate',
+          textClassName,
+        )}
+        style={
+          overflowPx > 0
+            ? ({
+                ['--status-marquee-shift' as string]: `-${overflowPx}px`,
+                animation: `status-marquee ${durationSec}s ease-in-out infinite`,
+              } as CSSProperties)
+            : undefined
+        }
+      >
+        {text}
+      </span>
+    </div>
+  )
+}
+
+function mediaPrimaryLine(media: MediaDisplay): string {
+  return media.singer ? `${media.title} · ${media.singer}` : media.title
+}
+
+function MediaAndSteamRow({
+  media,
+  steam,
+}: {
+  media: MediaDisplay | null
+  steam: SteamNowPlayingClient | null
+}) {
+  const [steamImgFailed, setSteamImgFailed] = useState(false)
+
+  if (!media && !steam) return null
+
+  const pair = Boolean(media && steam)
+
+  return (
+    <div className="flex w-full min-w-0 items-center gap-1.5">
+      {media ? (
+        <div
           className={cn(
-            'flex w-full min-w-0 items-start gap-2 rounded-md text-left transition-colors',
-            'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'flex min-w-0 items-center gap-2',
+            pair ? 'min-w-0 flex-1 basis-0' : 'min-w-0 flex-1',
           )}
         >
-          <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            {!imgFailed ? (
-              // eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN header art
-              <img
-                src={steam.imageUrl}
-                alt=""
-                width={40}
-                height={15}
-                className="h-4 w-10 shrink-0 rounded object-cover bg-muted"
-                onError={() => setImgFailed(true)}
-              />
-            ) : (
-              <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            )}
-            <span className="truncate text-sm font-medium text-foreground/90">{steam.name}</span>
-          </div>
-        </button>
-      </HoverCardTrigger>
-      <HoverCardContent className="w-72 space-y-3" align="start">
-        {!imgFailed ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={steam.imageUrl}
-            alt=""
-            width={460}
-            height={215}
-            className="w-full max-h-32 rounded-md object-cover bg-muted"
-            onError={() => setImgFailed(true)}
-          />
-        ) : null}
-        <div className="space-y-1">
-          <p className="text-sm font-semibold leading-snug break-words">{steam.name}</p>
-          <p className="text-xs text-muted-foreground">正在游玩（Steam）</p>
+          <Music className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          <MarqueeIfNeeded text={mediaPrimaryLine(media)} />
         </div>
-      </HoverCardContent>
-    </HoverCard>
+      ) : null}
+
+      {pair ? (
+        <span
+          className="shrink-0 select-none px-0.5 text-muted-foreground/50 text-sm"
+          aria-hidden
+        >
+          |
+        </span>
+      ) : null}
+
+      {steam ? (
+        <div
+          className={cn(
+            'flex min-w-0 w-full items-center',
+            pair ? 'flex-1 basis-0' : 'flex-1',
+          )}
+        >
+          <HoverCard openDelay={120}>
+            <HoverCardTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'flex min-w-0 w-full items-center gap-2 rounded-md text-left transition-colors',
+                  'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                )}
+              >
+                <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                {!steamImgFailed ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN header art
+                  <img
+                    src={steam.imageUrl}
+                    alt=""
+                    width={40}
+                    height={15}
+                    className="h-4 w-10 shrink-0 rounded object-cover bg-muted"
+                    onError={() => setSteamImgFailed(true)}
+                  />
+                ) : (
+                  <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                )}
+                <MarqueeIfNeeded text={steam.name} />
+              </button>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-72 space-y-3" align="start">
+              {!steamImgFailed ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={steam.imageUrl}
+                  alt=""
+                  width={460}
+                  height={215}
+                  className="w-full max-h-32 rounded-md object-cover bg-muted"
+                  onError={() => setSteamImgFailed(true)}
+                />
+              ) : null}
+              <div className="space-y-1">
+                <p className="text-sm font-semibold leading-snug break-words">{steam.name}</p>
+                <p className="text-xs text-muted-foreground">正在游玩（Steam）</p>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -191,22 +292,7 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
                 </div>
               </div>
 
-              {media || steam ? (
-                <div className="space-y-2">
-                  {media ? (
-                    <div className="flex items-start gap-2">
-                      <Music className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <div className="text-sm font-medium text-foreground/90 break-words">{media.title}</div>
-                        {media.singer ? (
-                          <div className="text-xs text-muted-foreground break-words">{media.singer}</div>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : null}
-                  {steam ? <SteamPlayingRow steam={steam} /> : null}
-                </div>
-              ) : null}
+              {media || steam ? <MediaAndSteamRow media={media} steam={steam} /> : null}
 
               <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
