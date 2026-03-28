@@ -73,7 +73,7 @@ export default async function Home() {
     (prisma as any).inspirationEntry.count(),
   ])
   
-  // Timezone for inspiration entries - use cfg which is already defined
+  // Timezone for inspiration entries
   const displayTimezoneForEntries = normalizeTimezone(cfg.displayTimezone)
   const inspirationHomeEntries = inspirationRows.map((row: { createdAt: Date; [k: string]: unknown }) => ({
     ...row,
@@ -102,7 +102,6 @@ export default async function Home() {
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
-  const displayTimezone = normalizeTimezone(cfg.displayTimezone)
   const activityUpdateMode = normalizeActivityUpdateMode(cfg.activityUpdateMode)
 
   return (
