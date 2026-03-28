@@ -26,6 +26,7 @@ import {
 } from '@/lib/schedule-grid-by-weekday'
 import { normalizeInspirationAllowedHashes } from '@/lib/inspiration-device-allowlist'
 import { parseActivityLogRetentionMaxInput } from '@/lib/activity-log-retention'
+import { normalizeTimezone } from '@/lib/timezone'
 
 const SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX = 40
 const DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL = '正在摸鱼'
@@ -335,6 +336,12 @@ export async function PATCH(request: NextRequest) {
       activityLogRetentionMax = retentionParsed.value
     }
 
+    // 时区设置
+    let displayTimezone = existing?.displayTimezone ?? 'Asia/Shanghai'
+    if (body.displayTimezone !== undefined && body.displayTimezone !== null) {
+      displayTimezone = normalizeTimezone(body.displayTimezone)
+    }
+
     const config = await safeSiteConfigUpsert(prisma as any, {
       where: { id: 1 },
       update: {
@@ -380,6 +387,7 @@ export async function PATCH(request: NextRequest) {
         hcaptchaEnabled,
         hcaptchaSiteKey,
         hcaptchaSecretKey,
+        displayTimezone,
       },
       create: {
         id: 1,
@@ -425,6 +433,7 @@ export async function PATCH(request: NextRequest) {
         hcaptchaEnabled,
         hcaptchaSiteKey,
         hcaptchaSecretKey,
+        displayTimezone,
       },
     })
 

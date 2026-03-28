@@ -47,6 +47,7 @@ import {
   ACTIVITY_LOG_RETENTION_MAX,
   ACTIVITY_LOG_RETENTION_MIN,
 } from '@/lib/activity-log-retention'
+import { TIMEZONE_OPTIONS, DEFAULT_TIMEZONE, normalizeTimezone } from '@/lib/timezone'
 
 const CROP_VIEW_SIZE = 320
 const CROP_FRAME_SIZE = 220
@@ -406,6 +407,8 @@ interface SiteConfig {
   hideActivityMedia: boolean
   /** null = unlimited activity log rows (site-wide). */
   activityLogRetentionMax: number | null
+  /** 显示时区，默认 Asia/Shanghai */
+  displayTimezone: string
 }
 
 export function WebSettings() {
@@ -478,6 +481,7 @@ export function WebSettings() {
     globalMouseTiltEnabled: false,
     hideActivityMedia: false,
     activityLogRetentionMax: null,
+    displayTimezone: DEFAULT_TIMEZONE,
   })
 
   useEffect(() => {
@@ -579,6 +583,7 @@ export function WebSettings() {
                     ),
                   )
                 : null,
+            displayTimezone: normalizeTimezone(data.data.displayTimezone),
           })
         }
       } finally {
@@ -1343,6 +1348,28 @@ export function WebSettings() {
             />
           </div>
         ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="display-timezone">显示时区</Label>
+        <p className="text-xs text-muted-foreground">
+          用于显示时间的时区设置，默认为中国标准时间 (GMT+8)。
+        </p>
+        <Select
+          value={form.displayTimezone}
+          onValueChange={(v) => patch('displayTimezone', v)}
+        >
+          <SelectTrigger id="display-timezone" className="w-full max-w-xs">
+            <SelectValue placeholder="选择时区" />
+          </SelectTrigger>
+          <SelectContent>
+            {TIMEZONE_OPTIONS.map((tz) => (
+              <SelectItem key={tz.value} value={tz.value}>
+                {tz.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

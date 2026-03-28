@@ -20,6 +20,7 @@ import {
   resolveSchedulePeriodTemplate,
   type ScheduleCourse,
 } from '@/lib/schedule-courses'
+import { normalizeTimezone } from '@/lib/timezone'
 
 // 强制动态渲染，确保每次请求都获取最新数据
 export const dynamic = 'force-dynamic'
@@ -66,9 +67,11 @@ export default async function Home() {
     }),
     (prisma as any).inspirationEntry.count(),
   ])
+  const displayTimezoneForEntries = normalizeTimezone(cfg.displayTimezone)
   const inspirationHomeEntries = inspirationRows.map((row: { createdAt: Date; [k: string]: unknown }) => ({
     ...row,
     createdAt: row.createdAt.toISOString(),
+    displayTimezone: displayTimezoneForEntries,
   }))
 
   const scheduleInClassOnHome = Boolean(config.scheduleInClassOnHome)
@@ -98,6 +101,7 @@ export default async function Home() {
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
+  const displayTimezone = normalizeTimezone(cfg.displayTimezone)
 
   return (
     <>

@@ -1,0 +1,35 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { formatDateTimeShort, DEFAULT_TIMEZONE } from '@/lib/timezone'
+
+interface FormattedTimeProps {
+  /** ISO 日期字符串或 Date 对象 */
+  date: string | Date
+  /** 时区，默认从站点配置获取，未配置则使用 Asia/Shanghai */
+  timezone?: string
+  /** 自定义 className */
+  className?: string
+}
+
+/**
+ * 客户端时间格式化组件
+ * 使用配置的时区显示时间，避免服务端/客户端水合错误
+ */
+export function FormattedTime({ date, timezone, className }: FormattedTimeProps) {
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // 服务端渲染时显示占位符，避免水合错误
+  if (!mounted) {
+    return <span className={className} suppressHydrationWarning>--</span>
+  }
+
+  const tz = timezone || DEFAULT_TIMEZONE
+  const formatted = formatDateTimeShort(date, tz)
+
+  return <span className={className}>{formatted}</span>
+}

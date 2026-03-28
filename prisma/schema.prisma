@@ -118,6 +118,8 @@ model SiteConfig {
   hcaptchaEnabled      Boolean  @map("hcaptcha_enabled") @default(false)
   hcaptchaSiteKey      String?  @map("hcaptcha_site_key")
   hcaptchaSecretKey    String?  @map("hcaptcha_secret_key")
+  /// Display timezone for timestamps (e.g. "Asia/Shanghai", "UTC"). Default: Asia/Shanghai (GMT+8).
+  displayTimezone      String   @map("display_timezone") @default("Asia/Shanghai")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
