@@ -44,21 +44,21 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-COPY --from=runner-prep /app/package.json /app/pnpm-lock.yaml ./
-COPY --from=runner-prep /app/node_modules ./node_modules
-COPY --from=runner-prep /app/drizzle ./drizzle
-COPY --from=runner-prep /app/drizzle.config.sqlite.ts ./drizzle.config.sqlite.ts
-COPY --from=runner-prep /app/drizzle.config.pg.ts ./drizzle.config.pg.ts
-COPY --from=runner-prep /app/scripts ./scripts
-COPY --from=runner-prep /app/public ./public
-COPY --from=runner-prep /app/.next ./.next
-COPY --from=runner-prep /app/next.config.mjs ./next.config.mjs
+# --chown during COPY avoids a slow `chown -R` over node_modules + .next.
+COPY --chown=nextjs:nodejs --from=runner-prep /app/package.json /app/pnpm-lock.yaml ./
+COPY --chown=nextjs:nodejs --from=runner-prep /app/node_modules ./node_modules
+COPY --chown=nextjs:nodejs --from=runner-prep /app/drizzle ./drizzle
+COPY --chown=nextjs:nodejs --from=runner-prep /app/drizzle.config.sqlite.ts ./drizzle.config.sqlite.ts
+COPY --chown=nextjs:nodejs --from=runner-prep /app/drizzle.config.pg.ts ./drizzle.config.pg.ts
+COPY --chown=nextjs:nodejs --from=runner-prep /app/scripts ./scripts
+COPY --chown=nextjs:nodejs --from=runner-prep /app/public ./public
+COPY --chown=nextjs:nodejs --from=runner-prep /app/.next ./.next
+COPY --chown=nextjs:nodejs --from=runner-prep /app/next.config.mjs ./next.config.mjs
 
 COPY --chmod=755 docker-entrypoint.sh /docker-entrypoint.sh
 
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app
+RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
-USER root
 EXPOSE 3000
 ENV PORT=3000
 

@@ -7,7 +7,7 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
     environment:
       DATABASE_URL: file:/app/data/dev.db
       JWT_SECRET: ${JWT_SECRET:-}
