@@ -60,24 +60,44 @@ function MarqueeIfNeeded({
     const outer = outerRef.current
     const inner = innerRef.current
     if (!outer || !inner) return
-    setOverflowPx(Math.max(0, inner.scrollWidth - outer.clientWidth))
+    const ow = outer.getBoundingClientRect().width
+    const sw = inner.scrollWidth
+    setOverflowPx(Math.max(0, Math.ceil(sw - ow)))
   }, [])
 
   useLayoutEffect(() => {
     measure()
+    const id = requestAnimationFrame(() => measure())
     const outer = outerRef.current
     const inner = innerRef.current
-    if (!outer || !inner) return
-    const ro = new ResizeObserver(measure)
+    if (!outer || !inner) {
+      return () => cancelAnimationFrame(id)
+    }
+    const ro = new ResizeObserver(() => measure())
     ro.observe(outer)
     ro.observe(inner)
-    return () => ro.disconnect()
+    return () => {
+      cancelAnimationFrame(id)
+      ro.disconnect()
+    }
+  }, [text, measure])
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || !document.fonts?.ready) return
+    void document.fonts.ready.then(() => measure())
   }, [text, measure])
 
   const durationSec = overflowPx > 0 ? Math.min(14, Math.max(5, overflowPx / 38)) : 0
 
   return (
-    <div ref={outerRef} className={cn('min-w-0 flex-1 overflow-hidden', outerClassName)}>
+    <div
+      ref={outerRef}
+      className={cn(
+        // w-0 + flex-1 + basis-0: flex allocates remaining width; without this, min-width:auto keeps the slot as wide as text and marquee never triggers
+        'w-0 min-w-0 max-w-full flex-1 basis-0 overflow-hidden',
+        outerClassName,
+      )}
+    >
       <span
         ref={innerRef}
         className={cn(
@@ -123,7 +143,7 @@ function MediaAndSteamRow({
         <div
           className={cn(
             'flex min-w-0 items-center gap-2',
-            pair ? 'min-w-0 flex-1 basis-0' : 'min-w-0 flex-1',
+            pair ? 'flex-1 basis-0' : 'w-full min-w-0',
           )}
         >
           <Music className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -144,7 +164,7 @@ function MediaAndSteamRow({
         <div
           className={cn(
             'flex min-w-0 justify-end overflow-hidden',
-            pair ? 'flex-1 basis-0' : 'w-full flex-1',
+            pair ? 'flex-1 basis-0' : 'w-full min-w-0',
           )}
         >
           <HoverCard openDelay={120}>
@@ -156,7 +176,7 @@ function MediaAndSteamRow({
                   'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 )}
               >
-                <MarqueeIfNeeded text={steam.name} outerClassName="min-w-0 flex-1" />
+                <MarqueeIfNeeded text={steam.name} />
                 {!steamImgFailed ? (
                   // eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN header art
                   <img
