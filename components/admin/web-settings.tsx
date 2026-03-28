@@ -43,10 +43,6 @@ import {
   resolveScheduleGridByWeekday,
   type ScheduleDayGrid,
 } from '@/lib/schedule-grid-by-weekday'
-import {
-  ACTIVITY_LOG_RETENTION_MAX,
-  ACTIVITY_LOG_RETENTION_MIN,
-} from '@/lib/activity-log-retention'
 import { TIMEZONE_OPTIONS, DEFAULT_TIMEZONE, normalizeTimezone } from '@/lib/timezone'
 import {
   ACTIVITY_UPDATE_MODE_OPTIONS,
@@ -351,19 +347,6 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   if ('hideActivityMedia' in web && typeof web.hideActivityMedia === 'boolean') {
     patch.hideActivityMedia = web.hideActivityMedia
   }
-  if ('activityLogRetentionMax' in web) {
-    if (web.activityLogRetentionMax === null) {
-      patch.activityLogRetentionMax = null
-    } else {
-      const n = Number(web.activityLogRetentionMax)
-      if (Number.isFinite(n)) {
-        const r = Math.round(n)
-        if (r >= ACTIVITY_LOG_RETENTION_MIN && r <= ACTIVITY_LOG_RETENTION_MAX) {
-          patch.activityLogRetentionMax = r
-        }
-      }
-    }
-  }
   return patch
 }
 
@@ -411,12 +394,14 @@ interface SiteConfig {
   scheduleHomeAfterClassesLabel: string
   globalMouseTiltEnabled: boolean
   hideActivityMedia: boolean
-  /** null = unlimited activity log rows (site-wide). */
-  activityLogRetentionMax: number | null
   /** 显示时区，默认 Asia/Shanghai */
   displayTimezone: string
   /** 活动状态更新模式 */
   activityUpdateMode: ActivityUpdateMode
+  /** Steam 状态是否启用 */
+  steamEnabled: boolean
+  /** Steam 64-bit ID */
+  steamId: string
 }
 
 export function WebSettings() {
@@ -488,9 +473,10 @@ export function WebSettings() {
     scheduleHomeAfterClassesLabel: '正在摸鱼',
     globalMouseTiltEnabled: false,
     hideActivityMedia: false,
-    activityLogRetentionMax: null,
     displayTimezone: DEFAULT_TIMEZONE,
     activityUpdateMode: DEFAULT_ACTIVITY_UPDATE_MODE,
+    steamEnabled: false,
+    steamId: '',
   })
 
   useEffect(() => {
@@ -581,20 +567,11 @@ export function WebSettings() {
                 : '正在摸鱼',
             globalMouseTiltEnabled: data.data.globalMouseTiltEnabled === true,
             hideActivityMedia: data.data.hideActivityMedia === true,
-            activityLogRetentionMax:
-              data.data.activityLogRetentionMax != null &&
-              Number.isFinite(Number(data.data.activityLogRetentionMax))
-                ? Math.min(
-                    ACTIVITY_LOG_RETENTION_MAX,
-                    Math.max(
-                      ACTIVITY_LOG_RETENTION_MIN,
-                      Math.round(Number(data.data.activityLogRetentionMax)),
-                    ),
-                  )
-                : null,
             displayTimezone: normalizeTimezone(data.data.displayTimezone),
-            activityUpdateMode: normalizeActivityUpdateMode(data.data.activityUpdateMode),
-          })
+  activityUpdateMode: normalizeActivityUpdateMode(data.data.activityUpdateMode),
+  steamEnabled: Boolean(data.data.steamEnabled),
+  steamId: String(data.data.steamId ?? ''),
+  })
         }
       } finally {
         setLoading(false)
@@ -1139,7 +1116,7 @@ export function WebSettings() {
           placeholder="示例：:root { --primary: oklch(0.5 0.2 30); }"
         />
         <p className="text-xs text-muted-foreground">
-          保存后会注入主页并覆盖默认样式，可用于快速主题定制。
+          保存后会注入��页并覆盖默认样式，可用于快速主题定制。
         </p>
       </div>
 
@@ -1149,7 +1126,7 @@ export function WebSettings() {
             全站页面视差倾斜
           </Label>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            开启后整页随鼠标轻微 3D 倾斜；默认关闭。后台路由不受此影响；系统「减少动效」时自动不启用。
+            开启后整页随鼠标轻微 3D 倾斜；默认关闭。后台路由不受此影响；系统「减少动效」时自动���启用。
           </p>
         </div>
         <Switch
@@ -1315,50 +1292,7 @@ export function WebSettings() {
         />
       </div>
 
-      <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-3 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-0.5 min-w-0">
-            <Label htmlFor="activity-retention-unlimited" className="font-normal cursor-pointer">
-              活动记录无上限
-            </Label>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              关闭后全站仅保留最近 N 条活动记录（所有设备合计）；超出后每次新增会自动删除最旧记录。范围{' '}
-              {ACTIVITY_LOG_RETENTION_MIN}–{ACTIVITY_LOG_RETENTION_MAX}。
-            </p>
-          </div>
-          <Switch
-            id="activity-retention-unlimited"
-            checked={form.activityLogRetentionMax === null}
-            onCheckedChange={(unlimited) => {
-              if (unlimited) patch('activityLogRetentionMax', null)
-              else patch('activityLogRetentionMax', 500)
-            }}
-            className="shrink-0"
-          />
-        </div>
-        {form.activityLogRetentionMax !== null ? (
-          <div className="space-y-1">
-            <Label htmlFor="activity-retention-max">保留条数</Label>
-            <Input
-              id="activity-retention-max"
-              type="number"
-              min={ACTIVITY_LOG_RETENTION_MIN}
-              max={ACTIVITY_LOG_RETENTION_MAX}
-              value={form.activityLogRetentionMax}
-              onChange={(e) => {
-                const n = Math.round(Number(e.target.value))
-                if (!Number.isFinite(n)) return
-                const clamped = Math.min(
-                  ACTIVITY_LOG_RETENTION_MAX,
-                  Math.max(ACTIVITY_LOG_RETENTION_MIN, n),
-                )
-                patch('activityLogRetentionMax', clamped)
-              }}
-              className="max-w-[12rem]"
-            />
-          </div>
-        ) : null}
-      </div>
+
 
       <div className="space-y-2">
         <Label htmlFor="display-timezone">显示时区</Label>
@@ -1411,6 +1345,49 @@ export function WebSettings() {
             </div>
           ))}
         </RadioGroup>
+      </div>
+
+      {/* Steam 状态设置 */}
+      <div className="space-y-4 rounded-lg border border-border p-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Label htmlFor="steam-enabled" className="text-base font-medium">Steam 状态</Label>
+            <p className="text-xs text-muted-foreground">
+              在主页显示你的 Steam 在线状态和正在游玩的游戏。
+            </p>
+          </div>
+          <Switch
+            id="steam-enabled"
+            checked={form.steamEnabled}
+            onCheckedChange={(v) => patch('steamEnabled', v)}
+          />
+        </div>
+        
+        {form.steamEnabled && (
+          <div className="space-y-3 pt-2 border-t border-border">
+            <div className="space-y-2">
+              <Label htmlFor="steam-id">Steam ID (64-bit)</Label>
+              <Input
+                id="steam-id"
+                value={form.steamId}
+                onChange={(e) => patch('steamId', e.target.value)}
+                placeholder="例如: 76561198000000000"
+              />
+              <p className="text-xs text-muted-foreground">
+                你的 Steam 64-bit ID，可以在 
+                <a 
+                  href="https://steamid.io/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline mx-1"
+                >
+                  steamid.io
+                </a>
+                查询。Steam API Key 需要在环境变量 STEAM_API_KEY 中配置。
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -1472,7 +1449,7 @@ export function WebSettings() {
           自动接收本地新设备（GeneratedHashKey）
         </Label>
         <p className="text-xs text-muted-foreground">
-          关闭后，未知 GeneratedHashKey 首次上报会进入待审核状态，需要在“设备管理”中手动通过。
+          关闭后，未�� GeneratedHashKey 首次上报会进入待审核状态，需要在“设备管理”中手动通过。
         </p>
       </div>
 

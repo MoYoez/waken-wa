@@ -1,5 +1,6 @@
 import { UserProfile } from '@/components/user-profile'
 import { CurrentStatus } from '@/components/current-status'
+import { SteamStatus } from '@/components/steam-status'
 import { InspirationHomeSection } from '@/components/inspiration-home-section'
 import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
@@ -165,12 +166,15 @@ export default async function Home() {
 
               <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-              <section>
-                <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
-                  {currentlyText}
-                </h2>
-                <CurrentStatus hideActivityMedia={hideActivityMedia} activityUpdateMode={activityUpdateMode} />
-              </section>
+<section>
+  <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
+  {currentlyText}
+  </h2>
+  <div className="space-y-3">
+    <CurrentStatus hideActivityMedia={hideActivityMedia} activityUpdateMode={activityUpdateMode} />
+    <SteamStatus />
+  </div>
+  </section>
             </div>
 
             {/* Timeline */}

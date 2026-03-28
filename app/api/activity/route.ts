@@ -2,14 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import {
-  getActivityFeedData,
-  getHistoryWindowMinutes,
-  redactGeneratedHashKeyForClient,
-} from '@/lib/activity-feed'
-import { Prisma } from '@prisma/client'
+import { getActivityFeedData } from '@/lib/activity-feed'
+import { upsertActivity, redactGeneratedHashKeyForClient } from '@/lib/activity-store'
 import { mergeActivityMetadata } from '@/lib/activity-media'
-import { pruneActivityLogsAfterInsert } from '@/lib/activity-log-retention'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -23,9 +18,9 @@ async function validateToken(request: NextRequest): Promise<{ id: number } | nul
   return resolveActiveApiTokenFromPlainSecret(authHeader.slice(7))
 }
 
-// GET - activity log listing
+// GET - 获取活动 feed
 // 支持两种模式：
-// 1. 管理员模式（需要 session）- 返回详细日志和分页
+// 1. 管理员模式（需要 session）- 返回 feed 数据
 // 2. 公开模式（?public=1）- 只返回 feed 数据，供客户端轮询使用
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +29,6 @@ export async function GET(request: NextRequest) {
 
     // 公开模式：只返回 feed 数据，但需要检查页面锁
     if (isPublicMode) {
-      // 检查页面锁：如果启用了页面锁且用户未解锁，拒绝访问
       const siteLockOk = await isSiteLockSatisfied()
       if (!siteLockOk) {
         return NextResponse.json(
@@ -55,37 +49,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
     }
 
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
-    const offset = parseInt(searchParams.get('offset') || '0')
-    const generatedHashKey = String(searchParams.get('generatedHashKey') ?? '').trim()
-    const historyWindowMinutes = await getHistoryWindowMinutes()
-    const since = new Date(Date.now() - historyWindowMinutes * 60 * 1000)
-
-    const where = generatedHashKey
-      ? { generatedHashKey, startedAt: { gte: since } }
-      : { startedAt: { gte: since } }
-
-    const [logs, total] = await Promise.all([
-      (prisma as any).activityLog.findMany({
-        where,
-        orderBy: { startedAt: 'desc' },
-        take: limit,
-        skip: offset
-      }),
-      (prisma as any).activityLog.count({ where })
-    ])
-
-    const feed = await getActivityFeedData(limit)
-
-    const logsPublic = logs.map((row: Record<string, unknown>) =>
-      redactGeneratedHashKeyForClient({ ...row }),
-    )
-
+    const feed = await getActivityFeedData(50)
     return NextResponse.json({
       success: true,
-      data: logsPublic,
-      pagination: { limit, offset, total },
-      feed,
+      data: feed,
     })
   } catch (error) {
     console.error('获取活动日志失败:', error)
@@ -180,6 +147,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 验证设备
     let deviceRecord = await (prisma as any).device.findUnique({
       where: { generatedHashKey },
     })
@@ -226,67 +194,26 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // 检查是否存在相同 generatedHashKey + process_name 的活动，如果存在则更新时间戳而非创建新记录
-    const existing = await (prisma as any).activityLog.findFirst({
-      where: { generatedHashKey, processName: process_name, endedAt: null },
-      orderBy: { startedAt: 'desc' }
-    })
-    
-    const metadataInput = metadata as Prisma.InputJsonValue | undefined
-
-    if (existing) {
-      const updateData: {
-        processTitle?: string
-        metadata?: Prisma.InputJsonValue
-      } = {}
-
-      if (process_title) {
-        updateData.processTitle = process_title
-      }
-      if (metadata) {
-        const existingMeta =
-          existing.metadata && typeof existing.metadata === 'object' && !Array.isArray(existing.metadata)
-            ? (existing.metadata as Record<string, unknown>)
-            : {}
-        updateData.metadata = mergeActivityMetadata(existingMeta, metadata) as Prisma.InputJsonValue
-      }
-      // 更新现有活动的时间戳和上报间隔
-      const log = await (prisma as any).activityLog.update({
-        where: { id: existing.id },
-        data: updateData
-      })
-      await (prisma as any).device.update({
-        where: { id: deviceRecord.id },
-        data: { displayName: device || deviceRecord.displayName, lastSeenAt: new Date() },
-      })
-      return NextResponse.json({ success: true, data: log, updated: true }, { status: 200 })
-    }
-    
-    // 结束该设备上其他进程的活动
-    await (prisma as any).activityLog.updateMany({
-      where: { generatedHashKey, endedAt: null },
-      data: { endedAt: new Date() },
+    // 存储到内存（不写入数据库）
+    const entry = upsertActivity({
+      device,
+      generatedHashKey,
+      deviceId: deviceRecord.id,
+      processName: process_name,
+      processTitle: process_title,
+      metadata,
     })
 
-    const log = await (prisma as any).activityLog.create({
-      data: {
-        device,
-        generatedHashKey,
-        deviceId: deviceRecord.id,
-        processName: process_name,
-        processTitle: process_title || null,
-        startedAt: new Date(),
-        endedAt: null,
-        metadata: metadataInput
-      }
-    })
+    // 更新设备最后在线时间
     await (prisma as any).device.update({
       where: { id: deviceRecord.id },
       data: { displayName: device || deviceRecord.displayName, lastSeenAt: new Date() },
     })
-    await pruneActivityLogsAfterInsert(prisma as any)
 
-    return NextResponse.json({ success: true, data: log }, { status: 201 })
+    return NextResponse.json({
+      success: true,
+      data: redactGeneratedHashKeyForClient(entry as unknown as Record<string, unknown>),
+    }, { status: 200 })
   } catch (error) {
     console.error('上报活动失败:', error)
     return NextResponse.json(

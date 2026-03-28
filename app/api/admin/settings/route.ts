@@ -349,6 +349,16 @@ export async function PATCH(request: NextRequest) {
       activityUpdateMode = normalizeActivityUpdateMode(body.activityUpdateMode)
     }
 
+    // Steam 设置
+    let steamEnabled = existing?.steamEnabled ?? false
+    if (body.steamEnabled !== undefined) {
+      steamEnabled = Boolean(body.steamEnabled)
+    }
+    let steamId = existing?.steamId ?? null
+    if (body.steamId !== undefined) {
+      steamId = body.steamId ? String(body.steamId).trim() : null
+    }
+
     const config = await safeSiteConfigUpsert(prisma as any, {
       where: { id: 1 },
       update: {
@@ -396,6 +406,8 @@ export async function PATCH(request: NextRequest) {
         hcaptchaSecretKey,
         displayTimezone,
         activityUpdateMode,
+        steamEnabled,
+        steamId,
       },
       create: {
         id: 1,
@@ -443,6 +455,8 @@ export async function PATCH(request: NextRequest) {
         hcaptchaSecretKey,
         displayTimezone,
         activityUpdateMode,
+        steamEnabled,
+        steamId,
       },
     })
 
