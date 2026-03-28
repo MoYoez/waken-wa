@@ -117,6 +117,10 @@ model SiteConfig {
   displayTimezone      String   @map("display_timezone") @db.VarChar(50) @default("Asia/Shanghai")
   /// Activity update mode: "sse" (Server-Sent Events), "realtime" (Supabase Realtime), "polling" (HTTP polling). Default: "sse".
   activityUpdateMode   String   @map("activity_update_mode") @db.VarChar(20) @default("sse")
+  /// Steam integration: enable Steam status display on homepage.
+  steamEnabled         Boolean  @map("steam_enabled") @default(false)
+  /// Steam 64-bit ID (e.g. "76561198000000000").
+  steamId              String?  @map("steam_id") @db.VarChar(30)
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 

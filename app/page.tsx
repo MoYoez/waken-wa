@@ -1,5 +1,6 @@
 import { UserProfile } from '@/components/user-profile'
 import { CurrentStatus } from '@/components/current-status'
+import { SteamStatus } from '@/components/steam-status'
 import { InspirationHomeSection } from '@/components/inspiration-home-section'
 import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
@@ -21,7 +22,6 @@ import {
   type ScheduleCourse,
 } from '@/lib/schedule-courses'
 import { normalizeTimezone } from '@/lib/timezone'
-// Activity update mode configuration
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 
 // 强制动态渲染，确保每次请求都获取最新数据
@@ -54,6 +54,9 @@ export default async function Home() {
   const customCss = String(config.customCss ?? '')
   const themeCss = `${themePresetCss}\n${customCss}`.trim()
 
+  // Config object for later use
+  const cfg = config as Record<string, unknown>
+
   const [inspirationRows, inspirationTotal] = await Promise.all([
     (prisma as any).inspirationEntry.findMany({
       orderBy: { createdAt: 'desc' },
@@ -69,7 +72,9 @@ export default async function Home() {
     }),
     (prisma as any).inspirationEntry.count(),
   ])
-  const displayTimezoneForEntries = normalizeTimezone((config as Record<string, unknown>).displayTimezone)
+  
+  // Timezone for inspiration entries
+  const displayTimezoneForEntries = normalizeTimezone(cfg.displayTimezone)
   const inspirationHomeEntries = inspirationRows.map((row: { createdAt: Date; [k: string]: unknown }) => ({
     ...row,
     createdAt: row.createdAt.toISOString(),
@@ -80,14 +85,10 @@ export default async function Home() {
   const scheduleHomeShowLocation = Boolean(config.scheduleHomeShowLocation)
   const scheduleHomeShowTeacher = Boolean(config.scheduleHomeShowTeacher)
   const scheduleHomeShowNextUpcoming = Boolean(config.scheduleHomeShowNextUpcoming)
-  const scheduleHomeAfterClassesLabelRaw = String(
-    (config as Record<string, unknown>).scheduleHomeAfterClassesLabel ?? '',
-  ).trim()
-  const scheduleHomeAfterClassesLabel =
-    scheduleHomeAfterClassesLabelRaw.slice(0, 40) || '正在摸鱼'
-  const schedulePeriodTemplate = resolveSchedulePeriodTemplate(
-    (config as Record<string, unknown>).schedulePeriodTemplate ?? null,
-  )
+  const scheduleHomeAfterClassesLabelRaw = String(cfg.scheduleHomeAfterClassesLabel ?? '').trim()
+  const scheduleHomeAfterClassesLabel = scheduleHomeAfterClassesLabelRaw.slice(0, 40) || '正在摸鱼'
+  const schedulePeriodTemplate = resolveSchedulePeriodTemplate(cfg.schedulePeriodTemplate ?? null)
+  
   let scheduleCoursesForHome: ScheduleCourse[] = []
   if (scheduleInClassOnHome) {
     const parsed = parseScheduleCoursesJson(config.scheduleCourses ?? null)
@@ -95,15 +96,12 @@ export default async function Home() {
       scheduleCoursesForHome = parsed.data
     }
   }
-  const showScheduleHomeColumn =
-    scheduleInClassOnHome && scheduleCoursesForHome.length > 0
+  const showScheduleHomeColumn = scheduleInClassOnHome && scheduleCoursesForHome.length > 0
 
-  const cfg = config as Record<string, unknown>
   const hideActivityMedia = Boolean(cfg.hideActivityMedia)
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
-  const displayTimezone = normalizeTimezone(cfg.displayTimezone)
   const activityUpdateMode = normalizeActivityUpdateMode(cfg.activityUpdateMode)
 
   return (
@@ -169,7 +167,10 @@ export default async function Home() {
                 <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
                   {currentlyText}
                 </h2>
-                <CurrentStatus hideActivityMedia={hideActivityMedia} activityUpdateMode={activityUpdateMode} />
+                <div className="space-y-3">
+                  <CurrentStatus hideActivityMedia={hideActivityMedia} activityUpdateMode={activityUpdateMode} />
+                  <SteamStatus />
+                </div>
               </section>
             </div>
 
@@ -191,4 +192,3 @@ export default async function Home() {
     </>
   )
 }
-

@@ -1,19 +1,13 @@
 import prisma from '@/lib/prisma'
+import {
+  getAllActivities,
+  cleanupStaleActivities,
+  redactGeneratedHashKeyForClient,
+  type ActivityEntry,
+  type ActivityFeedData,
+} from '@/lib/activity-store'
 
-export interface ActivityFeedData {
-  activeStatuses: any[]
-  recentActivities: any[]
-  historyWindowMinutes: number
-  processStaleSeconds: number
-  recentTopApps: any[]
-  generatedAt: string
-}
-
-/** Strip device identity secret before JSON to browser (SSE / homepage). */
-export function redactGeneratedHashKeyForClient(row: Record<string, unknown>): Record<string, unknown> {
-  const { generatedHashKey: _omit, ...rest } = row
-  return rest
-}
+export { redactGeneratedHashKeyForClient, type ActivityFeedData }
 
 function normalizeProcessName(value: string): string {
   return value.trim().toLowerCase()
@@ -78,7 +72,7 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
   const historyWindowMinutes = Number.isFinite(minutes)
     ? Math.min(Math.max(Math.round(minutes), 10), 24 * 60)
     : 120
-  // 全局默认过期时间（用于没有设置 reportIntervalSeconds 的活动）
+  // 全局默认过期时间
   const staleSecondsRaw = Number(config?.processStaleSeconds ?? 500)
   const defaultStaleSeconds = Number.isFinite(staleSecondsRaw)
     ? Math.min(Math.max(Math.round(staleSecondsRaw), 30), 24 * 60 * 60)
@@ -104,51 +98,25 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     }
     return !blacklistSet.has(key)
   }
-  const since = new Date(Date.now() - historyWindowMinutes * 60 * 1000)
 
-  // 获取所有未结束的活动，然后根据每条活动的 reportIntervalSeconds 判断是否过期
-  const openActivities = await prisma.activityLog.findMany({
-    where: { endedAt: null },
-    orderBy: { startedAt: 'desc' },
-  })
+  // 清理过期活动
+  cleanupStaleActivities(defaultStaleSeconds)
 
-  const now = Date.now()
-  const toClose: number[] = []
-  const stillActive: typeof openActivities = []
+  // 从内存获取所有活动
+  const allActivities = getAllActivities()
+  const since = Date.now() - historyWindowMinutes * 60 * 1000
 
-  for (const activity of openActivities) {
-    const pushMode = getPushModeFromMetadata(activity.metadata)
-    const maybeInterval = (activity as any).reportIntervalSeconds
-    const maybeUpdatedAt = (activity as any).updatedAt as Date | undefined
-    // 优先使用活动自己的上报间隔，如果没有则使用全局默认值
-    const intervalSeconds = maybeInterval ?? defaultStaleSeconds
-    // 使用 updatedAt（最后上报时间）来判断是否过期
-    const lastReportTime = maybeUpdatedAt?.getTime() ?? activity.startedAt.getTime()
-    const isStale =
-      pushMode === 'active'
-        ? false
-        : now - lastReportTime > intervalSeconds * 1000
+  // 过滤仍然活跃的活动
+  const stillActive = allActivities.filter(
+    (a) => !a.endedAt && passesAppFilter(a.processName)
+  )
 
-    if (isStale) {
-      toClose.push(activity.id)
-    } else {
-      stillActive.push(activity)
-    }
-  }
+  // 过滤最近的活动（用于历史记录）
+  const recentActivitiesRaw = allActivities
+    .filter((a) => a.startedAt.getTime() >= since)
+    .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
+    .slice(0, Math.min(limit, 100))
 
-  // 批量关闭过期的活动
-  if (toClose.length > 0) {
-    await prisma.activityLog.updateMany({
-      where: { id: { in: toClose } },
-      data: { endedAt: new Date() },
-    })
-  }
-
-  const recentActivitiesRaw = await prisma.activityLog.findMany({
-    where: { startedAt: { gte: since } },
-    orderBy: { startedAt: 'desc' },
-    take: Math.min(limit, 100),
-  })
   const recentActivities = recentActivitiesRaw
     .filter((item) => passesAppFilter(item.processName))
     .map((item) => {
@@ -156,7 +124,7 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
         nameOnlySet.has(normalizeProcessName(item.processName))
           ? { ...item, processTitle: null }
           : { ...item }
-      return redactGeneratedHashKeyForClient(shaped as Record<string, unknown>)
+      return redactGeneratedHashKeyForClient(shaped as unknown as Record<string, unknown>)
     })
 
   // Keep latest active entry for each device
@@ -164,21 +132,19 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
   const seen = new Set<string>()
   for (const item of stillActive) {
     const processKey = normalizeProcessName(item.processName)
-    if (!passesAppFilter(item.processName)) continue
-    const key = String((item as any).generatedHashKey ?? '')
+    const key = item.generatedHashKey
     if (!key) continue
     if (seen.has(key)) continue
     seen.add(key)
     const pushMode = getPushModeFromMetadata(item.metadata)
     const maskedTitle = nameOnlySet.has(processKey) ? null : item.processTitle
     const ruleStatusText = applyMessageRule(item.processName, maskedTitle, appMessageRules)
-    // When a rule matches: statusText is rule text, optionally ` | processName`; processTitle hidden. No rule: omit statusText, keep processTitle + processName for the client layout.
     const processTitleForClient = ruleStatusText ? null : maskedTitle
     const row: Record<string, unknown> = {
       ...item,
       processTitle: processTitleForClient,
       pushMode,
-      lastReportAt: (item as any).updatedAt ?? item.startedAt,
+      lastReportAt: item.updatedAt ?? item.startedAt,
     }
     if (ruleStatusText) {
       row.statusText = appMessageRulesShowProcessName
