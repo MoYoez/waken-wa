@@ -120,7 +120,7 @@ model SiteConfig {
   hcaptchaSecretKey    String?  @map("hcaptcha_secret_key")
   /// Display timezone for timestamps (e.g. "Asia/Shanghai", "UTC"). Default: Asia/Shanghai (GMT+8).
   displayTimezone      String   @map("display_timezone") @default("Asia/Shanghai")
-  /// Activity update mode: "sse" (Server-Sent Events), "realtime" (Supabase Realtime), "polling" (HTTP polling). Default: "sse".
+  /// Activity update mode: "sse" (Server-Sent Events) or "polling" (HTTP polling). Legacy "realtime"/"websocket" normalized to "sse". Default: "sse".
   activityUpdateMode   String   @map("activity_update_mode") @default("sse")
   /// Steam integration: enable Steam status display on homepage.
   steamEnabled         Boolean  @map("steam_enabled") @default(false)
