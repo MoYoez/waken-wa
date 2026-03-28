@@ -37,6 +37,7 @@ model Device {
   id               Int           @id @default(autoincrement())
   displayName      String        @map("display_name") @db.VarChar(200)
   generatedHashKey String        @unique @map("generated_hash_key") @db.VarChar(128)
+  showSteamNowPlaying Boolean   @default(false) @map("show_steam_now_playing")
   status           String        @default("active") @db.VarChar(20)
   apiTokenId       Int?          @map("api_token_id")
   lastSeenAt       DateTime?     @map("last_seen_at")

@@ -5,6 +5,7 @@ import { Copy, Link2, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -28,6 +29,7 @@ interface DeviceItem {
   id: number
   displayName: string
   generatedHashKey: string
+  showSteamNowPlaying?: boolean
   status: 'active' | 'pending' | 'revoked'
   apiTokenId: number | null
   lastSeenAt: string | null
@@ -170,6 +172,15 @@ export function DeviceManager({
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status: nextStatus }),
+    })
+    await fetchDevices()
+  }
+
+  const updateShowSteamNowPlaying = async (id: number, showSteamNowPlaying: boolean) => {
+    await fetch('/api/admin/devices', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, showSteamNowPlaying }),
     })
     await fetchDevices()
   }
@@ -387,6 +398,21 @@ export function DeviceManager({
                 ) : (
                   <p className="text-xs text-muted-foreground">Token: 未绑定</p>
                 )}
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+                  <div className="space-y-0.5 min-w-0">
+                    <Label htmlFor={`steam-card-${item.id}`} className="text-xs font-medium cursor-pointer">
+                      状态卡片显示 Steam 正在游玩
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Uses site-wide Steam ID from Web settings. When this device is online and Steam reports in-game, the game appears next to media on the home card.
+                    </p>
+                  </div>
+                  <Switch
+                    id={`steam-card-${item.id}`}
+                    checked={Boolean(item.showSteamNowPlaying)}
+                    onCheckedChange={(v) => void updateShowSteamNowPlaying(item.id, v)}
+                  />
+                </div>
               </div>
             ))}
           </div>

@@ -1,6 +1,5 @@
 import { UserProfile } from '@/components/user-profile'
 import { CurrentStatus } from '@/components/current-status'
-import { SteamStatus } from '@/components/steam-status'
 import { InspirationHomeSection } from '@/components/inspiration-home-section'
 import prisma from '@/lib/prisma'
 import { redirect } from 'next/navigation'
@@ -146,6 +145,7 @@ export default async function Home() {
                     noteHitokotoEnabled={noteHitokotoEnabled}
                     noteHitokotoCategories={noteHitokotoCategories}
                     noteHitokotoEncode={noteHitokotoEncode}
+                    activityUpdateMode={activityUpdateMode}
                   />
                 </div>
                 {showScheduleHomeColumn ? (
@@ -169,7 +169,6 @@ export default async function Home() {
                 </h2>
                 <div className="space-y-3">
                   <CurrentStatus hideActivityMedia={hideActivityMedia} activityUpdateMode={activityUpdateMode} />
-                  <SteamStatus />
                 </div>
               </section>
             </div>

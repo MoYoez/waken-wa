@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
         generatedHashKey,
         status: 'active',
         apiTokenId,
+        ...(typeof body?.showSteamNowPlaying === 'boolean' ? { showSteamNowPlaying: body.showSteamNowPlaying } : {}),
       },
     })
 
@@ -172,6 +173,9 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: false, error: '绑定的 Token 不存在' }, { status: 400 })
       }
       data.apiTokenId = tokenId
+    }
+    if (typeof body?.showSteamNowPlaying === 'boolean') {
+      data.showSteamNowPlaying = body.showSteamNowPlaying
     }
 
     if (Object.keys(data).length === 0) {

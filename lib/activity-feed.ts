@@ -10,6 +10,7 @@ import {
   hydrateUserActivitiesIntoStoreOnce,
   purgeExpiredUserActivitiesFromDbAndMemory,
 } from '@/lib/user-activity-hydration'
+import { getSteamNowPlayingByDeviceHashes } from '@/lib/steam-feed-merge'
 
 export { redactGeneratedHashKeyForClient, type ActivityFeedData }
 
@@ -139,7 +140,7 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     })
 
   // Keep latest active entry for each device
-  const activeStatuses: any[] = []
+  const activePending: Array<{ hashKey: string; row: Record<string, unknown> }> = []
   const seen = new Set<string>()
   for (const item of stillActive) {
     const processKey = normalizeProcessName(item.processName)
@@ -162,6 +163,24 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
         ? `${ruleStatusText} | ${item.processName}`
         : ruleStatusText
     }
+    activePending.push({ hashKey: key, row })
+  }
+
+  const steamApiKey = String(config?.steamApiKey || process.env.STEAM_API_KEY || '')
+  const siteSteamId = String(config?.steamId || '')
+  const steamByHash = await getSteamNowPlayingByDeviceHashes(
+    activePending.map((p) => p.hashKey),
+    {
+      steamEnabled: Boolean(config?.steamEnabled),
+      apiKey: steamApiKey,
+      siteSteamId,
+    },
+  )
+
+  const activeStatuses: any[] = []
+  for (const { hashKey, row } of activePending) {
+    const sp = steamByHash.get(hashKey)
+    if (sp) row.steamNowPlaying = sp
     activeStatuses.push(redactGeneratedHashKeyForClient(row))
   }
 

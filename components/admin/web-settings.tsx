@@ -1364,7 +1364,8 @@ export function WebSettings() {
           <div className="space-y-1">
             <Label htmlFor="steam-enabled" className="text-base font-medium">Steam 状态</Label>
             <p className="text-xs text-muted-foreground">
-              在主页显示你的 Steam 在线状态和正在游玩的游戏。
+              在此配置全站 Steam 账号与 API Key；在「设备管理」中为需要展示的设备打开「状态卡片显示 Steam
+              正在游玩」后，该设备在线且 Steam 回报在玩游戏时，会在首页状态卡片上与音乐信息一并显示。
             </p>
           </div>
           <Switch
@@ -1385,7 +1386,7 @@ export function WebSettings() {
                 placeholder="例如: 76561198000000000"
               />
               <p className="text-xs text-muted-foreground">
-                你的 Steam 64-bit ID，可以在
+                全站共用的 Steam 64-bit ID（非按设备填写），可在
                 <a
                   href="https://steamid.io/"
                   target="_blank"

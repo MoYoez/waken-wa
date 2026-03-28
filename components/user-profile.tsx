@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { useActivityFeed } from '@/hooks/use-activity-feed'
+import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
 import {
   buildHitokotoRequestUrl,
   type HitokotoJsonBody,
@@ -107,6 +108,8 @@ interface UserProfileProps {
   noteHitokotoEnabled?: boolean
   noteHitokotoCategories?: string[]
   noteHitokotoEncode?: UserNoteHitokotoEncode
+  /** Same as site setting: SSE vs HTTP polling (default sse if omitted). */
+  activityUpdateMode?: ActivityUpdateMode
 }
 
 export function UserProfile({
@@ -117,8 +120,9 @@ export function UserProfile({
   noteHitokotoEnabled = false,
   noteHitokotoCategories = [],
   noteHitokotoEncode = 'json',
+  activityUpdateMode = 'sse',
 }: UserProfileProps) {
-  const { feed } = useActivityFeed()
+  const { feed } = useActivityFeed({ mode: activityUpdateMode })
   const isOnline = Boolean(feed?.activeStatuses?.length)
 
   const showNoteBlock = Boolean(note.trim()) || noteHitokotoEnabled

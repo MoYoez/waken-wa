@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { AppWindow, Battery, Clock, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
+import { AppWindow, Battery, Clock, Gamepad2, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
 import { getMediaDisplay } from '@/lib/activity-media'
 import { useActivityFeed } from '@/hooks/use-activity-feed'
 import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { cn } from '@/lib/utils'
 
 function getBatteryLabel(metadata: Record<string, unknown> | null | undefined): string | null {
   const value = metadata?.deviceBatteryPercent
@@ -26,6 +28,65 @@ function getDeviceType(
   if (/ipad|tablet|tab|平板/.test(source)) return 'tablet'
   if (/iphone|android|mobile|phone|手机/.test(source)) return 'mobile'
   return 'desktop'
+}
+
+type SteamNowPlayingClient = {
+  appId: string
+  name: string
+  imageUrl: string
+}
+
+function SteamPlayingRow({ steam }: { steam: SteamNowPlayingClient }) {
+  const [imgFailed, setImgFailed] = useState(false)
+
+  return (
+    <HoverCard openDelay={120}>
+      <HoverCardTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'flex w-full min-w-0 items-start gap-2 rounded-md text-left transition-colors',
+            'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          )}
+        >
+          <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {!imgFailed ? (
+              // eslint-disable-next-line @next/next/no-img-element -- remote Steam CDN header art
+              <img
+                src={steam.imageUrl}
+                alt=""
+                width={40}
+                height={15}
+                className="h-4 w-10 shrink-0 rounded object-cover bg-muted"
+                onError={() => setImgFailed(true)}
+              />
+            ) : (
+              <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            )}
+            <span className="truncate text-sm font-medium text-foreground/90">{steam.name}</span>
+          </div>
+        </button>
+      </HoverCardTrigger>
+      <HoverCardContent className="w-72 space-y-3" align="start">
+        {!imgFailed ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={steam.imageUrl}
+            alt=""
+            width={460}
+            height={215}
+            className="w-full max-h-32 rounded-md object-cover bg-muted"
+            onError={() => setImgFailed(true)}
+          />
+        ) : null}
+        <div className="space-y-1">
+          <p className="text-sm font-semibold leading-snug break-words">{steam.name}</p>
+          <p className="text-xs text-muted-foreground">正在游玩（Steam）</p>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  )
 }
 
 interface CurrentStatusProps {
@@ -75,6 +136,15 @@ export function CurrentStatus({ hideActivityMedia = false, activityUpdateMode = 
         const lastReportAt = activity.lastReportAt || activity.updatedAt || activity.startedAt
         const statusLine = typeof activity.statusText === 'string' ? activity.statusText.trim() : ''
         const media = hideActivityMedia ? null : getMediaDisplay(activity.metadata)
+        const sp = activity.steamNowPlaying
+        const steam: SteamNowPlayingClient | null =
+          sp && typeof sp.name === 'string' && sp.name.trim()
+            ? {
+                appId: sp.appId,
+                name: sp.name,
+                imageUrl: sp.imageUrl,
+              }
+            : null
 
         return (
           <div
@@ -123,15 +193,20 @@ export function CurrentStatus({ hideActivityMedia = false, activityUpdateMode = 
                 </div>
               </div>
 
-              {media ? (
-                <div className="flex items-start gap-2">
-                  <Music className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="text-sm font-medium text-foreground/90 break-words">{media.title}</div>
-                    {media.singer ? (
-                      <div className="text-xs text-muted-foreground break-words">{media.singer}</div>
-                    ) : null}
-                  </div>
+              {media || steam ? (
+                <div className="space-y-2">
+                  {media ? (
+                    <div className="flex items-start gap-2">
+                      <Music className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="text-sm font-medium text-foreground/90 break-words">{media.title}</div>
+                        {media.singer ? (
+                          <div className="text-xs text-muted-foreground break-words">{media.singer}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                  {steam ? <SteamPlayingRow steam={steam} /> : null}
                 </div>
               ) : null}
 

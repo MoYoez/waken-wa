@@ -36,6 +36,8 @@ model Device {
   id               Int           @id @default(autoincrement())
   displayName      String        @map("display_name")
   generatedHashKey String        @unique @map("generated_hash_key")
+  /// When true and the device is online, show site-wide Steam now-playing on this activity card (uses SiteConfig.steamId).
+  showSteamNowPlaying Boolean   @default(false) @map("show_steam_now_playing")
   status           String        @default("active")
   apiTokenId       Int?          @map("api_token_id")
   lastSeenAt       DateTime?     @map("last_seen_at")

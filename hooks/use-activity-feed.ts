@@ -17,6 +17,8 @@ interface ActivityItem {
   pushMode?: 'realtime' | 'active'
   lastReportAt?: string
   updatedAt?: string
+  /** Server-filled when device opted in and Steam reports in-game. */
+  steamNowPlaying?: { appId: string; name: string; imageUrl: string } | null
 }
 
 interface ActivityFeedData {

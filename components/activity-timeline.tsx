@@ -6,6 +6,7 @@ import { zhCN } from 'date-fns/locale'
 import { Laptop, Music, Smartphone, Tablet } from 'lucide-react'
 import { getMediaDisplay } from '@/lib/activity-media'
 import { useActivityFeed } from '@/hooks/use-activity-feed'
+import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
 
 function getBatteryLabel(metadata: Record<string, unknown> | null | undefined): string | null {
   const value = metadata?.deviceBatteryPercent
@@ -26,8 +27,14 @@ function getDeviceType(
   return 'desktop'
 }
 
-export function ActivityTimeline({ hideActivityMedia = false }: { hideActivityMedia?: boolean }) {
-  const { feed, error } = useActivityFeed()
+export function ActivityTimeline({
+  hideActivityMedia = false,
+  activityUpdateMode = 'sse',
+}: {
+  hideActivityMedia?: boolean
+  activityUpdateMode?: ActivityUpdateMode
+}) {
+  const { feed, error } = useActivityFeed({ mode: activityUpdateMode })
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {

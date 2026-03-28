@@ -36,6 +36,20 @@ export interface SteamStatusResponse {
   error?: string
 }
 
+/** Shown on activity cards when the device is online and Steam reports in-game. */
+export interface SteamNowPlayingInfo {
+  appId: string
+  name: string
+  imageUrl: string
+}
+
+const STEAM_APP_HEADER_CDN = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
+
+export function steamAppHeaderImageUrl(appId: string): string {
+  const id = String(appId || '').trim()
+  return `${STEAM_APP_HEADER_CDN}/${encodeURIComponent(id)}/header.jpg`
+}
+
 const PERSONA_STATE_MAP: Record<number, SteamPersonaState> = {
   0: 'offline',
   1: 'online',
@@ -88,25 +102,94 @@ export async function fetchSteamPlayerStatus(
     }
 
     const player = players[0]
-    const personaStateNum = player.personastate ?? 0
+    if (!player || typeof player !== 'object') {
+      return { success: false, error: '未找到玩家信息' }
+    }
 
     return {
       success: true,
-      data: {
-        steamId: player.steamid,
-        personaName: player.personaname,
-        personaState: PERSONA_STATE_MAP[personaStateNum] || 'offline',
-        avatarUrl: player.avatarmedium || player.avatar,
-        profileUrl: player.profileurl,
-        gameExtraInfo: player.gameextrainfo || null,
-        gameId: player.gameid || null,
-        lastLogoff: player.lastlogoff,
-      },
+      data: parseSteamPlayer(player as Record<string, unknown>),
     }
   } catch (error) {
     console.error('Steam API 请求失败:', error)
     return { success: false, error: '无法连接到 Steam API' }
   }
+}
+
+function parseSteamPlayer(player: Record<string, unknown>): SteamPlayerStatus {
+  const personaStateNum = Number(player.personastate ?? 0)
+  return {
+    steamId: String(player.steamid ?? ''),
+    personaName: String(player.personaname ?? ''),
+    personaState: PERSONA_STATE_MAP[personaStateNum] || 'offline',
+    avatarUrl: String(player.avatarmedium || player.avatar || ''),
+    profileUrl: String(player.profileurl ?? ''),
+    gameExtraInfo: player.gameextrainfo ? String(player.gameextrainfo) : null,
+    gameId: player.gameid ? String(player.gameid) : null,
+    lastLogoff: typeof player.lastlogoff === 'number' ? player.lastlogoff : undefined,
+  }
+}
+
+/** True when Steam reports a non-empty game name and app id and the user is not offline. */
+export function isSteamShowingInGame(player: SteamPlayerStatus): boolean {
+  const name = (player.gameExtraInfo || '').trim()
+  const gid = (player.gameId || '').trim()
+  if (!name || !gid || gid === '0') return false
+  return player.personaState !== 'offline'
+}
+
+export function steamPlayerToNowPlaying(player: SteamPlayerStatus): SteamNowPlayingInfo | null {
+  if (!isSteamShowingInGame(player)) return null
+  const appId = String(player.gameId || '').trim()
+  const name = String(player.gameExtraInfo || '').trim()
+  return {
+    appId,
+    name,
+    imageUrl: steamAppHeaderImageUrl(appId),
+  }
+}
+
+const MAX_STEAM_IDS_PER_REQUEST = 100
+
+/**
+ * Batch fetch player summaries (one HTTP call per chunk of up to 100 IDs).
+ */
+export async function fetchSteamPlayersByIds(
+  steamIds: string[],
+  apiKey: string
+): Promise<Map<string, SteamPlayerStatus>> {
+  const out = new Map<string, SteamPlayerStatus>()
+  const unique = [...new Set(steamIds.map((id) => String(id || '').trim()).filter(Boolean))]
+  if (unique.length === 0 || !apiKey) return out
+
+  for (let i = 0; i < unique.length; i += MAX_STEAM_IDS_PER_REQUEST) {
+    const chunk = unique.slice(i, i + MAX_STEAM_IDS_PER_REQUEST)
+    try {
+      const url = new URL('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/')
+      url.searchParams.set('key', apiKey)
+      url.searchParams.set('steamids', chunk.join(','))
+
+      const response = await fetch(url.toString(), {
+        next: { revalidate: 60 },
+      })
+
+      if (!response.ok) continue
+
+      const data = await response.json()
+      const players = data?.response?.players
+      if (!Array.isArray(players)) continue
+
+      for (const raw of players) {
+        if (!raw || typeof raw !== 'object') continue
+        const p = parseSteamPlayer(raw as Record<string, unknown>)
+        if (p.steamId) out.set(p.steamId, p)
+      }
+    } catch (error) {
+      console.error('Steam batch API 请求失败:', error)
+    }
+  }
+
+  return out
 }
 
 /**
