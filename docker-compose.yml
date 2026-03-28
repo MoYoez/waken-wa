@@ -1,4 +1,5 @@
-# Deploy: create .env next to this file with at least POSTGRES_PASSWORD, JWT_SECRET, NEXT_PUBLIC_BASE_URL.
+# Quick start: ./deploy.sh (or: bash deploy.sh on Windows if the file is not executable).
+# Manual: create .env (see .env.example) with POSTGRES_PASSWORD, JWT_SECRET, NEXT_PUBLIC_BASE_URL, then:
 #   docker compose up -d --build
 #
 # On each app start, entrypoint runs `prisma db push` for prisma/schema.postgres.prisma.
