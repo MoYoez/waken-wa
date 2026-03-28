@@ -160,7 +160,8 @@ function MediaAndSteamRow({
         <div
           className={cn(
             'flex min-w-0 justify-end overflow-hidden',
-            pair ? 'max-w-[50%] min-w-0 shrink' : 'w-full min-w-0',
+            // flex-1 basis-0: column must get real width from the row; otherwise min-content width ignores the w-0 flex-1 marquee slot and the game name collapses to 0
+            pair ? 'max-w-[50%] min-w-0 flex-1 basis-0' : 'w-full min-w-0',
           )}
         >
           <HoverCard openDelay={120}>
