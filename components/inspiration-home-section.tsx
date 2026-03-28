@@ -1,6 +1,5 @@
 'use client'
 
-// Activity feed time display with timezone support
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { MarkdownContent } from '@/components/admin/markdown-content'

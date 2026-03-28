@@ -22,7 +22,6 @@ import {
   type ScheduleCourse,
 } from '@/lib/schedule-courses'
 import { normalizeTimezone } from '@/lib/timezone'
-// Activity update mode configuration
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 
 // 强制动态渲染，确保每次请求都获取最新数据
