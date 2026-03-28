@@ -1,47 +1,18 @@
-/**
- * Steam Web API integration
- *
- * Uses ISteamUser/GetPlayerSummaries for player status.
- * API key: SiteConfig.steamApiKey (admin) or env STEAM_API_KEY as fallback.
- *
- * @see https://developer.valvesoftware.com/wiki/Steam_Web_API
- */
+/** Steam Web API (GetPlayerSummaries). Keys: SiteConfig or STEAM_API_KEY. @see https://developer.valvesoftware.com/wiki/Steam_Web_API */
 
-export type SteamPersonaState = 
-  | 'offline'      // 0
-  | 'online'       // 1
-  | 'busy'         // 2
-  | 'away'         // 3
-  | 'snooze'       // 4
-  | 'lookingToTrade' // 5
-  | 'lookingToPlay'  // 6
+import type {
+  SteamNowPlayingInfo,
+  SteamPersonaState,
+  SteamPlayerStatus,
+  SteamStatusResponse,
+} from '@/types/steam'
 
-export interface SteamPlayerStatus {
-  steamId: string
-  personaName: string
-  personaState: SteamPersonaState
-  avatarUrl: string
-  profileUrl: string
-  /** Currently playing game name, null if not in-game */
-  gameExtraInfo: string | null
-  /** Currently playing game ID, null if not in-game */
-  gameId: string | null
-  /** Last logoff timestamp (Unix) */
-  lastLogoff?: number
-}
-
-export interface SteamStatusResponse {
-  success: boolean
-  data?: SteamPlayerStatus
-  error?: string
-}
-
-/** Shown on activity cards when the device is online and Steam reports in-game. */
-export interface SteamNowPlayingInfo {
-  appId: string
-  name: string
-  imageUrl: string
-}
+export type {
+  SteamNowPlayingInfo,
+  SteamPersonaState,
+  SteamPlayerStatus,
+  SteamStatusResponse,
+} from '@/types/steam'
 
 const STEAM_APP_HEADER_CDN = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 

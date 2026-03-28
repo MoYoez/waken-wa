@@ -2,9 +2,9 @@ import prisma from '@/lib/prisma'
 import {
   fetchSteamPlayersByIds,
   isValidSteamId,
-  steamPlayerToNowPlaying,
   type SteamNowPlayingInfo,
   type SteamPlayerStatus,
+  steamPlayerToNowPlaying,
 } from '@/lib/steam'
 
 const BATCH_CACHE_TTL_MS = 60_000

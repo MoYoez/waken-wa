@@ -1,24 +1,16 @@
 'use client'
 
-import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 
 import { MarkdownContent } from '@/components/admin/markdown-content'
-import { Card } from '@/components/ui/card'
 import { FormattedTime } from '@/components/formatted-time'
-import { cn } from '@/lib/utils'
+import { Card } from '@/components/ui/card'
 import { inspirationNeedsFullPage, inspirationPlainPreview } from '@/lib/inspiration-preview'
+import { cn } from '@/lib/utils'
+import type { InspirationHomeItem } from '@/types/components'
 
-export type InspirationHomeItem = {
-  id: number
-  title: string | null
-  content: string
-  imageDataUrl: string | null
-  statusSnapshot: string | null
-  createdAt: string
-  /** 可选的时区配置，传入则使用该时区 */
-  displayTimezone?: string
-}
+export type { InspirationHomeItem } from '@/types/components'
 
 const PREVIEW_CHARS = 220
 

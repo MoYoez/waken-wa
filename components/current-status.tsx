@@ -1,19 +1,20 @@
 'use client'
 
+import { format } from 'date-fns'
+import { zhCN } from 'date-fns/locale'
+import { AppWindow, Battery, Clock, Gamepad2, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
 } from 'react'
-import { format } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
-import { AppWindow, Battery, Clock, Gamepad2, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
-import { getMediaDisplay, type MediaDisplay } from '@/lib/activity-media'
+
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { getMediaDisplay, type MediaDisplay } from '@/lib/activity-media'
 import { cn } from '@/lib/utils'
 
 function getBatteryLabel(metadata: Record<string, unknown> | null | undefined): string | null {

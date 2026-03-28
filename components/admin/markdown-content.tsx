@@ -1,9 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
+import type { Components } from 'react-markdown'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { Components } from 'react-markdown'
 
 const DEFAULT_IMG_CLASS = 'max-h-48 rounded-md border border-border my-2'
 

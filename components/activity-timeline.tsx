@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Laptop, Music, Smartphone, Tablet } from 'lucide-react'
-import { getMediaDisplay } from '@/lib/activity-media'
+import { useEffect, useState } from 'react'
+
 import { useActivityFeed } from '@/hooks/use-activity-feed'
+import { getMediaDisplay } from '@/lib/activity-media'
 import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
 
 function getBatteryLabel(metadata: Record<string, unknown> | null | undefined): string | null {

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+
 import prisma from '@/lib/prisma'
 
 const STORED_HASH_PREFIX = 'h$'

@@ -1,8 +1,9 @@
-import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import prisma from '@/lib/prisma'
+import { Suspense } from 'react'
+
 import { LoginForm } from '@/components/admin/login-form'
 import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
+import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 

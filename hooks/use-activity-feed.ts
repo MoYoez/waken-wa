@@ -1,33 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+
 import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
-
-interface ActivityItem {
-  id: number
-  deviceId?: number | null
-  device: string
-  processName: string
-  processTitle: string | null
-  startedAt: string
-  endedAt: string | null
-  /** Includes optional `media: { title?: string; singer?: string }` for now-playing. */
-  metadata?: Record<string, unknown> | null
-  statusText?: string
-  pushMode?: 'realtime' | 'active'
-  lastReportAt?: string
-  updatedAt?: string
-  /** Server-filled when device opted in and Steam reports in-game. */
-  steamNowPlaying?: { appId: string; name: string; imageUrl: string } | null
-}
-
-interface ActivityFeedData {
-  activeStatuses: ActivityItem[]
-  recentActivities: ActivityItem[]
-  historyWindowMinutes: number
-  recentTopApps: ActivityItem[]
-  generatedAt: string
-}
+import type { ActivityFeedData } from '@/types/activity'
 
 const SSE_RECONNECT_DELAY_MS = 3000
 const POLLING_INTERVAL_MS = 30000

@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getSession, createSession, validatePasswordStrength } from '@/lib/auth'
-import { cookies } from 'next/headers'
-import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { cookies } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server'
+
+import { createSession, getSession, validatePasswordStrength } from '@/lib/auth'
+import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 

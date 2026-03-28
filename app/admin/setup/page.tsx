@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
-import { getAdminSetupSnapshot } from '@/lib/is-config-ok'
+
 import { SetupForm } from '@/components/admin/setup-form'
+import { getAdminSetupSnapshot } from '@/lib/is-config-ok'
 
 // Always re-check DB; do not cache a stale “still in setup” shell from build/ISR.
 export const dynamic = 'force-dynamic'

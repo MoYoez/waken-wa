@@ -1,22 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { Plus, Trash2, Copy, Check, QrCode } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { Check, Copy, Plus, QrCode, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,41 +16,35 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import type { ApiTokenListRow } from '@/types/admin'
 
-interface RecentDeviceRow {
-  displayName: string
-  generatedHashKey: string
-  lastSeenAt: string | null
-}
-
-interface ApiToken {
-  id: number
-  name: string
-  token: string
-  isActive: boolean
-  createdAt: string
-  lastUsedAt: string | null
-  recentDevices?: RecentDeviceRow[]
-}
-
-/** Paginated list page size for the token grid (API supports limit when this query is sent). */
 const TOKEN_LIST_PAGE_SIZE = 10
-/** Max scroll height for the token card list. */
 const TOKEN_LIST_MAX_HEIGHT = 'min(70vh,48rem)'
 
 export function TokenManager() {
-  const [tokens, setTokens] = useState<ApiToken[]>([])
+  const [tokens, setTokens] = useState<ApiTokenListRow[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
-  /** Bumps to refetch the current page when mutations do not change `page` (e.g. create while on page 0). */
   const [listTick, setListTick] = useState(0)
   const [loading, setLoading] = useState(true)
   const [newTokenName, setNewTokenName] = useState('')
   const [newToken, setNewToken] = useState<string | null>(null)
   const [newTokenBundle, setNewTokenBundle] = useState<string | null>(null)
   const [newEndpoint, setNewEndpoint] = useState<string | null>(null)
-  /** Which copy control last succeeded (avoid sharing one flag across multiple buttons). */
   const [copiedTarget, setCopiedTarget] = useState<string | null>(null)
   const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)

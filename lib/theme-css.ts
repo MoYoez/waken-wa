@@ -1,17 +1,7 @@
 import { buildCustomSurfaceCss, sanitizeCssUrls } from '@/lib/theme-custom-surface'
+import type { ThemePreset } from '@/types/theme'
 
-export type ThemePreset =
-  | 'basic'
-  | 'midnight'
-  | 'forest'
-  | 'sakura'
-  | 'obsidian'
-  | 'ocean'
-  | 'amber'
-  | 'lavender'
-  | 'mono'
-  | 'nord'
-  | 'customSurface'
+export type { ThemePreset } from '@/types/theme'
 
 export function getThemePresetCss(
   presetRaw: string | null | undefined,

@@ -2,11 +2,11 @@ import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
-import { resolveScheduleGridByWeekday } from '@/lib/schedule-grid-by-weekday'
 import {
   backfillCoursePeriodIdsFromTemplate,
   resolveSchedulePeriodTemplate,
 } from '@/lib/schedule-courses'
+import { resolveScheduleGridByWeekday } from '@/lib/schedule-grid-by-weekday'
 
 /**
  * Build JSON body for PATCH /api/admin/settings from a GET response row plus overrides.

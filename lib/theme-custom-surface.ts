@@ -1,23 +1,8 @@
-/**
- * "Custom surface" theme: warm rounded cards + configurable CSS variables and animated background.
- * User input is sanitized before being injected into style blocks.
- */
+import type { ThemeCustomSurfaceFields } from '@/types/theme'
 
-export type ThemeCustomSurfaceFields = {
-  background?: string
-  bodyBackground?: string
-  animatedBg?: string
-  primary?: string
-  foreground?: string
-  card?: string
-  border?: string
-  mutedForeground?: string
-  radius?: string
-  hideFloatingOrbs?: boolean
-  /** When true, `.animated-bg` is transparent so body / 页面底色 shows through (default gradient is skipped). */
-  transparentAnimatedBg?: boolean
-}
+export type { ThemeCustomSurfaceFields } from '@/types/theme'
 
+/** Custom surface preset: CSS vars + sanitized user fragments. */
 const MAX_SHORT = 2400
 const MAX_ANIMATED = 12000
 const MAX_RADIUS = 48

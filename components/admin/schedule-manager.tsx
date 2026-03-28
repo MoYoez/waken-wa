@@ -1,6 +1,5 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import { addWeeks, format, startOfWeek } from 'date-fns'
 import {
   CalendarDays,
@@ -10,9 +9,11 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { WeekTimetableGrid } from '@/components/admin/week-timetable-grid'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -34,22 +34,22 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { buildAdminSettingsPatchBody } from '@/lib/admin-settings-patch-body'
-import { exportCoursesToIcs, importIcsToCourses } from '@/lib/schedule-ics'
 import {
   backfillCoursePeriodIdsFromTemplate,
   defaultSchedulePeriodTemplate,
   expandOccurrencesInWeek,
   getCourseTimeSessions,
-  parseSchedulePeriodTemplateJson,
-  resolveSchedulePeriodTemplate,
-  type SchedulePeriodPart,
-  type SchedulePeriodTemplateItem,
   MAX_TIME_SESSIONS_PER_COURSE,
   newScheduleCourseId,
-  validateCoursePeriodIdsAgainstTemplate,
+  parseSchedulePeriodTemplateJson,
+  resolveSchedulePeriodTemplate,
   type ScheduleCourse,
+  type SchedulePeriodPart,
+  type SchedulePeriodTemplateItem,
   snapAnchorToWeekday,
+  validateCoursePeriodIdsAgainstTemplate,
 } from '@/lib/schedule-courses'
+import { exportCoursesToIcs, importIcsToCourses } from '@/lib/schedule-ics'
 
 const WEEKDAY_OPTIONS: { value: number; label: string }[] = [
   { value: 0, label: '周一' },

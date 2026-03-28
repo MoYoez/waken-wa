@@ -1,5 +1,6 @@
-import type { SetupInitialConfig } from '@/components/admin/setup-form'
 import prisma from '@/lib/prisma'
+import type { SetupInitialConfig } from '@/types/components'
+import type { AdminSetupSnapshot } from '@/types/setup'
 
 function siteRowToSetupInitial(row: unknown): SetupInitialConfig {
   const r = row as Record<string, unknown>
@@ -17,13 +18,7 @@ function siteRowToSetupInitial(row: unknown): SetupInitialConfig {
   }
 }
 
-export type AdminSetupSnapshot = {
-  /** True when at least one admin exists and SiteConfig id=1 exists (setup finished). */
-  isConfigOK: boolean
-  hasAdmin: boolean
-  /** Defaults for setup form when a SiteConfig row exists but setup is incomplete. */
-  initialConfig?: SetupInitialConfig
-}
+export type { AdminSetupSnapshot } from '@/types/setup'
 
 /** Single DB round-trip for setup page and status checks. */
 export async function getAdminSetupSnapshot(): Promise<AdminSetupSnapshot> {

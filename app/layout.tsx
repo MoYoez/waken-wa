@@ -1,10 +1,12 @@
-import type { Metadata } from 'next'
-import { Noto_Sans_SC, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import prisma from '@/lib/prisma'
-import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
-import { GlobalMouseTilt } from '@/components/global-mouse-tilt'
 import './globals.css'
+
+import { Analytics } from '@vercel/analytics/next'
+import type { Metadata } from 'next'
+import { Geist_Mono,Noto_Sans_SC } from 'next/font/google'
+
+import { GlobalMouseTilt } from '@/components/global-mouse-tilt'
+import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
+import prisma from '@/lib/prisma'
 
 const _notoSansSC = Noto_Sans_SC({ subsets: ["latin"], weight: ["300", "400", "500"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });

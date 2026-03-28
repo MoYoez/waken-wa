@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, type ReactNode,useContext } from 'react'
 
 import { useActivityFeed } from '@/hooks/use-activity-feed'
 import type { ActivityUpdateMode } from '@/lib/activity-update-mode'

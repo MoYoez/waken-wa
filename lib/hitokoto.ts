@@ -1,4 +1,8 @@
-/** Hitokoto v1 sentence API (https://developer.hitokoto.cn). */
+import type { HitokotoJsonBody, UserNoteHitokotoEncode } from '@/types/hitokoto'
+
+export type { HitokotoJsonBody, UserNoteHitokotoEncode } from '@/types/hitokoto'
+
+/** Hitokoto v1 API. @see https://developer.hitokoto.cn */
 
 export const HITOKOTO_API_V1 = 'https://v1.hitokoto.cn'
 
@@ -18,8 +22,6 @@ export const HITOKOTO_CATEGORY_OPTIONS: { id: string; label: string }[] = [
 ]
 
 const CATEGORY_IDS = new Set(HITOKOTO_CATEGORY_OPTIONS.map((o) => o.id))
-
-export type UserNoteHitokotoEncode = 'json' | 'text'
 
 export function normalizeHitokotoCategories(raw: unknown): string[] {
   if (!Array.isArray(raw)) return []
@@ -51,9 +53,4 @@ export function buildHitokotoRequestUrl(
     if (CATEGORY_IDS.has(c)) u.searchParams.append('c', c)
   }
   return u.toString()
-}
-
-export type HitokotoJsonBody = {
-  hitokoto?: string
-  uuid?: string
 }

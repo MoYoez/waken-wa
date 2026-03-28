@@ -1,7 +1,8 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { verifySession } from '@/lib/auth'
+
 import { AdminDashboard } from '@/components/admin/dashboard'
+import { verifySession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
 // 强制动态渲染，确保每次请求都获取最新数据

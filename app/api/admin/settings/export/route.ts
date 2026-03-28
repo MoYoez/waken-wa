@@ -1,15 +1,16 @@
+import { NextResponse } from 'next/server'
+
+import { getSession } from '@/lib/auth'
 import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
-import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import { resolveScheduleGridByWeekday } from '@/lib/schedule-grid-by-weekday'
 import {
   backfillCoursePeriodIdsFromTemplate,
   resolveSchedulePeriodTemplate,
 } from '@/lib/schedule-courses'
+import { resolveScheduleGridByWeekday } from '@/lib/schedule-grid-by-weekday'
 
 async function requireAdmin() {
   const session = await getSession()

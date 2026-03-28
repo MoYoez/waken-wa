@@ -1,7 +1,8 @@
-import fs from 'fs'
 import { createRequire } from 'node:module'
-import path from 'path'
 import { fileURLToPath } from 'node:url'
+
+import fs from 'fs'
+import path from 'path'
 
 const POSTGRES_URL_RE = /^postgres(ql)?:\/\//i
 

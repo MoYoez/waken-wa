@@ -1,28 +1,29 @@
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+
 import { ActivityFeedProvider } from '@/components/activity-feed-provider'
-import { UserProfile, UserProfileNoteSection } from '@/components/user-profile'
+import { ContentReadingPanel } from '@/components/content-reading-panel'
 import { CurrentStatus } from '@/components/current-status'
 import { InspirationHomeSection } from '@/components/inspiration-home-section'
-import prisma from '@/lib/prisma'
-import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
-import { verifySiteLockSession } from '@/lib/auth'
-import { SiteLockForm } from '@/components/site-lock-form'
-import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
-import { getThemePresetCss } from '@/lib/theme-css'
 import { LayoutFooterPortal } from '@/components/layout-footer-portal'
-import { ContentReadingPanel } from '@/components/content-reading-panel'
 import { ScheduleHomeInClassBanner } from '@/components/schedule-home-in-class-banner'
+import { SiteLockForm } from '@/components/site-lock-form'
+import { UserProfile, UserProfileNoteSection } from '@/components/user-profile'
+import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
+import { verifySiteLockSession } from '@/lib/auth'
+import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
 import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
+import prisma from '@/lib/prisma'
 import {
   parseScheduleCoursesJson,
   resolveSchedulePeriodTemplate,
   type ScheduleCourse,
 } from '@/lib/schedule-courses'
+import { getThemePresetCss } from '@/lib/theme-css'
 import { normalizeTimezone } from '@/lib/timezone'
-import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 
 // 强制动态渲染，确保每次请求都获取最新数据
 export const dynamic = 'force-dynamic'

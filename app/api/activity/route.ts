@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
-import { getSession, isSiteLockSatisfied } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+
 import { getActivityFeedData } from '@/lib/activity-feed'
 import {
-  upsertActivity,
   redactGeneratedHashKeyForClient,
+  upsertActivity,
   USER_ACTIVITY_DB_SYNCED_METADATA_KEY,
   USER_PERSIST_EXPIRES_AT_METADATA_KEY,
 } from '@/lib/activity-store'
-import { mergeActivityMetadata } from '@/lib/activity-media'
+import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
+import { getSession, isSiteLockSatisfied } from '@/lib/auth'
+import prisma from '@/lib/prisma'
 import { persistMinutesToExpiresAt } from '@/lib/user-activity-persist'
 
-// 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -24,16 +23,12 @@ async function validateToken(request: NextRequest): Promise<{ id: number } | nul
   return resolveActiveApiTokenFromPlainSecret(authHeader.slice(7))
 }
 
-// GET - 获取活动 feed
-// 支持两种模式：
-// 1. 管理员模式（需要 session）- 返回 feed 数据
-// 2. 公开模式（?public=1）- 只返回 feed 数据，供客户端轮询使用
+/** GET: admin session, or `?public=1` with site lock satisfied. */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const isPublicMode = searchParams.get('public') === '1'
 
-    // 公开模式：只返回 feed 数据，但需要检查页面锁
     if (isPublicMode) {
       const siteLockOk = await isSiteLockSatisfied()
       if (!siteLockOk) {
@@ -49,7 +44,6 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // 管理员模式：需要认证
     const session = await getSession()
     if (!session) {
       return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
@@ -69,7 +63,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - 上报活动（需要 API Token）
+/** POST: device activity report (Bearer API token). */
 export async function POST(request: NextRequest) {
   try {
     const tokenInfo = await validateToken(request)
@@ -160,7 +154,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 验证设备
     let deviceRecord = await (prisma as any).device.findUnique({
       where: { generatedHashKey },
     })
@@ -248,13 +241,11 @@ export async function POST(request: NextRequest) {
         where: { deviceId: deviceRecord.id, processName: process_name },
       })
       finalMetadata = { ...(finalMetadata || {}) }
-      // Non-realtime without persist_minutes would never stale; fall back to realtime.
       if (isActivePush && !expiresAt) {
         finalMetadata.pushMode = 'realtime'
       }
     }
 
-    // Store in memory (primary cache)
     const entry = upsertActivity({
       device,
       generatedHashKey,
@@ -264,7 +255,6 @@ export async function POST(request: NextRequest) {
       metadata: finalMetadata,
     })
 
-    // 更新设备最后在线时间
     await (prisma as any).device.update({
       where: { id: deviceRecord.id },
       data: { displayName: device || deviceRecord.displayName, lastSeenAt: new Date() },

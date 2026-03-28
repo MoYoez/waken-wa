@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -9,14 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import type { ImageCropAspectMode, ImageCropDialogProps } from '@/types/components'
+
+export type { ImageCropDialogProps } from '@/types/components'
 
 const CROP_VIEW_SIZE = 320
 const DEFAULT_SQUARE_FRAME = 220
 const MIN_FRAME = 48
 const MIN_SQUARE_FRAME = 80
-
-type AspectMode = 'square' | 'free'
 
 type CropRect = { x: number; y: number; w: number; h: number }
 
@@ -66,23 +68,6 @@ function freeBaseScaleOf(nw: number, nh: number): number {
 function squareBaseScaleOf(nw: number, nh: number, frame: number): number {
   if (!nw || !nh) return 1
   return Math.max(frame / nw, frame / nh)
-}
-
-export interface ImageCropDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  /** Object URL from URL.createObjectURL(file); caller revokes after close */
-  sourceUrl: string | null
-  /**
-   * Square mode: output PNG side length in pixels.
-   * Free mode: max long edge of output (width/height scale proportionally).
-   */
-  outputSize: number
-  /** Square = fixed aspect + symmetric resize; free = rectangular crop with corner handles */
-  aspectMode?: AspectMode
-  title: string
-  description?: string
-  onComplete: (dataUrl: string) => void
 }
 
 export function ImageCropDialog({

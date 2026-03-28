@@ -1,22 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
-import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { normalizeCustomCss } from '@/lib/theme-css'
-import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
-import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
+import { NextRequest, NextResponse } from 'next/server'
+
+import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
+import { getSession } from '@/lib/auth'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
+import { normalizeInspirationAllowedHashes } from '@/lib/inspiration-device-allowlist'
+import prisma from '@/lib/prisma'
+import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import {
   backfillCoursePeriodIdsFromTemplate,
   defaultSchedulePeriodTemplate,
   isAllowedSlotMinutes,
   MAX_SCHEDULE_ICS_BYTES,
-  parseSchedulePeriodTemplateJson,
   parseScheduleCoursesJson,
+  parseSchedulePeriodTemplateJson,
   validateCoursePeriodIdsAgainstTemplate,
 } from '@/lib/schedule-courses'
 import {
@@ -24,9 +25,9 @@ import {
   minIntervalFromGrid,
   normalizeScheduleGridByWeekday,
 } from '@/lib/schedule-grid-by-weekday'
-import { normalizeInspirationAllowedHashes } from '@/lib/inspiration-device-allowlist'
+import { normalizeCustomCss } from '@/lib/theme-css'
+import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
-import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 
 const SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX = 40
 const DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL = '正在摸鱼'

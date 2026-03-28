@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
-import prisma from '@/lib/prisma'
-import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
+
 import {
   ADMIN_PERSIST_SECONDS_METADATA_KEY,
+  redactGeneratedHashKeyForClient,
+  upsertActivity,
   USER_ACTIVITY_DB_SYNCED_METADATA_KEY,
   USER_PERSIST_EXPIRES_AT_METADATA_KEY,
-  upsertActivity,
-  redactGeneratedHashKeyForClient,
 } from '@/lib/activity-store'
+import { getSession } from '@/lib/auth'
+import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
+import prisma from '@/lib/prisma'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'

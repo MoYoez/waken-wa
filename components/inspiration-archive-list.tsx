@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import type { InspirationHomeItem } from '@/components/inspiration-home-section'
 import { inspirationPlainPreview } from '@/lib/inspiration-preview'
 import { cn } from '@/lib/utils'

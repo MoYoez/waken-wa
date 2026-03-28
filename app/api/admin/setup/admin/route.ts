@@ -1,12 +1,13 @@
+import bcrypt from 'bcryptjs'
 import { NextRequest, NextResponse } from 'next/server'
+
 import { hashPassword, validatePasswordStrength } from '@/lib/auth'
 import { getSession } from '@/lib/auth'
+import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import prisma from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
+import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
-import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
-import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 
 export async function POST(request: NextRequest) {
   try {

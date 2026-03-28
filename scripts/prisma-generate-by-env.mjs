@@ -3,7 +3,8 @@
  * Used by `pnpm build` on Vercel so Client matches DATABASE_URL (Postgres vs SQLite).
  */
 import { execSync } from 'node:child_process'
-import { resolvePrismaEnv, repoRoot } from './prisma-resolve-env.mjs'
+
+import { repoRoot,resolvePrismaEnv } from './prisma-resolve-env.mjs'
 
 try {
   const { schemaRel, provider } = resolvePrismaEnv()

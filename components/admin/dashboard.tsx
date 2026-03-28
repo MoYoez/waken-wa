@@ -1,29 +1,31 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   Activity,
-  LayoutDashboard,
-  Key,
-  Settings,
-  LogOut,
+  CalendarDays,
   Clock,
   Home,
-  UserCog,
+  Key,
+  LayoutDashboard,
   Lightbulb,
+  LogOut,
   MonitorSmartphone,
-  CalendarDays,
+  Settings,
+  UserCog,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TokenManager } from './token-manager'
-import { AddActivityForm } from './add-activity-form'
-import { WebSettings } from './web-settings'
+
 import { AccountSettings } from './account-settings'
-import { InspirationManager } from './inspiration-manager'
+import { AddActivityForm } from './add-activity-form'
 import { DeviceManager } from './device-manager'
+import { InspirationManager } from './inspiration-manager'
 import { ScheduleManager } from './schedule-manager'
+import { TokenManager } from './token-manager'
+import { WebSettings } from './web-settings'
 
 const VALID_TABS = new Set([
   'overview',

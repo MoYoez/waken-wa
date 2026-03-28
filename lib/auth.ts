@@ -1,9 +1,15 @@
 import { randomBytes } from 'node:crypto'
-import { SignJWT, jwtVerify } from 'jose'
-import { cookies } from 'next/headers'
+
 import bcrypt from 'bcryptjs'
+import { jwtVerify,SignJWT } from 'jose'
+import { cookies } from 'next/headers'
+
 import { findActiveApiTokenBySecret, resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
+import type { SessionPayload } from '@/types/auth'
+
 import prisma from './prisma'
+
+export type { SessionPayload } from '@/types/auth'
 
 let _dummyHash: Promise<string> | null = null
 function getDummyHash(): Promise<string> {
@@ -16,14 +22,7 @@ function getDummyHash(): Promise<string> {
 const JWT_SECRET_DB_KEY = 'jwt_secret'
 let cachedJwtSecret: Uint8Array | null = null
 
-/**
- * HS256 key resolution order:
- *   1. JWT_SECRET env var (explicit config, highest priority)
- *   2. DB-persisted secret in `system_secrets` table (shared across all serverless instances)
- *   3. Generate a new random secret → persist to DB so other instances reuse it
- *
- * The resolved value is cached in-memory per process to avoid repeated DB queries.
- */
+/** JWT secret: env JWT_SECRET, else DB system_secrets, else generate; cached per process. */
 async function getJwtSecretBytes(): Promise<Uint8Array> {
   if (cachedJwtSecret) return cachedJwtSecret
 
@@ -49,7 +48,6 @@ async function getJwtSecretBytes(): Promise<Uint8Array> {
       create: { key: JWT_SECRET_DB_KEY, value: generated },
     })
 
-    // Re-read: another instance may have won the race and inserted a different value.
     const saved = await prisma.systemSecret.findUnique({
       where: { key: JWT_SECRET_DB_KEY },
     })
@@ -57,18 +55,10 @@ async function getJwtSecretBytes(): Promise<Uint8Array> {
     cachedJwtSecret = new TextEncoder().encode(finalValue)
     return cachedJwtSecret
   } catch (err) {
-    // DB not yet migrated / unreachable — fall back to ephemeral secret so the app
-    // can still boot (setup / migration pages won't break).
     console.warn('[auth] Failed to load JWT secret from DB, using ephemeral secret:', err)
     cachedJwtSecret = randomBytes(32)
     return cachedJwtSecret
   }
-}
-
-export interface SessionPayload {
-  userId: number
-  username: string
-  exp: number
 }
 
 interface SiteLockPayload {

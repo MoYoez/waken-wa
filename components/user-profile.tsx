@@ -3,12 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
-import {
-  buildHitokotoRequestUrl,
-  type HitokotoJsonBody,
-  type UserNoteHitokotoEncode,
-} from '@/lib/hitokoto'
+import { buildHitokotoRequestUrl } from '@/lib/hitokoto'
 import { cn } from '@/lib/utils'
+import type { UserProfileNoteSectionProps } from '@/types/components'
+import type { HitokotoJsonBody, UserNoteHitokotoEncode } from '@/types/hitokoto'
 
 /** One step smaller than name (`text-base`); same weight/color as name. */
 const NOTE_BOX_CLASS =
@@ -106,12 +104,7 @@ function ProfileHitokotoNote({
   return <p className={NOTE_BOX_CLASS}>{text}</p>
 }
 
-export interface UserProfileNoteSectionProps {
-  note?: string
-  noteHitokotoEnabled?: boolean
-  noteHitokotoCategories?: string[]
-  noteHitokotoEncode?: UserNoteHitokotoEncode
-}
+export type { UserProfileNoteSectionProps } from '@/types/components'
 
 /** Full-width note / 一言 under the profile row so text can reach the card’s right inner edge (spans past the schedule column). */
 export function UserProfileNoteSection({

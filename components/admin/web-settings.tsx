@@ -1,12 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Dialog,
   DialogContent,
@@ -15,6 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -22,11 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
+import { Switch } from '@/components/ui/switch'
 import {
-  parseThemeCustomSurface,
-  THEME_CUSTOM_SURFACE_DEFAULTS,
-} from '@/lib/theme-custom-surface'
+  ACTIVITY_UPDATE_MODE_OPTIONS,
+  type ActivityUpdateMode,
+  DEFAULT_ACTIVITY_UPDATE_MODE,
+  normalizeActivityUpdateMode,
+} from '@/lib/activity-update-mode'
+import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import {
   HITOKOTO_CATEGORY_OPTIONS,
   normalizeHitokotoCategories,
@@ -34,22 +37,20 @@ import {
   type UserNoteHitokotoEncode,
 } from '@/lib/hitokoto'
 import {
-  resolveSchedulePeriodTemplate,
   isAllowedSlotMinutes,
-  type SchedulePeriodTemplateItem,
+  resolveSchedulePeriodTemplate,
   type ScheduleCourse,
+  type SchedulePeriodTemplateItem,
 } from '@/lib/schedule-courses'
 import {
   resolveScheduleGridByWeekday,
   type ScheduleDayGrid,
 } from '@/lib/schedule-grid-by-weekday'
-import { TIMEZONE_OPTIONS, DEFAULT_TIMEZONE, normalizeTimezone } from '@/lib/timezone'
 import {
-  ACTIVITY_UPDATE_MODE_OPTIONS,
-  DEFAULT_ACTIVITY_UPDATE_MODE,
-  normalizeActivityUpdateMode,
-  type ActivityUpdateMode,
-} from '@/lib/activity-update-mode'
+  parseThemeCustomSurface,
+  THEME_CUSTOM_SURFACE_DEFAULTS,
+} from '@/lib/theme-custom-surface'
+import { DEFAULT_TIMEZONE, normalizeTimezone,TIMEZONE_OPTIONS } from '@/lib/timezone'
 
 const CROP_VIEW_SIZE = 320
 const CROP_FRAME_SIZE = 220

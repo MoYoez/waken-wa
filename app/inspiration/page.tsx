@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { InspirationArchiveList } from '@/components/inspiration-archive-list'
+
 import { ContentReadingPanel } from '@/components/content-reading-panel'
+import { InspirationArchiveList } from '@/components/inspiration-archive-list'
 
 export const dynamic = 'force-dynamic'
 

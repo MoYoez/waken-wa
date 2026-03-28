@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { isSiteLockSatisfied } from '@/lib/auth'
 

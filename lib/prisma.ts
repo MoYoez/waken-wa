@@ -1,10 +1,10 @@
-import { isPostgresConnectionUrl } from '@/lib/db-env'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 import { PrismaPg } from '@prisma/adapter-pg'
+
 import { PrismaClient } from '@/generated/prisma/client'
+import { isPostgresConnectionUrl } from '@/lib/db-env'
 
 declare global {
-  // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined
 }
 

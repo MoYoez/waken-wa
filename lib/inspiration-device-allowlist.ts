@@ -1,11 +1,11 @@
 import type { NextRequest } from 'next/server'
-import type { PrismaClient } from '@/generated/prisma/client'
 
-/**
- * `null` from DB = no restriction (any token-bound active device).
- * Empty array = no device may use token-based inspiration APIs.
- * Non-empty = whitelist of `Device.generatedHashKey`.
- */
+import type { PrismaClient } from '@/generated/prisma/client'
+import type { InspirationTokenGateResult } from '@/types/inspiration'
+
+export type { InspirationTokenGateResult } from '@/types/inspiration'
+
+/** null = any device; [] = none; else whitelist of Device.generatedHashKey. */
 export function normalizeInspirationAllowedHashes(value: unknown): string[] | null {
   if (value === null || value === undefined) return null
   if (!Array.isArray(value)) return null
@@ -37,14 +37,7 @@ export function extractInspirationDeviceKey(
   return fromBody || null
 }
 
-export type InspirationTokenGateResult =
-  | { ok: true }
-  | { ok: false; status: number; error: string }
-
-/**
- * Enforce SiteConfig inspiration device allowlist for Bearer token calls only.
- * Caller must pass `tokenId` from a validated API token.
- */
+/** Bearer-token inspiration APIs: enforce SiteConfig device allowlist. */
 export async function gateInspirationApiForDevice(
   prismaClient: PrismaClient,
   tokenId: number,

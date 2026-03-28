@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import prisma from '@/lib/prisma'
-import { verifySiteLockSession } from '@/lib/auth'
+
 import { SiteLockForm } from '@/components/site-lock-form'
-import { getThemePresetCss } from '@/lib/theme-css'
+import { verifySiteLockSession } from '@/lib/auth'
 import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
+import prisma from '@/lib/prisma'
+import { getThemePresetCss } from '@/lib/theme-css'
 
 export default async function InspirationLayout({ children }: { children: React.ReactNode }) {
   const config = await (prisma as any).siteConfig.findUnique({ where: { id: 1 } })

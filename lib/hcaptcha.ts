@@ -1,9 +1,7 @@
 import prisma from '@/lib/prisma'
+import type { HCaptchaConfig } from '@/types/hcaptcha'
 
-export interface HCaptchaConfig {
-  enabled: boolean
-  siteKey: string | null
-}
+export type { HCaptchaConfig } from '@/types/hcaptcha'
 
 /**
  * Resolve hCaptcha keys.

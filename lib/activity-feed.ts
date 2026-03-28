@@ -1,17 +1,18 @@
-import prisma from '@/lib/prisma'
 import {
-  getAllActivities,
   cleanupStaleActivities,
+  getAllActivities,
   redactGeneratedHashKeyForClient,
-  type ActivityFeedData,
 } from '@/lib/activity-store'
+import prisma from '@/lib/prisma'
+import { getSteamNowPlayingByDeviceHashes } from '@/lib/steam-feed-merge'
 import {
   hydrateUserActivitiesIntoStoreOnce,
   purgeExpiredUserActivitiesFromDbAndMemory,
 } from '@/lib/user-activity-hydration'
-import { getSteamNowPlayingByDeviceHashes } from '@/lib/steam-feed-merge'
+import type { ActivityFeedData, ActivityFeedItem } from '@/types/activity'
 
-export { redactGeneratedHashKeyForClient, type ActivityFeedData }
+export { redactGeneratedHashKeyForClient }
+export type { ActivityFeedData } from '@/types/activity'
 
 function normalizeProcessName(value: string): string {
   return value.trim().toLowerCase()
@@ -76,7 +77,6 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
   const historyWindowMinutes = Number.isFinite(minutes)
     ? Math.min(Math.max(Math.round(minutes), 10), 24 * 60)
     : 120
-  // 全局默认过期时间
   const staleSecondsRaw = Number(config?.processStaleSeconds ?? 500)
   const defaultStaleSeconds = Number.isFinite(staleSecondsRaw)
     ? Math.min(Math.max(Math.round(staleSecondsRaw), 30), 24 * 60 * 60)
@@ -110,19 +110,15 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     console.error('[activity-feed] UserActivity purge/hydrate failed:', error)
   }
 
-  // 清理过期活动
   cleanupStaleActivities(defaultStaleSeconds)
 
-  // 从内存获取所有活动
   const allActivities = getAllActivities()
   const since = Date.now() - historyWindowMinutes * 60 * 1000
 
-  // 过滤仍然活跃的活动
   const stillActive = allActivities.filter(
     (a) => !a.endedAt && passesAppFilter(a.processName)
   )
 
-  // 过滤最近的活动（用于历史记录）
   const recentActivitiesRaw = allActivities
     .filter((a) => a.startedAt.getTime() >= since)
     .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
@@ -176,14 +172,14 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
     },
   )
 
-  const activeStatuses: any[] = []
+  const activeStatuses: ActivityFeedItem[] = []
   for (const { hashKey, row } of activePending) {
     const sp = steamByHash.get(hashKey)
     if (sp) row.steamNowPlaying = sp
-    activeStatuses.push(redactGeneratedHashKeyForClient(row))
+    activeStatuses.push(redactGeneratedHashKeyForClient(row) as unknown as ActivityFeedItem)
   }
 
-  const recentTopApps: any[] = []
+  const recentTopApps: ActivityFeedItem[] = []
   const seenProcess = new Set<string>()
   for (const item of recentActivities as Array<{ processName: string; processTitle?: string | null }>) {
     const key = item.processName.toLowerCase()
@@ -199,22 +195,22 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
         statusText: appMessageRulesShowProcessName
           ? `${ruleStatusText} | ${item.processName}`
           : ruleStatusText,
-      })
+      } as unknown as ActivityFeedItem)
     } else {
       recentTopApps.push({
         ...item,
         processTitle: maskedTitle,
-      })
+      } as unknown as ActivityFeedItem)
     }
     if (recentTopApps.length >= 3) break
   }
 
   return {
     activeStatuses,
-    recentActivities,
+    recentActivities: recentActivities as unknown as ActivityFeedItem[],
     historyWindowMinutes,
     processStaleSeconds: defaultStaleSeconds,
     recentTopApps,
     generatedAt: new Date().toISOString(),
-  }
+  } as ActivityFeedData
 }

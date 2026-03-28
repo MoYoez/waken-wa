@@ -1,8 +1,10 @@
 import { createHash, randomBytes } from 'node:crypto'
+
 import { NextRequest, NextResponse } from 'next/server'
+
 import { getSession } from '@/lib/auth'
-import prisma from '@/lib/prisma'
 import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
+import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0

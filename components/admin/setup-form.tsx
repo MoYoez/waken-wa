@@ -1,21 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
+import type { SetupInitialConfig } from '@/types/components'
 
-export interface SetupInitialConfig {
-  pageTitle?: string
-  userName: string
-  userBio: string
-  avatarUrl: string
-  userNote: string
-  historyWindowMinutes: number
-  currentlyText: string
-  earlierText: string
-  adminText: string
-}
+export type { SetupInitialConfig } from '@/types/components'
 
 interface SetupFormProps {
   needAdminSetup: boolean

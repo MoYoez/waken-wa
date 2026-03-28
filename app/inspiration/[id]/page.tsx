@@ -1,10 +1,11 @@
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import prisma from '@/lib/prisma'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+
 import { MarkdownContent } from '@/components/admin/markdown-content'
 import { ContentReadingPanel } from '@/components/content-reading-panel'
+import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 

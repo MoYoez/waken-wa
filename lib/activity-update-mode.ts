@@ -1,13 +1,8 @@
-/**
- * Activity update mode configuration
- *
- * Modes:
- * - "sse": Server-Sent Events (default) - moderate resource usage, good real-time
- * - "polling": HTTP polling - lowest resource usage but less real-time
- */
+import type { ActivityUpdateMode } from '@/types/activity-update-mode'
 
-export type ActivityUpdateMode = 'sse' | 'polling'
+export type { ActivityUpdateMode } from '@/types/activity-update-mode'
 
+/** SSE (default) vs HTTP polling. */
 export const ACTIVITY_UPDATE_MODE_OPTIONS: {
   value: ActivityUpdateMode
   label: string

@@ -1,8 +1,8 @@
-/**
- * Helpers for `metadata.media` on activity logs: now-playing title + optional singer.
- * Clients POST `metadata: { media: { title?: string, singer?: string } }` to `/api/activity`.
- */
+import type { MediaDisplay } from '@/types/activity-media'
 
+export type { MediaDisplay } from '@/types/activity-media'
+
+/** Parse `metadata.media` from POST /api/activity. */
 const MEDIA_FIELD_MAX_LEN = 200
 
 function clampField(value: string): string {
@@ -10,15 +10,6 @@ function clampField(value: string): string {
   return `${value.slice(0, MEDIA_FIELD_MAX_LEN)}…`
 }
 
-export interface MediaDisplay {
-  title: string
-  singer: string | null
-}
-
-/**
- * Returns display payload when `metadata.media.title` is non-empty after trim.
- * Singer is optional; title-only is valid.
- */
 export function getMediaDisplay(metadata: unknown): MediaDisplay | null {
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null
   const media = (metadata as Record<string, unknown>).media

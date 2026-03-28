@@ -1,27 +1,22 @@
 'use client'
 
+import { Shield, Trash2, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { User, Shield, Trash2 } from 'lucide-react'
-
-interface AdminUser {
-  id: number
-  username: string
-  createdAt: string
-}
+import type { AdminUserRow } from '@/types/admin'
 
 export function AccountSettings() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<string>('')
-  const [admins, setAdmins] = useState<AdminUser[]>([])
+  const [admins, setAdmins] = useState<AdminUserRow[]>([])
   const [newAdminUsername, setNewAdminUsername] = useState('')
   const [newAdminPassword, setNewAdminPassword] = useState('')
   const [creatingAdmin, setCreatingAdmin] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
-  // 修改密码
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')

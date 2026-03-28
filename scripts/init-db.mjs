@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process'
-import { resolvePrismaEnv, repoRoot } from './prisma-resolve-env.mjs'
+
+import { repoRoot,resolvePrismaEnv } from './prisma-resolve-env.mjs'
 
 try {
   const { schemaRel, provider } = resolvePrismaEnv({ forInitDb: true })
