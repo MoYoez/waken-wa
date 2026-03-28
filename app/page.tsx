@@ -68,7 +68,7 @@ export default async function Home() {
     }),
     (prisma as any).inspirationEntry.count(),
   ])
-  const displayTimezoneForEntries = normalizeTimezone(cfg.displayTimezone)
+  const displayTimezoneForEntries = normalizeTimezone((config as Record<string, unknown>).displayTimezone)
   const inspirationHomeEntries = inspirationRows.map((row: { createdAt: Date; [k: string]: unknown }) => ({
     ...row,
     createdAt: row.createdAt.toISOString(),

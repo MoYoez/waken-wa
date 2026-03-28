@@ -23,13 +23,15 @@ export function FormattedTime({ date, timezone, className }: FormattedTimeProps)
     setMounted(true)
   }, [])
 
+  const tz = timezone || DEFAULT_TIMEZONE
+  
   // 服务端渲染时显示占位符，避免水合错误
   if (!mounted) {
-    return <span className={className} suppressHydrationWarning>--</span>
+    return <time className={className} suppressHydrationWarning>--</time>
   }
 
-  const tz = timezone || DEFAULT_TIMEZONE
   const formatted = formatDateTimeShort(date, tz)
+  const isoDate = typeof date === 'string' ? date : date.toISOString()
 
-  return <span className={className}>{formatted}</span>
+  return <time className={className} dateTime={isoDate}>{formatted}</time>
 }
