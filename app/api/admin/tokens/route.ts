@@ -3,6 +3,7 @@ import { count, desc, eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { storedFormFromPlainSecret } from '@/lib/api-token-secret'
+import { getPublicOrigin } from '@/lib/public-request-url'
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { apiTokens, devices } from '@/lib/drizzle-schema'
@@ -130,8 +131,7 @@ export async function POST(request: NextRequest) {
       .values({ name, token: storedToken, isActive: true })
       .returning()
 
-    const requestUrl = new URL(request.url)
-    const endpoint = `${requestUrl.protocol}//${requestUrl.host}/api/activity`
+    const endpoint = `${getPublicOrigin(request)}/api/activity`
     const tokenBundle = Buffer.from(
       JSON.stringify({
         version: 1,

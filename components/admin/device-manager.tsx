@@ -1,7 +1,7 @@
 'use client'
 
-import { Copy, Link2, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Copy, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   AlertDialog,
@@ -25,6 +25,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface DeviceItem {
   id: number
@@ -36,6 +44,7 @@ interface DeviceItem {
   lastSeenAt: string | null
   updatedAt: string
   apiToken?: { id: number; name: string; isActive: boolean } | null
+  approvalUrl?: string
 }
 
 interface TokenOption {
@@ -69,6 +78,8 @@ export function DeviceManager({
   const [newTokenId, setNewTokenId] = useState('')
   const [newHashKey, setNewHashKey] = useState('')
   const [message, setMessage] = useState('')
+  const [reviewDevice, setReviewDevice] = useState<DeviceItem | null>(null)
+  const highlightHandledRef = useRef(false)
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(total / DEVICE_LIST_PAGE_SIZE)),
@@ -175,6 +186,7 @@ export function DeviceManager({
       body: JSON.stringify({ id, status: nextStatus }),
     })
     await fetchDevices()
+    setReviewDevice((d) => (d?.id === id ? null : d))
   }
 
   const updateShowSteamNowPlaying = async (id: number, showSteamNowPlaying: boolean) => {
@@ -196,12 +208,36 @@ export function DeviceManager({
     setMessage('GeneratedHashKey 已复制')
   }
 
-  const copyApprovalLink = async (hash: string) => {
-    const path = `/admin?tab=devices&hash=${encodeURIComponent(hash)}`
-    const url = typeof window !== 'undefined' ? `${window.location.origin}${path}` : path
-    await navigator.clipboard.writeText(url)
-    setMessage('审核链接已复制（登录后台后可直达该设备）')
-  }
+  useEffect(() => {
+    const h = highlightHashKey?.trim()
+    if (!h || loading) return
+    if (highlightHandledRef.current) return
+
+    const match = items.find((i) => i.generatedHashKey === h)
+    if (match) {
+      highlightHandledRef.current = true
+      if (match.status === 'pending') {
+        setReviewDevice(match)
+      } else {
+        setMessage('该设备已审核')
+      }
+      return
+    }
+
+    if (q.trim() !== h) return
+
+    highlightHandledRef.current = true
+    setMessage('未找到该 Hash 对应的设备')
+  }, [highlightHashKey, loading, items, q])
+
+  useEffect(() => {
+    setReviewDevice((d) => {
+      if (!d) return d
+      const next = items.find((i) => i.id === d.id)
+      if (!next || next.status !== 'pending') return null
+      return next
+    })
+  }, [items])
 
   return (
     <div className="space-y-6">
@@ -344,33 +380,14 @@ export function DeviceManager({
                       {item.status === 'active' ? '停用' : '启用'}
                     </Button>
                     {item.status === 'pending' ? (
-                      <>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void copyApprovalLink(item.generatedHashKey)}
-                        >
-                          <Link2 className="h-4 w-4 mr-1" />
-                          复制审核链接
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void updateStatus(item.id, 'active')}
-                        >
-                          通过
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void updateStatus(item.id, 'revoked')}
-                        >
-                          拒绝
-                        </Button>
-                      </>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setReviewDevice(item)}
+                      >
+                        审核
+                      </Button>
                     ) : null}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -405,7 +422,7 @@ export function DeviceManager({
                       状态卡片显示 Steam 正在游玩
                     </Label>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Uses site-wide Steam ID from Web settings. When this device is online and Steam reports in-game, the game appears next to media on the home card.
+                      使用网站设置中的全站 Steam ID；当本设备在线且 Steam 上报「正在游戏」时，主页状态卡片会在媒体信息旁显示当前游戏。
                     </p>
                   </div>
                   <Switch
@@ -460,6 +477,62 @@ export function DeviceManager({
           </div>
         ) : null}
       </div>
+
+      <Dialog
+        open={reviewDevice !== null}
+        onOpenChange={(open) => {
+          if (!open) setReviewDevice(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton>
+          {reviewDevice ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>设备审核</DialogTitle>
+                <DialogDescription>
+                  确认是否同意该设备接入。通过后可正常上报活动；拒绝将标记为不可用。
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2 text-sm">
+                <p>
+                  <span className="text-muted-foreground">显示名：</span>
+                  {reviewDevice.displayName}
+                </p>
+                <p className="break-all font-mono text-xs">
+                  <span className="text-muted-foreground">GeneratedHashKey：</span>
+                  {reviewDevice.generatedHashKey}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">状态：</span>
+                  {reviewDevice.status}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">最后在线：</span>
+                  {reviewDevice.lastSeenAt
+                    ? new Date(reviewDevice.lastSeenAt).toLocaleString()
+                    : '—'}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">绑定 Token：</span>
+                  {reviewDevice.apiToken ? reviewDevice.apiToken.name : '未绑定'}
+                </p>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void updateStatus(reviewDevice.id, 'revoked')}
+                >
+                  拒绝
+                </Button>
+                <Button type="button" onClick={() => void updateStatus(reviewDevice.id, 'active')}>
+                  通过
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

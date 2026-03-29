@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
 import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { apiTokens, devices } from '@/lib/drizzle-schema'
@@ -72,13 +73,19 @@ export async function GET(request: NextRequest) {
         tId: number | null
         tName: string | null
         tActive: boolean | null
-      }) => ({
-      ...rest,
-      apiToken:
-        tId != null && tName != null
-          ? { id: tId, name: tName, isActive: Boolean(tActive) }
-          : null,
-    }),
+      }) => {
+        const row: Record<string, unknown> = {
+          ...rest,
+          apiToken:
+            tId != null && tName != null
+              ? { id: tId, name: tName, isActive: Boolean(tActive) }
+              : null,
+        }
+        if (rest.status === 'pending' && typeof rest.generatedHashKey === 'string') {
+          row.approvalUrl = buildDeviceApprovalUrl(request, rest.generatedHashKey)
+        }
+        return row
+      },
     )
 
     return NextResponse.json({

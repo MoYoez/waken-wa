@@ -12,6 +12,7 @@ import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { devices, siteConfig, userActivities } from '@/lib/drizzle-schema'
+import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { persistMinutesToExpiresAt } from '@/lib/user-activity-persist'
 
@@ -182,16 +183,38 @@ export async function POST(request: NextRequest) {
       deviceRecord = created!
 
       if (!autoAccept) {
+        const approvalUrl = buildDeviceApprovalUrl(request, generatedHashKey)
         return NextResponse.json(
-          { success: false, error: '设备待后台审核后可用', pending: true },
+          {
+            success: false,
+            error: '设备待后台审核后可用',
+            pending: true,
+            approvalUrl,
+            registration: {
+              displayName: device || 'Unknown Device',
+              generatedHashKey,
+              status: 'pending' as const,
+            },
+          },
           { status: 202 },
         )
       }
     }
 
     if (deviceRecord.status === 'pending') {
+      const approvalUrl = buildDeviceApprovalUrl(request, generatedHashKey)
       return NextResponse.json(
-        { success: false, error: '设备待后台审核后可用', pending: true },
+        {
+          success: false,
+          error: '设备待后台审核后可用',
+          pending: true,
+          approvalUrl,
+          registration: {
+            displayName: deviceRecord.displayName,
+            generatedHashKey,
+            status: 'pending' as const,
+          },
+        },
         { status: 202 },
       )
     }
