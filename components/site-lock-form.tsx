@@ -1,63 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 
-declare global {
-  interface Window {
-    hcaptcha?: {
-      render: (container: string | HTMLElement, params: Record<string, unknown>) => string
-      reset: (widgetId: string) => void
-      getResponse: (widgetId: string) => string
-    }
-  }
-}
-
-function useHCaptcha(siteKey: string | null, enabled: boolean) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const widgetIdRef = useRef<string | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-
-  const onVerify = useCallback((t: string) => setToken(t), [])
-  const onExpire = useCallback(() => setToken(null), [])
-
-  useEffect(() => {
-    if (!enabled || !siteKey) return
-
-    const renderWidget = () => {
-      if (!containerRef.current || !window.hcaptcha || widgetIdRef.current !== null) return
-      widgetIdRef.current = window.hcaptcha.render(containerRef.current, {
-        sitekey: siteKey,
-        callback: onVerify,
-        'expired-callback': onExpire,
-        theme: 'auto',
-      })
-    }
-
-    if (window.hcaptcha) {
-      renderWidget()
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = 'https://js.hcaptcha.com/1/api.js?render=explicit'
-    script.async = true
-    script.onload = renderWidget
-    document.head.appendChild(script)
-
-    return () => {
-      widgetIdRef.current = null
-    }
-  }, [enabled, siteKey, onVerify, onExpire])
-
-  const reset = useCallback(() => {
-    if (widgetIdRef.current !== null && window.hcaptcha) {
-      window.hcaptcha.reset(widgetIdRef.current)
-    }
-    setToken(null)
-  }, [])
-
-  return { containerRef, token, reset }
-}
+import { useHCaptcha } from '@/hooks/use-hcaptcha'
 
 interface SiteLockFormProps {
   hcaptchaEnabled?: boolean

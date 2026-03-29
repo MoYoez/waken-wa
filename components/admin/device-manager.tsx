@@ -656,7 +656,7 @@ export function DeviceManager({
                   {reviewDevice.apiToken ? reviewDevice.apiToken.name : '未绑定'}
                 </p>
               </div>
-              <DialogFooter className="gap-2 sm:gap-0">
+              <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"

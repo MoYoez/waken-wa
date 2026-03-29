@@ -63,6 +63,8 @@
 - `push_mode = realtime`：按超时规则自动判定离线。
 - `push_mode = active`：长期显示，不按超时自动结束，并展示最后更新时间。
 
+桌面端 **Go Reporter**（`reporter/go`）的轮询/心跳、待审核流程与后台运行方式见子目录 [reporter/go/README.md](../reporter/go/README.md)。
+
 ## 3. 设备管理与 GeneratedHashKey
 
 1. 访问后台：`/admin`

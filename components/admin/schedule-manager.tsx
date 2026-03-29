@@ -1054,7 +1054,7 @@ export function ScheduleManager() {
               </div>
             </div>
           ) : null}
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
               取消
             </Button>
