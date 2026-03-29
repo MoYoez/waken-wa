@@ -79,9 +79,12 @@ export default async function Home() {
   
   // Timezone for inspiration entries
   const displayTimezoneForEntries = normalizeTimezone(cfg.displayTimezone)
-  const inspirationHomeEntries = inspirationRows.map((row: { createdAt: Date; [k: string]: unknown }) => ({
+  const inspirationHomeEntries = inspirationRows.map((row: (typeof inspirationRows)[number]) => ({
     ...row,
-    createdAt: row.createdAt.toISOString(),
+    createdAt:
+      row.createdAt instanceof Date
+        ? row.createdAt.toISOString()
+        : String(row.createdAt ?? ''),
     displayTimezone: displayTimezoneForEntries,
   }))
 
