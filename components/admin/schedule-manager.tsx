@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { SortablePeriodTemplatePart } from '@/components/admin/sortable-period-template-part'
 import { WeekTimetableGrid } from '@/components/admin/week-timetable-grid'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -213,6 +214,21 @@ export function ScheduleManager() {
         periodIds: c.periodIds?.filter((pid) => pid !== id),
       })),
     )
+  }
+
+  const reorderPeriodTemplatePart = (part: SchedulePeriodPart, orderedIds: string[]) => {
+    setPeriodTemplate((prev) => {
+      const byId = new Map(prev.map((p) => [p.id, p]))
+      const reordered = orderedIds.map((id, i) => {
+        const item = byId.get(id)
+        if (!item) return null
+        return { ...item, order: (i + 1) * 10 }
+      })
+      const valid = reordered.filter((x): x is SchedulePeriodTemplateItem => x !== null)
+      if (valid.length !== orderedIds.length) return prev
+      const others = prev.filter((p) => p.part !== part)
+      return [...others, ...valid]
+    })
   }
 
   const save = async () => {
@@ -566,7 +582,7 @@ export function ScheduleManager() {
           <h4 className="text-sm font-medium text-foreground">固定节次模板（全站共用）</h4>
         </div>
         <p className="text-xs text-muted-foreground">
-          课程只选择节次，不再手填具体时间。修改模板后，已有课程会自动按新节次时间显示。
+          课程只选择节次，不再手填具体时间。修改模板后，已有课程会自动按新节次时间显示。同一时段内拖动左侧手柄调整节次顺序。
         </p>
         {compatWarnings.length > 0 ? (
           <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
@@ -595,52 +611,13 @@ export function ScheduleManager() {
                 {rows.length === 0 ? (
                   <p className="text-xs text-muted-foreground">暂无节次</p>
                 ) : (
-                  rows.map((row) => (
-                    <div
-                      key={row.id}
-                      className="grid gap-2 sm:grid-cols-[minmax(0,9rem)_auto_auto_auto_auto] sm:items-center"
-                    >
-                      <Input
-                        value={row.label}
-                        onChange={(e) => patchPeriodTemplateItem(row.id, { label: e.target.value })}
-                        placeholder="如：1-2节"
-                        className="h-9"
-                      />
-                      <Input
-                        type="time"
-                        step={60}
-                        value={row.startTime}
-                        onChange={(e) => patchPeriodTemplateItem(row.id, { startTime: e.target.value })}
-                        className="h-9 w-[7.5rem] font-mono"
-                      />
-                      <Input
-                        type="time"
-                        step={60}
-                        value={row.endTime}
-                        onChange={(e) => patchPeriodTemplateItem(row.id, { endTime: e.target.value })}
-                        className="h-9 w-[7.5rem] font-mono"
-                      />
-                      <Input
-                        type="number"
-                        min={0}
-                        max={999}
-                        value={row.order}
-                        onChange={(e) =>
-                          patchPeriodTemplateItem(row.id, { order: Number(e.target.value || 0) })
-                        }
-                        className="h-9 w-[6rem]"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => removePeriodTemplateItem(row.id)}
-                      >
-                        删除
-                      </Button>
-                    </div>
-                  ))
+                  <SortablePeriodTemplatePart
+                    part={part}
+                    rows={rows}
+                    onReorderOrderedIds={reorderPeriodTemplatePart}
+                    patchItem={patchPeriodTemplateItem}
+                    removeItem={removePeriodTemplateItem}
+                  />
                 )}
               </div>
             )
