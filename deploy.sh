@@ -108,7 +108,3 @@ ensure_jwt_in_env_file
 
 echo "Building and starting app (SQLite in Docker volume waken_sqlite_data)..."
 compose up -d --build
-
-echo ""
-echo "Done. Open http://localhost:3000 (set APP_PORT in .env to map a different host port)."
-echo "Logs: docker compose logs -f app"

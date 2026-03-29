@@ -27,3 +27,4 @@ dev.db
 .env
 .env*.local
 .vercel
+tsconfig.tsbuildinfo
