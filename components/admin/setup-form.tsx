@@ -252,6 +252,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   const objectUrl = URL.createObjectURL(file)
                   setCropSourceUrl(objectUrl)
                   setCropDialogOpen(true)
+                  e.target.value = ''
                 }}
                 className="w-full text-xs text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border file:border-border file:bg-muted/50 file:text-foreground hover:file:bg-muted file:cursor-pointer"
               />

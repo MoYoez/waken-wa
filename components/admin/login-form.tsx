@@ -7,8 +7,10 @@ function safeNextPath(raw: string | null): string {
   if (!raw) return '/admin'
   try {
     const u = new URL(raw, 'http://local.invalid')
-    if (u.pathname !== '/admin') return '/admin'
-    return `/admin${u.search}`
+    const p = u.pathname
+    if (p === '/admin') return `/admin${u.search}`
+    if (p === '/admin/setup') return `/admin/setup${u.search}`
+    return '/admin'
   } catch {
     return '/admin'
   }
