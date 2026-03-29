@@ -1,7 +1,6 @@
 # Quick start: ./deploy.sh
 # Local stack: single app service + SQLite (volume waken_sqlite_data). No Postgres.
 # Schema: Drizzle (`drizzle-kit push` in entrypoint). JWT: optional in .env; if empty, entrypoint persists /app/data/.jwt_secret.
-
 services:
   app:
     image: ${WAKEN_IMAGE:-ghcr.io/moyoez/waken-wa:main}
