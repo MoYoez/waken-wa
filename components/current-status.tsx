@@ -101,7 +101,8 @@ function MarqueeIfNeeded({
       className={cn(
         'min-w-0 max-w-full overflow-hidden',
         grow
-          ? 'w-0 flex-1 basis-0'
+          ? // Left-align with sibling icons; UA <button> defaults to text-center and would center short titles.
+            'flex w-0 flex-1 basis-0 justify-start text-left'
           : 'w-max max-w-full shrink text-right',
         outerClassName,
       )}
@@ -180,10 +181,10 @@ function MediaAndSteamRow({
               <button
                 type="button"
                 className={cn(
-                  'min-w-0 items-center gap-2 rounded-md transition-colors',
+                  'min-w-0 items-center gap-2 rounded-md transition-colors text-left',
                   // Steam-only: full-width flex row so MarqueeIfNeeded (flex-1) gets real width like the media row.
                   // Paired with media: inline-flex stays compact on the right half.
-                  pair ? 'inline-flex max-w-full' : 'flex w-full',
+                  pair ? 'inline-flex max-w-full' : 'flex w-full justify-start',
                   'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 )}
               >
