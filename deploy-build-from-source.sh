@@ -75,9 +75,10 @@ resolve_project_root() {
     exit 1
   fi
 
-  echo "Cloning $WAKEN_REPO_URL (branch $WAKEN_BRANCH) into $target ..."
-  git clone --depth 1 -b "$WAKEN_BRANCH" "$WAKEN_REPO_URL" "$target"
-  (cd "$target" && git submodule update --init --recursive --depth 1)
+  echo "Cloning $WAKEN_REPO_URL (branch $WAKEN_BRANCH) into $target ..." >&2
+  # Only the final path must go to stdout (for ROOT="$(resolve_project_root)"); clone/submodule may print to stdout.
+  git clone --depth 1 -b "$WAKEN_BRANCH" "$WAKEN_REPO_URL" "$target" >&2
+  (cd "$target" && git submodule update --init --recursive --depth 1) >&2
   echo "$target"
 }
 
