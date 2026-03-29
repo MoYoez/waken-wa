@@ -388,6 +388,7 @@ export function TokenManager() {
                                 : '从未在线'}
                             </span>
                           </div>
+                          <p className="text-[10px] text-muted-foreground">设备身份牌</p>
                           <code className="block font-mono break-all text-muted-foreground">
                             {d.generatedHashKey}
                           </code>
@@ -508,6 +509,9 @@ export function TokenManager() {
         <CardContent className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground mb-2">上报活动数据:</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              字段 <code className="rounded bg-muted px-1">generatedHashKey</code> 即设备在后台的「设备身份牌」。
+            </p>
             <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">
 {`curl -X POST ${typeof window !== 'undefined' ? window.location.origin : ''}/api/activity \\
   -H "Authorization: Bearer YOUR_TOKEN" \\

@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     if (generatedHashKey.length > GENERATED_HASH_KEY_MAX_LENGTH) {
       return NextResponse.json(
-        { success: false, error: 'GeneratedHashKey 长度不能超过 128' },
+        { success: false, error: '设备身份牌长度不能超过 128' },
         { status: 400 },
       )
     }
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error:
-            '设备不可用或不存在。请在「设备管理」中创建设备并复制 GeneratedHashKey，或使用留空以使用 Web 预留设备。',
+            '设备不可用或不存在。请在「设备管理」中创建设备并复制设备身份牌，或使用留空以使用 Web 预留设备。',
         },
         { status: 403 },
       )

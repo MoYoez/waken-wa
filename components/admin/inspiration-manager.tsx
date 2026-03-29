@@ -383,7 +383,7 @@ export function InspirationManager() {
             DataURL。正文内嵌图请先 `POST /api/inspiration/assets`（JSON 字段 `imageDataUrl`），再在 `content` 里写
             `![](/api/inspiration/img/…)`（路径取上传接口返回的 `url`）；提交条目后会自动绑定到该条记录。
             若在「网站设置」中开启了「仅允许所选设备提交随想录」，请在两个请求上都加请求头{' '}
-            <code className="rounded bg-muted px-1">X-Device-Key: {'<GeneratedHashKey>'}</code>
+            <code className="rounded bg-muted px-1">X-Device-Key: {'<设备身份牌>'}</code>
             （与设备管理中的值一致）。
           </p>
         </CardHeader>

@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
 
     if (!generatedHashKey || !process_name) {
       return NextResponse.json(
-        { success: false, error: '缺少必要字段: generatedHashKey, process_name' },
+        { success: false, error: '缺少必要字段: generatedHashKey（设备身份牌）、process_name' },
         { status: 400 },
       )
     }

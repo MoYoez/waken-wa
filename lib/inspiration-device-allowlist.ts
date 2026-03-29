@@ -70,7 +70,7 @@ export async function gateInspirationApiForDevice(
       ok: false,
       status: 400,
       error:
-        '已启用「仅指定设备可提交随想录」：请在请求头加入 X-Device-Key（值为该设备的 GeneratedHashKey），或在 JSON 中传 generatedHashKey',
+        '已启用「仅指定设备可提交随想录」：请在请求头加入 X-Device-Key（值为该设备的设备身份牌），或在 JSON 中传 generatedHashKey',
     }
   }
 

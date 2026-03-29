@@ -1394,10 +1394,10 @@ export function WebSettings() {
             checked={form.autoAcceptNewDevices}
             onChange={(e) => patch('autoAcceptNewDevices', e.target.checked)}
           />
-          自动接收本地新设备（GeneratedHashKey）
+          自动接收本地新设备（设备身份牌）
         </Label>
         <p className="text-xs text-muted-foreground">
-          关闭后，未授权 GeneratedHashKey 首次上报会进入待审核状态，需要在“设备管理”中手动通过。
+          关闭后，未授权设备身份牌首次上报会进入待审核状态，需要在“设备管理”中手动通过。
         </p>
       </div>
 
@@ -1413,7 +1413,7 @@ export function WebSettings() {
         <p className="text-xs text-muted-foreground">
           关闭时：任意已绑定且激活、并使用同一 Token 的设备均可调用随想录接口。开启后：仅下方勾选的设备可提交；客户端请求需携带请求头{' '}
           <code className="rounded bg-muted px-1 py-0.5 text-[11px]">X-Device-Key</code>
-          （值为该设备在后台的 GeneratedHashKey），或在 JSON 中传{' '}
+          （值为该设备在后台的「设备身份牌」），或在 JSON 中传{' '}
           <code className="rounded bg-muted px-1 py-0.5 text-[11px]">generatedHashKey</code>
           。管理员在后台网页里提交不受此限制。
         </p>

@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
 
 interface DeviceItem {
   id: number
@@ -51,6 +52,74 @@ interface TokenOption {
   id: number
   name: string
   isActive: boolean
+}
+
+const DEVICE_STATUS_LABEL: Record<DeviceItem['status'], string> = {
+  active: '已启用',
+  pending: '待审核',
+  revoked: '已撤销',
+}
+
+function deviceStatusLabel(status: DeviceItem['status']): string {
+  return DEVICE_STATUS_LABEL[status]
+}
+
+function DeviceListItemActions({
+  item,
+  variant,
+  onCopyHash,
+  onToggleActive,
+  onReview,
+}: {
+  item: DeviceItem
+  variant: 'mobile' | 'desktop'
+  onCopyHash: () => void
+  onToggleActive: () => void
+  onReview: () => void
+}) {
+  if (variant === 'mobile') {
+    return (
+      <div className="flex w-full flex-col gap-2">
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-9 h-auto gap-1.5 py-2"
+            onClick={onCopyHash}
+          >
+            <Copy className="h-4 w-4 shrink-0" />
+            <span className="truncate text-left">复制身份牌</span>
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="min-h-9" onClick={onToggleActive}>
+            {item.status === 'active' ? '停用' : '启用'}
+          </Button>
+        </div>
+        {item.status === 'pending' ? (
+          <Button type="button" variant="outline" size="sm" className="min-h-9 w-full" onClick={onReview}>
+            审核
+          </Button>
+        ) : null}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={onCopyHash}>
+        <Copy className="h-4 w-4 shrink-0" />
+        复制身份牌
+      </Button>
+      <Button type="button" variant="outline" size="sm" className="h-8" onClick={onToggleActive}>
+        {item.status === 'active' ? '停用' : '启用'}
+      </Button>
+      {item.status === 'pending' ? (
+        <Button type="button" variant="outline" size="sm" className="h-8" onClick={onReview}>
+          审核
+        </Button>
+      ) : null}
+    </div>
+  )
 }
 
 /** Server page size; smaller pages keep the admin panel from growing too tall. */
@@ -205,7 +274,7 @@ export function DeviceManager({
 
   const copyHash = async (hash: string) => {
     await navigator.clipboard.writeText(hash)
-    setMessage('GeneratedHashKey 已复制')
+    setMessage('设备身份牌已复制')
   }
 
   useEffect(() => {
@@ -227,7 +296,7 @@ export function DeviceManager({
     if (q.trim() !== h) return
 
     highlightHandledRef.current = true
-    setMessage('未找到该 Hash 对应的设备')
+    setMessage('未找到该设备身份牌对应的设备')
   }, [highlightHashKey, loading, items, q])
 
   useEffect(() => {
@@ -276,16 +345,16 @@ export function DeviceManager({
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="new-device-hash">自定义 GeneratedHashKey（可选）</Label>
+          <Label htmlFor="new-device-hash">自定义设备身份牌（可选）</Label>
           <Input
             id="new-device-hash"
             value={newHashKey}
             onChange={(e) => setNewHashKey(e.target.value)}
-            placeholder="留空则系统自动生成；可与「快速添加活动」中生成的 Key 一致"
+            placeholder="留空则系统自动生成；可与「快速添加活动」中的设备身份牌一致"
             className="font-mono text-xs"
           />
           <p className="text-xs text-muted-foreground">
-            8～128 字符，须唯一。可与概览中「生成随机 Key」结果一致后在此粘贴创建设备。
+            8～128 字符，须唯一。可与概览中「生成随机 Key」得到的设备身份牌一致后在此粘贴创建设备。
           </p>
         </div>
 
@@ -313,7 +382,7 @@ export function DeviceManager({
                 setQ(e.target.value)
                 setPage(0)
               }}
-              placeholder="按显示名或 HashKey 搜索"
+              placeholder="按显示名或设备身份牌搜索"
             />
           </div>
           <div className="space-y-2">
@@ -330,9 +399,9 @@ export function DeviceManager({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="active">active</SelectItem>
-                <SelectItem value="pending">pending</SelectItem>
-                <SelectItem value="revoked">revoked</SelectItem>
+                <SelectItem value="active">{DEVICE_STATUS_LABEL.active}</SelectItem>
+                <SelectItem value="pending">{DEVICE_STATUS_LABEL.pending}</SelectItem>
+                <SelectItem value="revoked">{DEVICE_STATUS_LABEL.revoked}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -353,83 +422,100 @@ export function DeviceManager({
               <div
                 key={item.id}
                 id={`device-row-${item.id}`}
-                className={
+                className={cn(
+                  'relative rounded-md border p-2.5 sm:p-3',
                   highlightHashKey?.trim() && item.generatedHashKey === highlightHashKey.trim()
-                    ? 'rounded-md border p-3 space-y-2 ring-2 ring-primary ring-offset-2 ring-offset-background'
-                    : 'rounded-md border p-3 space-y-2'
-                }
+                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                    : null,
+                )}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{item.displayName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      状态: {item.status} | 最后在线: {item.lastSeenAt ? new Date(item.lastSeenAt).toLocaleString() : '—'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => void copyHash(item.generatedHashKey)}>
-                      <Copy className="h-4 w-4 mr-1" />
-                      复制 Key
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void updateStatus(item.id, item.status === 'active' ? 'revoked' : 'active')}
-                    >
-                      {item.status === 'active' ? '停用' : '启用'}
-                    </Button>
-                    {item.status === 'pending' ? (
+                <div className="pointer-events-none absolute right-1 top-1 z-10 sm:right-2 sm:top-2">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
                       <Button
                         type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setReviewDevice(item)}
+                        variant="ghost"
+                        size="icon"
+                        className="pointer-events-auto h-8 w-8 text-muted-foreground hover:text-destructive"
+                        aria-label="删除设备"
                       >
-                        审核
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    ) : null}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>确认删除设备</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            删除后该 GeneratedHashKey 将无法继续上报活动。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>取消</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => void removeDevice(item.id)}>删除</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>确认删除设备</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          删除后该设备身份牌将无法继续上报活动。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => void removeDevice(item.id)}>删除</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
-                <p className="text-xs font-mono break-all text-muted-foreground">{item.generatedHashKey}</p>
-                {item.apiToken ? (
-                  <p className="text-xs text-muted-foreground">Token: {item.apiToken.name}</p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">Token: 未绑定</p>
-                )}
-                <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
-                  <div className="space-y-0.5 min-w-0">
-                    <Label htmlFor={`steam-card-${item.id}`} className="text-xs font-medium cursor-pointer">
-                      状态卡片显示 Steam 正在游玩
-                    </Label>
-                    <p className="text-[11px] text-muted-foreground leading-snug">
-                      使用网站设置中的全站 Steam ID；当本设备在线且 Steam 上报「正在游戏」时，主页状态卡片会在媒体信息旁显示当前游戏。
-                    </p>
+                <div className="space-y-2">
+                  <div className="pr-10 sm:pr-11">
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-medium break-words">{item.displayName}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        <span className="block sm:inline">状态: {deviceStatusLabel(item.status)}</span>
+                        <span className="hidden sm:inline">{' | '}</span>
+                        <span className="mt-0.5 block sm:mt-0 sm:inline">
+                          最后在线: {item.lastSeenAt ? new Date(item.lastSeenAt).toLocaleString() : '—'}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="mt-3 sm:hidden">
+                      <DeviceListItemActions
+                        item={item}
+                        variant="mobile"
+                        onCopyHash={() => void copyHash(item.generatedHashKey)}
+                        onToggleActive={() =>
+                          void updateStatus(item.id, item.status === 'active' ? 'revoked' : 'active')
+                        }
+                        onReview={() => setReviewDevice(item)}
+                      />
+                    </div>
                   </div>
-                  <Switch
-                    id={`steam-card-${item.id}`}
-                    checked={Boolean(item.showSteamNowPlaying)}
-                    onCheckedChange={(v) => void updateShowSteamNowPlaying(item.id, v)}
-                  />
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-sans">设备身份牌 </span>
+                    <span className="font-mono break-all">{item.generatedHashKey}</span>
+                  </p>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <p className="text-xs text-muted-foreground min-w-0 sm:flex-1">
+                      {item.apiToken ? `Token: ${item.apiToken.name}` : 'Token: 未绑定'}
+                    </p>
+                    <div className="hidden sm:block sm:shrink-0">
+                      <DeviceListItemActions
+                        item={item}
+                        variant="desktop"
+                        onCopyHash={() => void copyHash(item.generatedHashKey)}
+                        onToggleActive={() =>
+                          void updateStatus(item.id, item.status === 'active' ? 'revoked' : 'active')
+                        }
+                        onReview={() => setReviewDevice(item)}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-3">
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <Label htmlFor={`steam-card-${item.id}`} className="text-xs font-medium cursor-pointer">
+                        状态卡片显示 Steam 正在游玩
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-snug">
+                        使用网站设置中的全站 Steam ID；当本设备在线且 Steam 上报「正在游戏」时，主页状态卡片会在媒体信息旁显示当前游戏。
+                      </p>
+                    </div>
+                    <Switch
+                      id={`steam-card-${item.id}`}
+                      className="shrink-0 self-end sm:self-auto"
+                      checked={Boolean(item.showSteamNowPlaying)}
+                      onCheckedChange={(v) => void updateShowSteamNowPlaying(item.id, v)}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -498,13 +584,13 @@ export function DeviceManager({
                   <span className="text-muted-foreground">显示名：</span>
                   {reviewDevice.displayName}
                 </p>
-                <p className="break-all font-mono text-xs">
-                  <span className="text-muted-foreground">GeneratedHashKey：</span>
-                  {reviewDevice.generatedHashKey}
+                <p className="text-xs">
+                  <span className="text-muted-foreground">设备身份牌：</span>
+                  <span className="font-mono break-all">{reviewDevice.generatedHashKey}</span>
                 </p>
                 <p>
                   <span className="text-muted-foreground">状态：</span>
-                  {reviewDevice.status}
+                  {deviceStatusLabel(reviewDevice.status)}
                 </p>
                 <p>
                   <span className="text-muted-foreground">最后在线：</span>

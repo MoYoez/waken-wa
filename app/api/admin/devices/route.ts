@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
         customKey.length < GENERATED_HASH_KEY_MIN_LENGTH
       ) {
         return NextResponse.json(
-          { success: false, error: '自定义 GeneratedHashKey 长度需在 8～128 之间' },
+          { success: false, error: '自定义设备身份牌长度需在 8～128 之间' },
           { status: 400 },
         )
       }
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         .where(eq(devices.generatedHashKey, customKey))
         .limit(1)
       if (taken) {
-        return NextResponse.json({ success: false, error: '该 GeneratedHashKey 已被使用' }, { status: 400 })
+        return NextResponse.json({ success: false, error: '该设备身份牌已被使用' }, { status: 400 })
       }
     }
 
