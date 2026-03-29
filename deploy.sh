@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Local: ./deploy.sh
 # One-liner (needs git + docker; clone + compose up):
-#   curl -fsSL https://raw.githubusercontent.com/MoYoez/waken-wa-web/main/deploy.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/MoYoez/waken-wa/main/deploy.sh | bash
 #
 # Optional env: WAKEN_DEPLOY_DIR, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL
 set -euo pipefail
 
 WAKEN_REPO_URL="${WAKEN_REPO_URL:-https://github.com/MoYoez/waken-wa.git}"
 WAKEN_BRANCH="${WAKEN_BRANCH:-main}"
-WAKEN_DIR="${WAKEN_DIR:-waken-wa-web}"
+WAKEN_DIR="${WAKEN_DIR:-waken-wa}"
 
 compose() {
   if docker compose version >/dev/null 2>&1; then

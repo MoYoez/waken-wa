@@ -167,9 +167,10 @@ function MediaAndSteamRow({
       {steam ? (
         <div
           className={cn(
-            'flex min-w-0 justify-end overflow-hidden',
-            // flex-1 basis-0: column must get real width from the row; otherwise min-content width ignores the w-0 flex-1 marquee slot and the game name collapses to 0
-            pair ? 'max-w-[50%] min-w-0 flex-1 basis-0' : 'w-full min-w-0',
+            'flex min-w-0 overflow-hidden',
+            // With media: keep Steam on the right half, flush end within that column.
+            // Steam only: align like the media row (icon + title from the left), not stuck on the card edge.
+            pair ? 'max-w-[50%] min-w-0 flex-1 basis-0 justify-end' : 'w-full min-w-0 justify-start',
           )}
         >
           <HoverCard openDelay={120}>
@@ -192,7 +193,7 @@ function MediaAndSteamRow({
                     onError={() => setSteamImgFailed(true)}
                   />
                 ) : null}
-                <MarqueeIfNeeded text={steam.name} grow={false} />
+                <MarqueeIfNeeded text={steam.name} grow={!pair} />
               </button>
             </HoverCardTrigger>
             <HoverCardContent className="w-72 space-y-3" align="start">
