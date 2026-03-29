@@ -44,6 +44,8 @@ pnpm dev
 
 在浏览器中打开 [http://localhost:3000](http://localhost:3000)。
 
+> 如果需要使用，请配合 [Waken-Wa-Reporter](https://github.com/MoYoez/waken-wa-reporter)
+
 ### 环境变量
 
 复制 [`.env.example`](.env.example) 为 `.env` / `.env.local` 并按需填写。常见项：
