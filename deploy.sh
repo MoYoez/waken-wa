@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Local: ./deploy-build-from-source.sh
-#   curl -fsSL https://raw.githubusercontent.com/MoYoez/waken-wa/main/deploy-build-from-source.sh | bash
+# Local: ./deploy.sh
+#   curl -fsSL https://raw.githubusercontent.com/MoYoez/waken-wa/main/deploy.sh | bash
 #
-# Optional env: WAKEN_DEPLOY_DIR, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL
+# Optional env: WAKEN_DEPLOY_DIR, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL, WAKEN_IMAGE
 set -euo pipefail
 
 WAKEN_REPO_URL="${WAKEN_REPO_URL:-https://github.com/MoYoez/waken-wa.git}"
 WAKEN_BRANCH="${WAKEN_BRANCH:-main}"
 WAKEN_DIR="${WAKEN_DIR:-waken-wa}"
+WAKEN_IMAGE="${WAKEN_IMAGE:-ghcr.io/moyoez/waken-wa:main}"
 
 compose() {
   if docker compose version >/dev/null 2>&1; then
@@ -89,6 +90,8 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+export WAKEN_IMAGE
+
 if [ ! -f .env ]; then
   if [ -f .env.example ]; then
     cp .env.example .env
@@ -105,5 +108,8 @@ fi
 
 ensure_jwt_in_env_file
 
-echo "Building and starting app (SQLite in Docker volume waken_sqlite_data)..."
-compose up -d --build
+echo "Pulling image $WAKEN_IMAGE ..."
+docker pull "$WAKEN_IMAGE"
+
+echo "Starting app from registry image (SQLite in Docker volume waken_sqlite_data)..."
+compose up -d --no-build

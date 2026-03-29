@@ -4,6 +4,7 @@
 
 services:
   app:
+    image: ${WAKEN_IMAGE:-ghcr.io/moyoez/waken-wa:main}
     build: .
     restart: unless-stopped
     ports:
