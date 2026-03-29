@@ -171,6 +171,10 @@ export const siteConfig = sqliteTable('site_config', {
     .default(false),
   steamId: text('steam_id'),
   steamApiKey: text('steam_api_key'),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  activityRejectLockappSleep: integer('activity_reject_lockapp_sleep', {
+    mode: 'boolean',
+  }).default(false),
   createdAt: ts('created_at'),
   updatedAt: ts('updated_at'),
 })

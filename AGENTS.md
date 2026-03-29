@@ -119,6 +119,11 @@ flowchart TB
 
 推送 schema 使用 `pnpm db:push` 或 `pnpm db:push:postgres`（具体 config 文件见 [drizzle.config.pg.ts](drizzle.config.pg.ts)、[drizzle.config.sqlite.ts](drizzle.config.sqlite.ts)）。
 
+### 迁移与已有数据（数据优先）
+
+- **新增列不要加 `.notNull()`**（Agent / 协作者默认遵守）：优先**可空**列 + 可选 `.default(...)`；应用层用 `x === true`、`Boolean(x)` 等把 `null`/`undefined` 当关闭或默认，避免 `db:push` 对已有行触发 data-loss 警告或迁移摩擦。
+- 仅在业务**强制**不能接受 `NULL` 时，再对新列使用 `.notNull()`，且必须同时声明服务端 `.default(...)`（PostgreSQL 若 Kit 仍不识别布尔默认，可用 `drizzle-orm` 的 `sql` 模板写字面默认值）。
+
 ---
 
 ## 5. 认证与安全要点
@@ -143,7 +148,7 @@ flowchart TB
 
 ## 7. Agent / 协作者工作准则
 
-1. **数据库变更**：必须同步 PG 与 SQLite 两套 schema，并更新 [lib/drizzle-schema.ts](lib/drizzle-schema.ts)。
+1. **数据库变更**：必须同步 PG 与 SQLite 两套 schema，并更新 [lib/drizzle-schema.ts](lib/drizzle-schema.ts)。**新增列不要加 `.notNull()`**（默认可空 + 代码侧默认值）；确需 `NOT NULL` 时须带服务端 `.default`（见上文「迁移与已有数据」）。
 2. **优先复用**：业务逻辑放在 [lib/](lib/)，页面与 Route 保持精简。
 3. **服务端边界**：数据库与敏感逻辑使用 `server-only`（参见 [lib/db.ts](lib/db.ts)），避免在客户端包中引入服务端专用模块。
 4. **大改前**：先阅读相关 `app/api/**/route.ts` 与 [lib/](lib/) 中的既有实现，保持命名与错误处理风格一致。

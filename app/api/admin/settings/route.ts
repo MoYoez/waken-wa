@@ -362,6 +362,11 @@ export async function PATCH(request: NextRequest) {
           : null
     }
 
+    let activityRejectLockappSleep = existing?.activityRejectLockappSleep === true
+    if (body.activityRejectLockappSleep !== undefined && body.activityRejectLockappSleep !== null) {
+      activityRejectLockappSleep = Boolean(body.activityRejectLockappSleep)
+    }
+
     await safeSiteConfigUpsert({
       where: { id: 1 },
       update: {
@@ -411,6 +416,7 @@ export async function PATCH(request: NextRequest) {
         steamEnabled,
         steamId,
         steamApiKey,
+        activityRejectLockappSleep,
       },
       create: {
         id: 1,
@@ -460,6 +466,7 @@ export async function PATCH(request: NextRequest) {
         steamEnabled,
         steamId,
         steamApiKey,
+        activityRejectLockappSleep,
       },
     })
 

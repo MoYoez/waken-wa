@@ -1,3 +1,4 @@
+
 import {
   boolean,
   index,
@@ -148,6 +149,8 @@ export const siteConfig = pgTable('site_config', {
   steamEnabled: boolean('steam_enabled').notNull().default(false),
   steamId: varchar('steam_id', { length: 30 }),
   steamApiKey: varchar('steam_api_key', { length: 128 }),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  activityRejectLockappSleep: boolean('activity_reject_lockapp_sleep').default(false),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -357,6 +357,12 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   if ('hideActivityMedia' in web && typeof web.hideActivityMedia === 'boolean') {
     patch.hideActivityMedia = web.hideActivityMedia
   }
+  if (
+    'activityRejectLockappSleep' in web &&
+    typeof web.activityRejectLockappSleep === 'boolean'
+  ) {
+    patch.activityRejectLockappSleep = web.activityRejectLockappSleep
+  }
   return patch
 }
 
@@ -404,6 +410,11 @@ interface SiteConfig {
   scheduleHomeAfterClassesLabel: string
   globalMouseTiltEnabled: boolean
   hideActivityMedia: boolean
+  /**
+   * When true, POST /api/activity rejects reports whose process_name is the LockApp reporter (basename lockapp / lockapp.exe).
+   * English UI help only; behavior is server-side.
+   */
+  activityRejectLockappSleep: boolean
   /** 显示时区，默认 Asia/Shanghai */
   displayTimezone: string
   /** 活动状态更新模式 */
@@ -480,6 +491,7 @@ export function WebSettings() {
     scheduleHomeAfterClassesLabel: SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
     globalMouseTiltEnabled: false,
     hideActivityMedia: false,
+    activityRejectLockappSleep: false,
     displayTimezone: DEFAULT_TIMEZONE,
     activityUpdateMode: DEFAULT_ACTIVITY_UPDATE_MODE,
     steamEnabled: false,
@@ -582,6 +594,7 @@ export function WebSettings() {
                 : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
             globalMouseTiltEnabled: data.data.globalMouseTiltEnabled === true,
             hideActivityMedia: data.data.hideActivityMedia === true,
+            activityRejectLockappSleep: data.data.activityRejectLockappSleep === true,
             displayTimezone: normalizeTimezone(data.data.displayTimezone),
             activityUpdateMode: normalizeActivityUpdateMode(data.data.activityUpdateMode),
             steamEnabled: Boolean(data.data.steamEnabled),
@@ -1177,7 +1190,22 @@ export function WebSettings() {
         />
       </div>
 
-
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+        <div className="space-y-0.5 min-w-0">
+          <Label htmlFor="activity-reject-lockapp-sleep" className="font-normal cursor-pointer">
+            休眠视作离线（拒绝 LockApp 进程上报）
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            开启后，若上报的进程名为 LockApp 上报程序（如 LockApp.exe），服务端将拒绝写入并不更新设备最后在线时间。
+          </p>
+        </div>
+        <Switch
+          id="activity-reject-lockapp-sleep"
+          checked={form.activityRejectLockappSleep}
+          onCheckedChange={(v) => patch('activityRejectLockappSleep', v)}
+          className="shrink-0"
+        />
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="display-timezone">显示时区</Label>

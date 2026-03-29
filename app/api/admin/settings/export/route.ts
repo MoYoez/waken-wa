@@ -129,6 +129,7 @@ export async function GET(request: Request) {
             : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
         globalMouseTiltEnabled: cfg.globalMouseTiltEnabled === true,
         hideActivityMedia: cfg.hideActivityMedia === true,
+        activityRejectLockappSleep: cfg.activityRejectLockappSleep === true,
       },
       token: {
         reportEndpoint: `${baseUrl}/api/activity`,

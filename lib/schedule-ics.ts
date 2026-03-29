@@ -164,6 +164,7 @@ export function importIcsToCourses(icsText: string):
       weekday,
       startTime: formatHm(start),
       endTime: formatHm(end),
+      timeMode: 'custom',
       anchorDate,
       untilDate,
     })

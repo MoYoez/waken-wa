@@ -19,6 +19,7 @@ import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { devices, siteConfig, userActivities } from '@/lib/drizzle-schema'
+import { isLockAppReporterProcessName } from '@/lib/lockapp-reporter'
 import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { persistMinutesToExpiresAt } from '@/lib/user-activity-persist'
@@ -243,6 +244,24 @@ export async function POST(request: NextRequest) {
     if (deviceRecord.apiTokenId && deviceRecord.apiTokenId !== tokenInfo.id) {
       return NextResponse.json(
         { success: false, error: '该设备未绑定当前 Token' },
+        { status: 403 },
+      )
+    }
+
+    const [lockappCfg] = await db
+      .select({ activityRejectLockappSleep: siteConfig.activityRejectLockappSleep })
+      .from(siteConfig)
+      .where(eq(siteConfig.id, 1))
+      .limit(1)
+    if (
+      lockappCfg?.activityRejectLockappSleep === true &&
+      isLockAppReporterProcessName(process_name)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '站点已开启「休眠视作离线」，已拒绝 LockApp 进程上报',
+        },
         { status: 403 },
       )
     }

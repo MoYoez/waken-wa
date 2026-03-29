@@ -78,6 +78,7 @@ export function buildAdminSettingsPatchBody(
         : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
     globalMouseTiltEnabled: Boolean(data.globalMouseTiltEnabled),
     hideActivityMedia: Boolean(data.hideActivityMedia),
+    activityRejectLockappSleep: Boolean(data.activityRejectLockappSleep),
     scheduleSlotMinutes,
     schedulePeriodTemplate,
     scheduleGridByWeekday: resolveScheduleGridByWeekday(

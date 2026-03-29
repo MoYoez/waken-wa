@@ -5,7 +5,7 @@ import { addDays, format, startOfWeek } from 'date-fns'
 import type { ScheduleOccurrence, SchedulePeriodTemplateItem } from '@/lib/schedule-courses'
 import { cn } from '@/lib/utils'
 
-const ROW_PX = 28
+const ROW_PX = 24
 const PX_PER_MINUTE = ROW_PX / 15
 const DEFAULT_START_MIN = 8 * 60
 const DEFAULT_END_MIN = 22 * 60
@@ -139,40 +139,59 @@ export function WeekTimetableGrid({
     return occurrences.filter((o) => format(o.start, 'yyyy-MM-dd') === key)
   })
 
+  const todayYmd = format(new Date(), 'yyyy-MM-dd')
+
   return (
-    <div className={cn('rounded-lg border border-border bg-card overflow-x-auto', className)}>
-      <div className="min-w-[720px] flex text-xs">
+    <div
+      className={cn(
+        'rounded-xl border border-border/70 bg-card shadow-sm overflow-x-auto',
+        className,
+      )}
+    >
+      <div className="min-w-[680px] flex text-[11px]">
         <div
-          className="shrink-0 w-14 border-r border-border bg-muted/30 text-muted-foreground"
+          className="shrink-0 w-12 border-r border-border/50 bg-muted/20 text-muted-foreground"
           style={{ paddingTop: ROW_PX }}
         >
           {timeLabels.map(({ m, text }, i) => (
             <div
               key={`${m}-${i}`}
-              className="text-[10px] tabular-nums pr-1 text-right border-t border-border/60"
-              style={{ height: AXIS_STEP_MIN * PX_PER_MINUTE, lineHeight: '28px' }}
+              className="text-[10px] tabular-nums pr-1.5 text-right border-t border-border/40 text-muted-foreground/90"
+              style={{
+                height: AXIS_STEP_MIN * PX_PER_MINUTE,
+                lineHeight: `${ROW_PX}px`,
+              }}
             >
               {text}
             </div>
           ))}
         </div>
-        <div className="flex-1 grid grid-cols-7 border-l border-border">
+        <div className="flex-1 grid grid-cols-7 border-l border-border/50 bg-card/30">
           {columnDays.map((day, col) => {
             const dayEvents = byColumn[col]
             const maxLanes = maxConcurrentOnDay(dayEvents)
             const laneByKey = assignLanesForDay(dayEvents)
+            const isToday = format(day, 'yyyy-MM-dd') === todayYmd
             return (
               <div
                 key={col}
-                className="relative border-r border-border last:border-r-0 bg-background/50"
+                className={cn(
+                  'relative border-r border-border/40 last:border-r-0',
+                  isToday
+                    ? 'bg-primary/[0.05] ring-1 ring-inset ring-primary/15'
+                    : 'bg-background/40',
+                )}
                 style={{ minHeight: totalHeight + ROW_PX }}
               >
                 <div
-                  className="sticky top-0 z-20 border-b border-border bg-muted/40 py-1 text-center font-medium text-foreground"
+                  className={cn(
+                    'sticky top-0 z-20 border-b border-border/50 py-1 text-center font-medium text-foreground',
+                    isToday ? 'bg-muted/50' : 'bg-muted/30',
+                  )}
                   style={{ height: ROW_PX }}
                 >
-                  <div>{WEEK_LABELS[col]}</div>
-                  <div className="text-[10px] font-normal text-muted-foreground">
+                  <div className="text-[11px] leading-tight">{WEEK_LABELS[col]}</div>
+                  <div className="text-[10px] font-normal tabular-nums text-muted-foreground">
                     {format(day, 'M/d')}
                   </div>
                 </div>
@@ -183,7 +202,7 @@ export function WeekTimetableGrid({
                     return (
                       <div
                         key={`axis-${m}`}
-                        className="absolute left-0 right-0 border-t border-border/25 pointer-events-none"
+                        className="absolute left-0 right-0 border-t border-border/30 pointer-events-none"
                         style={{ top: y }}
                       />
                     )
@@ -193,7 +212,7 @@ export function WeekTimetableGrid({
                     return (
                       <div
                         key={`period-${m}`}
-                        className="absolute left-0 right-0 border-t border-dashed border-primary/50 pointer-events-none"
+                        className="absolute left-0 right-0 border-t border-dashed border-primary/35 pointer-events-none"
                         style={{ top: y }}
                       />
                     )
@@ -214,7 +233,7 @@ export function WeekTimetableGrid({
                     return (
                       <div
                         key={`${o.courseId}-${o.start.toISOString()}-${idx}`}
-                        className="absolute rounded-md border border-primary/30 bg-primary/15 px-1 py-0.5 text-[10px] leading-tight text-foreground shadow-sm overflow-hidden z-10 box-border"
+                        className="absolute rounded-md border border-border/45 border-l-2 border-l-primary bg-primary/[0.08] px-1.5 py-0.5 text-[11px] leading-snug text-foreground shadow-sm overflow-hidden z-10 box-border"
                         style={{
                           top,
                           height: h,
@@ -226,12 +245,12 @@ export function WeekTimetableGrid({
                         <div className="flex items-start justify-between gap-0.5 min-w-0">
                           <div className="font-medium truncate min-w-0 flex-1">{o.title}</div>
                           {o.sessionCount && o.sessionCount > 1 && o.sessionOrdinal ? (
-                            <span className="shrink-0 rounded bg-primary/25 px-0.5 text-[9px] tabular-nums text-primary">
+                            <span className="shrink-0 rounded bg-primary/20 px-0.5 text-[9px] tabular-nums text-primary">
                               {o.sessionOrdinal}/{o.sessionCount}
                             </span>
                           ) : null}
                         </div>
-                        <div className="tabular-nums text-muted-foreground">
+                        <div className="tabular-nums text-[10px] text-muted-foreground">
                           {format(o.start, 'HH:mm')}–{format(o.end, 'HH:mm')}
                         </div>
                       </div>

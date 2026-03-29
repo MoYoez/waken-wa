@@ -54,6 +54,8 @@ export const scheduleCourseSchema = z.object({
   timeSessions: z.array(scheduleTimeSessionSchema).max(MAX_TIME_SESSIONS_PER_COURSE).optional(),
   /** Preferred period ids under schedulePeriodTemplate; when present, runtime times are resolved from template. */
   periodIds: z.array(z.string().min(1).max(64)).max(MAX_TIME_SESSIONS_PER_COURSE).optional(),
+  /** When `custom`, times come from timeSessions / startTime+endTime only; periodIds are ignored. */
+  timeMode: z.enum(['periods', 'custom']).optional(),
   anchorDate: dateYmd,
   untilDate: dateYmd.optional(),
 })
@@ -228,6 +230,7 @@ export function backfillCoursePeriodIdsFromTemplate(
   const sortedByOrder = [...periodTemplate].sort((a, b) => a.order - b.order)
   const warnings: string[] = []
   const next = courses.map((c) => {
+    if (c.timeMode === 'custom') return c
     if (c.periodIds && c.periodIds.length > 0) return c
     const sessions = getCourseTimeSessions(c)
     const ids: string[] = []
@@ -335,6 +338,12 @@ export function getCourseTimeSessions(
   c: ScheduleCourse,
   periodTemplate?: SchedulePeriodTemplateItem[],
 ): ScheduleTimeSession[] {
+  if (c.timeMode === 'custom') {
+    if (c.timeSessions && c.timeSessions.length > 0) {
+      return c.timeSessions
+    }
+    return [{ startTime: c.startTime, endTime: c.endTime }]
+  }
   if (periodTemplate && c.periodIds && c.periodIds.length > 0) {
     const byId = new Map(periodTemplate.map((p) => [p.id, p]))
     const picked = c.periodIds
