@@ -5,8 +5,11 @@ import { addDays, format, startOfWeek } from 'date-fns'
 import type { ScheduleOccurrence, SchedulePeriodTemplateItem } from '@/lib/schedule-courses'
 import { cn } from '@/lib/utils'
 
-const ROW_PX = 24
-const PX_PER_MINUTE = ROW_PX / 15
+/** Vertical scale: pixels per 15 minutes in the grid body (lower = shorter timetable). */
+const GRID_ROW_PX = 16
+const PX_PER_MINUTE = GRID_ROW_PX / 15
+/** Sticky day header height (two lines); decoupled from grid density. */
+const HEADER_BAND_PX = 30
 const DEFAULT_START_MIN = 8 * 60
 const DEFAULT_END_MIN = 22 * 60
 const AXIS_STEP_MIN = 30
@@ -144,22 +147,21 @@ export function WeekTimetableGrid({
   return (
     <div
       className={cn(
-        'rounded-xl border border-border/70 bg-card shadow-sm overflow-x-auto',
+        'rounded-lg border border-border/70 bg-card shadow-sm overflow-x-auto',
         className,
       )}
     >
-      <div className="min-w-[680px] flex text-[11px]">
+      <div className="min-w-[600px] flex text-[11px]">
         <div
-          className="shrink-0 w-12 border-r border-border/50 bg-muted/20 text-muted-foreground"
-          style={{ paddingTop: ROW_PX }}
+          className="shrink-0 w-10 border-r border-border/50 bg-muted/20 text-muted-foreground"
+          style={{ paddingTop: HEADER_BAND_PX }}
         >
           {timeLabels.map(({ m, text }, i) => (
             <div
               key={`${m}-${i}`}
-              className="text-[10px] tabular-nums pr-1.5 text-right border-t border-border/40 text-muted-foreground/90"
+              className="flex items-start justify-end border-t border-border/40 pt-0.5 pr-1 text-[9px] tabular-nums text-muted-foreground/90"
               style={{
                 height: AXIS_STEP_MIN * PX_PER_MINUTE,
-                lineHeight: `${ROW_PX}px`,
               }}
             >
               {text}
@@ -181,17 +183,17 @@ export function WeekTimetableGrid({
                     ? 'bg-primary/[0.05] ring-1 ring-inset ring-primary/15'
                     : 'bg-background/40',
                 )}
-                style={{ minHeight: totalHeight + ROW_PX }}
+                style={{ minHeight: totalHeight + HEADER_BAND_PX }}
               >
                 <div
                   className={cn(
-                    'sticky top-0 z-20 border-b border-border/50 py-1 text-center font-medium text-foreground',
+                    'sticky top-0 z-20 flex flex-col items-center justify-center border-b border-border/50 py-0.5 text-center font-medium leading-tight text-foreground',
                     isToday ? 'bg-muted/50' : 'bg-muted/30',
                   )}
-                  style={{ height: ROW_PX }}
+                  style={{ height: HEADER_BAND_PX }}
                 >
-                  <div className="text-[11px] leading-tight">{WEEK_LABELS[col]}</div>
-                  <div className="text-[10px] font-normal tabular-nums text-muted-foreground">
+                  <div className="text-[10px]">{WEEK_LABELS[col]}</div>
+                  <div className="text-[9px] font-normal tabular-nums text-muted-foreground">
                     {format(day, 'M/d')}
                   </div>
                 </div>
@@ -221,7 +223,7 @@ export function WeekTimetableGrid({
                     const sm = minutesFromMidnight(o.start)
                     const em = minutesFromMidnight(o.end)
                     const top = (sm - globalStart) * PX_PER_MINUTE
-                    const h = Math.max((em - sm) * PX_PER_MINUTE, ROW_PX * 0.75)
+                    const h = Math.max((em - sm) * PX_PER_MINUTE, GRID_ROW_PX * 0.85)
                     const lane = laneByKey.get(occurrenceLayoutKey(o)) ?? 0
                     const laneW = 100 / maxLanes
                     const gapPx = 2
@@ -233,7 +235,7 @@ export function WeekTimetableGrid({
                     return (
                       <div
                         key={`${o.courseId}-${o.start.toISOString()}-${idx}`}
-                        className="absolute rounded-md border border-border/45 border-l-2 border-l-primary bg-primary/[0.08] px-1.5 py-0.5 text-[11px] leading-snug text-foreground shadow-sm overflow-hidden z-10 box-border"
+                        className="absolute rounded border border-border/45 border-l-2 border-l-primary bg-primary/[0.08] px-1 py-px text-[10px] leading-tight text-foreground shadow-sm overflow-hidden z-10 box-border"
                         style={{
                           top,
                           height: h,
@@ -250,7 +252,7 @@ export function WeekTimetableGrid({
                             </span>
                           ) : null}
                         </div>
-                        <div className="tabular-nums text-[10px] text-muted-foreground">
+                        <div className="tabular-nums text-[9px] text-muted-foreground">
                           {format(o.start, 'HH:mm')}–{format(o.end, 'HH:mm')}
                         </div>
                       </div>

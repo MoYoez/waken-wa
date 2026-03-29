@@ -474,7 +474,7 @@ export function ScheduleManager() {
   }
 
   return (
-    <div className="rounded-xl border border-border/80 bg-card p-5 sm:p-6 shadow-sm space-y-5 sm:space-y-6">
+    <div className="rounded-xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm space-y-4 sm:space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold text-foreground flex items-center gap-2">
@@ -512,7 +512,7 @@ export function ScheduleManager() {
         </div>
       ) : null}
 
-      <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
+      <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3">
         <h4 className="text-sm font-medium text-foreground">主页展示</h4>
         <p className="text-xs text-muted-foreground">
           开启后，访客在自己本地时间的上课时段内，会在首页个人资料右侧看到「正在上课」卡片（仍须点击保存写入配置）。
@@ -577,11 +577,11 @@ export function ScheduleManager() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-3">
+      <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3 overflow-x-hidden min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="text-sm font-medium text-foreground">固定节次模板（全站共用）</h4>
+          <h4 className="text-sm font-medium text-foreground min-w-0">固定节次模板（全站共用）</h4>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground text-pretty leading-relaxed">
           课程只选择节次，不再手填具体时间。修改模板后，已有课程会自动按新节次时间显示。同一时段内拖动左侧手柄调整节次顺序。
         </p>
         {compatWarnings.length > 0 ? (
@@ -590,19 +590,20 @@ export function ScheduleManager() {
             {compatWarnings.length > 1 ? ` 等 ${compatWarnings.length} 条` : ''}
           </div>
         ) : null}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {(['morning', 'afternoon', 'evening'] as const).map((part) => {
             const rows = [...periodTemplate]
               .filter((p) => p.part === part)
               .sort((a, b) => a.order - b.order)
             return (
-              <div key={part} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>{PERIOD_PART_LABELS[part]}</Label>
+              <div key={part} className="space-y-2 min-w-0">
+                <div className="flex flex-col gap-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
+                  <Label className="shrink-0 text-sm font-medium">{PERIOD_PART_LABELS[part]}</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="w-full shrink-0 min-[480px]:w-auto"
                     onClick={() => addPeriodTemplateItem(part)}
                   >
                     新增节次
@@ -625,26 +626,26 @@ export function ScheduleManager() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex items-center gap-0.5 rounded-full border border-border/60 bg-muted/25 p-0.5 shadow-sm">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 rounded-full"
+            className="h-7 w-7 shrink-0 rounded-full"
             onClick={() => setWeekRef((w) => addWeeks(w, -1))}
             aria-label="上一周"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="text-xs sm:text-sm tabular-nums min-w-[168px] sm:min-w-[200px] text-center text-foreground/90 px-1">
+          <div className="text-xs tabular-nums min-w-[150px] sm:min-w-[180px] text-center text-foreground/90 px-1">
             {format(startOfWeek(weekRef, { weekStartsOn: 1 }), 'yyyy-MM-dd')} 起
           </div>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 rounded-full"
+            className="h-7 w-7 shrink-0 rounded-full"
             onClick={() => setWeekRef((w) => addWeeks(w, 1))}
             aria-label="下一周"
           >
@@ -654,7 +655,7 @@ export function ScheduleManager() {
             type="button"
             variant="secondary"
             size="sm"
-            className="h-8 rounded-full px-3 text-xs"
+            className="h-7 rounded-full px-2.5 text-xs"
             onClick={() => setWeekRef(startOfWeek(new Date(), { weekStartsOn: 1 }))}
           >
             本周
