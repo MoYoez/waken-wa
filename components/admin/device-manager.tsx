@@ -2,6 +2,7 @@
 
 import { Copy, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -33,6 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { toastSwitchLabel } from '@/lib/admin-switch-toast'
 import { cn } from '@/lib/utils'
 
 interface DeviceItem {
@@ -146,7 +148,6 @@ export function DeviceManager({
   const [newName, setNewName] = useState('')
   const [newTokenId, setNewTokenId] = useState('')
   const [newHashKey, setNewHashKey] = useState('')
-  const [message, setMessage] = useState('')
   const [reviewDevice, setReviewDevice] = useState<DeviceItem | null>(null)
   const highlightHandledRef = useRef(false)
 
@@ -173,8 +174,10 @@ export function DeviceManager({
     }
   }, [])
 
-  const fetchDevices = useCallback(async () => {
-    setLoading(true)
+  /** When `silent`, skip the list loading overlay so controlled Switches keep mounting and CSS transitions run. */
+  const fetchDevices = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true
+    if (!silent) setLoading(true)
     try {
       const params = new URLSearchParams({
         limit: String(DEVICE_LIST_PAGE_SIZE),
@@ -192,7 +195,7 @@ export function DeviceManager({
     } catch {
       // ignore
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [page, q, status])
 
@@ -215,7 +218,6 @@ export function DeviceManager({
   const createDevice = async () => {
     if (!newName.trim()) return
     setCreating(true)
-    setMessage('')
     try {
       const apiTokenId = newTokenId ? Number(newTokenId) : undefined
       const body: Record<string, unknown> = {
@@ -232,49 +234,101 @@ export function DeviceManager({
       })
       const data = await res.json()
       if (!res.ok || !data?.success) {
-        setMessage(data?.error || '创建设备失败')
+        toast.error(data?.error || '创建设备失败')
         return
       }
       setNewName('')
       setNewTokenId('')
       setNewHashKey('')
-      setMessage('设备已创建')
+      toast.success('设备已创建')
       setPage(0)
       await fetchDevices()
     } catch {
-      setMessage('网络错误')
+      toast.error('网络错误')
     } finally {
       setCreating(false)
     }
   }
 
   const updateStatus = async (id: number, nextStatus: 'active' | 'pending' | 'revoked') => {
-    await fetch('/api/admin/devices', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status: nextStatus }),
-    })
-    await fetchDevices()
-    setReviewDevice((d) => (d?.id === id ? null : d))
+    try {
+      const res = await fetch('/api/admin/devices', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: nextStatus }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
+      if (!res.ok || !data?.success) {
+        toast.error(typeof data?.error === 'string' ? data.error : '更新失败')
+        return
+      }
+      await fetchDevices({ silent: true })
+      setReviewDevice((d) => (d?.id === id ? null : d))
+      toast.success(`设备状态已更新为「${DEVICE_STATUS_LABEL[nextStatus]}」`)
+    } catch {
+      toast.error('网络错误')
+    }
   }
 
   const updateShowSteamNowPlaying = async (id: number, showSteamNowPlaying: boolean) => {
-    await fetch('/api/admin/devices', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, showSteamNowPlaying }),
-    })
-    await fetchDevices()
+    const prev = items.find((i) => i.id === id)
+    setItems((rows) =>
+      rows.map((i) => (i.id === id ? { ...i, showSteamNowPlaying } : i)),
+    )
+    try {
+      const res = await fetch('/api/admin/devices', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, showSteamNowPlaying }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
+      if (!res.ok || !data?.success) {
+        if (prev) {
+          setItems((rows) =>
+            rows.map((i) =>
+              i.id === id ? { ...i, showSteamNowPlaying: prev.showSteamNowPlaying } : i,
+            ),
+          )
+        }
+        toast.error(typeof data?.error === 'string' ? data.error : '更新失败')
+        return
+      }
+      await fetchDevices({ silent: true })
+      toastSwitchLabel('状态卡片显示 Steam 正在游玩', showSteamNowPlaying)
+    } catch {
+      if (prev) {
+        setItems((rows) =>
+          rows.map((i) =>
+            i.id === id ? { ...i, showSteamNowPlaying: prev.showSteamNowPlaying } : i,
+          ),
+        )
+      }
+      toast.error('网络错误')
+    }
   }
 
   const removeDevice = async (id: number) => {
-    await fetch(`/api/admin/devices?id=${id}`, { method: 'DELETE' })
-    await fetchDevices()
+    try {
+      const res = await fetch(`/api/admin/devices?id=${id}`, { method: 'DELETE' })
+      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
+      if (!res.ok || !data?.success) {
+        toast.error(typeof data?.error === 'string' ? data.error : '删除失败')
+        return
+      }
+      await fetchDevices({ silent: true })
+      toast.success('设备已删除')
+    } catch {
+      toast.error('网络错误')
+    }
   }
 
   const copyHash = async (hash: string) => {
-    await navigator.clipboard.writeText(hash)
-    setMessage('设备身份牌已复制')
+    try {
+      await navigator.clipboard.writeText(hash)
+      toast.success('设备身份牌已复制')
+    } catch {
+      toast.error('复制失败，请检查浏览器权限')
+    }
   }
 
   useEffect(() => {
@@ -288,7 +342,7 @@ export function DeviceManager({
       if (match.status === 'pending') {
         setReviewDevice(match)
       } else {
-        setMessage('该设备已审核')
+        toast.info('该设备已审核')
       }
       return
     }
@@ -296,7 +350,7 @@ export function DeviceManager({
     if (q.trim() !== h) return
 
     highlightHandledRef.current = true
-    setMessage('未找到该设备身份牌对应的设备')
+    toast.warning('未找到该设备身份牌对应的设备')
   }, [highlightHashKey, loading, items, q])
 
   useEffect(() => {
@@ -368,7 +422,6 @@ export function DeviceManager({
             刷新
           </Button>
         </div>
-        {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
       </div>
 
       <div className="rounded-xl border bg-card p-4 sm:p-6 space-y-4">

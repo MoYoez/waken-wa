@@ -2,6 +2,7 @@
 
 import { Shield, Trash2, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +11,6 @@ import type { AdminUserRow } from '@/types/admin'
 
 export function AccountSettings() {
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState<string>('')
   const [admins, setAdmins] = useState<AdminUserRow[]>([])
   const [newAdminUsername, setNewAdminUsername] = useState('')
   const [newAdminPassword, setNewAdminPassword] = useState('')
@@ -36,9 +36,8 @@ export function AccountSettings() {
   }, [])
 
   const createAdmin = async () => {
-    setMessage('')
     if (!newAdminUsername.trim() || !newAdminPassword.trim()) {
-      setMessage('用户名和密码不能为空')
+      toast.error('用户名和密码不能为空')
       return
     }
     setCreatingAdmin(true)
@@ -53,15 +52,15 @@ export function AccountSettings() {
       })
       const data = await res.json()
       if (!res.ok || !data?.success) {
-        setMessage(data?.error || '创建管理员失败')
+        toast.error(typeof data?.error === 'string' ? data.error : '创建管理员失败')
         return
       }
       setNewAdminUsername('')
       setNewAdminPassword('')
       setAdmins((prev) => [data.data, ...prev])
-      setMessage('管理员创建成功')
+      toast.success('管理员创建成功')
     } catch {
-      setMessage('网络异常，请重试')
+      toast.error('网络异常，请重试')
     } finally {
       setCreatingAdmin(false)
     }
@@ -69,40 +68,38 @@ export function AccountSettings() {
 
   const deleteAdmin = async (id: number) => {
     if (admins.length <= 1) {
-      setMessage('至少需要保留一个管理员账户')
+      toast.error('至少需要保留一个管理员账户')
       return
     }
     if (!confirm('确定删除该管理员？此操作不可恢复。')) return
     setDeletingId(id)
-    setMessage('')
     try {
       const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok || !data?.success) {
-        setMessage(data?.error || '删除失败')
+        toast.error(typeof data?.error === 'string' ? data.error : '删除失败')
         return
       }
       setAdmins((prev) => prev.filter((u) => u.id !== id))
-      setMessage('管理员已删除')
+      toast.success('管理员已删除')
     } catch {
-      setMessage('网络异常，请重试')
+      toast.error('网络异常，请重试')
     } finally {
       setDeletingId(null)
     }
   }
 
   const changePassword = async () => {
-    setMessage('')
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setMessage('请填写所有密码字段')
+      toast.error('请填写所有密码字段')
       return
     }
     if (newPassword !== confirmPassword) {
-      setMessage('新密码与确认密码不一致')
+      toast.error('新密码与确认密码不一致')
       return
     }
     if (newPassword.length < 6) {
-      setMessage('新密码长度至少 6 位')
+      toast.error('新密码长度至少 6 位')
       return
     }
     setChangingPassword(true)
@@ -117,15 +114,15 @@ export function AccountSettings() {
       })
       const data = await res.json()
       if (!res.ok || !data?.success) {
-        setMessage(data?.error || '密码修改失败')
+        toast.error(typeof data?.error === 'string' ? data.error : '密码修改失败')
         return
       }
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-      setMessage('密码修改成功')
+      toast.success('密码修改成功')
     } catch {
-      setMessage('网络异常，请重试')
+      toast.error('网络异常，请重试')
     } finally {
       setChangingPassword(false)
     }
@@ -245,12 +242,6 @@ export function AccountSettings() {
           </div>
         </div>
       </div>
-
-      {message && (
-        <p className={`text-sm ${message.includes('成功') ? 'text-green-600' : 'text-destructive'}`}>
-          {message}
-        </p>
-      )}
     </div>
   )
 }

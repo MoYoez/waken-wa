@@ -5,6 +5,7 @@ import { zhCN } from 'date-fns/locale'
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { MarkdownContent } from '@/components/admin/markdown-content'
@@ -26,6 +27,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { toastSwitchLabel } from '@/lib/admin-switch-toast'
 
 interface InspirationEntry {
   id: number
@@ -54,7 +56,6 @@ export function InspirationManager() {
   const [content, setContent] = useState('')
   const [imageDataUrl, setImageDataUrl] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
-  const [message, setMessage] = useState<string>('')
   const [attachCurrentStatus, setAttachCurrentStatus] = useState(false)
   const [bodyImageBusy, setBodyImageBusy] = useState(false)
 
@@ -108,7 +109,6 @@ export function InspirationManager() {
 
   const openCropForFile = (file: File | undefined, target: 'cover' | 'body') => {
     if (!file) return
-    setMessage('')
     setCropTarget(target)
     if (cropSourceUrl) URL.revokeObjectURL(cropSourceUrl)
     const objectUrl = URL.createObjectURL(file)
@@ -119,7 +119,6 @@ export function InspirationManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-    setMessage('')
 
     try {
       const res = await fetch('/api/inspiration/entries', {
@@ -135,7 +134,7 @@ export function InspirationManager() {
 
       const data = await res.json()
       if (!res.ok || !data?.success) {
-        setMessage(data?.error || '提交失败')
+        toast.error(typeof data?.error === 'string' ? data.error : '提交失败')
         return
       }
 
@@ -143,11 +142,11 @@ export function InspirationManager() {
       setContent('')
       setImageDataUrl('')
       setAttachCurrentStatus(false)
-      setMessage('提交成功')
+      toast.success('灵感已提交')
       setPage(0)
       setTimeout(() => void fetchEntries(), 0)
     } catch {
-      setMessage('网络错误，请重试')
+      toast.error('网络错误，请重试')
     } finally {
       setSubmitting(false)
     }
@@ -155,10 +154,16 @@ export function InspirationManager() {
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`/api/inspiration/entries?id=${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/inspiration/entries?id=${id}`, { method: 'DELETE' })
+      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
+      if (!res.ok || !data?.success) {
+        toast.error(typeof data?.error === 'string' ? data.error : '删除失败')
+        return
+      }
+      toast.success('灵感已删除')
       setTimeout(() => void fetchEntries(), 0)
     } catch {
-      // ignore
+      toast.error('网络错误，删除失败')
     }
   }
 
@@ -209,7 +214,11 @@ export function InspirationManager() {
                 id="insp-attach-status"
                 type="checkbox"
                 checked={attachCurrentStatus}
-                onChange={(e) => setAttachCurrentStatus(e.target.checked)}
+                onChange={(e) => {
+                  const on = e.target.checked
+                  setAttachCurrentStatus(on)
+                  toastSwitchLabel('附上提交时首页「当前」状态快照', on)
+                }}
                 className="rounded border-input"
               />
               <Label htmlFor="insp-attach-status" className="font-normal text-sm cursor-pointer">
@@ -292,8 +301,6 @@ export function InspirationManager() {
               </div>
             ) : null}
 
-            {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
-
             <div className="flex items-center gap-3 flex-wrap">
               <Button type="submit" disabled={submitting || !content.trim()}>
                 {submitting ? (
@@ -314,7 +321,6 @@ export function InspirationManager() {
                   setContent('')
                   setImageDataUrl('')
                   setAttachCurrentStatus(false)
-                  setMessage('')
                 }}
               >
                 清空
@@ -347,7 +353,6 @@ export function InspirationManager() {
           }
           void (async () => {
             setBodyImageBusy(true)
-            setMessage('')
             try {
               const res = await fetch('/api/inspiration/assets', {
                 method: 'POST',
@@ -357,7 +362,7 @@ export function InspirationManager() {
               })
               const data = await res.json().catch(() => ({}))
               if (!res.ok || !data?.success || !data?.data?.url) {
-                setMessage(typeof data?.error === 'string' ? data.error : '正文配图上传失败')
+                toast.error(typeof data?.error === 'string' ? data.error : '正文配图上传失败')
                 return
               }
               const url = String(data.data.url)
@@ -365,9 +370,9 @@ export function InspirationManager() {
                 const line = c.trim().length > 0 ? '\n\n' : ''
                 return `${c}${line}![](${url})`
               })
-              setMessage('正文配图已插入')
+              toast.success('正文配图已插入')
             } catch {
-              setMessage('正文配图上传失败')
+              toast.error('正文配图上传失败')
             } finally {
               setBodyImageBusy(false)
             }

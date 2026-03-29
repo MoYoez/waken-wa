@@ -161,6 +161,8 @@
   /* 3D tilt (GlobalMouseTilt) expands painted bounds; clip horizontal overflow on the scroll viewport */
   html {
     overflow-x: hidden;
+    /* Reserve scrollbar gutter so opening popovers/selects does not shift layout (e.g. admin settings). */
+    scrollbar-gutter: stable;
   }
   body {
     @apply bg-background text-foreground;

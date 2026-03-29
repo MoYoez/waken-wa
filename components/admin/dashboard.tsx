@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -51,6 +52,7 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
+    toast.success('已登出')
     router.push('/admin/login')
     router.refresh()
   }

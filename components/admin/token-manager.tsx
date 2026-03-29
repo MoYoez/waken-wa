@@ -5,6 +5,7 @@ import { zhCN } from 'date-fns/locale'
 import { Check, Copy, Plus, QrCode, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -70,8 +71,10 @@ export function TokenManager() {
     if (page > maxPage) setPage(maxPage)
   }, [loading, total, page])
 
-  const fetchTokens = useCallback(async () => {
-    setLoading(true)
+  /** When `silent`, skip the list loading overlay so controlled Switches keep mounting and CSS transitions run. */
+  const fetchTokens = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true
+    if (!silent) setLoading(true)
     try {
       const params = new URLSearchParams({
         limit: String(TOKEN_LIST_PAGE_SIZE),
@@ -86,7 +89,7 @@ export function TokenManager() {
     } catch {
       // ignore
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [page])
 
@@ -96,7 +99,7 @@ export function TokenManager() {
 
   const handleCreate = async () => {
     if (!newTokenName.trim()) return
-    
+
     setCreating(true)
     try {
       const res = await fetch('/api/admin/tokens', {
@@ -104,48 +107,81 @@ export function TokenManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newTokenName }),
       })
-      const data = await res.json()
-      
-      if (data.success) {
-        setNewToken(data.data.token)
-        setNewTokenBundle(data.tokenBundleBase64 || null)
-        setNewEndpoint(data.endpoint || null)
-        setPage(0)
-        setListTick((t) => t + 1)
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean
+        error?: string
+        data?: { token: string }
+        tokenBundleBase64?: string | null
+        endpoint?: string | null
       }
+
+      if (!res.ok || !data?.success || !data.data?.token) {
+        toast.error(typeof data?.error === 'string' ? data.error : '创建失败')
+        return
+      }
+      setNewToken(data.data.token)
+      setNewTokenBundle(data.tokenBundleBase64 || null)
+      setNewEndpoint(data.endpoint || null)
+      setPage(0)
+      setListTick((t) => t + 1)
+      toast.success('Token 已创建')
     } catch {
-      // 忽略
+      toast.error('网络错误')
     } finally {
       setCreating(false)
     }
   }
 
   const handleToggle = async (id: number, is_active: boolean) => {
+    const prev = tokens.find((t) => t.id === id)
+    if (prev) {
+      setTokens((rows) => rows.map((t) => (t.id === id ? { ...t, isActive: is_active } : t)))
+    }
     try {
-      await fetch('/api/admin/tokens', {
+      const res = await fetch('/api/admin/tokens', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, is_active }),
       })
-      setListTick((t) => t + 1)
+      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
+      if (!res.ok || !data?.success) {
+        if (prev) {
+          setTokens((rows) => rows.map((t) => (t.id === id ? { ...t, isActive: prev.isActive } : t)))
+        }
+        toast.error(typeof data?.error === 'string' ? data.error : '更新失败')
+        return
+      }
+      await fetchTokens({ silent: true })
+      toast.success(is_active ? 'Token 已启用' : 'Token 已禁用', { duration: 2200 })
     } catch {
-      // ignore
+      if (prev) {
+        setTokens((rows) => rows.map((t) => (t.id === id ? { ...t, isActive: prev.isActive } : t)))
+      }
+      toast.error('网络错误')
     }
   }
 
   const handleDelete = async (id: number) => {
     try {
-      await fetch(`/api/admin/tokens?id=${id}`, { method: 'DELETE' })
-      setListTick((t) => t + 1)
+      const res = await fetch(`/api/admin/tokens?id=${id}`, { method: 'DELETE' })
+      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
+      if (!res.ok || !data?.success) {
+        toast.error(typeof data?.error === 'string' ? data.error : '删除失败')
+        return
+      }
+      await fetchTokens({ silent: true })
+      toast.success('Token 已删除')
     } catch {
-      // ignore
+      toast.error('网络错误')
     }
   }
 
   const copyToClipboard = async (text: string, target: string) => {
     try {
       await navigator.clipboard.writeText(text)
+      toast.success('已复制到剪贴板')
     } catch {
+      toast.error('复制失败，请检查浏览器权限')
       return
     }
     if (copyFeedbackTimerRef.current) clearTimeout(copyFeedbackTimerRef.current)
@@ -191,7 +227,7 @@ export function TokenManager() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4" />
               创建 Token
             </Button>
           </DialogTrigger>
@@ -260,7 +296,7 @@ export function TokenManager() {
                           setQrDialogOpen(true)
                         }}
                       >
-                        <QrCode className="h-4 w-4 mr-1" />
+                        <QrCode className="h-4 w-4" />
                         显示接入二维码
                       </Button>
                     </div>
@@ -490,9 +526,9 @@ export function TokenManager() {
                 onClick={() => void copyToClipboard(qrEncoded, 'qr-encoded')}
               >
                 {copiedTarget === 'qr-encoded' ? (
-                  <Check className="h-4 w-4 mr-1" />
+                  <Check className="h-4 w-4" />
                 ) : (
-                  <Copy className="h-4 w-4 mr-1" />
+                  <Copy className="h-4 w-4" />
                 )}
                 {copiedTarget === 'qr-encoded' ? '已复制' : '复制接入配置'}
               </Button>

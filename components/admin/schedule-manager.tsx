@@ -11,6 +11,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import { SortablePeriodTemplatePart } from '@/components/admin/sortable-period-template-part'
 import { WeekTimetableGrid } from '@/components/admin/week-timetable-grid'
@@ -36,6 +37,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { buildAdminSettingsPatchBody } from '@/lib/admin-settings-patch-body'
+import { toastSwitchLabel } from '@/lib/admin-switch-toast'
 import {
   backfillCoursePeriodIdsFromTemplate,
   defaultSchedulePeriodTemplate,
@@ -233,15 +235,14 @@ export function ScheduleManager() {
 
   const save = async () => {
     if (!serverData) {
-      setMessage('尚未加载配置')
+      toast.error('尚未加载配置')
       return
     }
     setSaving(true)
-    setMessage('')
     try {
       const parsedTemplate = parseSchedulePeriodTemplateJson(periodTemplate)
       if (!parsedTemplate.ok) {
-        setMessage(parsedTemplate.error)
+        toast.error(parsedTemplate.error)
         setSaving(false)
         return
       }
@@ -250,7 +251,7 @@ export function ScheduleManager() {
         parsedTemplate.data,
       )
       if (!periodValidation.ok) {
-        setMessage(periodValidation.error)
+        toast.error(periodValidation.error)
         setSaving(false)
         return
       }
@@ -273,10 +274,10 @@ export function ScheduleManager() {
       })
       const data = await res.json()
       if (!res.ok || !data?.success) {
-        setMessage(data?.error || '保存失败')
+        toast.error(typeof data?.error === 'string' ? data.error : '保存失败')
         return
       }
-      setMessage('已保存')
+      toast.success('课表与主页展示已保存')
       const saved = data.data as Record<string, unknown>
       setServerData(saved)
       const tpl = resolveSchedulePeriodTemplate(saved.schedulePeriodTemplate)
@@ -288,7 +289,7 @@ export function ScheduleManager() {
       setCourses(backfilled.courses)
       setCompatWarnings(backfilled.warnings)
     } catch {
-      setMessage('网络异常')
+      toast.error('网络异常')
     } finally {
       setSaving(false)
     }
@@ -524,7 +525,10 @@ export function ScheduleManager() {
           <Switch
             id="sched-in-class"
             checked={inClassOnHome}
-            onCheckedChange={setInClassOnHome}
+            onCheckedChange={(v) => {
+              setInClassOnHome(v)
+              toastSwitchLabel('上课时间在主页显示「正在上课」', v, { remindSave: true })
+            }}
           />
         </div>
         <div className="flex items-center justify-between gap-3">
@@ -534,7 +538,10 @@ export function ScheduleManager() {
           <Switch
             id="sched-home-next"
             checked={homeShowNextUpcoming}
-            onCheckedChange={setHomeShowNextUpcoming}
+            onCheckedChange={(v) => {
+              setHomeShowNextUpcoming(v)
+              toastSwitchLabel('在课间显示「下一节」课程预告', v, { remindSave: true })
+            }}
             disabled={!inClassOnHome}
           />
         </div>
@@ -545,7 +552,10 @@ export function ScheduleManager() {
           <Switch
             id="sched-home-loc"
             checked={homeShowLocation}
-            onCheckedChange={setHomeShowLocation}
+            onCheckedChange={(v) => {
+              setHomeShowLocation(v)
+              toastSwitchLabel('卡片中显示上课地点', v, { remindSave: true })
+            }}
             disabled={!inClassOnHome}
           />
         </div>
@@ -556,7 +566,10 @@ export function ScheduleManager() {
           <Switch
             id="sched-home-teacher"
             checked={homeShowTeacher}
-            onCheckedChange={setHomeShowTeacher}
+            onCheckedChange={(v) => {
+              setHomeShowTeacher(v)
+              toastSwitchLabel('卡片中显示任课教师', v, { remindSave: true })
+            }}
             disabled={!inClassOnHome}
           />
         </div>

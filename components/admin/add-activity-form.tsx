@@ -2,6 +2,7 @@
 
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,12 +22,10 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
   const [processTitle, setProcessTitle] = useState('')
   const [persistMinutes, setPersistMinutes] = useState('30')
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setMessage(null)
 
     try {
       const parsedPersist = Math.round(Number(persistMinutes))
@@ -53,16 +52,16 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
       const data = await res.json()
 
       if (data.success) {
-        setMessage({ type: 'success', text: '活动已添加' })
+        toast.success('活动已添加')
         setDevice('')
         setProcessName('')
         setProcessTitle('')
         onSuccess?.()
       } else {
-        setMessage({ type: 'error', text: data.error || '添加失败' })
+        toast.error(data.error || '添加失败')
       }
     } catch {
-      setMessage({ type: 'error', text: '网络错误' })
+      toast.error('网络错误')
     } finally {
       setLoading(false)
     }
@@ -118,12 +117,6 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
           无客户端上报时，超过该时间后活动会从首页「当前状态」自动结束（1–1440 分钟，与站点「进程无上报判定间隔」规则一致）。
         </p>
       </div>
-
-      {message && (
-        <p className={`text-sm ${message.type === 'success' ? 'text-emerald-500' : 'text-destructive'}`}>
-          {message.text}
-        </p>
-      )}
 
       <Button type="submit" disabled={loading}>
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

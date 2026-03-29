@@ -53,7 +53,8 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = 'popper',
+  /** Item-aligned keeps the menu width to the trigger and avoids popper side nudges that can look like drift. */
+  position = 'item-aligned',
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -75,6 +76,7 @@ function SelectContent({
             'p-1 space-y-0.5',
             position === 'popper' &&
               'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1',
+            position === 'item-aligned' && 'w-full min-w-[var(--radix-select-trigger-width)]',
           )}
         >
           {children}

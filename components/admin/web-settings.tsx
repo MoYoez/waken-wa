@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { Button } from '@/components/ui/button'
@@ -430,7 +431,6 @@ interface SiteConfig {
 export function WebSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState<string>('')
   const [blacklistInput, setBlacklistInput] = useState('')
   const [whitelistInput, setWhitelistInput] = useState('')
   const [nameOnlyListInput, setNameOnlyListInput] = useState('')
@@ -662,7 +662,6 @@ export function WebSettings() {
   }
 
   const save = async () => {
-    setMessage('')
     setSaving(true)
     try {
       const normalizeStringList = (items: string[]) => {
@@ -732,36 +731,33 @@ export function WebSettings() {
       })
       const data = await res.json()
       if (!res.ok || !data?.success) {
-        setMessage(data?.error || '保存失败')
+        toast.error(data?.error || '保存失败')
         return
       }
-      setMessage('保存成功，主页刷新后生效')
+      toast.success('保存成功，主页刷新后生效')
     } catch {
-      setMessage('网络异常，请重试')
+      toast.error('网络异常，请重试')
     } finally {
       setSaving(false)
     }
   }
 
   const copyExportConfig = async () => {
-    setMessage('')
     try {
       const res = await fetch('/api/admin/settings/export')
       const data = await res.json()
       if (!res.ok || !data?.success || !data?.data?.encoded) {
-        setMessage(data?.error || '导出失败')
+        window.alert(typeof data?.error === 'string' ? data.error : '导出失败')
         return
       }
 
       await navigator.clipboard.writeText(data.data.encoded)
-      setMessage('已复制 Base64 接入配置，可在其他设备解码后使用')
     } catch {
-      setMessage('复制失败，请重试')
+      window.alert('复制失败，请重试')
     }
   }
 
   const applyImportConfig = async () => {
-    setMessage('')
     let raw = ''
     try {
       raw = (await navigator.clipboard.readText()).trim()
@@ -772,12 +768,12 @@ export function WebSettings() {
       raw = (window.prompt('请粘贴 Base64 接入配置（与「一键复制接入配置」导出格式相同）') ?? '').trim()
     }
     if (!raw) {
-      setMessage('未获取到内容')
+      window.alert('未获取到内容')
       return
     }
     const parsed = parseExportPayload(raw)
     if (!parsed) {
-      setMessage('格式无效：请确认是本站「一键复制接入配置」导出的 Base64 全文')
+      window.alert('格式无效：请确认是本站「一键复制接入配置」导出的 Base64 全文')
       return
     }
     if (
@@ -800,7 +796,6 @@ export function WebSettings() {
     setBlacklistListPage(0)
     setWhitelistListPage(0)
     setNameOnlyListPage(0)
-    setMessage('已写入表单，请核对后点击「保存配置」。API Token 需在原站点单独管理或重新创建。')
   }
 
   const rulesTotal = form.appMessageRules.length
@@ -901,12 +896,13 @@ export function WebSettings() {
                   >
                     <Checkbox
                       checked={form.userNoteHitokotoCategories.includes(opt.id)}
-                      onCheckedChange={() => {
+                      onCheckedChange={(v) => {
+                        const checked = v === true
                         setForm((prev) => {
                           const cur = prev.userNoteHitokotoCategories
-                          const next = cur.includes(opt.id)
-                            ? cur.filter((x) => x !== opt.id)
-                            : [...cur, opt.id]
+                          const next = checked
+                            ? Array.from(new Set([...cur, opt.id]))
+                            : cur.filter((x) => x !== opt.id)
                           return { ...prev, userNoteHitokotoCategories: next }
                         })
                       }}
@@ -1214,7 +1210,7 @@ export function WebSettings() {
         </p>
         <Select
           value={form.displayTimezone}
-          onValueChange={(v) => patch('displayTimezone', v)}
+                onValueChange={(v) => patch('displayTimezone', v)}
         >
           <SelectTrigger id="display-timezone" className="w-full max-w-xs">
             <SelectValue placeholder="选择时区" />
@@ -1429,7 +1425,8 @@ export function WebSettings() {
                     checked={form.inspirationAllowedDeviceHashes.includes(d.generatedHashKey)}
                     onChange={(e) => {
                       const key = d.generatedHashKey
-                      const next = e.target.checked
+                      const checked = e.target.checked
+                      const next = checked
                         ? Array.from(new Set([...form.inspirationAllowedDeviceHashes, key]))
                         : form.inspirationAllowedDeviceHashes.filter((k) => k !== key)
                       patch('inspirationAllowedDeviceHashes', next)
@@ -1944,7 +1941,6 @@ export function WebSettings() {
         )}
       </div>
 
-      {message && <p className="text-sm text-muted-foreground">{message}</p>}
 
       <div className="flex flex-wrap gap-3">
         <Button onClick={save} disabled={saving}>
