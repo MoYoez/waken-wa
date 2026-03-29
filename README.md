@@ -97,7 +97,7 @@ chmod +x deploy-build-from-source.sh   # Unix 首次需要
 
 ### 2. Railway
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/fbsSzK?referralCode=GQhtvt&utm_medium=integration&utm_source=template&utm_campaign=generic)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/waken-wa)
 
 > RailWay 可能需要使用 Hobby 方案.
 
