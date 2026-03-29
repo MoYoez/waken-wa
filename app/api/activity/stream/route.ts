@@ -75,7 +75,9 @@ export async function GET() {
       const push = async () => {
         if (closed) return
         try {
-          const payload = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT)
+          const payload = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT, {
+            forPublicFeed: true,
+          })
           if (safeEnqueue(
             encoder.encode(
               toSseEvent('activity', { success: true, data: payload })

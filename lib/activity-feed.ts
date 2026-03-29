@@ -48,6 +48,32 @@ function asObject(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>
 }
 
+/** Drop `metadata.media` on feed items for public responses when site hides media (store unchanged). */
+function stripMediaFromFeedItem(item: ActivityFeedItem): ActivityFeedItem {
+  const meta = item.metadata
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return item
+  if (!Object.prototype.hasOwnProperty.call(meta, 'media')) return item
+  const { media: _omit, ...rest } = meta as Record<string, unknown>
+  return { ...item, metadata: rest }
+}
+
+function omitActivityMediaFromFeed(feed: ActivityFeedData): ActivityFeedData {
+  return {
+    ...feed,
+    activeStatuses: feed.activeStatuses.map(stripMediaFromFeedItem),
+    recentActivities: feed.recentActivities.map(stripMediaFromFeedItem),
+    recentTopApps: feed.recentTopApps.map(stripMediaFromFeedItem),
+  }
+}
+
+export type GetActivityFeedOptions = {
+  /**
+   * When true and site `hideActivityMedia` is enabled, strip `metadata.media` from all items.
+   * Public home (REST `?public=1`, SSE) should set this; admin session feed should omit it.
+   */
+  forPublicFeed?: boolean
+}
+
 function getPushModeFromMetadata(metadata: unknown): 'realtime' | 'active' {
   const meta = asObject(metadata)
   if (!meta) return 'realtime'
@@ -81,7 +107,10 @@ export async function getHistoryWindowMinutes(): Promise<number> {
   return parseHistoryWindowMinutes(config?.historyWindowMinutes)
 }
 
-export async function getActivityFeedData(limit = ACTIVITY_FEED_DEFAULT_LIMIT): Promise<ActivityFeedData> {
+export async function getActivityFeedData(
+  limit = ACTIVITY_FEED_DEFAULT_LIMIT,
+  options?: GetActivityFeedOptions,
+): Promise<ActivityFeedData> {
   const [config] = await db.select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1)
   const historyWindowMinutes = parseHistoryWindowMinutes(config?.historyWindowMinutes)
   const defaultStaleSeconds = parseProcessStaleSeconds(config?.processStaleSeconds)
@@ -209,7 +238,7 @@ export async function getActivityFeedData(limit = ACTIVITY_FEED_DEFAULT_LIMIT): 
     if (recentTopApps.length >= ACTIVITY_FEED_RECENT_TOP_APPS_MAX) break
   }
 
-  return {
+  const data = {
     activeStatuses,
     recentActivities: recentActivities as unknown as ActivityFeedItem[],
     historyWindowMinutes,
@@ -217,4 +246,10 @@ export async function getActivityFeedData(limit = ACTIVITY_FEED_DEFAULT_LIMIT): 
     recentTopApps,
     generatedAt: new Date().toISOString(),
   } as ActivityFeedData
+
+  const hideActivityMedia = config?.hideActivityMedia === true
+  if (options?.forPublicFeed && hideActivityMedia) {
+    return omitActivityMediaFromFeed(data)
+  }
+  return data
 }

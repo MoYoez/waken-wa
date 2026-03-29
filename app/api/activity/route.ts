@@ -48,7 +48,9 @@ export async function GET(request: NextRequest) {
           { status: 403 },
         )
       }
-      const feed = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT)
+      const feed = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT, {
+        forPublicFeed: true,
+      })
       return NextResponse.json({
         success: true,
         data: feed,
