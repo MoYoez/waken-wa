@@ -49,6 +49,19 @@ import {
   type ScheduleDayGrid,
 } from '@/lib/schedule-grid-by-weekday'
 import {
+  clampSiteConfigHistoryWindowMinutes,
+  clampSiteConfigProcessStaleSeconds,
+  SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
+  SITE_CONFIG_HISTORY_WINDOW_MAX_MINUTES,
+  SITE_CONFIG_HISTORY_WINDOW_MIN_MINUTES,
+  SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
+  SITE_CONFIG_PROCESS_STALE_MAX_SECONDS,
+  SITE_CONFIG_PROCESS_STALE_MIN_SECONDS,
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+  SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
+} from '@/lib/site-config-constants'
+import {
   parseThemeCustomSurface,
   THEME_CUSTOM_SURFACE_DEFAULTS,
 } from '@/lib/theme-custom-surface'
@@ -242,13 +255,13 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   if ('historyWindowMinutes' in web) {
     const hw = Number(web.historyWindowMinutes)
     if (Number.isFinite(hw)) {
-      patch.historyWindowMinutes = Math.min(Math.max(Math.round(hw), 10), 24 * 60)
+      patch.historyWindowMinutes = clampSiteConfigHistoryWindowMinutes(hw)
     }
   }
   if ('processStaleSeconds' in web) {
     const st = Number(web.processStaleSeconds)
     if (Number.isFinite(st)) {
-      patch.processStaleSeconds = Math.min(Math.max(Math.round(st), 30), 24 * 60 * 60)
+      patch.processStaleSeconds = clampSiteConfigProcessStaleSeconds(st)
     }
   }
   if ('appMessageRules' in web) patch.appMessageRules = normalizeRulesImport(web.appMessageRules)
@@ -288,7 +301,7 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
         .filter((item: string) => item.length > 0)
     }
   }
-  let scheduleImportSlot = 30
+  let scheduleImportSlot = SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES
   if ('scheduleSlotMinutes' in web) {
     const s = Number(web.scheduleSlotMinutes)
     if (isAllowedSlotMinutes(s)) {
@@ -333,7 +346,10 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
     typeof web.scheduleHomeAfterClassesLabel === 'string'
   ) {
     const t = web.scheduleHomeAfterClassesLabel.trim()
-    patch.scheduleHomeAfterClassesLabel = (t.length > 0 ? t : '正在摸鱼').slice(0, 40)
+    patch.scheduleHomeAfterClassesLabel = (t.length > 0 ? t : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT).slice(
+      0,
+      SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+    )
   }
   if ('globalMouseTiltEnabled' in web && typeof web.globalMouseTiltEnabled === 'boolean') {
     patch.globalMouseTiltEnabled = web.globalMouseTiltEnabled
@@ -433,8 +449,8 @@ export function WebSettings() {
     themePreset: 'basic',
     themeCustomSurface: emptyThemeCustomSurfaceForm(),
     customCss: '',
-    historyWindowMinutes: 120,
-    processStaleSeconds: 500,
+    historyWindowMinutes: SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
+    processStaleSeconds: SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
     appMessageRules: [],
     appMessageRulesShowProcessName: true,
     appFilterMode: 'blacklist',
@@ -452,16 +468,16 @@ export function WebSettings() {
     autoAcceptNewDevices: false,
     inspirationDeviceRestrictionEnabled: false,
     inspirationAllowedDeviceHashes: [],
-    scheduleSlotMinutes: 30,
+    scheduleSlotMinutes: SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
     schedulePeriodTemplate: resolveSchedulePeriodTemplate(null),
-    scheduleGridByWeekday: resolveScheduleGridByWeekday(null, 30),
+    scheduleGridByWeekday: resolveScheduleGridByWeekday(null, SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES),
     scheduleCourses: [],
     scheduleIcs: '',
     scheduleInClassOnHome: false,
     scheduleHomeShowLocation: false,
     scheduleHomeShowTeacher: false,
     scheduleHomeShowNextUpcoming: false,
-    scheduleHomeAfterClassesLabel: '正在摸鱼',
+    scheduleHomeAfterClassesLabel: SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
     globalMouseTiltEnabled: false,
     hideActivityMedia: false,
     displayTimezone: DEFAULT_TIMEZONE,
@@ -509,8 +525,12 @@ export function WebSettings() {
             themePreset: data.data.themePreset ?? 'basic',
             themeCustomSurface: themeCustomSurfaceFromApi(data.data.themeCustomSurface),
             customCss: data.data.customCss ?? '',
-            historyWindowMinutes: Number(data.data.historyWindowMinutes ?? 120),
-            processStaleSeconds: Number(data.data.processStaleSeconds ?? 500),
+            historyWindowMinutes: Number(
+              data.data.historyWindowMinutes ?? SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
+            ),
+            processStaleSeconds: Number(
+              data.data.processStaleSeconds ?? SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
+            ),
             appMessageRules: rules,
             appMessageRulesShowProcessName: data.data.appMessageRulesShowProcessName !== false,
             appFilterMode,
@@ -536,13 +556,13 @@ export function WebSettings() {
               : [],
             scheduleSlotMinutes: isAllowedSlotMinutes(Number(data.data.scheduleSlotMinutes))
               ? Number(data.data.scheduleSlotMinutes)
-              : 30,
+              : SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
             schedulePeriodTemplate: resolveSchedulePeriodTemplate(data.data.schedulePeriodTemplate),
             scheduleGridByWeekday: resolveScheduleGridByWeekday(
               data.data.scheduleGridByWeekday,
               isAllowedSlotMinutes(Number(data.data.scheduleSlotMinutes))
                 ? Number(data.data.scheduleSlotMinutes)
-                : 30,
+                : SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
             ),
             scheduleCourses: Array.isArray(data.data.scheduleCourses)
               ? (data.data.scheduleCourses as ScheduleCourse[])
@@ -555,8 +575,11 @@ export function WebSettings() {
             scheduleHomeAfterClassesLabel:
               typeof data.data.scheduleHomeAfterClassesLabel === 'string' &&
               data.data.scheduleHomeAfterClassesLabel.trim().length > 0
-                ? data.data.scheduleHomeAfterClassesLabel.trim().slice(0, 40)
-                : '正在摸鱼',
+                ? data.data.scheduleHomeAfterClassesLabel.trim().slice(
+                    0,
+                    SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+                  )
+                : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
             globalMouseTiltEnabled: data.data.globalMouseTiltEnabled === true,
             hideActivityMedia: data.data.hideActivityMedia === true,
             displayTimezone: normalizeTimezone(data.data.displayTimezone),
@@ -1280,23 +1303,34 @@ export function WebSettings() {
         <Label>历史窗口（分钟）</Label>
         <Input
           type="number"
-          min={10}
-          max={1440}
+          min={SITE_CONFIG_HISTORY_WINDOW_MIN_MINUTES}
+          max={SITE_CONFIG_HISTORY_WINDOW_MAX_MINUTES}
           value={form.historyWindowMinutes}
-          onChange={(e) => patch('historyWindowMinutes', Number(e.target.value || 120))}
+          onChange={(e) =>
+            patch(
+              'historyWindowMinutes',
+              Number(e.target.value || SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES),
+            )
+          }
         />
       </div>
       <div className="space-y-2">
         <Label>进程超时判定（秒）</Label>
         <Input
           type="number"
-          min={30}
-          max={86400}
+          min={SITE_CONFIG_PROCESS_STALE_MIN_SECONDS}
+          max={SITE_CONFIG_PROCESS_STALE_MAX_SECONDS}
           value={form.processStaleSeconds}
-          onChange={(e) => patch('processStaleSeconds', Number(e.target.value || 500))}
+          onChange={(e) =>
+            patch(
+              'processStaleSeconds',
+              Number(e.target.value || SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS),
+            )
+          }
         />
         <p className="text-xs text-muted-foreground">
-          超过该时长仍未收到该进程新活动时，将自动判定为已结束。默认 500 秒。
+          超过该时长仍未收到该进程新活动时，将自动判定为已结束。默认{' '}
+          {SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS} 秒。
         </p>
       </div>
 

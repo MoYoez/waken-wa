@@ -13,6 +13,12 @@ import {
   resolveSchedulePeriodTemplate,
 } from '@/lib/schedule-courses'
 import { resolveScheduleGridByWeekday } from '@/lib/schedule-grid-by-weekday'
+import {
+  SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+  SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
+} from '@/lib/site-config-constants'
 
 async function requireAdmin() {
   const session = await getSession()
@@ -84,7 +90,7 @@ export async function GET(request: Request) {
         themeCustomSurface: cfg.themeCustomSurface,
         customCss: cfg.customCss,
         historyWindowMinutes: cfg.historyWindowMinutes,
-        processStaleSeconds: cfg.processStaleSeconds ?? 500,
+        processStaleSeconds: cfg.processStaleSeconds ?? SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
         appMessageRules: cfg.appMessageRules,
         appMessageRulesShowProcessName: cfg.appMessageRulesShowProcessName !== false,
         appBlacklist: cfg.appBlacklist,
@@ -101,11 +107,11 @@ export async function GET(request: Request) {
           cfg.inspirationAllowedDeviceHashes === undefined
             ? null
             : cfg.inspirationAllowedDeviceHashes,
-        scheduleSlotMinutes: cfg.scheduleSlotMinutes ?? 30,
+        scheduleSlotMinutes: cfg.scheduleSlotMinutes ?? SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
         schedulePeriodTemplate,
         scheduleGridByWeekday: resolveScheduleGridByWeekday(
           cfg.scheduleGridByWeekday,
-          cfg.scheduleSlotMinutes ?? 30,
+          cfg.scheduleSlotMinutes ?? SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
         ),
         scheduleCourses,
         scheduleIcs: cfg.scheduleIcs ?? null,
@@ -116,8 +122,11 @@ export async function GET(request: Request) {
         scheduleHomeAfterClassesLabel:
           typeof cfg.scheduleHomeAfterClassesLabel === 'string' &&
           cfg.scheduleHomeAfterClassesLabel.trim().length > 0
-            ? cfg.scheduleHomeAfterClassesLabel.trim().slice(0, 40)
-            : '正在摸鱼',
+            ? cfg.scheduleHomeAfterClassesLabel.trim().slice(
+                0,
+                SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+              )
+            : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
         globalMouseTiltEnabled: cfg.globalMouseTiltEnabled === true,
         hideActivityMedia: cfg.hideActivityMedia === true,
       },

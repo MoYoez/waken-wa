@@ -6,13 +6,14 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  USER_ACTIVITY_PERSIST_MAX_MINUTES,
+  USER_ACTIVITY_PERSIST_MIN_MINUTES_UI,
+} from '@/lib/user-activity-persist'
 
 interface AddActivityFormProps {
   onSuccess?: () => void
 }
-
-const PERSIST_MIN_MINUTES = 1
-const PERSIST_MAX_MINUTES = 24 * 60
 
 export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
   const [device, setDevice] = useState('')
@@ -31,7 +32,10 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
       const parsedPersist = Math.round(Number(persistMinutes))
       const safePersist =
         Number.isFinite(parsedPersist) && parsedPersist > 0
-          ? Math.min(Math.max(parsedPersist, PERSIST_MIN_MINUTES), PERSIST_MAX_MINUTES)
+          ? Math.min(
+              Math.max(parsedPersist, USER_ACTIVITY_PERSIST_MIN_MINUTES_UI),
+              USER_ACTIVITY_PERSIST_MAX_MINUTES,
+            )
           : 30
 
       const res = await fetch('/api/admin/activity', {
@@ -105,8 +109,8 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
           id="persist"
           type="number"
           inputMode="numeric"
-          min={PERSIST_MIN_MINUTES}
-          max={PERSIST_MAX_MINUTES}
+          min={USER_ACTIVITY_PERSIST_MIN_MINUTES_UI}
+          max={USER_ACTIVITY_PERSIST_MAX_MINUTES}
           value={persistMinutes}
           onChange={(e) => setPersistMinutes(e.target.value)}
         />

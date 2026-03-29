@@ -8,6 +8,7 @@ import { db, isPostgresDb } from '@/lib/db'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import { adminUsers, siteConfig } from '@/lib/drizzle-schema'
 import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
+import { parseHistoryWindowMinutes, parseProcessStaleSeconds } from '@/lib/site-config-constants'
 import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 
@@ -68,14 +69,8 @@ export async function POST(request: NextRequest) {
     const normalizedThemePreset = String(themePreset ?? 'basic').trim() || 'basic'
     const normalizedThemeCustomSurface = parseThemeCustomSurface(themeCustomSurface ?? {})
     const normalizedCustomCss = normalizeCustomCss(customCss)
-    const parsedWindow = Number(historyWindowMinutes ?? 120)
-    const normalizedHistoryWindowMinutes = Number.isFinite(parsedWindow)
-      ? Math.min(Math.max(Math.round(parsedWindow), 10), 24 * 60)
-      : 120
-    const parsedStaleSeconds = Number(processStaleSeconds ?? 500)
-    const normalizedProcessStaleSeconds = Number.isFinite(parsedStaleSeconds)
-      ? Math.min(Math.max(Math.round(parsedStaleSeconds), 30), 24 * 60 * 60)
-      : 500
+    const normalizedHistoryWindowMinutes = parseHistoryWindowMinutes(historyWindowMinutes)
+    const normalizedProcessStaleSeconds = parseProcessStaleSeconds(processStaleSeconds)
     const normalizedAppMessageRules = Array.isArray(appMessageRules) ? appMessageRules : []
     const normalizedAppBlacklist = Array.isArray(appBlacklist)
       ? appBlacklist

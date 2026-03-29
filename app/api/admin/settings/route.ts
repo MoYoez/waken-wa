@@ -27,12 +27,16 @@ import {
   minIntervalFromGrid,
   normalizeScheduleGridByWeekday,
 } from '@/lib/schedule-grid-by-weekday'
+import {
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+  SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
+  parseHistoryWindowMinutes,
+  parseProcessStaleSeconds,
+} from '@/lib/site-config-constants'
 import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
-
-const SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX = 40
-const DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL = '正在摸鱼'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -108,14 +112,8 @@ export async function PATCH(request: NextRequest) {
           .map((item: unknown) => String(item ?? '').trim())
           .filter((item: string) => item.length > 0)
       : []
-    const parsedWindow = Number(body.historyWindowMinutes ?? 120)
-    const historyWindowMinutes = Number.isFinite(parsedWindow)
-      ? Math.min(Math.max(Math.round(parsedWindow), 10), 24 * 60)
-      : 120
-    const parsedStaleSeconds = Number(body.processStaleSeconds ?? 500)
-    const processStaleSeconds = Number.isFinite(parsedStaleSeconds)
-      ? Math.min(Math.max(Math.round(parsedStaleSeconds), 30), 24 * 60 * 60)
-      : 500
+    const historyWindowMinutes = parseHistoryWindowMinutes(body.historyWindowMinutes)
+    const processStaleSeconds = parseProcessStaleSeconds(body.processStaleSeconds)
 
     const [existing] = await db.select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1)
 
@@ -132,7 +130,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     let scheduleSlotMinutes =
-      typeof existing?.scheduleSlotMinutes === 'number' ? existing.scheduleSlotMinutes : 30
+      typeof existing?.scheduleSlotMinutes === 'number'
+        ? existing.scheduleSlotMinutes
+        : SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES
     const existingTemplateParsed = parseSchedulePeriodTemplateJson(
       existing?.schedulePeriodTemplate ?? null,
     )
@@ -235,12 +235,12 @@ export async function PATCH(request: NextRequest) {
       scheduleHomeShowNextUpcoming = Boolean(body.scheduleHomeShowNextUpcoming)
     }
 
-    let scheduleHomeAfterClassesLabel = DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL
+    let scheduleHomeAfterClassesLabel = SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT
     const existingLabel = existing?.scheduleHomeAfterClassesLabel
     if (typeof existingLabel === 'string' && existingLabel.trim().length > 0) {
       scheduleHomeAfterClassesLabel = existingLabel.trim().slice(
         0,
-        SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX,
+        SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
       )
     }
     if (
@@ -249,8 +249,8 @@ export async function PATCH(request: NextRequest) {
     ) {
       const raw = String(body.scheduleHomeAfterClassesLabel).trim()
       scheduleHomeAfterClassesLabel = (
-        raw.length > 0 ? raw : DEFAULT_SCHEDULE_HOME_AFTER_CLASSES_LABEL
-      ).slice(0, SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX)
+        raw.length > 0 ? raw : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT
+      ).slice(0, SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN)
     }
 
     let appMessageRulesShowProcessName = existing?.appMessageRulesShowProcessName !== false

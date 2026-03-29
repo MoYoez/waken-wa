@@ -2,6 +2,12 @@ import { and, eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import {
+  ACTIVITY_METADATA_MAX_JSON_LENGTH,
+  ACTIVITY_METADATA_MAX_KEYS,
+  DEVICE_BATTERY_PERCENT_MAX,
+  DEVICE_BATTERY_PERCENT_MIN,
+} from '@/lib/activity-api-constants'
+import {
   ADMIN_PERSIST_SECONDS_METADATA_KEY,
   redactGeneratedHashKeyForClient,
   upsertActivity,
@@ -10,22 +16,25 @@ import {
 } from '@/lib/activity-store'
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
+import {
+  GENERATED_HASH_KEY_MAX_LENGTH,
+  WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY,
+} from '@/lib/device-constants'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { devices, userActivities } from '@/lib/drizzle-schema'
+import { USER_ACTIVITY_PERSIST_MAX_SEC, USER_ACTIVITY_PERSIST_MIN_SEC } from '@/lib/user-activity-persist'
 
-// 强制动态渲染，禁用缓存
+// Force dynamic rendering; disable caching
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-// 检查管理员权限
 async function requireAdmin() {
   const session = await getSession()
   if (!session) return null
   return session
 }
 
-// POST - 手动添加活动（写入内存 activity-store，与公开上报一致）
+/** POST: admin manual activity (writes activity-store like public report). */
 export async function POST(request: NextRequest) {
   const session = await requireAdmin()
   if (!session) {
@@ -68,7 +77,10 @@ export async function POST(request: NextRequest) {
       delete metadata[USER_PERSIST_EXPIRES_AT_METADATA_KEY]
       delete metadata[USER_ACTIVITY_DB_SYNCED_METADATA_KEY]
       const metaKeys = Object.keys(metadata)
-      if (metaKeys.length > 50 || JSON.stringify(metadata).length > 10240) {
+      if (
+        metaKeys.length > ACTIVITY_METADATA_MAX_KEYS ||
+        JSON.stringify(metadata).length > ACTIVITY_METADATA_MAX_JSON_LENGTH
+      ) {
         return NextResponse.json(
           { success: false, error: 'metadata 数据过大' },
           { status: 400 },
@@ -76,7 +88,10 @@ export async function POST(request: NextRequest) {
       }
     }
     if (typeof batteryRaw === 'number' && Number.isFinite(batteryRaw)) {
-      const batteryLevel = Math.min(Math.max(Math.round(batteryRaw), 0), 100)
+      const batteryLevel = Math.min(
+        Math.max(Math.round(batteryRaw), DEVICE_BATTERY_PERCENT_MIN),
+        DEVICE_BATTERY_PERCENT_MAX,
+      )
       metadata = {
         ...(metadata || {}),
         deviceBatteryPercent: batteryLevel,
@@ -103,14 +118,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const STALE_MIN_SEC = 30
-    const STALE_MAX_SEC = 24 * 60 * 60
     let adminPersistSeconds: number | undefined
     if (persistMinutesRaw !== undefined && persistMinutesRaw !== null) {
       const mins = Number(persistMinutesRaw)
       if (Number.isFinite(mins) && mins > 0) {
         const sec = Math.round(mins * 60)
-        adminPersistSeconds = Math.min(Math.max(sec, STALE_MIN_SEC), STALE_MAX_SEC)
+        adminPersistSeconds = Math.min(
+          Math.max(sec, USER_ACTIVITY_PERSIST_MIN_SEC),
+          USER_ACTIVITY_PERSIST_MAX_SEC,
+        )
       }
     }
     let finalMetadata = metadata
@@ -136,7 +152,7 @@ export async function POST(request: NextRequest) {
     const effectiveHashKey =
       generatedHashKey.length > 0 ? generatedHashKey : WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY
 
-    if (generatedHashKey.length > 128) {
+    if (generatedHashKey.length > GENERATED_HASH_KEY_MAX_LENGTH) {
       return NextResponse.json(
         { success: false, error: 'GeneratedHashKey 长度不能超过 128' },
         { status: 400 },

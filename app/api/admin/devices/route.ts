@@ -3,10 +3,18 @@ import { createHash, randomBytes } from 'node:crypto'
 import { count, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
+import {
+  ADMIN_LIST_DEFAULT_PAGE_SIZE,
+  ADMIN_LIST_MAX_PAGE_SIZE,
+} from '@/lib/admin-list-constants'
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
+import {
+  GENERATED_HASH_KEY_MAX_LENGTH,
+  GENERATED_HASH_KEY_MIN_LENGTH,
+  WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY,
+} from '@/lib/device-constants'
 import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
-import { WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY } from '@/lib/device-constants'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { apiTokens, devices } from '@/lib/drizzle-schema'
 
@@ -31,7 +39,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
+    const limit = Math.min(
+      parseInt(searchParams.get('limit') || String(ADMIN_LIST_DEFAULT_PAGE_SIZE), 10),
+      ADMIN_LIST_MAX_PAGE_SIZE,
+    )
     const offset = parseInt(searchParams.get('offset') || '0')
     const status = String(searchParams.get('status') ?? '').trim()
     const q = String(searchParams.get('q') ?? '').trim()
@@ -133,7 +144,10 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         )
       }
-      if (customKey.length > 128 || customKey.length < 8) {
+      if (
+        customKey.length > GENERATED_HASH_KEY_MAX_LENGTH ||
+        customKey.length < GENERATED_HASH_KEY_MIN_LENGTH
+      ) {
         return NextResponse.json(
           { success: false, error: '自定义 GeneratedHashKey 长度需在 8～128 之间' },
           { status: 400 },

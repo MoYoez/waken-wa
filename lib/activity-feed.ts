@@ -1,12 +1,21 @@
 import { eq } from 'drizzle-orm'
 
 import {
+  ACTIVITY_FEED_DEFAULT_LIMIT,
+  ACTIVITY_FEED_QUERY_MAX_LIMIT,
+  ACTIVITY_FEED_RECENT_TOP_APPS_MAX,
+} from '@/lib/activity-api-constants'
+import {
   cleanupStaleActivities,
   getAllActivities,
   redactGeneratedHashKeyForClient,
 } from '@/lib/activity-store'
 import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
+import {
+  parseHistoryWindowMinutes,
+  parseProcessStaleSeconds,
+} from '@/lib/site-config-constants'
 import { getSteamNowPlayingByDeviceHashes } from '@/lib/steam-feed-merge'
 import {
   hydrateUserActivitiesIntoStoreOnce,
@@ -69,21 +78,13 @@ function applyMessageRule(
 
 export async function getHistoryWindowMinutes(): Promise<number> {
   const [config] = await db.select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1)
-  const minutes = Number(config?.historyWindowMinutes ?? 120)
-  if (!Number.isFinite(minutes)) return 120
-  return Math.min(Math.max(Math.round(minutes), 10), 24 * 60)
+  return parseHistoryWindowMinutes(config?.historyWindowMinutes)
 }
 
-export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData> {
+export async function getActivityFeedData(limit = ACTIVITY_FEED_DEFAULT_LIMIT): Promise<ActivityFeedData> {
   const [config] = await db.select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1)
-  const minutes = Number(config?.historyWindowMinutes ?? 120)
-  const historyWindowMinutes = Number.isFinite(minutes)
-    ? Math.min(Math.max(Math.round(minutes), 10), 24 * 60)
-    : 120
-  const staleSecondsRaw = Number(config?.processStaleSeconds ?? 500)
-  const defaultStaleSeconds = Number.isFinite(staleSecondsRaw)
-    ? Math.min(Math.max(Math.round(staleSecondsRaw), 30), 24 * 60 * 60)
-    : 500
+  const historyWindowMinutes = parseHistoryWindowMinutes(config?.historyWindowMinutes)
+  const defaultStaleSeconds = parseProcessStaleSeconds(config?.processStaleSeconds)
   const appMessageRules: Array<{ match: string; text: string }> = Array.isArray(config?.appMessageRules)
     ? config.appMessageRules
     : []
@@ -125,7 +126,7 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
   const recentActivitiesRaw = allActivities
     .filter((a) => a.startedAt.getTime() >= since)
     .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
-    .slice(0, Math.min(limit, 100))
+    .slice(0, Math.min(limit, ACTIVITY_FEED_QUERY_MAX_LIMIT))
 
   const recentActivities = recentActivitiesRaw
     .filter((item) => passesAppFilter(item.processName))
@@ -205,7 +206,7 @@ export async function getActivityFeedData(limit = 50): Promise<ActivityFeedData>
         processTitle: maskedTitle,
       } as unknown as ActivityFeedItem)
     }
-    if (recentTopApps.length >= 3) break
+    if (recentTopApps.length >= ACTIVITY_FEED_RECENT_TOP_APPS_MAX) break
   }
 
   return {

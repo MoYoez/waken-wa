@@ -50,6 +50,10 @@ import {
   validateCoursePeriodIdsAgainstTemplate,
 } from '@/lib/schedule-courses'
 import { exportCoursesToIcs, importIcsToCourses } from '@/lib/schedule-ics'
+import {
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+} from '@/lib/site-config-constants'
 
 const WEEKDAY_OPTIONS: { value: number; label: string }[] = [
   { value: 0, label: '周一' },
@@ -119,7 +123,9 @@ export function ScheduleManager() {
   const [homeShowLocation, setHomeShowLocation] = useState(false)
   const [homeShowTeacher, setHomeShowTeacher] = useState(false)
   const [homeShowNextUpcoming, setHomeShowNextUpcoming] = useState(false)
-  const [homeAfterClassesLabel, setHomeAfterClassesLabel] = useState('正在摸鱼')
+  const [homeAfterClassesLabel, setHomeAfterClassesLabel] = useState(
+    SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -147,8 +153,11 @@ export function ScheduleManager() {
       setHomeAfterClassesLabel(
         typeof d.scheduleHomeAfterClassesLabel === 'string' &&
           d.scheduleHomeAfterClassesLabel.trim().length > 0
-          ? d.scheduleHomeAfterClassesLabel.trim().slice(0, 40)
-          : '正在摸鱼',
+          ? d.scheduleHomeAfterClassesLabel.trim().slice(
+              0,
+              SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+            )
+          : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
       )
     } catch {
       setMessage('网络异常')
@@ -235,7 +244,8 @@ export function ScheduleManager() {
         scheduleHomeShowLocation: homeShowLocation,
         scheduleHomeShowTeacher: homeShowTeacher,
         scheduleHomeShowNextUpcoming: homeShowNextUpcoming,
-        scheduleHomeAfterClassesLabel: homeAfterClassesLabel.trim() || '正在摸鱼',
+        scheduleHomeAfterClassesLabel:
+          homeAfterClassesLabel.trim() || SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
       })
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',

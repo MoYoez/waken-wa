@@ -1,6 +1,13 @@
 import { and, eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
+import {
+  ACTIVITY_FEED_DEFAULT_LIMIT,
+  ACTIVITY_METADATA_MAX_JSON_LENGTH,
+  ACTIVITY_METADATA_MAX_KEYS,
+  DEVICE_BATTERY_PERCENT_MAX,
+  DEVICE_BATTERY_PERCENT_MIN,
+} from '@/lib/activity-api-constants'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import {
   redactGeneratedHashKeyForClient,
@@ -41,7 +48,7 @@ export async function GET(request: NextRequest) {
           { status: 403 },
         )
       }
-      const feed = await getActivityFeedData(50)
+      const feed = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT)
       return NextResponse.json({
         success: true,
         data: feed,
@@ -53,7 +60,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
     }
 
-    const feed = await getActivityFeedData(50)
+    const feed = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT)
     return NextResponse.json({
       success: true,
       data: feed,
@@ -108,7 +115,10 @@ export async function POST(request: NextRequest) {
     if (metadataRaw && typeof metadataRaw === 'object' && !Array.isArray(metadataRaw)) {
       metadata = { ...(metadataRaw as Record<string, unknown>) }
       const metaKeys = Object.keys(metadata)
-      if (metaKeys.length > 50 || JSON.stringify(metadata).length > 10240) {
+      if (
+        metaKeys.length > ACTIVITY_METADATA_MAX_KEYS ||
+        JSON.stringify(metadata).length > ACTIVITY_METADATA_MAX_JSON_LENGTH
+      ) {
         return NextResponse.json(
           { success: false, error: 'metadata 数据过大' },
           { status: 400 },
@@ -117,7 +127,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (typeof batteryRaw === 'number' && Number.isFinite(batteryRaw)) {
-      const batteryLevel = Math.min(Math.max(Math.round(batteryRaw), 0), 100)
+      const batteryLevel = Math.min(
+        Math.max(Math.round(batteryRaw), DEVICE_BATTERY_PERCENT_MIN),
+        DEVICE_BATTERY_PERCENT_MAX,
+      )
       metadata = {
         ...(metadata || {}),
         deviceBatteryPercent: batteryLevel,

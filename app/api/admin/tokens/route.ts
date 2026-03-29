@@ -2,6 +2,11 @@ import crypto from 'crypto'
 import { count, desc, eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
+import {
+  ADMIN_API_TOKENS_PAGE_DEFAULT_SIZE,
+  ADMIN_API_TOKENS_RECENT_DEVICES_LIMIT,
+  ADMIN_LIST_MAX_PAGE_SIZE,
+} from '@/lib/admin-list-constants'
 import { storedFormFromPlainSecret } from '@/lib/api-token-secret'
 import { getPublicOrigin } from '@/lib/public-request-url'
 import { getSession } from '@/lib/auth'
@@ -26,7 +31,6 @@ export async function GET(request: NextRequest) {
     const rawLimit = searchParams.get('limit')
     const usePagination = rawLimit !== null && rawLimit !== ''
 
-    const recentLimit = 5
     type DeviceRow = { displayName: string; generatedHashKey: string; lastSeenAt: Date | null }
 
     const maskWithRecent = (
@@ -44,7 +48,10 @@ export async function GET(request: NextRequest) {
       }))
 
     if (usePagination) {
-      const limit = Math.min(Math.max(parseInt(rawLimit, 10) || 10, 1), 100)
+      const limit = Math.min(
+        Math.max(parseInt(rawLimit, 10) || ADMIN_API_TOKENS_PAGE_DEFAULT_SIZE, 1),
+        ADMIN_LIST_MAX_PAGE_SIZE,
+      )
       const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0)
 
       const [tokens, [totalRow]] = await Promise.all([
@@ -69,7 +76,7 @@ export async function GET(request: NextRequest) {
             .from(devices)
             .where(eq(devices.apiTokenId, t.id))
             .orderBy(desc(devices.lastSeenAt), desc(devices.updatedAt))
-            .limit(recentLimit),
+            .limit(ADMIN_API_TOKENS_RECENT_DEVICES_LIMIT),
         ),
       )
 
@@ -96,7 +103,7 @@ export async function GET(request: NextRequest) {
           .from(devices)
           .where(eq(devices.apiTokenId, t.id))
           .orderBy(desc(devices.lastSeenAt), desc(devices.updatedAt))
-          .limit(recentLimit),
+          .limit(ADMIN_API_TOKENS_RECENT_DEVICES_LIMIT),
       ),
     )
 

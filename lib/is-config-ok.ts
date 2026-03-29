@@ -1,6 +1,7 @@
 import { count, eq } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
+import { SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES } from '@/lib/site-config-constants'
 import { adminUsers, siteConfig } from '@/lib/drizzle-schema'
 import type { SetupInitialConfig } from '@/types/components'
 import type { AdminSetupSnapshot } from '@/types/setup'
@@ -14,7 +15,9 @@ function siteRowToSetupInitial(row: unknown): SetupInitialConfig {
     avatarUrl: typeof r.avatarUrl === 'string' ? r.avatarUrl : '',
     userNote: typeof r.userNote === 'string' ? r.userNote : '',
     historyWindowMinutes:
-      typeof r.historyWindowMinutes === 'number' ? r.historyWindowMinutes : 120,
+      typeof r.historyWindowMinutes === 'number'
+        ? r.historyWindowMinutes
+        : SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
     currentlyText: typeof r.currentlyText === 'string' ? r.currentlyText : '',
     earlierText: typeof r.earlierText === 'string' ? r.earlierText : '',
     adminText: typeof r.adminText === 'string' ? r.adminText : '',

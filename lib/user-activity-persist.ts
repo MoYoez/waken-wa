@@ -2,6 +2,10 @@
 export const USER_ACTIVITY_PERSIST_MIN_SEC = 30
 export const USER_ACTIVITY_PERSIST_MAX_SEC = 24 * 60 * 60
 
+/** Admin UI: persist duration in minutes (aligned with second bounds). */
+export const USER_ACTIVITY_PERSIST_MIN_MINUTES_UI = Math.ceil(USER_ACTIVITY_PERSIST_MIN_SEC / 60)
+export const USER_ACTIVITY_PERSIST_MAX_MINUTES = USER_ACTIVITY_PERSIST_MAX_SEC / 60
+
 /**
  * Convert client persist_minutes to absolute expiry, or null if invalid / omitted.
  */

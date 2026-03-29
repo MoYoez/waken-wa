@@ -24,6 +24,10 @@ import {
   resolveSchedulePeriodTemplate,
   type ScheduleCourse,
 } from '@/lib/schedule-courses'
+import {
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+} from '@/lib/site-config-constants'
 import { getThemePresetCss } from '@/lib/theme-css'
 import { normalizeTimezone } from '@/lib/timezone'
 
@@ -93,7 +97,9 @@ export default async function Home() {
   const scheduleHomeShowTeacher = Boolean(config.scheduleHomeShowTeacher)
   const scheduleHomeShowNextUpcoming = Boolean(config.scheduleHomeShowNextUpcoming)
   const scheduleHomeAfterClassesLabelRaw = String(cfg.scheduleHomeAfterClassesLabel ?? '').trim()
-  const scheduleHomeAfterClassesLabel = scheduleHomeAfterClassesLabelRaw.slice(0, 40) || '正在摸鱼'
+  const scheduleHomeAfterClassesLabel =
+    scheduleHomeAfterClassesLabelRaw.slice(0, SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN) ||
+    SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT
   const schedulePeriodTemplate = resolveSchedulePeriodTemplate(cfg.schedulePeriodTemplate ?? null)
   
   let scheduleCoursesForHome: ScheduleCourse[] = []

@@ -1,6 +1,11 @@
 import { count, desc, eq, or, sql } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
+import {
+  ADMIN_LIST_DEFAULT_PAGE_SIZE,
+  ADMIN_LIST_MAX_PAGE_SIZE,
+} from '@/lib/admin-list-constants'
+import { ACTIVITY_FEED_DEFAULT_LIMIT } from '@/lib/activity-api-constants'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { getBearerApiTokenRecord, getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -35,7 +40,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
+    const limit = Math.min(
+      parseInt(searchParams.get('limit') || String(ADMIN_LIST_DEFAULT_PAGE_SIZE), 10),
+      ADMIN_LIST_MAX_PAGE_SIZE,
+    )
     const offset = parseInt(searchParams.get('offset') || '0')
     const q = searchParams.get('q')?.trim()
 
@@ -123,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     let statusSnapshot: string | null = null
     if (attachCurrentStatus && session) {
-      const feed = await getActivityFeedData(50)
+      const feed = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT)
       statusSnapshot = formatStatusSnapshotFromFeed(feed)
     }
 

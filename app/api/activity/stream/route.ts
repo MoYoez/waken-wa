@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { ACTIVITY_FEED_DEFAULT_LIMIT } from '@/lib/activity-api-constants'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { isSiteLockSatisfied } from '@/lib/auth'
 
@@ -74,7 +75,7 @@ export async function GET() {
       const push = async () => {
         if (closed) return
         try {
-          const payload = await getActivityFeedData(50)
+          const payload = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT)
           if (safeEnqueue(
             encoder.encode(
               toSseEvent('activity', { success: true, data: payload })

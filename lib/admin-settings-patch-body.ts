@@ -7,6 +7,13 @@ import {
   resolveSchedulePeriodTemplate,
 } from '@/lib/schedule-courses'
 import { resolveScheduleGridByWeekday } from '@/lib/schedule-grid-by-weekday'
+import {
+  SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
+  SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
+  SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+  SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
+} from '@/lib/site-config-constants'
 
 /**
  * Build JSON body for PATCH /api/admin/settings from a GET response row plus overrides.
@@ -16,7 +23,9 @@ export function buildAdminSettingsPatchBody(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
   const scheduleSlotMinutes =
-    typeof data.scheduleSlotMinutes === 'number' ? data.scheduleSlotMinutes : 30
+    typeof data.scheduleSlotMinutes === 'number'
+      ? data.scheduleSlotMinutes
+      : SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES
   const schedulePeriodTemplate = resolveSchedulePeriodTemplate(data.schedulePeriodTemplate)
   const scheduleCoursesRaw = Array.isArray(data.scheduleCourses) ? data.scheduleCourses : []
   const scheduleCourses = backfillCoursePeriodIdsFromTemplate(
@@ -38,8 +47,8 @@ export function buildAdminSettingsPatchBody(
     themePreset: data.themePreset ?? 'basic',
     themeCustomSurface: data.themeCustomSurface,
     customCss: data.customCss ?? '',
-    historyWindowMinutes: data.historyWindowMinutes ?? 120,
-    processStaleSeconds: data.processStaleSeconds ?? 500,
+    historyWindowMinutes: data.historyWindowMinutes ?? SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
+    processStaleSeconds: data.processStaleSeconds ?? SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
     appMessageRules: data.appMessageRules ?? [],
     appMessageRulesShowProcessName: (data as Record<string, unknown>).appMessageRulesShowProcessName !== false,
     appBlacklist: data.appBlacklist ?? [],
@@ -62,8 +71,11 @@ export function buildAdminSettingsPatchBody(
     scheduleHomeAfterClassesLabel:
       typeof data.scheduleHomeAfterClassesLabel === 'string' &&
       data.scheduleHomeAfterClassesLabel.trim().length > 0
-        ? data.scheduleHomeAfterClassesLabel.trim().slice(0, 40)
-        : '正在摸鱼',
+        ? data.scheduleHomeAfterClassesLabel.trim().slice(
+            0,
+            SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+          )
+        : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
     globalMouseTiltEnabled: Boolean(data.globalMouseTiltEnabled),
     hideActivityMedia: Boolean(data.hideActivityMedia),
     scheduleSlotMinutes,

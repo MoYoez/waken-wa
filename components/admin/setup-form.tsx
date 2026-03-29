@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
+import { SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES } from '@/lib/site-config-constants'
 import type { SetupInitialConfig } from '@/types/components'
 
 export type { SetupInitialConfig } from '@/types/components'
@@ -28,7 +29,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
   const [avatarUrl, setAvatarUrl] = useState(initialConfig?.avatarUrl ?? '')
   const [userNote, setUserNote] = useState(initialConfig?.userNote ?? '')
   const [historyWindowMinutes, setHistoryWindowMinutes] = useState(
-    initialConfig?.historyWindowMinutes ?? 120
+    initialConfig?.historyWindowMinutes ?? SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
   )
   const [currentlyText, setCurrentlyText] = useState(initialConfig?.currentlyText ?? '')
   const [earlierText, setEarlierText] = useState(initialConfig?.earlierText ?? '')
@@ -283,14 +284,21 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground">历史展示窗口（分钟）</label>
-                  <p className="text-[11px] text-muted-foreground">主页历史列表仅显示最近这段时间，默认 120 分钟。</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    主页历史列表仅显示最近这段时间，默认 {SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES}{' '}
+                    分钟。
+                  </p>
                   <input
                     type="number"
                     min={10}
                     max={1440}
                     step={10}
                     value={historyWindowMinutes}
-                    onChange={(e) => setHistoryWindowMinutes(Number(e.target.value || 120))}
+                    onChange={(e) =>
+                      setHistoryWindowMinutes(
+                        Number(e.target.value || SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES),
+                      )
+                    }
                     className="w-full px-3 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 </div>
