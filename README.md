@@ -12,6 +12,10 @@
 > 晨光里睁眼是醒，  
 > 深夜写下"今天很好"也是醒。
 
+
+> 项目灵感来源于 [Sleepy](https://github.com/sleepy-project/sleepy)
+
+
 ---
 
 ## 技术栈
@@ -101,7 +105,27 @@ chmod +x deploy-build-from-source.sh   # Unix 首次需要
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/waken-wa)
 
-> RailWay 可能需要使用 Hobby 方案.
+> Railway 可能需要使用 Hobby 方案.
+
+
+### 3.Vercel
+
+> 并不推荐 Vercel 部署，因为需要使用 PostgresSQL (SupaBase / Neon)，且开销较高 (SSE 长连接 / Realtime POST 多)
+
+> Fluid Provisioned Memory 可能会吃掉 900 GB (1month) （远超 Vercel Hobby上限 (450gh / month) ）
+
+> 如需使用请考虑 非 Realtime 模式上传活动，并且在后台启用 Polling （轮询）
+
+> 如果一定需要在 Vercel 上体验到完整服务，**强烈建议配合 Pro 食用**
+
+[![Deploy with Vercel](https://vercel.com/button)](
+https://vercel.com/new/clone?repository-url=https://github.com/MoYoez/waken-wa
+)
+
+> 第一次部署后不用担心报错，在项目的 "Integrations" 中 通过 "Marketplace"找到 **PostgreSQL** 供应商，Install 后 Connect 到此项目，Redeploy 即可。
+
+> 如果你想用自己的供应商，请在 env 的 DATABASE_URL 中 写入地址即可
+
 
 ---
 
