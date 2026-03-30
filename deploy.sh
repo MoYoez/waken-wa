@@ -21,6 +21,37 @@ compose() {
   fi
 }
 
+# Return 0 if the image reference exists locally (same tag/digest resolution as compose).
+image_exists_locally() {
+  docker image inspect "$1" >/dev/null 2>&1
+}
+
+# Pull only when missing, or when user confirms (if image already exists and stdin is a TTY).
+pull_waken_image() {
+  local img="$1"
+  if image_exists_locally "$img"; then
+    if [ -t 0 ]; then
+      local ans
+      read -r -p "Image $img already exists locally. Pull latest from registry? [y/N] " ans || true
+      case "$ans" in
+        [yY]|[yY][eE][sS])
+          echo "Pulling $img ..."
+          docker pull "$img"
+          ;;
+        *)
+          echo "Using existing local image."
+          ;;
+      esac
+    else
+      echo "Image $img exists locally; non-interactive session: pulling to refresh ..."
+      docker pull "$img"
+    fi
+  else
+    echo "Pulling image $img ..."
+    docker pull "$img"
+  fi
+}
+
 # Fill empty JWT_SECRET in .env so compose passes a stable secret (optional; container also persists .jwt_secret).
 ensure_jwt_in_env_file() {
   [ -f .env ] || return
@@ -109,8 +140,7 @@ fi
 
 ensure_jwt_in_env_file
 
-echo "Pulling image $WAKEN_IMAGE ..."
-docker pull "$WAKEN_IMAGE"
+pull_waken_image "$WAKEN_IMAGE"
 
 echo "Starting app from registry image (SQLite in Docker volume waken_sqlite_data)..."
 compose up -d --no-build
