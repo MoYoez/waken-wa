@@ -80,6 +80,8 @@ export async function GET(request: Request) {
         userName: cfg.userName,
         userBio: cfg.userBio,
         avatarUrl: cfg.avatarUrl,
+        profileOnlineAccentColor: cfg.profileOnlineAccentColor ?? null,
+        profileOnlinePulseEnabled: cfg.profileOnlinePulseEnabled !== false,
         userNote: cfg.userNote,
         userNoteHitokotoEnabled: Boolean(cfg.userNoteHitokotoEnabled),
         userNoteHitokotoCategories: normalizeHitokotoCategories(

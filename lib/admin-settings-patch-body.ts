@@ -2,6 +2,7 @@ import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
+import { normalizeProfileOnlineAccentColor } from '@/lib/profile-online-accent-color'
 import {
   backfillCoursePeriodIdsFromTemplate,
   resolveSchedulePeriodTemplate,
@@ -38,6 +39,12 @@ export function buildAdminSettingsPatchBody(
     userName: data.userName,
     userBio: data.userBio,
     avatarUrl: data.avatarUrl,
+    profileOnlineAccentColor:
+      normalizeProfileOnlineAccentColor(
+        (data as Record<string, unknown>).profileOnlineAccentColor ?? '',
+      ) ?? null,
+    profileOnlinePulseEnabled:
+      (data as Record<string, unknown>).profileOnlinePulseEnabled !== false,
     userNote: data.userNote ?? '',
     userNoteHitokotoEnabled: Boolean(data.userNoteHitokotoEnabled),
     userNoteHitokotoCategories: normalizeHitokotoCategories(

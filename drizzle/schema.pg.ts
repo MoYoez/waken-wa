@@ -93,6 +93,10 @@ export const siteConfig = pgTable('site_config', {
   userName: varchar('user_name', { length: 120 }).notNull(),
   userBio: text('user_bio').notNull(),
   avatarUrl: text('avatar_url').notNull(),
+  /** Hex #RRGGBB for avatar online ring/dot; null = use theme --online */
+  profileOnlineAccentColor: varchar('profile_online_accent_color', { length: 7 }),
+  /** null in app = enable pulse on online status dot */
+  profileOnlinePulseEnabled: boolean('profile_online_pulse_enabled'),
   userNote: text('user_note').notNull(),
   userNoteHitokotoEnabled: boolean('user_note_hitokoto_enabled').notNull().default(false),
   userNoteHitokotoCategories: jsonb('user_note_hitokoto_categories'),

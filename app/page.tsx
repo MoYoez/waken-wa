@@ -152,7 +152,13 @@ export default async function Home() {
                         : 'min-w-0 w-full'
                     }
                   >
-                    <UserProfile name={userName} bio={userBio} avatarUrl={avatarUrl} />
+                    <UserProfile
+                      name={userName}
+                      bio={userBio}
+                      avatarUrl={avatarUrl}
+                      profileOnlineAccentColor={config.profileOnlineAccentColor ?? null}
+                      profileOnlinePulseEnabled={config.profileOnlinePulseEnabled ?? null}
+                    />
                   </div>
                   {showScheduleHomeColumn ? (
                     <ScheduleHomeInClassBanner

@@ -83,6 +83,10 @@ export const siteConfig = sqliteTable('site_config', {
   userName: text('user_name').notNull(),
   userBio: text('user_bio').notNull(),
   avatarUrl: text('avatar_url').notNull(),
+  /** Hex #RRGGBB for avatar online ring/dot; null = use theme --online */
+  profileOnlineAccentColor: text('profile_online_accent_color'),
+  /** null/undefined in app = enable pulse on online status dot */
+  profileOnlinePulseEnabled: integer('profile_online_pulse_enabled', { mode: 'boolean' }),
   userNote: text('user_note').notNull(),
   userNoteHitokotoEnabled: integer('user_note_hitokoto_enabled', {
     mode: 'boolean',

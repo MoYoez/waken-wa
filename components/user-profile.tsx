@@ -1,10 +1,14 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
 import { buildHitokotoRequestUrl } from '@/lib/hitokoto'
+import {
+  normalizeProfileOnlineAccentColor,
+  PROFILE_ONLINE_ACCENT_VAR,
+} from '@/lib/profile-online-accent-color'
 import { cn } from '@/lib/utils'
 import type { UserProfileNoteSectionProps } from '@/types/components'
 import type { HitokotoJsonBody, UserNoteHitokotoEncode } from '@/types/hitokoto'
@@ -136,15 +140,27 @@ interface UserProfileProps {
   name?: string
   bio?: string
   avatarUrl?: string
+  /** When set (#RRGGBB), overrides theme --online for avatar ring and status dot */
+  profileOnlineAccentColor?: string | null
+  /** When false, no animate-pulse on the online dot (null/undefined = enable pulse) */
+  profileOnlinePulseEnabled?: boolean | null
 }
 
 export function UserProfile({
   name = 'User',
   bio = 'Building something awesome',
   avatarUrl = '/avatar.jpg',
+  profileOnlineAccentColor = null,
+  profileOnlinePulseEnabled = null,
 }: UserProfileProps) {
   const { feed } = useSharedActivityFeed()
   const isOnline = Boolean(feed?.activeStatuses?.length)
+  const onlineHex = normalizeProfileOnlineAccentColor(profileOnlineAccentColor ?? '')
+  const onlinePulse = profileOnlinePulseEnabled !== false
+  const accentVarStyle: CSSProperties | undefined =
+    onlineHex != null
+      ? ({ [PROFILE_ONLINE_ACCENT_VAR]: onlineHex } as CSSProperties)
+      : undefined
 
   return (
     <div className="w-full min-w-0">
@@ -152,12 +168,19 @@ export function UserProfile({
         {/* Avatar — online: green dot, offline: red dot */}
         <div
           className="relative flex-shrink-0"
+          style={accentVarStyle}
           aria-label={isOnline ? '在线' : '离线'}
         >
           <div
-            className={`w-[4.5rem] h-[4.5rem] rounded-full overflow-hidden border-2 ring-2 ring-background ${
-              isOnline ? 'border-online/60' : 'border-destructive/50'
-            }`}
+            className={cn(
+              'w-[4.5rem] h-[4.5rem] rounded-full overflow-hidden border-2 ring-2 ring-background',
+              !isOnline && 'border-destructive/50',
+              isOnline && !onlineHex && 'border-online/60',
+              // Same pattern as offline ring: semantic color at 50% on the border
+              isOnline &&
+                onlineHex &&
+                'border-solid border-[color:color-mix(in_srgb,var(--ProfileOnlineAccent)_50%,transparent)]',
+            )}
           >
             <Image
               src={avatarUrl}
@@ -169,9 +192,14 @@ export function UserProfile({
             />
           </div>
           <div
-            className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-[3px] border-background shadow-sm ${
-              isOnline ? 'bg-online animate-pulse' : 'bg-destructive'
-            }`}
+            className={cn(
+              'absolute bottom-0 right-0 z-10 w-4 h-4 rounded-full border-[3px] border-background shadow-sm',
+              isOnline && !onlineHex && 'bg-online',
+              isOnline && !onlineHex && onlinePulse && 'animate-pulse',
+              !isOnline && 'bg-destructive',
+              isOnline && onlineHex && 'bg-[var(--ProfileOnlineAccent)]',
+              isOnline && onlineHex && onlinePulse && 'animate-pulse',
+            )}
             title={isOnline ? '在线' : '离线'}
           />
         </div>

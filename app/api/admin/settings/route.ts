@@ -12,6 +12,7 @@ import {
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
 import { normalizeInspirationAllowedHashes } from '@/lib/inspiration-device-allowlist'
+import { normalizeProfileOnlineAccentColor } from '@/lib/profile-online-accent-color'
 import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import {
   backfillCoursePeriodIdsFromTemplate,
@@ -367,6 +368,28 @@ export async function PATCH(request: NextRequest) {
       activityRejectLockappSleep = Boolean(body.activityRejectLockappSleep)
     }
 
+    let profileOnlineAccentColor: string | null =
+      normalizeProfileOnlineAccentColor(existing?.profileOnlineAccentColor ?? '') ?? null
+    if ('profileOnlineAccentColor' in body) {
+      if (body.profileOnlineAccentColor === null || body.profileOnlineAccentColor === '') {
+        profileOnlineAccentColor = null
+      } else if (typeof body.profileOnlineAccentColor === 'string') {
+        const normalized = normalizeProfileOnlineAccentColor(body.profileOnlineAccentColor)
+        if (!normalized) {
+          return NextResponse.json(
+            { success: false, error: '无效的头像在线色（需 #RRGGBB）' },
+            { status: 400 },
+          )
+        }
+        profileOnlineAccentColor = normalized
+      }
+    }
+
+    let profileOnlinePulseEnabled = existing?.profileOnlinePulseEnabled !== false
+    if (body.profileOnlinePulseEnabled !== undefined && body.profileOnlinePulseEnabled !== null) {
+      profileOnlinePulseEnabled = Boolean(body.profileOnlinePulseEnabled)
+    }
+
     await safeSiteConfigUpsert({
       where: { id: 1 },
       update: {
@@ -374,6 +397,8 @@ export async function PATCH(request: NextRequest) {
         userName,
         userBio,
         avatarUrl,
+        profileOnlineAccentColor,
+        profileOnlinePulseEnabled,
         userNote,
         userNoteHitokotoEnabled,
         userNoteHitokotoCategories,
@@ -424,6 +449,8 @@ export async function PATCH(request: NextRequest) {
         userName,
         userBio,
         avatarUrl,
+        profileOnlineAccentColor,
+        profileOnlinePulseEnabled,
         userNote,
         userNoteHitokotoEnabled,
         userNoteHitokotoCategories,

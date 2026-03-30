@@ -62,6 +62,7 @@ import {
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
+import { normalizeProfileOnlineAccentColor } from '@/lib/profile-online-accent-color'
 import {
   parseThemeCustomSurface,
   THEME_CUSTOM_SURFACE_DEFAULTS,
@@ -236,6 +237,17 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   if ('userName' in web && typeof web.userName === 'string') patch.userName = web.userName.trim()
   if ('userBio' in web && typeof web.userBio === 'string') patch.userBio = web.userBio.trim()
   if ('avatarUrl' in web && typeof web.avatarUrl === 'string') patch.avatarUrl = web.avatarUrl.trim()
+  if ('profileOnlineAccentColor' in web) {
+    if (web.profileOnlineAccentColor === null || web.profileOnlineAccentColor === '') {
+      patch.profileOnlineAccentColor = ''
+    } else if (typeof web.profileOnlineAccentColor === 'string') {
+      const n = normalizeProfileOnlineAccentColor(web.profileOnlineAccentColor)
+      patch.profileOnlineAccentColor = n ?? ''
+    }
+  }
+  if ('profileOnlinePulseEnabled' in web && typeof web.profileOnlinePulseEnabled === 'boolean') {
+    patch.profileOnlinePulseEnabled = web.profileOnlinePulseEnabled
+  }
   if ('userNote' in web && typeof web.userNote === 'string') patch.userNote = web.userNote.trim()
   if ('userNoteHitokotoEnabled' in web && typeof web.userNoteHitokotoEnabled === 'boolean') {
     patch.userNoteHitokotoEnabled = web.userNoteHitokotoEnabled
@@ -372,6 +384,10 @@ interface SiteConfig {
   userName: string
   userBio: string
   avatarUrl: string
+  /** Empty = use theme --online; otherwise #RRGGBB */
+  profileOnlineAccentColor: string
+  /** Online status dot breathing animation (animate-pulse) */
+  profileOnlinePulseEnabled: boolean
   userNote: string
   userNoteHitokotoEnabled: boolean
   userNoteHitokotoCategories: string[]
@@ -453,6 +469,8 @@ export function WebSettings() {
     userName: '',
     userBio: '',
     avatarUrl: '',
+    profileOnlineAccentColor: '',
+    profileOnlinePulseEnabled: true,
     userNote: '',
     userNoteHitokotoEnabled: false,
     userNoteHitokotoCategories: [],
@@ -528,6 +546,13 @@ export function WebSettings() {
             userName: data.data.userName ?? '',
             userBio: data.data.userBio ?? '',
             avatarUrl: data.data.avatarUrl ?? '',
+            profileOnlineAccentColor:
+              normalizeProfileOnlineAccentColor(
+                typeof data.data.profileOnlineAccentColor === 'string'
+                  ? data.data.profileOnlineAccentColor
+                  : '',
+              ) ?? '',
+            profileOnlinePulseEnabled: data.data.profileOnlinePulseEnabled !== false,
             userNote: data.data.userNote ?? '',
             userNoteHitokotoEnabled: Boolean(data.data.userNoteHitokotoEnabled),
             userNoteHitokotoCategories: normalizeHitokotoCategories(
@@ -692,6 +717,13 @@ export function WebSettings() {
       const parsedWhitelist = normalizeStringList(form.appWhitelist)
       const parsedNameOnlyList = normalizeStringList(form.appNameOnlyList)
 
+      const poTrim = form.profileOnlineAccentColor.trim()
+      if (poTrim && !normalizeProfileOnlineAccentColor(poTrim)) {
+        toast.error('头像在线色格式无效，请使用 #RRGGBB 或留空')
+        setSaving(false)
+        return
+      }
+
       const {
         inspirationDeviceRestrictionEnabled,
         inspirationAllowedDeviceHashes: inspirationHashSelection,
@@ -718,6 +750,7 @@ export function WebSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formRest,
+          profileOnlineAccentColor: normalizeProfileOnlineAccentColor(poTrim || '') ?? null,
           appMessageRules: parsedRules,
           appBlacklist: parsedBlacklist,
           appWhitelist: parsedWhitelist,
@@ -1148,6 +1181,49 @@ export function WebSettings() {
             <span className="text-xs text-muted-foreground">头像预览</span>
           </div>
         )}
+      </div>
+
+      {/* Profile avatar online ring/dot accent; empty = theme --online */}
+      <div className="space-y-2">
+        <Label htmlFor="profile-online-accent">头像在线态强调色</Label>
+        <p className="text-xs text-muted-foreground">
+          留空则使用当前主题自带的在线颜色。仅影响首页头像圆环与右下角在线点。
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            id="profile-online-accent"
+            type="color"
+            className="h-9 w-14 cursor-pointer rounded-md border border-input bg-background p-1 shadow-xs"
+            value={form.profileOnlineAccentColor || '#22C55E'}
+            onChange={(e) => patch('profileOnlineAccentColor', e.target.value.toUpperCase())}
+            aria-label="Pick profile online accent color"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => patch('profileOnlineAccentColor', '')}
+          >
+            使用主题默认
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+        <div className="space-y-0.5 min-w-0">
+          <Label htmlFor="profile-online-pulse" className="font-normal cursor-pointer">
+            在线状态呼吸灯
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            开启时首页头像右下角在线点为呼吸动画；关闭后为静态实心点。系统「减少动效」时浏览器可能仍会减弱动画。
+          </p>
+        </div>
+        <Switch
+          id="profile-online-pulse"
+          checked={form.profileOnlinePulseEnabled}
+          onCheckedChange={(v) => patch('profileOnlinePulseEnabled', v)}
+          className="shrink-0"
+        />
       </div>
 
       <ImageCropDialog
