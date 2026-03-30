@@ -295,8 +295,8 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
             className="border border-border rounded-lg shadow-sm p-5 sm:p-6 bg-card transition-all hover:shadow-md hover:border-primary/25"
           >
             <div className="space-y-4">
-              <div className="rounded-md bg-muted/30 px-3 py-2.5 space-y-2">
-                <div className="text-xs font-medium text-muted-foreground tracking-tight mb-0.5">
+              <div className="rounded-md border border-border/50 bg-muted/55 px-3 py-2.5 space-y-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
+                <div className="text-xs font-medium text-foreground/65 tracking-tight mb-0.5">
                   设备
                 </div>
                 <div className="text-sm text-foreground flex items-center gap-2">
@@ -349,21 +349,21 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
               <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                    <span className="text-xs font-medium text-muted-foreground tracking-tight">
+                    <Clock className="h-3.5 w-3.5 shrink-0 text-foreground/55" aria-hidden />
+                    <span className="text-xs font-medium text-foreground/65 tracking-tight">
                       开始时间
                     </span>
                   </div>
-                  <div className="text-xs tabular-nums pl-5">
+                  <div className="text-xs tabular-nums text-foreground pl-5">
                     {format(new Date(activity.startedAt), timestampFormat, { locale: zhCN })}
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">
                   <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                    <span className="text-xs font-medium text-muted-foreground tracking-tight">最后上报</span>
+                    <Clock className="h-3.5 w-3.5 shrink-0 text-foreground/55" aria-hidden />
+                    <span className="text-xs font-medium text-foreground/65 tracking-tight">最后上报</span>
                   </div>
-                  <div className="text-xs tabular-nums pl-5 sm:pl-0 w-full sm:text-right">
+                  <div className="text-xs tabular-nums text-foreground pl-5 sm:pl-0 w-full sm:text-right">
                     {format(new Date(lastReportAt), timestampFormat, { locale: zhCN })}
                   </div>
                 </div>

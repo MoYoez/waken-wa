@@ -1,11 +1,22 @@
+/* Light green: align card/muted/popover with foreground hue (no warm globals leak). */
 :root {
   --background: oklch(0.97 0.015 145);
   --foreground: oklch(0.22 0.04 145);
   --card: oklch(0.99 0.01 145);
+  --card-foreground: oklch(0.22 0.04 145);
+  --popover: oklch(0.99 0.01 145);
+  --popover-foreground: oklch(0.22 0.04 145);
   --primary: oklch(0.5 0.14 150);
-  --accent: oklch(0.6 0.1 130);
-  --border: oklch(0.86 0.03 145);
+  --primary-foreground: oklch(0.99 0.01 145);
+  --secondary: oklch(0.94 0.02 145);
+  --secondary-foreground: oklch(0.22 0.04 145);
+  --muted: oklch(0.93 0.02 145);
   --muted-foreground: oklch(0.5 0.04 145);
+  --accent: oklch(0.6 0.1 130);
+  --accent-foreground: oklch(0.99 0.01 145);
+  --border: oklch(0.86 0.03 145);
+  --input: oklch(0.86 0.03 145);
+  --ring: oklch(0.5 0.14 150);
   --online: oklch(0.58 0.16 145);
 }
 .animated-bg {

@@ -1,15 +1,35 @@
+/* Cool gray-blue (Nord-like): surfaces slightly above background for depth. */
 :root {
   --background: oklch(0.25 0.02 230);
   --foreground: oklch(0.92 0.01 220);
   --card: oklch(0.28 0.025 230);
+  --card-foreground: oklch(0.92 0.01 220);
+  --popover: oklch(0.28 0.025 230);
+  --popover-foreground: oklch(0.92 0.01 220);
   --primary: oklch(0.72 0.1 210);
-  --accent: oklch(0.7 0.08 180);
+  --primary-foreground: oklch(0.98 0.01 220);
+  --secondary: oklch(0.32 0.025 230);
+  --secondary-foreground: oklch(0.92 0.01 220);
+  --muted: oklch(0.34 0.025 230);
+  --muted-foreground: oklch(0.72 0.02 220);
+  --accent: oklch(0.36 0.03 230);
+  --accent-foreground: oklch(0.92 0.01 220);
   --border: oklch(0.35 0.025 230);
-  --muted-foreground: oklch(0.65 0.02 220);
+  --input: oklch(0.35 0.025 230);
+  --ring: oklch(0.72 0.1 210);
   --online: oklch(0.72 0.14 145);
 }
 .animated-bg {
   background:
     radial-gradient(ellipse 70% 50% at 50% -20%, oklch(0.35 0.05 210 / 0.3), transparent),
     radial-gradient(ellipse 50% 40% at 0% 100%, oklch(0.32 0.04 180 / 0.25), transparent);
+}
+.floating-orb-1 {
+  background: oklch(0.4 0.04 220 / 0.12);
+}
+.floating-orb-2 {
+  background: oklch(0.38 0.04 210 / 0.1);
+}
+.floating-orb-3 {
+  background: oklch(0.36 0.03 230 / 0.1);
 }

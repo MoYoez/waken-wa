@@ -2,10 +2,20 @@
   --background: oklch(0.97 0.015 290);
   --foreground: oklch(0.25 0.03 290);
   --card: oklch(0.99 0.01 290);
+  --card-foreground: oklch(0.25 0.03 290);
+  --popover: oklch(0.99 0.01 290);
+  --popover-foreground: oklch(0.25 0.03 290);
   --primary: oklch(0.58 0.14 290);
-  --accent: oklch(0.7 0.1 310);
-  --border: oklch(0.88 0.025 290);
+  --primary-foreground: oklch(0.99 0.01 290);
+  --secondary: oklch(0.94 0.02 290);
+  --secondary-foreground: oklch(0.25 0.03 290);
+  --muted: oklch(0.93 0.022 290);
   --muted-foreground: oklch(0.52 0.04 290);
+  --accent: oklch(0.7 0.1 310);
+  --accent-foreground: oklch(0.99 0.01 290);
+  --border: oklch(0.88 0.025 290);
+  --input: oklch(0.88 0.025 290);
+  --ring: oklch(0.58 0.14 290);
   --online: oklch(0.65 0.16 150);
 }
 .animated-bg {

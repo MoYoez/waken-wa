@@ -1,11 +1,22 @@
+/* Blue-violet dark: lifted surfaces + orbs tinted to match gradients. */
 :root {
   --background: oklch(0.14 0.015 270);
   --foreground: oklch(0.92 0.01 270);
   --card: oklch(0.18 0.02 270);
+  --card-foreground: oklch(0.92 0.01 270);
+  --popover: oklch(0.18 0.02 270);
+  --popover-foreground: oklch(0.92 0.01 270);
   --primary: oklch(0.7 0.15 270);
-  --accent: oklch(0.65 0.12 300);
+  --primary-foreground: oklch(0.98 0.01 270);
+  --secondary: oklch(0.22 0.02 270);
+  --secondary-foreground: oklch(0.92 0.01 270);
+  --muted: oklch(0.24 0.02 270);
+  --muted-foreground: oklch(0.68 0.02 270);
+  --accent: oklch(0.26 0.03 270);
+  --accent-foreground: oklch(0.92 0.01 270);
   --border: oklch(0.28 0.025 270);
-  --muted-foreground: oklch(0.65 0.02 270);
+  --input: oklch(0.28 0.025 270);
+  --ring: oklch(0.7 0.15 270);
   --online: oklch(0.72 0.18 160);
 }
 .animated-bg {
@@ -13,4 +24,13 @@
     radial-gradient(ellipse 80% 60% at 50% -30%, oklch(0.35 0.12 280 / 0.4), transparent),
     radial-gradient(ellipse 60% 50% at 100% 100%, oklch(0.3 0.1 300 / 0.3), transparent),
     radial-gradient(ellipse 50% 40% at 0% 80%, oklch(0.32 0.08 250 / 0.25), transparent);
+}
+.floating-orb-1 {
+  background: oklch(0.38 0.1 280 / 0.14);
+}
+.floating-orb-2 {
+  background: oklch(0.34 0.12 300 / 0.12);
+}
+.floating-orb-3 {
+  background: oklch(0.36 0.08 260 / 0.1);
 }

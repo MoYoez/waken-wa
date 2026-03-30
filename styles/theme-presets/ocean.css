@@ -1,11 +1,22 @@
+/* Teal deep sea: muted/secondary aligned to cool hue for frosted panels. */
 :root {
   --background: oklch(0.18 0.025 220);
   --foreground: oklch(0.9 0.01 200);
   --card: oklch(0.22 0.03 220);
+  --card-foreground: oklch(0.9 0.01 200);
+  --popover: oklch(0.22 0.03 220);
+  --popover-foreground: oklch(0.9 0.01 200);
   --primary: oklch(0.75 0.14 180);
-  --accent: oklch(0.7 0.1 200);
+  --primary-foreground: oklch(0.98 0.01 200);
+  --secondary: oklch(0.26 0.03 220);
+  --secondary-foreground: oklch(0.9 0.01 200);
+  --muted: oklch(0.28 0.03 220);
+  --muted-foreground: oklch(0.66 0.03 200);
+  --accent: oklch(0.3 0.04 220);
+  --accent-foreground: oklch(0.9 0.01 200);
   --border: oklch(0.3 0.03 220);
-  --muted-foreground: oklch(0.6 0.03 200);
+  --input: oklch(0.3 0.03 220);
+  --ring: oklch(0.75 0.14 180);
   --online: oklch(0.75 0.16 175);
 }
 .animated-bg {
@@ -13,4 +24,13 @@
     radial-gradient(ellipse 80% 60% at 0% 0%, oklch(0.28 0.06 200 / 0.5), transparent),
     radial-gradient(ellipse 60% 50% at 100% 80%, oklch(0.25 0.05 180 / 0.4), transparent),
     linear-gradient(135deg, oklch(0.16 0.02 230) 0%, oklch(0.2 0.03 210) 100%);
+}
+.floating-orb-1 {
+  background: oklch(0.32 0.06 200 / 0.16);
+}
+.floating-orb-2 {
+  background: oklch(0.3 0.05 180 / 0.14);
+}
+.floating-orb-3 {
+  background: oklch(0.28 0.04 220 / 0.12);
 }
