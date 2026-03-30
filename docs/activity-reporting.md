@@ -30,6 +30,7 @@
 - `device`: 设备显示名（如 `MacBook Pro`，仅用于展示，不参与唯一识别）
 - `process_title`: 进程标题
 - `battery_level`: 当前设备电量（0-100，若设备/浏览器支持）
+- `is_charging`: 是否正在充电（布尔）；服务端写入 `metadata.deviceBatteryCharging`。也可使用别名 `isCharging`。未传则合并时保留上一次的充电态。
 - `device_type`: 设备类型（`desktop` / `tablet` / `mobile`）
 - `push_mode`: 推送模式（`realtime` / `active`）
 - `metadata`: 扩展 JSON 对象
@@ -97,6 +98,7 @@ curl -X POST "http://localhost:3000/api/activity" \
     "process_name": "VS Code",
     "process_title": "editing setup-form.tsx",
     "battery_level": 82,
+    "is_charging": true,
     "push_mode": "realtime",
     "metadata": {
       "source": "manual-test",
@@ -113,6 +115,7 @@ curl -X POST "http://localhost:3000/api/activity" \
 ```ts
 const battery = await navigator.getBattery?.().catch(() => null)
 const batteryLevel = battery ? Math.round(battery.level * 100) : undefined
+const isCharging = battery ? battery.charging : undefined
 
 await fetch('http://localhost:3000/api/activity', {
   method: 'POST',
@@ -127,6 +130,7 @@ await fetch('http://localhost:3000/api/activity', {
     process_name: 'Chrome',
     process_title: 'Dashboard',
     battery_level: batteryLevel,
+    ...(typeof isCharging === 'boolean' ? { is_charging: isCharging } : {}),
     push_mode: 'active', // 主动推送：长期展示，显示最后更新时间
     metadata: {
       media: {

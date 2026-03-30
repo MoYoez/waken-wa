@@ -2,11 +2,12 @@
 
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { Laptop, Music, Smartphone, Tablet } from 'lucide-react'
+import { Battery, BatteryCharging, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
 
 import { useActivityFeed } from '@/hooks/use-activity-feed'
 import { useIsClient } from '@/hooks/use-is-client'
 import { useTickingMs } from '@/hooks/use-ticking-ms'
+import { isDeviceBatteryCharging } from '@/lib/activity-battery-metadata'
 import { getMediaDisplay } from '@/lib/activity-media'
 import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
 
@@ -65,6 +66,7 @@ export function ActivityTimeline({
       <div className="space-y-2">
         {activities.map((activity) => {
           const batteryLabel = getBatteryLabel(activity.metadata)
+          const charging = isDeviceBatteryCharging(activity.metadata)
           const deviceName =
             activity.device ||
             (activity.deviceId != null ? `device #${activity.deviceId}` : `activity #${activity.id}`)
@@ -117,16 +119,33 @@ export function ActivityTimeline({
                   ) : null}
 
                   <div className="flex items-center gap-3 text-xs text-muted-foreground/70">
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 flex-wrap min-w-0">
                       {deviceType === 'mobile' ? (
-                        <Smartphone className="h-3.5 w-3.5" />
+                        <Smartphone className="h-3.5 w-3.5 shrink-0" />
                       ) : deviceType === 'tablet' ? (
-                        <Tablet className="h-3.5 w-3.5" />
+                        <Tablet className="h-3.5 w-3.5 shrink-0" />
                       ) : (
-                        <Laptop className="h-3.5 w-3.5" />
+                        <Laptop className="h-3.5 w-3.5 shrink-0" />
                       )}
-                      {deviceName}
-                      {batteryLabel ? ` · 电量 ${batteryLabel}` : ''}
+                      <span className="min-w-0 inline-flex items-center gap-1.5 flex-wrap">
+                        <span>{deviceName}</span>
+                        {batteryLabel || charging ? (
+                          <span className="inline-flex items-center gap-1">
+                            {charging ? (
+                              <BatteryCharging
+                                className="h-3.5 w-3.5 shrink-0"
+                                aria-label={batteryLabel ? undefined : '充电中'}
+                                aria-hidden={batteryLabel ? true : undefined}
+                              />
+                            ) : (
+                              <Battery className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            )}
+                            {batteryLabel ? (
+                              <span>{` · 电量 ${batteryLabel}`}</span>
+                            ) : null}
+                          </span>
+                        ) : null}
+                      </span>
                     </span>
                     <span>
                       {format(new Date(activity.startedAt), 'HH:mm', {

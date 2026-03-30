@@ -8,6 +8,10 @@ import {
   DEVICE_BATTERY_PERCENT_MAX,
   DEVICE_BATTERY_PERCENT_MIN,
 } from '@/lib/activity-api-constants'
+import {
+  DEVICE_BATTERY_CHARGING_METADATA_KEY,
+  parseIsChargingFromBody,
+} from '@/lib/activity-battery-metadata'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import {
   redactGeneratedHashKeyForClient,
@@ -137,6 +141,14 @@ export async function POST(request: NextRequest) {
       metadata = {
         ...(metadata || {}),
         deviceBatteryPercent: batteryLevel,
+      }
+    }
+
+    const isCharging = parseIsChargingFromBody(body)
+    if (isCharging !== undefined) {
+      metadata = {
+        ...(metadata || {}),
+        [DEVICE_BATTERY_CHARGING_METADATA_KEY]: isCharging,
       }
     }
 

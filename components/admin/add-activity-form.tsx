@@ -5,8 +5,13 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  DEVICE_BATTERY_PERCENT_MAX,
+  DEVICE_BATTERY_PERCENT_MIN,
+} from '@/lib/activity-api-constants'
 import {
   USER_ACTIVITY_PERSIST_MAX_MINUTES,
   USER_ACTIVITY_PERSIST_MIN_MINUTES_UI,
@@ -21,6 +26,8 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
   const [processName, setProcessName] = useState('')
   const [processTitle, setProcessTitle] = useState('')
   const [persistMinutes, setPersistMinutes] = useState('30')
+  const [batteryLevel, setBatteryLevel] = useState('')
+  const [isCharging, setIsCharging] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,16 +44,29 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
             )
           : 30
 
+      const payload: Record<string, unknown> = {
+        generatedHashKey: '',
+        device,
+        process_name: processName,
+        process_title: processTitle || undefined,
+        persist_minutes: safePersist,
+        is_charging: isCharging,
+      }
+      const trimmedBatt = batteryLevel.trim()
+      if (trimmedBatt !== '') {
+        const n = Math.round(Number(trimmedBatt))
+        if (Number.isFinite(n)) {
+          payload.battery_level = Math.min(
+            Math.max(n, DEVICE_BATTERY_PERCENT_MIN),
+            DEVICE_BATTERY_PERCENT_MAX,
+          )
+        }
+      }
+
       const res = await fetch('/api/admin/activity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          generatedHashKey: '',
-          device,
-          process_name: processName,
-          process_title: processTitle || undefined,
-          persist_minutes: safePersist,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const data = await res.json()
@@ -56,6 +76,8 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
         setDevice('')
         setProcessName('')
         setProcessTitle('')
+        setBatteryLevel('')
+        setIsCharging(false)
         onSuccess?.()
       } else {
         toast.error(data.error || '添加失败')
@@ -100,6 +122,32 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
           value={processTitle}
           onChange={(e) => setProcessTitle(e.target.value)}
         />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="battery-level">电量（可选，0–100）</Label>
+          <Input
+            id="battery-level"
+            type="number"
+            inputMode="numeric"
+            min={DEVICE_BATTERY_PERCENT_MIN}
+            max={DEVICE_BATTERY_PERCENT_MAX}
+            placeholder="留空则不上报"
+            value={batteryLevel}
+            onChange={(e) => setBatteryLevel(e.target.value)}
+          />
+        </div>
+        <div className="flex items-end gap-2 pb-2">
+          <Checkbox
+            id="is-charging"
+            checked={isCharging}
+            onCheckedChange={(v) => setIsCharging(v === true)}
+          />
+          <Label htmlFor="is-charging" className="text-sm font-normal cursor-pointer">
+            充电中
+          </Label>
+        </div>
       </div>
 
       <div className="space-y-2">

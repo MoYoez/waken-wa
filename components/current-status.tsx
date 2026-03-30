@@ -2,7 +2,17 @@
 
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { AppWindow, Battery, Clock, Gamepad2, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
+import {
+  AppWindow,
+  Battery,
+  BatteryCharging,
+  Clock,
+  Gamepad2,
+  Laptop,
+  Music,
+  Smartphone,
+  Tablet,
+} from 'lucide-react'
 import Image from 'next/image'
 import {
   type CSSProperties,
@@ -16,6 +26,7 @@ import {
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { useIsClient } from '@/hooks/use-is-client'
+import { isDeviceBatteryCharging } from '@/lib/activity-battery-metadata'
 import { getMediaDisplay, type MediaDisplay } from '@/lib/activity-media'
 import { cn } from '@/lib/utils'
 
@@ -260,6 +271,7 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
       {statuses.map((activity) => {
         const timestampFormat = 'MM/dd HH:mm:ss'
         const batteryLabel = getBatteryLabel(activity.metadata)
+        const charging = isDeviceBatteryCharging(activity.metadata)
         const deviceName =
           activity.device ||
           (activity.deviceId != null ? `device #${activity.deviceId}` : `activity #${activity.id}`)
@@ -297,10 +309,18 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
                   )}
                   <span className="font-medium">{deviceName}</span>
                 </div>
-                {batteryLabel ? (
+                {batteryLabel || charging ? (
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Battery className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span>电量 {batteryLabel}</span>
+                    {charging ? (
+                      <BatteryCharging
+                        className="h-3.5 w-3.5 shrink-0"
+                        aria-label={batteryLabel ? undefined : '充电中'}
+                        aria-hidden={batteryLabel ? true : undefined}
+                      />
+                    ) : (
+                      <Battery className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    )}
+                    {batteryLabel ? <span>电量 {batteryLabel}</span> : null}
                   </div>
                 ) : null}
               </div>

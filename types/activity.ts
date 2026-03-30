@@ -6,6 +6,8 @@ export interface ActivityInput {
   process_name: string
   process_title?: string
   battery_level?: number
+  /** When set, stored as `metadata.deviceBatteryCharging`. Alias: `isCharging`. */
+  is_charging?: boolean
   push_mode?: 'realtime' | 'active'
   metadata?: Record<string, unknown>
 }

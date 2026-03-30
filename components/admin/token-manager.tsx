@@ -559,6 +559,7 @@ export function TokenManager() {
     "process_name": "VS Code",
     "process_title": "编辑 index.tsx",
     "battery_level": 82,
+    "is_charging": true,
     "push_mode": "realtime"
   }'`}
             </pre>
