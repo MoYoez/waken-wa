@@ -1300,7 +1300,6 @@ export function WebSettings() {
               <Label htmlFor="steam-api-key">Steam Web API Key（留空则不修改已保存的值）</Label>
               <Input
                 id="steam-api-key"
-                type="password"
                 autoComplete="off"
                 value={form.steamApiKey}
                 onChange={(e) => patch('steamApiKey', e.target.value)}
