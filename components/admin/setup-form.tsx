@@ -258,7 +258,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                 className="w-full text-xs text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border file:border-border file:bg-muted/50 file:text-foreground hover:file:bg-muted file:cursor-pointer"
               />
               <p className="text-[11px] text-muted-foreground">
-                上传后在弹窗中拖动和缩放图片，确认后保存为 64x64 正方形（PNG DataURL）
+                上传后在弹窗中拖动和缩放图片，确认后保存为 128×128 正方形（PNG DataURL）
               </p>
               {avatarUrl && (
                 <div className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3">
@@ -366,9 +366,9 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
         }}
         sourceUrl={cropSourceUrl}
         aspectMode="square"
-        outputSize={64}
+        outputSize={128}
         title="裁剪头像"
-        description="拖动选区或边角调整范围，滑块缩放图片；确认后生成 64×64 头像。"
+        description="拖动选区或边角调整范围，滑块缩放图片；确认后生成 128×128 头像。"
         onComplete={(dataUrl) => {
           setAvatarUrl(dataUrl)
         }}

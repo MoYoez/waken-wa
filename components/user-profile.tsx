@@ -173,7 +173,7 @@ export function UserProfile({
         >
           <div
             className={cn(
-              'w-[4.5rem] h-[4.5rem] rounded-full overflow-hidden border-2 ring-2 ring-background',
+              'relative w-[4.5rem] h-[4.5rem] rounded-full overflow-hidden border-2 ring-2 ring-background [backface-visibility:hidden] [transform:translateZ(0)]',
               !isOnline && 'border-destructive/50',
               isOnline && !onlineHex && 'border-online/60',
               // Same pattern as offline ring: semantic color at 50% on the border
@@ -185,10 +185,12 @@ export function UserProfile({
             <Image
               src={avatarUrl}
               alt={name}
-              width={72}
-              height={72}
-              className="w-full h-full object-cover"
+              width={128}
+              height={128}
+              sizes="72px"
+              className="h-full w-full object-cover"
               priority
+              quality={92}
             />
           </div>
           <div
