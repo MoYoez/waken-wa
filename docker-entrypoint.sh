@@ -24,6 +24,8 @@ if [ "$(id -u)" = 0 ]; then
 fi
 
 export DATABASE_URL="${DATABASE_URL:-file:/app/data/dev.db}"
+export REDIS_URL="${REDIS_URL:-}"
+export REDIS_CACHE_TTL_SECONDS="${REDIS_CACHE_TTL_SECONDS:-3600}"
 
 # Config lives under /app but CLI deps are in /app/tools; TS config imports `drizzle-kit`.
 export NODE_PATH=/app/tools/node_modules
@@ -50,6 +52,8 @@ if [ "$(id -u)" = 0 ]; then
     JWT_SECRET="$JWT_SECRET" \
     PORT="${PORT:-3000}" \
     NODE_ENV="${NODE_ENV:-production}" \
+    REDIS_URL="$REDIS_URL" \
+    REDIS_CACHE_TTL_SECONDS="$REDIS_CACHE_TTL_SECONDS" \
     HOST=0.0.0.0 \
     HOSTNAME=0.0.0.0 \
     NODE_PATH=/app/tools/node_modules \

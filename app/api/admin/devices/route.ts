@@ -7,6 +7,7 @@ import {
   ADMIN_LIST_DEFAULT_PAGE_SIZE,
   ADMIN_LIST_MAX_PAGE_SIZE,
 } from '@/lib/admin-list-constants'
+import { clearActivityFeedDataCache } from '@/lib/activity-feed'
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
@@ -192,6 +193,7 @@ export async function POST(request: NextRequest) {
       })
       .returning()
     clearDeviceAuthCache()
+    await clearActivityFeedDataCache()
 
     return NextResponse.json({ success: true, data: item }, { status: 201 })
   } catch (error) {
@@ -254,6 +256,7 @@ export async function PATCH(request: NextRequest) {
       .where(eq(devices.id, id))
       .returning()
     clearDeviceAuthCache()
+    await clearActivityFeedDataCache()
 
     return NextResponse.json({ success: true, data: item })
   } catch (error) {
@@ -277,6 +280,7 @@ export async function DELETE(request: NextRequest) {
 
     await db.delete(devices).where(eq(devices.id, id))
     clearDeviceAuthCache()
+    await clearActivityFeedDataCache()
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('删除设备失败:', error)

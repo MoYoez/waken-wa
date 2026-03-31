@@ -7,7 +7,8 @@ import { MarkdownContent } from '@/components/admin/markdown-content'
 import { ContentReadingPanel } from '@/components/content-reading-panel'
 import { db } from '@/lib/db'
 import { inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
-import { formatDateTimeShort, normalizeTimezone } from '@/lib/timezone'
+import { coerceDbTimestampToIsoUtc, formatDateTimeShort, normalizeTimezone } from '@/lib/timezone'
+
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +46,7 @@ export default async function InspirationDetailPage({
   const entry = row[0]
   if (!entry) notFound()
 
-  const createdAt = entry.createdAt instanceof Date ? entry.createdAt.toISOString() : String(entry.createdAt)
+  const createdAt = coerceDbTimestampToIsoUtc(entry.createdAt)
   const displayTimezone = normalizeTimezone(config[0]?.displayTimezone)
 
   return (

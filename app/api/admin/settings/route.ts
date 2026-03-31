@@ -1,11 +1,15 @@
 import bcrypt from 'bcryptjs'
 import { NextRequest, NextResponse } from 'next/server'
 
+import {
+  REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
+} from '@/lib/activity-api-constants'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
+import { clearActivityFeedDataCache } from '@/lib/activity-feed'
 import { getSession } from '@/lib/auth'
-import { db } from '@/lib/db'
+
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
-import { siteConfig } from '@/lib/drizzle-schema'
+
 import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
@@ -38,6 +42,11 @@ import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
+import {
+  isRedisCacheForcedOnServerless,
+  mergeRedisCacheAdminFields,
+  parseRedisCacheTtlSeconds,
+} from '@/lib/cache-runtime-toggle'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -59,11 +68,14 @@ export async function GET() {
     if (!config) {
       return NextResponse.json({ success: true, data: null })
     }
+    const redisAdmin = mergeRedisCacheAdminFields(config)
     const safe = {
       ...config,
       pageLockPasswordHash: undefined,
       hcaptchaSecretKey: config.hcaptchaSecretKey ? '••••••••' : null,
       steamApiKey: config.steamApiKey ? '••••••••' : null,
+      useNoSqlAsCacheRedis: redisAdmin.useNoSqlAsCacheRedis,
+      redisCacheServerlessForced: redisAdmin.redisCacheServerlessForced,
     }
     return NextResponse.json({ success: true, data: safe })
   } catch (error) {
@@ -343,6 +355,19 @@ export async function PATCH(request: NextRequest) {
     if (body.activityUpdateMode !== undefined && body.activityUpdateMode !== null) {
       activityUpdateMode = normalizeActivityUpdateMode(body.activityUpdateMode)
     }
+    let useNoSqlAsCacheRedis = existing?.useNoSqlAsCacheRedis === true
+    if (body.useNoSqlAsCacheRedis !== undefined && body.useNoSqlAsCacheRedis !== null) {
+      useNoSqlAsCacheRedis = Boolean(body.useNoSqlAsCacheRedis)
+    }
+    if (isRedisCacheForcedOnServerless()) {
+      useNoSqlAsCacheRedis = true
+    }
+    let redisCacheTtlSeconds = parseRedisCacheTtlSeconds(
+      existing?.redisCacheTtlSeconds ?? REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
+    )
+    if (body.redisCacheTtlSeconds !== undefined && body.redisCacheTtlSeconds !== null) {
+      redisCacheTtlSeconds = parseRedisCacheTtlSeconds(body.redisCacheTtlSeconds)
+    }
 
     // Steam 设置
     let steamEnabled = existing?.steamEnabled ?? false
@@ -438,6 +463,8 @@ export async function PATCH(request: NextRequest) {
         hcaptchaSecretKey,
         displayTimezone,
         activityUpdateMode,
+        useNoSqlAsCacheRedis,
+        redisCacheTtlSeconds,
         steamEnabled,
         steamId,
         steamApiKey,
@@ -490,23 +517,29 @@ export async function PATCH(request: NextRequest) {
         hcaptchaSecretKey,
         displayTimezone,
         activityUpdateMode,
+        useNoSqlAsCacheRedis,
+        redisCacheTtlSeconds,
         steamEnabled,
         steamId,
         steamApiKey,
         activityRejectLockappSleep,
       },
     })
+    await clearActivityFeedDataCache()
 
     const config = await getSiteConfigMemoryFirst()
     if (!config) {
       return NextResponse.json({ success: false, error: '站点配置不存在' }, { status: 500 })
     }
 
+    const redisAdminOut = mergeRedisCacheAdminFields(config)
     const safeOut = {
       ...config,
       pageLockPasswordHash: undefined,
       hcaptchaSecretKey: config.hcaptchaSecretKey ? '••••••••' : null,
       steamApiKey: config.steamApiKey ? '••••••••' : null,
+      useNoSqlAsCacheRedis: redisAdminOut.useNoSqlAsCacheRedis,
+      redisCacheServerlessForced: redisAdminOut.redisCacheServerlessForced,
     }
     return NextResponse.json({ success: true, data: safeOut })
   } catch (error) {

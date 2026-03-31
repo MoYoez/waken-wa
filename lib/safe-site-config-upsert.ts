@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
-import { clearSiteConfigMemoryCache } from '@/lib/site-config-cache'
+import { clearSiteConfigCaches } from '@/lib/site-config-cache'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 
 type SiteConfigUpsertArgs = {
@@ -46,7 +46,7 @@ export async function safeSiteConfigUpsert(
           target: siteConfig.id,
           set: update as never,
         })
-      clearSiteConfigMemoryCache()
+      await clearSiteConfigCaches()
       return
     } catch (error) {
       const unknownCol = getUnknownColumnName(error)

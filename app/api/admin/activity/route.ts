@@ -12,6 +12,9 @@ import {
   parseIsChargingFromBody,
 } from '@/lib/activity-battery-metadata'
 import {
+  clearActivityFeedDataCache,
+} from '@/lib/activity-feed'
+import {
   ADMIN_PERSIST_SECONDS_METADATA_KEY,
   redactGeneratedHashKeyForClient,
   upsertActivity,
@@ -26,7 +29,10 @@ import {
   WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY,
 } from '@/lib/device-constants'
 import { devices, userActivities } from '@/lib/drizzle-schema'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
+import { parseProcessStaleSeconds } from '@/lib/site-config-constants'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
+import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
 import { USER_ACTIVITY_PERSIST_MAX_SEC, USER_ACTIVITY_PERSIST_MIN_SEC } from '@/lib/user-activity-persist'
 
 // Force dynamic rendering; disable caching
@@ -142,18 +148,14 @@ export async function POST(request: NextRequest) {
         )
       }
     }
+    const siteCfg = await getSiteConfigMemoryFirst()
+    const realtimeTtlSeconds = parseProcessStaleSeconds(siteCfg?.processStaleSeconds)
     let finalMetadata = metadata
     let adminExpiresAt: Date | undefined
     if (adminPersistSeconds != null) {
       adminExpiresAt = new Date(Date.now() + adminPersistSeconds * 1000)
-      finalMetadata = {
-        ...(finalMetadata || {}),
-        [ADMIN_PERSIST_SECONDS_METADATA_KEY]: adminPersistSeconds,
-        pushMode: 'active',
-        [USER_PERSIST_EXPIRES_AT_METADATA_KEY]: adminExpiresAt.toISOString(),
-        [USER_ACTIVITY_DB_SYNCED_METADATA_KEY]: true,
-      }
     }
+    const finalExpiresAt = adminExpiresAt ?? new Date(Date.now() + realtimeTtlSeconds * 1000)
 
     if (!process_name) {
       return NextResponse.json(
@@ -205,9 +207,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (adminPersistSeconds != null && adminExpiresAt) {
+    if (adminPersistSeconds != null) {
+      finalMetadata = {
+        ...(finalMetadata || {}),
+        [ADMIN_PERSIST_SECONDS_METADATA_KEY]: adminPersistSeconds,
+        pushMode: 'active',
+        [USER_PERSIST_EXPIRES_AT_METADATA_KEY]: finalExpiresAt.toISOString(),
+        [USER_ACTIVITY_DB_SYNCED_METADATA_KEY]: true,
+      }
       const now = sqlTimestamp()
-      const expiresAtVal = sqlDate(adminExpiresAt)
+      const expiresAtVal = sqlDate(finalExpiresAt)
       await db
         .insert(userActivities)
         .values({
@@ -229,12 +238,26 @@ export async function POST(request: NextRequest) {
             updatedAt: now,
           },
         })
+      await removeRealtimeActivity(effectiveHashKey, process_name)
     } else {
-      await db
-        .delete(userActivities)
-        .where(
-          and(eq(userActivities.deviceId, deviceRecord.id), eq(userActivities.processName, process_name)),
-        )
+      finalMetadata = {
+        ...(finalMetadata || {}),
+        pushMode: 'realtime',
+      }
+      await upsertRealtimeActivity(
+        {
+          deviceId: deviceRecord.id,
+          device,
+          generatedHashKey: effectiveHashKey,
+          processName: process_name,
+          processTitle: process_title,
+          metadata: finalMetadata,
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          expiresAt: finalExpiresAt.toISOString(),
+        },
+        realtimeTtlSeconds,
+      )
     }
 
     const entry = upsertActivity({
@@ -255,6 +278,8 @@ export async function POST(request: NextRequest) {
         updatedAt: seenAt,
       })
       .where(eq(devices.id, deviceRecord.id))
+
+    await clearActivityFeedDataCache()
 
     return NextResponse.json(
       {

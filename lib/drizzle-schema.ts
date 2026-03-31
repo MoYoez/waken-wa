@@ -12,6 +12,7 @@ export const devices = usePg ? pg.devices : sqlite.devices
 export const userActivities = usePg ? pg.userActivities : sqlite.userActivities
 export const siteConfig = usePg ? pg.siteConfig : sqlite.siteConfig
 export const systemSecrets = usePg ? pg.systemSecrets : sqlite.systemSecrets
+export const rateLimitBackups = usePg ? pg.rateLimitBackups : sqlite.rateLimitBackups
 export const inspirationEntries = usePg ? pg.inspirationEntries : sqlite.inspirationEntries
 export const inspirationAssets = usePg ? pg.inspirationAssets : sqlite.inspirationAssets
 

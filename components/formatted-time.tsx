@@ -1,7 +1,7 @@
 'use client'
 
 import { useIsClient } from '@/hooks/use-is-client'
-import { DEFAULT_TIMEZONE, formatDateTimeShort } from '@/lib/timezone'
+import { coerceDbTimestampToIsoUtc, DEFAULT_TIMEZONE, formatDateTimeShort } from '@/lib/timezone'
 
 interface FormattedTimeProps {
   /** ISO 日期字符串或 Date 对象 */
@@ -19,14 +19,14 @@ interface FormattedTimeProps {
 export function FormattedTime({ date, timezone, className }: FormattedTimeProps) {
   const mounted = useIsClient()
 
-  const tz = timezone || DEFAULT_TIMEZONE
-  const isoDate = typeof date === 'string' ? date : date.toISOString()
+  const tz = (typeof timezone === 'string' && timezone.trim()) || DEFAULT_TIMEZONE
+  const isoInstant = coerceDbTimestampToIsoUtc(typeof date === 'string' ? date : date)
 
   if (!mounted) {
-    return <time className={className} dateTime={isoDate} suppressHydrationWarning>--</time>
+    return <time className={className} dateTime={isoInstant} suppressHydrationWarning>--</time>
   }
 
   const formatted = formatDateTimeShort(date, tz)
 
-  return <time className={className} dateTime={isoDate} suppressHydrationWarning>{formatted}</time>
+  return <time className={className} dateTime={isoInstant} suppressHydrationWarning>{formatted}</time>
 }

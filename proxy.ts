@@ -40,13 +40,13 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   return response
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (RATE_LIMITED_PATHS.has(pathname) && request.method === 'POST') {
     const ip = getClientIp(request)
     if (
-      isRateLimited(`rl:${pathname}:${ip}`, RATE_LIMIT_MAX_AUTH, RATE_LIMIT_WINDOW_MS)
+      await isRateLimited(`rl:${pathname}:${ip}`, RATE_LIMIT_MAX_AUTH, RATE_LIMIT_WINDOW_MS)
     ) {
       return addSecurityHeaders(
         NextResponse.json(

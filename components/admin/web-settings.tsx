@@ -28,6 +28,10 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import {
+  REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
+  REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
+} from '@/lib/activity-api-constants'
+import {
   ACTIVITY_UPDATE_MODE_OPTIONS,
   type ActivityUpdateMode,
   DEFAULT_ACTIVITY_UPDATE_MODE,
@@ -377,6 +381,18 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   ) {
     patch.activityRejectLockappSleep = web.activityRejectLockappSleep
   }
+  if ('useNoSqlAsCacheRedis' in web && typeof web.useNoSqlAsCacheRedis === 'boolean') {
+    patch.useNoSqlAsCacheRedis = web.useNoSqlAsCacheRedis
+  }
+  if ('redisCacheTtlSeconds' in web) {
+    const ttl = Number(web.redisCacheTtlSeconds)
+    if (Number.isFinite(ttl)) {
+      patch.redisCacheTtlSeconds = Math.min(
+        REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
+        Math.max(1, Math.round(ttl)),
+      )
+    }
+  }
   return patch
 }
 
@@ -437,6 +453,10 @@ interface SiteConfig {
   displayTimezone: string
   /** 活动状态更新模式 */
   activityUpdateMode: ActivityUpdateMode
+  /** Enable Redis cache outside forced runtime environments. */
+  useNoSqlAsCacheRedis: boolean
+  /** Redis activity-feed cache TTL seconds. */
+  redisCacheTtlSeconds: number
   /** Steam 状态是否启用 */
   steamEnabled: boolean
   /** Steam 64-bit ID */
@@ -466,6 +486,8 @@ export function WebSettings() {
   >([])
 
   const [baselineForm, setBaselineForm] = useState<SiteConfig | null>(null)
+  /** Vercel + Redis: serverless forces activity-feed Redis cache on; switch is read-only. */
+  const [redisCacheServerlessForced, setRedisCacheServerlessForced] = useState(false)
 
   const [form, setForm] = useState<SiteConfig>({
     pageTitle: DEFAULT_PAGE_TITLE,
@@ -515,6 +537,8 @@ export function WebSettings() {
     activityRejectLockappSleep: false,
     displayTimezone: DEFAULT_TIMEZONE,
     activityUpdateMode: DEFAULT_ACTIVITY_UPDATE_MODE,
+    useNoSqlAsCacheRedis: true,
+    redisCacheTtlSeconds: REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
     steamEnabled: false,
     steamId: '',
     steamApiKey: '',
@@ -625,10 +649,18 @@ export function WebSettings() {
             activityRejectLockappSleep: data.data.activityRejectLockappSleep === true,
             displayTimezone: normalizeTimezone(data.data.displayTimezone),
             activityUpdateMode: normalizeActivityUpdateMode(data.data.activityUpdateMode),
+            useNoSqlAsCacheRedis:
+              data.data.useNoSqlAsCacheRedis === undefined
+                ? true
+                : data.data.useNoSqlAsCacheRedis === true,
+            redisCacheTtlSeconds: Number(
+              data.data.redisCacheTtlSeconds ?? REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
+            ),
             steamEnabled: Boolean(data.data.steamEnabled),
             steamId: String(data.data.steamId ?? ''),
             steamApiKey: '',
           }
+          setRedisCacheServerlessForced(data.data.redisCacheServerlessForced === true)
           setForm(loaded)
           setBaselineForm(structuredClone(loaded))
         }
@@ -736,6 +768,12 @@ export function WebSettings() {
         steamApiKey: steamApiKeyForm,
         ...formRest
       } = form
+      const normalizedRedisTtl = Number.isFinite(formRest.redisCacheTtlSeconds)
+        ? Math.min(
+            REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
+            Math.max(1, Math.round(formRest.redisCacheTtlSeconds)),
+          )
+        : REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS
 
       const hcaptchaPatch: Record<string, unknown> = {
         hcaptchaEnabled: formRest.hcaptchaEnabled,
@@ -755,6 +793,7 @@ export function WebSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formRest,
+          redisCacheTtlSeconds: normalizedRedisTtl,
           profileOnlineAccentColor: normalizeProfileOnlineAccentColor(poTrim || '') ?? null,
           appMessageRules: parsedRules,
           appBlacklist: parsedBlacklist,
@@ -773,7 +812,13 @@ export function WebSettings() {
         return
       }
       toast.success('保存成功，主页刷新后生效')
-      setBaselineForm(structuredClone(form))
+      setRedisCacheServerlessForced(data?.data?.redisCacheServerlessForced === true)
+      const nextForm =
+        data?.data && typeof data.data.useNoSqlAsCacheRedis === 'boolean'
+          ? { ...form, useNoSqlAsCacheRedis: data.data.useNoSqlAsCacheRedis === true }
+          : form
+      setForm(nextForm)
+      setBaselineForm(structuredClone(nextForm))
     } catch {
       toast.error('网络异常，请重试')
     } finally {
@@ -1351,6 +1396,51 @@ export function WebSettings() {
             </div>
           ))}
         </RadioGroup>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+        <div className="space-y-0.5 min-w-0">
+          <Label htmlFor="use-nosql-as-cache-redis" className="font-normal cursor-pointer">
+            UseNoSQLAsCache(Redis) - 使用 Redis 缓存
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            开启后，活动流、站点配置、JWT 密钥缓存、限流、设备与 API Token 校验等优先走 Redis；关闭后上述用途均不走 Redis。未配置或不可用时自动回退，不会中断服务。
+          </p>
+          {redisCacheServerlessForced && (
+            <div className="rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 mt-2">
+              <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                检测到 Serverless 环境（Vercel）：此项默认强制为开且无法在此关闭；若未配置 REDIS_URL，相关逻辑会跳过 Redis 并回退到数据库/内存。
+              </p>
+            </div>
+          )}
+        </div>
+        <Switch
+          id="use-nosql-as-cache-redis"
+          checked={form.useNoSqlAsCacheRedis}
+          onCheckedChange={(v) => patch('useNoSqlAsCacheRedis', v)}
+          disabled={redisCacheServerlessForced}
+          className="shrink-0"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="redis-cache-ttl-seconds">Redis 缓存 TTL（秒）</Label>
+        <Input
+          id="redis-cache-ttl-seconds"
+          type="number"
+          min={1}
+          max={REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS}
+          value={form.redisCacheTtlSeconds}
+          onChange={(e) =>
+            patch(
+              'redisCacheTtlSeconds',
+              Number(e.target.value || REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS),
+            )
+          }
+        />
+        <p className="text-xs text-muted-foreground">
+          聚合活动流（含数据库活动）在 Redis 中的缓存秒数。默认 3600（1 小时）；更短更实时，更长更省读库。
+        </p>
       </div>
 
       {/* Steam 状态设置 */}

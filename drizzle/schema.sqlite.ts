@@ -176,6 +176,10 @@ export const siteConfig = sqliteTable('site_config', {
   steamId: text('steam_id'),
   steamApiKey: text('steam_api_key'),
   // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  useNoSqlAsCacheRedis: integer('use_no_sql_as_cache_redis', { mode: 'boolean' }).default(true),
+  // Nullable on purpose: safe db:push on existing rows; app handles null with default.
+  redisCacheTtlSeconds: integer('redis_cache_ttl_seconds').default(3600),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
   activityRejectLockappSleep: integer('activity_reject_lockapp_sleep', {
     mode: 'boolean',
   }).default(false),
@@ -187,6 +191,19 @@ export const systemSecrets = sqliteTable('system_secrets', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
 })
+
+export const rateLimitBackups = sqliteTable(
+  'rate_limit_backups',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    rlKey: text('rl_key').notNull().unique(),
+    count: integer('count').notNull().default(0),
+    windowMs: integer('window_ms').notNull(),
+    resetAt: textCol('reset_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [index('rate_limit_backups_rl_key_idx').on(t.rlKey)],
+)
 
 export const inspirationEntries = sqliteTable('inspiration_entries', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -223,6 +240,7 @@ export const sqliteSchema = {
   userActivities,
   siteConfig,
   systemSecrets,
+  rateLimitBackups,
   inspirationEntries,
   inspirationAssets,
 }

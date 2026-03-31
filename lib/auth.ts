@@ -8,6 +8,8 @@ import { cookies } from 'next/headers'
 import { findActiveApiTokenBySecret, resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import { db } from '@/lib/db'
 import { adminUsers, systemSecrets } from '@/lib/drizzle-schema'
+import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
+import { redisGetString, redisSetString } from '@/lib/redis-client'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import type { SessionPayload } from '@/types/auth'
 
@@ -22,16 +24,31 @@ function getDummyHash(): Promise<string> {
 }
 
 const JWT_SECRET_DB_KEY = 'jwt_secret'
+const JWT_SECRET_REDIS_KEY = 'waken:jwt:secret'
+const JWT_SECRET_REDIS_TTL_SECONDS = 24 * 60 * 60
 let cachedJwtSecret: Uint8Array | null = null
 
-/** JWT secret: env JWT_SECRET, else DB system_secrets, else generate; cached per process. */
+/** JWT secret chain: env -> redis (if cache toggle) -> DB; all missing/failed => fail-closed. */
 async function getJwtSecretBytes(): Promise<Uint8Array> {
   if (cachedJwtSecret) return cachedJwtSecret
+
+  const useRedis = await shouldUseRedisCache()
 
   const fromEnv = process.env.JWT_SECRET?.trim()
   if (fromEnv) {
     cachedJwtSecret = new TextEncoder().encode(fromEnv)
+    if (useRedis) {
+      void redisSetString(JWT_SECRET_REDIS_KEY, fromEnv, JWT_SECRET_REDIS_TTL_SECONDS)
+    }
     return cachedJwtSecret
+  }
+
+  if (useRedis) {
+    const fromRedis = await redisGetString(JWT_SECRET_REDIS_KEY)
+    if (fromRedis?.trim()) {
+      cachedJwtSecret = new TextEncoder().encode(fromRedis.trim())
+      return cachedJwtSecret
+    }
   }
 
   try {
@@ -40,26 +57,38 @@ async function getJwtSecretBytes(): Promise<Uint8Array> {
       .from(systemSecrets)
       .where(eq(systemSecrets.key, JWT_SECRET_DB_KEY))
       .limit(1)
-    if (row) {
-      cachedJwtSecret = new TextEncoder().encode(row.value)
+    const dbValue = row?.value?.trim()
+    if (dbValue) {
+      cachedJwtSecret = new TextEncoder().encode(dbValue)
+      if (useRedis) {
+        void redisSetString(JWT_SECRET_REDIS_KEY, dbValue, JWT_SECRET_REDIS_TTL_SECONDS)
+      }
       return cachedJwtSecret
     }
 
+    // Secret is truly missing (query succeeded but no value): generate once and persist.
     const generated = randomBytes(48).toString('base64url')
-    await db.insert(systemSecrets).values({ key: JWT_SECRET_DB_KEY, value: generated }).onConflictDoNothing()
+    await db
+      .insert(systemSecrets)
+      .values({ key: JWT_SECRET_DB_KEY, value: generated })
+      .onConflictDoNothing()
 
     const [saved] = await db
       .select()
       .from(systemSecrets)
       .where(eq(systemSecrets.key, JWT_SECRET_DB_KEY))
       .limit(1)
-    const finalValue = saved?.value ?? generated
+    const finalValue = saved?.value?.trim()
+    if (!finalValue) {
+      throw new Error('JWT secret missing after initialization')
+    }
     cachedJwtSecret = new TextEncoder().encode(finalValue)
+    if (useRedis) {
+      void redisSetString(JWT_SECRET_REDIS_KEY, finalValue, JWT_SECRET_REDIS_TTL_SECONDS)
+    }
     return cachedJwtSecret
-  } catch (err) {
-    console.warn('[auth] Failed to load JWT secret from DB, using ephemeral secret:', err)
-    cachedJwtSecret = randomBytes(32)
-    return cachedJwtSecret
+  } catch {
+    throw new Error('JWT secret unavailable')
   }
 }
 

@@ -13,6 +13,15 @@ export const ACTIVITY_FEED_QUERY_MAX_LIMIT = 100
 /** Max distinct processes in `recentTopApps` sidebar list. */
 export const ACTIVITY_FEED_RECENT_TOP_APPS_MAX = 3
 
+/**
+ * Default Redis TTL (seconds) for aggregated activity feed cache (`waken:activity:feed:v1`).
+ * Includes DB-backed `userActivities` rows merged into the feed payload.
+ */
+export const REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS = 3600
+
+/** Upper bound for site-config / env activity-feed Redis TTL (seconds). */
+export const REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS = 86400
+
 /** Battery percent clamp for activity POST payloads (inclusive). */
 export const DEVICE_BATTERY_PERCENT_MIN = 0
 export const DEVICE_BATTERY_PERCENT_MAX = 100

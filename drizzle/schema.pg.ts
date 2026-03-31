@@ -154,6 +154,10 @@ export const siteConfig = pgTable('site_config', {
   steamId: varchar('steam_id', { length: 30 }),
   steamApiKey: varchar('steam_api_key', { length: 128 }),
   // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  useNoSqlAsCacheRedis: boolean('use_no_sql_as_cache_redis').default(true),
+  // Nullable on purpose: safe db:push on existing rows; app handles null with default.
+  redisCacheTtlSeconds: integer('redis_cache_ttl_seconds').default(3600),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
   activityRejectLockappSleep: boolean('activity_reject_lockapp_sleep').default(false),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
     .notNull()
@@ -167,6 +171,21 @@ export const systemSecrets = pgTable('system_secrets', {
   key: varchar('key', { length: 64 }).primaryKey(),
   value: varchar('value', { length: 512 }).notNull(),
 })
+
+export const rateLimitBackups = pgTable(
+  'rate_limit_backups',
+  {
+    id: serial('id').primaryKey(),
+    rlKey: varchar('rl_key', { length: 255 }).notNull(),
+    count: integer('count').notNull().default(0),
+    windowMs: integer('window_ms').notNull(),
+    resetAt: timestamp('reset_at', { mode: 'date', withTimezone: true }).notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex('rate_limit_backups_rl_key_key').on(t.rlKey)],
+)
 
 export const inspirationEntries = pgTable('inspiration_entries', {
   id: serial('id').primaryKey(),
@@ -206,6 +225,7 @@ export const pgSchema = {
   userActivities,
   siteConfig,
   systemSecrets,
+  rateLimitBackups,
   inspirationEntries,
   inspirationAssets,
 }

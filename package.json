@@ -57,6 +57,7 @@
     "embla-carousel-react": "8.6.0",
     "ical.js": "^2.2.1",
     "input-otp": "1.4.2",
+    "ioredis": "^5.8.2",
     "jose": "^6.0.11",
     "lucide-react": "^0.564.0",
     "next": "16.2.0",

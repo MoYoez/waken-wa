@@ -48,6 +48,33 @@ export function normalizeTimezone(tz: unknown): string {
 }
 
 /**
+ * Parse timestamps for display. SQLite `datetime('now')` and TEXT columns store UTC wall time
+ * without a `Z` suffix; `new Date("YYYY-MM-DD HH:mm:ss")` is interpreted as *local* time in JS,
+ * which breaks `displayTimezone` formatting. Naive `YYYY-MM-DD[ T]HH:mm:ss` is treated as UTC.
+ */
+function parseInstantForDisplay(input: Date | string | number): Date {
+  if (input instanceof Date) return input
+  if (typeof input === 'number') return new Date(input)
+  const s = input.trim()
+  if (!s) return new Date(NaN)
+  if (/[zZ]$/.test(s) || /[+-]\d{2}:\d{2}$/.test(s)) return new Date(s)
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)$/)
+  if (m) return new Date(`${m[1]}T${m[2]}Z`)
+  return new Date(s)
+}
+
+/**
+ * Stable ISO-8601 instant (UTC, `Z`) for `<time dateTime>` and APIs. Use at serialization boundaries.
+ */
+export function coerceDbTimestampToIsoUtc(
+  value: Date | string | number | null | undefined,
+): string {
+  if (value == null) return new Date(0).toISOString()
+  const d = parseInstantForDisplay(value)
+  return Number.isNaN(d.getTime()) ? new Date(0).toISOString() : d.toISOString()
+}
+
+/**
  * 在指定时区格式化日期
  */
 export function formatInTimezone(
@@ -55,7 +82,7 @@ export function formatInTimezone(
   timezone: string,
   options?: Intl.DateTimeFormatOptions
 ): string {
-  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date
+  const d = parseInstantForDisplay(date)
   const tz = isValidTimezone(timezone) ? timezone : DEFAULT_TIMEZONE
   
   const defaultOptions: Intl.DateTimeFormatOptions = {
@@ -75,7 +102,7 @@ export function formatInTimezone(
  * 获取简短的日期时间格式 (yyyy-MM-dd HH:mm)
  */
 export function formatDateTimeShort(date: Date | string | number, timezone: string): string {
-  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date
+  const d = parseInstantForDisplay(date)
   const tz = isValidTimezone(timezone) ? timezone : DEFAULT_TIMEZONE
   
   const formatted = new Intl.DateTimeFormat('sv-SE', {

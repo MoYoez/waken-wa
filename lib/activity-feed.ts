@@ -1,27 +1,40 @@
+import { desc, eq, gt } from 'drizzle-orm'
+
 import {
   ACTIVITY_FEED_DEFAULT_LIMIT,
   ACTIVITY_FEED_QUERY_MAX_LIMIT,
   ACTIVITY_FEED_RECENT_TOP_APPS_MAX,
 } from '@/lib/activity-api-constants'
-import {
-  cleanupStaleActivities,
-  getAllActivities,
-  redactGeneratedHashKeyForClient,
-} from '@/lib/activity-store'
+import { clearCachedActivityFeedData, getCachedActivityFeedData, setCachedActivityFeedData } from '@/lib/activity-feed-cache'
+import { redactGeneratedHashKeyForClient } from '@/lib/activity-store'
+import { db } from '@/lib/db'
+import { devices, userActivities } from '@/lib/drizzle-schema'
 import {
   parseHistoryWindowMinutes,
   parseProcessStaleSeconds,
 } from '@/lib/site-config-constants'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
+import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
+import { listRealtimeActivities } from '@/lib/realtime-activity-cache'
 import { getSteamNowPlayingByDeviceHashes } from '@/lib/steam-feed-merge'
-import {
-  hydrateUserActivitiesIntoStoreOnce,
-  purgeExpiredUserActivitiesFromDbAndMemory,
-} from '@/lib/user-activity-hydration'
+import { purgeExpiredUserActivitiesFromDbAndMemory } from '@/lib/user-activity-hydration'
 import type { ActivityFeedData, ActivityFeedItem } from '@/types/activity'
 
 export { redactGeneratedHashKeyForClient }
 export type { ActivityFeedData } from '@/types/activity'
+
+type ActivityDbRow = {
+  id: number | string
+  deviceId: number
+  generatedHashKey: string
+  processName: string
+  processTitle: string | null
+  metadata: Record<string, unknown> | null
+  startedAt: Date | string
+  updatedAt: Date | string
+  expiresAt: Date | string
+  device: string
+}
 
 function normalizeProcessName(value: string): string {
   return value.trim().toLowerCase()
@@ -109,6 +122,15 @@ export async function getActivityFeedData(
   options?: GetActivityFeedOptions,
 ): Promise<ActivityFeedData> {
   const config = await getSiteConfigMemoryFirst()
+  const cached = await getCachedActivityFeedData()
+  if (cached) {
+    const hideActivityMedia = config?.hideActivityMedia === true
+    if (options?.forPublicFeed && hideActivityMedia) {
+      return omitActivityMediaFromFeed(cached)
+    }
+    return cached
+  }
+
   const historyWindowMinutes = parseHistoryWindowMinutes(config?.historyWindowMinutes)
   const defaultStaleSeconds = parseProcessStaleSeconds(config?.processStaleSeconds)
   const appMessageRules: Array<{ match: string; text: string }> = Array.isArray(config?.appMessageRules)
@@ -135,43 +157,97 @@ export async function getActivityFeedData(
 
   try {
     await purgeExpiredUserActivitiesFromDbAndMemory()
-    await hydrateUserActivitiesIntoStoreOnce()
   } catch (error) {
     console.error('[activity-feed] UserActivity purge/hydrate failed:', error)
   }
 
-  cleanupStaleActivities(defaultStaleSeconds)
+  const now = sqlTimestamp()
+  const sinceDate = new Date(Date.now() - historyWindowMinutes * 60 * 1000)
+  const since = sqlDate(sinceDate)
 
-  const allActivities = getAllActivities()
-  const since = Date.now() - historyWindowMinutes * 60 * 1000
+  const [activeRowsRaw, recentRowsRaw, realtimeRows] = await Promise.all([
+    db
+      .select({
+        id: userActivities.id,
+        deviceId: userActivities.deviceId,
+        generatedHashKey: userActivities.generatedHashKey,
+        processName: userActivities.processName,
+        processTitle: userActivities.processTitle,
+        metadata: userActivities.metadata,
+        startedAt: userActivities.startedAt,
+        updatedAt: userActivities.updatedAt,
+        expiresAt: userActivities.expiresAt,
+        device: devices.displayName,
+      })
+      .from(userActivities)
+      .innerJoin(devices, eq(userActivities.deviceId, devices.id))
+      .where(gt(userActivities.expiresAt, now))
+      .orderBy(desc(userActivities.updatedAt)),
+    db
+      .select({
+        id: userActivities.id,
+        deviceId: userActivities.deviceId,
+        generatedHashKey: userActivities.generatedHashKey,
+        processName: userActivities.processName,
+        processTitle: userActivities.processTitle,
+        metadata: userActivities.metadata,
+        startedAt: userActivities.startedAt,
+        updatedAt: userActivities.updatedAt,
+        expiresAt: userActivities.expiresAt,
+        device: devices.displayName,
+      })
+      .from(userActivities)
+      .innerJoin(devices, eq(userActivities.deviceId, devices.id))
+      .where(gt(userActivities.startedAt, since))
+      .orderBy(desc(userActivities.startedAt))
+      .limit(Math.min(limit, ACTIVITY_FEED_QUERY_MAX_LIMIT)),
+    listRealtimeActivities(),
+  ])
+  const activeRows = activeRowsRaw as ActivityDbRow[]
+  const recentRows = recentRowsRaw as ActivityDbRow[]
 
-  const stillActive = allActivities.filter(
-    (a) => !a.endedAt && passesAppFilter(a.processName),
-  )
-
-  const recentActivitiesRaw = allActivities
-    .filter((a) => a.startedAt.getTime() >= since)
-    .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
+  const realtimeRowsTyped = realtimeRows as unknown as ActivityDbRow[]
+  const recentActivitiesRaw = [...recentRows, ...realtimeRowsTyped]
+    .filter((a: ActivityDbRow) => passesAppFilter(a.processName))
+    .sort((a, b) => Date.parse(String(b.startedAt)) - Date.parse(String(a.startedAt)))
     .slice(0, Math.min(limit, ACTIVITY_FEED_QUERY_MAX_LIMIT))
 
+  const toIso = (value: unknown): string => {
+    if (value instanceof Date) return value.toISOString()
+    const s = String(value ?? '').trim()
+    if (!s) return new Date(0).toISOString()
+    const t = Date.parse(s)
+    return Number.isFinite(t) ? new Date(t).toISOString() : new Date(0).toISOString()
+  }
+
   const recentActivities = recentActivitiesRaw
-    .filter((item) => passesAppFilter(item.processName))
-    .map((item) => {
+    .map((item: ActivityDbRow) => {
+      const startedAtIso = toIso(item.startedAt)
       const shaped =
         nameOnlySet.has(normalizeProcessName(item.processName))
-          ? { ...item, processTitle: null }
-          : { ...item }
-      return redactGeneratedHashKeyForClient(shaped as unknown as Record<string, unknown>)
+          ? { ...item, processTitle: null as string | null }
+          : item
+      const row = {
+        ...shaped,
+        startedAt: startedAtIso,
+        endedAt: null,
+        updatedAt: toIso(item.updatedAt),
+        lastReportAt: toIso(item.updatedAt || item.startedAt),
+      } as Record<string, unknown>
+      return redactGeneratedHashKeyForClient(row)
     })
 
   // Keep latest active entry for each device
   const activePending: Array<{ hashKey: string; row: Record<string, unknown> }> = []
   const seen = new Set<string>()
-  for (const item of stillActive) {
+  const activeMerged = [...activeRows, ...realtimeRowsTyped]
+    .sort((a, b) => Date.parse(String(b.updatedAt)) - Date.parse(String(a.updatedAt)))
+  for (const item of activeMerged) {
     const processKey = normalizeProcessName(item.processName)
     const key = item.generatedHashKey
     if (!key) continue
     if (seen.has(key)) continue
+    if (!passesAppFilter(item.processName)) continue
     seen.add(key)
     const pushMode = getPushModeFromMetadata(item.metadata)
     const maskedTitle = nameOnlySet.has(processKey) ? null : item.processTitle
@@ -180,8 +256,11 @@ export async function getActivityFeedData(
     const row: Record<string, unknown> = {
       ...item,
       processTitle: processTitleForClient,
+      startedAt: toIso(item.startedAt),
+      updatedAt: toIso(item.updatedAt),
+      endedAt: null,
       pushMode,
-      lastReportAt: item.updatedAt ?? item.startedAt,
+      lastReportAt: toIso(item.updatedAt ?? item.startedAt),
     }
     if (ruleStatusText) {
       row.statusText = appMessageRulesShowProcessName
@@ -244,9 +323,15 @@ export async function getActivityFeedData(
     generatedAt: new Date().toISOString(),
   } as ActivityFeedData
 
+  await setCachedActivityFeedData(data)
+
   const hideActivityMedia = config?.hideActivityMedia === true
   if (options?.forPublicFeed && hideActivityMedia) {
     return omitActivityMediaFromFeed(data)
   }
   return data
+}
+
+export async function clearActivityFeedDataCache(): Promise<void> {
+  await clearCachedActivityFeedData()
 }

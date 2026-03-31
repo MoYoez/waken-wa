@@ -1,9 +1,13 @@
 import { eq } from 'drizzle-orm'
 
+import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
 import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
+import { redisDel, redisGetJson, redisSetJson } from '@/lib/redis-client'
 
 type SiteConfigValue = any | null
+const SITE_CONFIG_CACHE_KEY = 'waken:site-config:v1'
+const SITE_CONFIG_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
 
 type SiteConfigCacheState = {
   loaded: boolean
@@ -25,6 +29,13 @@ export function clearSiteConfigMemoryCache(): void {
   globalThis.__wakenSiteConfigCache = { loaded: false, value: null }
 }
 
+export async function clearSiteConfigCaches(): Promise<void> {
+  clearSiteConfigMemoryCache()
+  if (await shouldUseRedisCache()) {
+    await redisDel(SITE_CONFIG_CACHE_KEY)
+  }
+}
+
 export function setSiteConfigMemoryCache(value: unknown): void {
   const state = getCacheState()
   state.loaded = true
@@ -37,7 +48,18 @@ export async function getSiteConfigMemoryFirst(): Promise<SiteConfigValue> {
     return state.value
   }
 
+  if (await shouldUseRedisCache()) {
+    const fromRedis = await redisGetJson<SiteConfigValue>(SITE_CONFIG_CACHE_KEY)
+    if (fromRedis && typeof fromRedis === 'object') {
+      setSiteConfigMemoryCache(fromRedis)
+      return getCacheState().value
+    }
+  }
+
   const [row] = await db.select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1)
   setSiteConfigMemoryCache(row ?? null)
+  if (row && typeof row === 'object' && (await shouldUseRedisCache())) {
+    await redisSetJson(SITE_CONFIG_CACHE_KEY, row, SITE_CONFIG_CACHE_TTL_SECONDS)
+  }
   return getCacheState().value
 }

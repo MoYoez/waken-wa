@@ -27,6 +27,7 @@
 - **TypeScript** ~5.9
 - **Tailwind CSS** 4.x（`@tailwindcss/postcss`）
 - **Drizzle ORM** + **Drizzle Kit**，数据库按环境使用 **SQLite**（better-sqlite3）或 **PostgreSQL**（pg）
+- **Redis** 7.0
 - **Radix UI**、**Zod**、**react-hook-form**、**jose**（JWT）、**bcryptjs**
 
 ---
@@ -110,7 +111,7 @@ chmod +x deploy-build-from-source.sh   # Unix 首次需要
 
 ### 3.Vercel
 
-> 需要使用 PostgresSQL (SupaBase / Neon)，且开销较高 (SSE 长连接 / Realtime POST 多)
+> 需要使用 PostgresSQL (SupaBase / Neon) + Redis ，且开销较高 (SSE 长连接 / Realtime POST 多)
 
 > 如需使用请考虑 非 Realtime 模式上传活动，并且在后台启用 Polling （轮询）
 
@@ -119,9 +120,11 @@ chmod +x deploy-build-from-source.sh   # Unix 首次需要
 https://vercel.com/new/clone?repository-url=https://github.com/MoYoez/waken-wa
 )
 
-> 第一次部署后不用担心报错，在项目的 "Integrations" 中 通过 "Marketplace"找到 **PostgreSQL** 供应商，Install 后 Connect 到此项目，Redeploy 即可。
+> 第一次部署后不用担心报错，在项目的 "Integrations" 中 通过 "Marketplace"找到 **PostgreSQL** 和 Redis 供应商，Install 后 Connect 到此项目，Redeploy 即可。
 
 > 如果你想用自己的供应商，请在 env 的 DATABASE_URL 中 写入地址即可，请注意 Vercel 这类 Serverless 平台的URL兼容性，以防止部署失败。
+
+> 当然，不启用 Redis 是没有问题的，但有可能会出现数据上报传上去了，但是没有出现实时数据的情况/ 在Vercel上是默认开启的，如果没有会被回退到内存。
 
 
 ---
