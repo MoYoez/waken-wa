@@ -282,10 +282,8 @@ export function InspirationManager() {
   const computedSnapshotText = useMemo(() => {
     if (!attachCurrentStatus || !attachStatusDeviceHash) return ''
 
-    const chosen =
-      selectedSnapshotCandidate?.item ??
-      (publicActivityFeed?.activeStatuses ?? []).find((x) => x.device === selectedSnapshotDeviceName) ??
-      null
+    // Require explicit selection (UX requirement).
+    const chosen = selectedSnapshotCandidate?.item ?? null
     if (!chosen) return ''
 
     const st = String(chosen.statusText ?? '').trim()
@@ -294,7 +292,11 @@ export function InspirationManager() {
     const base = st || (pt && pn ? `${pt} | ${pn}` : pn || pt || '')
     if (!base) return ''
 
-    if (!selectedSnapshotDeviceName) return base
+    // Only append device info when the user explicitly enables it.
+    if (!attachStatusIncludeDeviceInfo) return base
+
+    const deviceName = String(selectedSnapshotDeviceName || chosen.device || '').trim()
+    if (!deviceName) return base
 
     const battRaw =
       chosen.metadata && typeof chosen.metadata === 'object'
@@ -302,9 +304,9 @@ export function InspirationManager() {
         : null
     const batt = typeof battRaw === 'number' && Number.isFinite(battRaw) ? Math.round(battRaw) : null
     const suffix =
-      attachStatusIncludeDeviceInfo && batt !== null
-        ? `（${selectedSnapshotDeviceName} · ${batt}%）`
-        : `（${selectedSnapshotDeviceName}）`
+      batt !== null
+        ? `（${deviceName} · ${batt}%）`
+        : `（${deviceName}）`
 
     return `${base} ${suffix}`.trim()
   }, [
@@ -315,6 +317,16 @@ export function InspirationManager() {
     selectedSnapshotDeviceName,
     attachStatusIncludeDeviceInfo,
   ])
+
+  // Auto-pick a default candidate once data is loaded (still satisfies "must pick one"). Prefer active.
+  useEffect(() => {
+    if (!attachCurrentStatus) return
+    if (!attachStatusDeviceHash) return
+    if (attachStatusActivityKey) return
+    if (snapshotCandidates.length === 0) return
+    const preferred = snapshotCandidates.find((c) => c.group === 'active') ?? snapshotCandidates[0]
+    setAttachStatusActivityKey(preferred.key)
+  }, [attachCurrentStatus, attachStatusDeviceHash, attachStatusActivityKey, snapshotCandidates])
 
   useEffect(() => {
     if (!attachCurrentStatus) return
@@ -612,7 +624,7 @@ export function InspirationManager() {
                     </p>
                     <p className="text-xs text-foreground/80 break-words">{computedSnapshotText}</p>
                   </div>
-                ) : attachCurrentStatus && attachStatusDeviceHash && !publicActivityLoading ? (
+                ) : attachCurrentStatus && attachStatusDeviceHash && !publicActivityLoading && snapshotCandidates.length === 0 ? (
                   <div className="mt-2 rounded-md border border-border/40 bg-muted/10 px-3 py-2">
                     <p className="text-[11px] text-muted-foreground">
                       该设备暂无活动数据，提交后快照将为空。

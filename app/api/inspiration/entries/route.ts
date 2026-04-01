@@ -44,7 +44,8 @@ function formatDeviceSuffix(options: {
 }): string {
   const name = options.deviceName.trim()
   if (!name) return ''
-  if (!options.includeBattery) return `（${name}）`
+  // Only show any device suffix when user enabled it.
+  if (!options.includeBattery) return ''
   const pct = options.batteryPercent
   if (typeof pct === 'number' && Number.isFinite(pct)) {
     return `（${name} · ${Math.round(pct)}%）`
@@ -275,6 +276,7 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+
     }
 
     const now = sqlTimestamp()
