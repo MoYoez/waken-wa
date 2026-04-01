@@ -1,5 +1,31 @@
 import { lexicalTextContent } from '@/lib/inspiration-lexical'
 
+const MARKDOWN_IMAGE_RE = /!\[[^\]]*\]\([^)]+\)/g
+const LEXICAL_IMAGE_NODE_RE = /"type":"image"/
+
+function countNonEmptyLines(text: string): number {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean).length
+}
+
+function stripMarkdownImages(markdown: string): string {
+  return markdown.replace(MARKDOWN_IMAGE_RE, '')
+}
+
+function normalizePreviewWhitespace(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+function hasImageAndAtLeastOneTextLine(markdown: string): boolean {
+  const hasImage = MARKDOWN_IMAGE_RE.test(markdown)
+  MARKDOWN_IMAGE_RE.lastIndex = 0
+  if (!hasImage) return false
+  const textLineCount = countNonEmptyLines(stripMarkdownImages(markdown))
+  return textLineCount >= 1
+}
+
 /** Heuristic: whether plain text should be interpreted as markdown. */
 export function inspirationLooksLikeMarkdown(text: string): boolean {
   const value = text.trim()
@@ -19,15 +45,15 @@ export function inspirationLooksLikeMarkdown(text: string): boolean {
 
 /** Plain-text teaser for home list; keeps markdown out of truncated display. */
 export function inspirationPlainPreview(markdown: string, maxLen: number): { text: string; truncated: boolean } {
-  const text = markdown
-    .replace(/!\[[^\]]*\]\([^)]+\)/g, ' ')
+  const text = normalizePreviewWhitespace(
+    markdown
+    .replace(MARKDOWN_IMAGE_RE, ' ')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`[^`]+`/g, ' ')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/[*_~]+/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+  )
   if (text.length <= maxLen) return { text: text || '（附图或格式内容）', truncated: false }
   return { text: `${text.slice(0, maxLen).trim()}…`, truncated: true }
 }
@@ -35,8 +61,8 @@ export function inspirationPlainPreview(markdown: string, maxLen: number): { tex
 /** Whether home should offer “full article” instead of inline full markdown. */
 export function inspirationNeedsFullPage(markdown: string, maxInlineChars = 220): boolean {
   if (markdown.length > maxInlineChars) return true
-  if (markdown.includes('\n\n')) return true
-  if (/!\[[^\]]*\]\(/.test(markdown)) return true
+  if (countNonEmptyLines(markdown) >= 3) return true
+  if (hasImageAndAtLeastOneTextLine(markdown)) return true
   return false
 }
 
@@ -47,10 +73,11 @@ export function inspirationPlainPreviewAny(
 ): { text: string; truncated: boolean } {
   const lexicalText = lexicalTextContent(contentLexical)
   if (!lexicalText) return inspirationPlainPreview(markdown, maxLen)
-  if (lexicalText.length <= maxLen) {
-    return { text: lexicalText || '（附图或格式内容）', truncated: false }
+  const text = normalizePreviewWhitespace(lexicalText)
+  if (text.length <= maxLen) {
+    return { text: text || '（附图或格式内容）', truncated: false }
   }
-  return { text: `${lexicalText.slice(0, maxLen).trim()}…`, truncated: true }
+  return { text: `${text.slice(0, maxLen).trim()}…`, truncated: true }
 }
 
 export function inspirationNeedsFullPageAny(
@@ -61,8 +88,16 @@ export function inspirationNeedsFullPageAny(
   const lexicalText = lexicalTextContent(contentLexical)
   if (lexicalText) {
     if (lexicalText.length > maxInlineChars) return true
-    if (lexicalText.includes('\n\n')) return true
+    if (countNonEmptyLines(lexicalText) >= 3) return true
+    if (hasImageAndAtLeastOneTextLine(markdown)) return true
+    if (typeof contentLexical === 'string' && LEXICAL_IMAGE_NODE_RE.test(contentLexical)) {
+      if (countNonEmptyLines(lexicalText) >= 1) return true
+    }
     return false
+  }
+  if (typeof contentLexical === 'string' && contentLexical.trim()) {
+    if (LEXICAL_IMAGE_NODE_RE.test(contentLexical) && countNonEmptyLines(markdown) >= 1) return true
+    if (/"type":"(heading|quote|list|listitem|code|table)"/.test(contentLexical)) return true
   }
   return inspirationNeedsFullPage(markdown, maxInlineChars)
 }

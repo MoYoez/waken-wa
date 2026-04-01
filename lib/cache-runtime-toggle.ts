@@ -14,9 +14,9 @@ export function isVercelRuntime(): boolean {
   return String(process.env.VERCEL ?? '') === '1'
 }
 
-/** Vercel: Redis cache intent is always on in admin/runtime (no REDIS_URL still yields graceful no-op). */
+/** Vercel can auto-force Redis cache only when REDIS_URL is actually configured. */
 export function isRedisCacheForcedOnServerless(): boolean {
-  return isVercelRuntime()
+  return isVercelRuntime() && hasRedisConfigured()
 }
 
 export function mergeRedisCacheAdminFields(config: {
@@ -44,12 +44,12 @@ async function getUseNoSqlAsCacheRedisFromDb(): Promise<boolean> {
 
 /**
  * When true, app-layer Redis (JWT cache, rate limit, site config cache, activity caches, etc.) is used.
- * Vercel: always true (default on). Else: REDIS_URL required and DB toggle useNoSqlAsCacheRedis.
+ * Vercel: REDIS_URL required (then default-on). Else: REDIS_URL required and DB toggle useNoSqlAsCacheRedis.
  * Avoids importing site-config-cache here to prevent circular deps with shouldUseRedisCache gating.
  */
 export async function shouldUseRedisCache(): Promise<boolean> {
-  if (isVercelRuntime()) return true
   if (!hasRedisConfigured()) return false
+  if (isVercelRuntime()) return true
   return getUseNoSqlAsCacheRedisFromDb()
 }
 
