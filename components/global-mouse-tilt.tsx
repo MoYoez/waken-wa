@@ -31,6 +31,7 @@ export function GlobalMouseTilt({
   const targetRef = useRef({ rx: 0, ry: 0 })
   const currentRef = useRef({ rx: 0, ry: 0 })
   const rafRef = useRef(0)
+  const lastOrientationAtRef = useRef(0)
 
   const skipAdmin = pathname?.startsWith(ADMIN_PREFIX) ?? false
 
@@ -56,6 +57,8 @@ export function GlobalMouseTilt({
     el.style.willChange = 'transform'
 
     const onMove = (e: MouseEvent) => {
+      // If gyro is actually producing data, prefer it.
+      if (Date.now() - lastOrientationAtRef.current < 1200) return
       const w = window.innerWidth || 1
       const h = window.innerHeight || 1
       const nx = (e.clientX / w) * 2 - 1
@@ -68,6 +71,11 @@ export function GlobalMouseTilt({
       // beta: front-to-back (x axis), gamma: left-to-right (y axis)
       const beta = typeof e.beta === 'number' ? e.beta : 0
       const gamma = typeof e.gamma === 'number' ? e.gamma : 0
+      // Some desktop browsers expose DeviceOrientationEvent but never emit meaningful data.
+      // Only "claim" gyro control once we see non-zero values.
+      if (beta !== 0 || gamma !== 0) {
+        lastOrientationAtRef.current = Date.now()
+      }
 
       // Keep it subtle: map ~[-30,30] deg to [-MAX,MAX]
       const nx = clamp(gamma / 30, -1, 1)
@@ -96,12 +104,20 @@ export function GlobalMouseTilt({
 
     const attachMouse = () => {
       window.addEventListener('mousemove', onMove, { passive: true })
-      detachInput = () => window.removeEventListener('mousemove', onMove)
+      const prev = detachInput
+      detachInput = () => {
+        window.removeEventListener('mousemove', onMove)
+        prev()
+      }
     }
 
     const attachOrientation = () => {
       window.addEventListener('deviceorientation', onOrientation, { passive: true })
-      detachInput = () => window.removeEventListener('deviceorientation', onOrientation)
+      const prev = detachInput
+      detachInput = () => {
+        window.removeEventListener('deviceorientation', onOrientation)
+        prev()
+      }
     }
 
     const maybeRequestIOSPermission = async (): Promise<boolean> => {
@@ -133,6 +149,8 @@ export function GlobalMouseTilt({
       // iOS requires a user gesture to request permission.
       // We optimistically attach orientation; if iOS blocks it, user gesture handler below will re-attach.
       attachOrientation()
+      // Always keep mouse as a fallback (desktop commonly "supports" DeviceOrientationEvent but emits nothing).
+      attachMouse()
     }
 
     attach()
@@ -170,6 +188,7 @@ export function GlobalMouseTilt({
       el.style.willChange = 'auto'
       currentRef.current = { rx: 0, ry: 0 }
       targetRef.current = { rx: 0, ry: 0 }
+      lastOrientationAtRef.current = 0
     }
   }, [skipAdmin, enabled, gyroEnabled])
 
