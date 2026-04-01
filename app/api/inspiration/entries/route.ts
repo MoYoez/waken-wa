@@ -9,7 +9,7 @@ import {
 } from '@/lib/admin-list-constants'
 import { getBearerApiTokenRecord, getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
+import { devices, inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
 import { gateInspirationApiForDevice } from '@/lib/inspiration-device-allowlist'
 import { linkInspirationAssetsToEntry, validateInlineImageDataUrl } from '@/lib/inspiration-inline-images'
 import {
@@ -35,6 +35,21 @@ function formatStatusSnapshotFromStatuses(
     .filter(Boolean)
   if (lines.length === 0) return null
   return lines.join('\n')
+}
+
+function formatDeviceSuffix(options: {
+  deviceName: string
+  includeBattery: boolean
+  batteryPercent: number | null
+}): string {
+  const name = options.deviceName.trim()
+  if (!name) return ''
+  if (!options.includeBattery) return `（${name}）`
+  const pct = options.batteryPercent
+  if (typeof pct === 'number' && Number.isFinite(pct)) {
+    return `（${name} · ${Math.round(pct)}%）`
+  }
+  return `（${name}）`
 }
 
 // Force dynamic rendering, disable caching
@@ -108,11 +123,25 @@ export async function POST(request: NextRequest) {
       }
     }
     const attachCurrentStatus = Boolean(body?.attachCurrentStatus)
+    // Pre-computed snapshot text sent by the client (preferred path — avoids re-querying the feed).
+    const preComputedStatusSnapshotRaw =
+      body?.preComputedStatusSnapshot ?? body?.pre_computed_status_snapshot
+    const preComputedStatusSnapshot =
+      typeof preComputedStatusSnapshotRaw === 'string' ? preComputedStatusSnapshotRaw.trim() : ''
+    const attachStatusDeviceHashRaw = body?.attachStatusDeviceHash ?? body?.attach_status_device_hash
+    const attachStatusDeviceHash =
+      typeof attachStatusDeviceHashRaw === 'string' ? attachStatusDeviceHashRaw.trim().toLowerCase() : ''
+    const attachStatusActivityKeyRaw = body?.attachStatusActivityKey ?? body?.attach_status_activity_key
+    const attachStatusActivityKey =
+      typeof attachStatusActivityKeyRaw === 'string' ? attachStatusActivityKeyRaw.trim() : ''
+    const attachStatusIncludeDeviceInfo =
+      body?.attachStatusIncludeDeviceInfo === true || body?.attach_status_include_device_info === true
     const attachStatusDeviceHashes = Array.isArray(body?.attachStatusDeviceHashes)
       ? body.attachStatusDeviceHashes
           .map((item: unknown) => String(item ?? '').trim().toLowerCase())
           .filter((item: string) => item.length > 0)
       : []
+    const attachStatusDeviceHashResolved = attachStatusDeviceHash || attachStatusDeviceHashes[0] || ''
 
     if (attachCurrentStatus && !session) {
       return NextResponse.json(
@@ -153,22 +182,99 @@ export async function POST(request: NextRequest) {
 
     let statusSnapshot: string | null = null
     if (attachCurrentStatus && session) {
-      const feed = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT, {
-        includeGeneratedHashKey: attachStatusDeviceHashes.length > 0,
-      })
-      const statuses = attachStatusDeviceHashes.length
-        ? (feed.activeStatuses as Array<{
-            generatedHashKey?: string
-            statusText?: string
-            processName?: string
-            processTitle?: string | null
-          }>).filter((item) =>
-            attachStatusDeviceHashes.includes(
-              String(item.generatedHashKey ?? '').trim().toLowerCase(),
-            ),
-          )
-        : feed.activeStatuses
-      statusSnapshot = formatStatusSnapshotFromStatuses(statuses)
+      if (preComputedStatusSnapshot) {
+        // Fast path: client already computed the snapshot text from its loaded activity data.
+        statusSnapshot = preComputedStatusSnapshot
+      } else {
+        // Fallback path: re-query the activity feed on the server side.
+        // Used for external API clients that do not send preComputedStatusSnapshot.
+        const [deviceRow] = attachStatusDeviceHashResolved
+          ? await db
+              .select({ displayName: devices.displayName })
+              .from(devices)
+              .where(eq(devices.generatedHashKey, attachStatusDeviceHashResolved))
+              .limit(1)
+          : [null]
+        const selectedDeviceName = String(deviceRow?.displayName ?? '').trim()
+
+        const feed = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT, {
+          includeGeneratedHashKey: Boolean(attachStatusDeviceHashResolved),
+        })
+        const active = feed.activeStatuses as Array<{
+          generatedHashKey?: string
+          statusText?: string
+          processName?: string
+          processTitle?: string | null
+          device?: string
+          metadata?: Record<string, unknown> | null
+          id?: number | string
+        }>
+        const recent = feed.recentActivities as Array<{
+          generatedHashKey?: string
+          statusText?: string
+          processName?: string
+          processTitle?: string | null
+          device?: string
+          metadata?: Record<string, unknown> | null
+          id?: number | string
+        }>
+
+        const matchesActiveDevice = (item: { generatedHashKey?: string }) =>
+          !attachStatusDeviceHashResolved ||
+          String(item.generatedHashKey ?? '').trim().toLowerCase() === attachStatusDeviceHashResolved
+        const matchesRecentDevice = (item: { device?: string }) =>
+          !selectedDeviceName || String(item.device ?? '').trim() === selectedDeviceName
+
+        const keyWanted = attachStatusActivityKey.trim()
+        const pickFromKey = () => {
+          const [group, rawId] = keyWanted.split(':', 2)
+          if (!group || !rawId) return null
+          const idStr = rawId.trim()
+          if (!idStr) return null
+          if (group === 'active') {
+            return (
+              active.find(
+                (x) =>
+                  matchesActiveDevice(x) &&
+                  String((x as any).id ?? x.processName ?? '') === idStr,
+              ) ?? null
+            )
+          }
+          if (group === 'recent') {
+            return (
+              recent.find(
+                (x) =>
+                  matchesRecentDevice(x) &&
+                  String((x as any).id ?? x.processName ?? '') === idStr,
+              ) ?? null
+            )
+          }
+          return null
+        }
+
+        const picked = keyWanted ? pickFromKey() : null
+        const fallback = attachStatusDeviceHashResolved
+          ? active.find(matchesActiveDevice) ?? null
+          : active[0] ?? null
+        const chosen = picked ?? fallback
+
+        if (chosen) {
+          statusSnapshot = formatStatusSnapshotFromStatuses([chosen])
+          if (attachStatusDeviceHashResolved && statusSnapshot) {
+            const deviceName = String(deviceRow?.displayName ?? (chosen as any).device ?? '').trim()
+            const battRaw =
+              (chosen as any).metadata && typeof (chosen as any).metadata === 'object'
+                ? (chosen as any).metadata.deviceBatteryPercent
+                : null
+            const batt = typeof battRaw === 'number' ? battRaw : null
+            statusSnapshot = `${statusSnapshot} ${formatDeviceSuffix({
+              deviceName,
+              includeBattery: attachStatusIncludeDeviceInfo,
+              batteryPercent: batt,
+            })}`.trim()
+          }
+        }
+      }
     }
 
     const now = sqlTimestamp()

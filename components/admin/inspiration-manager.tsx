@@ -59,7 +59,8 @@ const INSPIRATION_LIST_MAX_HEIGHT = 'min(75vh,56rem)'
 /** Max long edge (px) for cropped PNG DataURL (cover + inline body images). */
 const INSPIRATION_MAX_OUTPUT_EDGE = 1200
 /** Local draft storage key for admin inspiration form. */
-const INSPIRATION_DRAFT_STORAGE_KEY = 'waken:admin:inspiration-draft:v1'
+const INSPIRATION_DRAFT_STORAGE_KEY_V1 = 'waken:admin:inspiration-draft:v1'
+const INSPIRATION_DRAFT_STORAGE_KEY = 'waken:admin:inspiration-draft:v2'
 
 type InspirationDraft = {
   title: string
@@ -67,7 +68,25 @@ type InspirationDraft = {
   contentLexical: string
   imageDataUrl: string
   attachCurrentStatus: boolean
-  attachStatusDeviceHashes: string[]
+  attachStatusDeviceHash: string
+  attachStatusActivityKey?: string
+  attachStatusIncludeDeviceInfo?: boolean
+}
+
+type ActivityFeedItem = {
+  id: number | string
+  device: string
+  processName: string
+  processTitle: string | null
+  metadata?: Record<string, unknown> | null
+  statusText?: string
+  lastReportAt?: string
+  updatedAt?: string
+}
+
+type ActivityFeedData = {
+  activeStatuses: ActivityFeedItem[]
+  recentActivities: ActivityFeedItem[]
 }
 
 export function InspirationManager() {
@@ -84,7 +103,12 @@ export function InspirationManager() {
   const [imageDataUrl, setImageDataUrl] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [attachCurrentStatus, setAttachCurrentStatus] = useState(false)
-  const [attachStatusDeviceHashes, setAttachStatusDeviceHashes] = useState<string[]>([])
+  const [attachStatusDeviceHash, setAttachStatusDeviceHash] = useState('')
+  const [attachStatusActivityKey, setAttachStatusActivityKey] = useState('')
+  const [attachStatusIncludeDeviceInfo, setAttachStatusIncludeDeviceInfo] = useState(false)
+  const [publicActivityFeed, setPublicActivityFeed] = useState<ActivityFeedData | null>(null)
+  const [publicActivityLoading, setPublicActivityLoading] = useState(false)
+  const [publicActivityError, setPublicActivityError] = useState<string>('')
   const [inspirationDevices, setInspirationDevices] = useState<
     Array<{ id: number; displayName: string; generatedHashKey: string; status: string }>
   >([])
@@ -116,15 +140,21 @@ export function InspirationManager() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(INSPIRATION_DRAFT_STORAGE_KEY)
+      const rawV2 = localStorage.getItem(INSPIRATION_DRAFT_STORAGE_KEY)
+      const rawV1 = rawV2 ? null : localStorage.getItem(INSPIRATION_DRAFT_STORAGE_KEY_V1)
+      const raw = rawV2 ?? rawV1
       if (!raw) return
-      const draft = JSON.parse(raw) as Partial<InspirationDraft>
+      const draft = JSON.parse(raw) as Partial<InspirationDraft> & { attachStatusDeviceHashes?: unknown }
       const nextTitle = typeof draft.title === 'string' ? draft.title : ''
       const nextImage = typeof draft.imageDataUrl === 'string' ? draft.imageDataUrl : ''
       const nextAttach = draft.attachCurrentStatus === true
-      const nextDeviceHashes = Array.isArray(draft.attachStatusDeviceHashes)
-        ? draft.attachStatusDeviceHashes.filter((v): v is string => typeof v === 'string')
-        : []
+      const nextDeviceHashRaw =
+        typeof draft.attachStatusDeviceHash === 'string'
+          ? draft.attachStatusDeviceHash
+          : Array.isArray(draft.attachStatusDeviceHashes)
+            ? String(draft.attachStatusDeviceHashes.find((v) => typeof v === 'string') ?? '')
+            : ''
+      const nextDeviceHash = nextDeviceHashRaw.trim()
       const nextContentLexical =
         typeof draft.contentLexical === 'string' && draft.contentLexical.trim()
           ? draft.contentLexical
@@ -135,9 +165,23 @@ export function InspirationManager() {
       setTitle(nextTitle)
       setImageDataUrl(nextImage)
       setAttachCurrentStatus(nextAttach)
-      setAttachStatusDeviceHashes(nextAttach ? nextDeviceHashes : [])
+      setAttachStatusDeviceHash(nextAttach ? nextDeviceHash : '')
+      setAttachStatusActivityKey(nextAttach && typeof draft.attachStatusActivityKey === 'string' ? draft.attachStatusActivityKey : '')
+      setAttachStatusIncludeDeviceInfo(nextAttach && draft.attachStatusIncludeDeviceInfo === true)
       setContentLexical(nextContentLexical)
       setContent(nextContent)
+
+      if (rawV1) {
+        const payload: InspirationDraft = {
+          title: nextTitle,
+          content: nextContent,
+          contentLexical: nextContentLexical,
+          imageDataUrl: nextImage,
+          attachCurrentStatus: nextAttach,
+          attachStatusDeviceHash: nextAttach ? nextDeviceHash : '',
+        }
+        localStorage.setItem(INSPIRATION_DRAFT_STORAGE_KEY, JSON.stringify(payload))
+      }
     } catch {
       // Ignore broken local draft payload.
     } finally {
@@ -155,7 +199,9 @@ export function InspirationManager() {
       lexicalPlain.length > 0 ||
       imageDataUrl.trim().length > 0 ||
       attachCurrentStatus ||
-      attachStatusDeviceHashes.length > 0
+      attachStatusDeviceHash.trim().length > 0 ||
+      attachStatusActivityKey.trim().length > 0 ||
+      attachStatusIncludeDeviceInfo
 
     if (!hasDraft) {
       localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
@@ -168,12 +214,16 @@ export function InspirationManager() {
       contentLexical,
       imageDataUrl,
       attachCurrentStatus,
-      attachStatusDeviceHashes,
+      attachStatusDeviceHash,
+      attachStatusActivityKey: attachStatusActivityKey.trim() || undefined,
+      attachStatusIncludeDeviceInfo: attachStatusIncludeDeviceInfo || undefined,
     }
     localStorage.setItem(INSPIRATION_DRAFT_STORAGE_KEY, JSON.stringify(payload))
   }, [
     attachCurrentStatus,
-    attachStatusDeviceHashes,
+    attachStatusActivityKey,
+    attachStatusDeviceHash,
+    attachStatusIncludeDeviceInfo,
     content,
     contentLexical,
     draftReady,
@@ -203,6 +253,93 @@ export function InspirationManager() {
       setLoading(false)
     }
   }, [page, q])
+
+  const selectedSnapshotDevice = useMemo(() => {
+    if (!attachStatusDeviceHash) return null
+    return inspirationDevices.find((d) => d.generatedHashKey === attachStatusDeviceHash) ?? null
+  }, [attachStatusDeviceHash, inspirationDevices])
+
+  const selectedSnapshotDeviceName = selectedSnapshotDevice?.displayName ?? ''
+
+  const snapshotCandidates = useMemo(() => {
+    if (!publicActivityFeed || !selectedSnapshotDeviceName) return []
+    const deviceName = selectedSnapshotDeviceName
+    const active = (publicActivityFeed.activeStatuses ?? []).filter((x) => x.device === deviceName)
+    const recent = (publicActivityFeed.recentActivities ?? []).filter((x) => x.device === deviceName)
+    const out: Array<{ key: string; group: 'active' | 'recent'; item: ActivityFeedItem }> = []
+    for (const it of active) out.push({ key: `active:${String(it.id)}`, group: 'active', item: it })
+    for (const it of recent) out.push({ key: `recent:${String(it.id)}`, group: 'recent', item: it })
+    return out
+  }, [publicActivityFeed, selectedSnapshotDeviceName])
+
+  const selectedSnapshotCandidate = useMemo(() => {
+    if (!attachStatusActivityKey) return null
+    return snapshotCandidates.find((c) => c.key === attachStatusActivityKey) ?? null
+  }, [attachStatusActivityKey, snapshotCandidates])
+
+  // Pre-compute snapshot text on the client side from what's already loaded in the UI.
+  // This text is sent directly to the server so it doesn't need to re-query the activity feed.
+  const computedSnapshotText = useMemo(() => {
+    if (!attachCurrentStatus || !attachStatusDeviceHash) return ''
+
+    const chosen =
+      selectedSnapshotCandidate?.item ??
+      (publicActivityFeed?.activeStatuses ?? []).find((x) => x.device === selectedSnapshotDeviceName) ??
+      null
+    if (!chosen) return ''
+
+    const st = String(chosen.statusText ?? '').trim()
+    const pn = String(chosen.processName ?? '').trim()
+    const pt = chosen.processTitle != null ? String(chosen.processTitle).trim() : ''
+    const base = st || (pt && pn ? `${pt} | ${pn}` : pn || pt || '')
+    if (!base) return ''
+
+    if (!selectedSnapshotDeviceName) return base
+
+    const battRaw =
+      chosen.metadata && typeof chosen.metadata === 'object'
+        ? (chosen.metadata as Record<string, unknown>).deviceBatteryPercent
+        : null
+    const batt = typeof battRaw === 'number' && Number.isFinite(battRaw) ? Math.round(battRaw) : null
+    const suffix =
+      attachStatusIncludeDeviceInfo && batt !== null
+        ? `（${selectedSnapshotDeviceName} · ${batt}%）`
+        : `（${selectedSnapshotDeviceName}）`
+
+    return `${base} ${suffix}`.trim()
+  }, [
+    attachCurrentStatus,
+    attachStatusDeviceHash,
+    selectedSnapshotCandidate,
+    publicActivityFeed,
+    selectedSnapshotDeviceName,
+    attachStatusIncludeDeviceInfo,
+  ])
+
+  useEffect(() => {
+    if (!attachCurrentStatus) return
+    if (!attachStatusDeviceHash) return
+
+    setPublicActivityLoading(true)
+    setPublicActivityError('')
+    void (async () => {
+      try {
+        const res = await fetch('/api/activity?public=1')
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data?.success || !data?.data) {
+          setPublicActivityError(typeof data?.error === 'string' ? data.error : '活动数据加载失败')
+          setPublicActivityFeed(null)
+          return
+        }
+        setPublicActivityFeed(data.data as ActivityFeedData)
+      } catch {
+        setPublicActivityError('活动数据加载失败')
+        setPublicActivityFeed(null)
+      } finally {
+        setPublicActivityLoading(false)
+      }
+    })()
+  }, [attachCurrentStatus, attachStatusDeviceHash])
 
   useEffect(() => {
     void (async () => {
@@ -252,7 +389,13 @@ export function InspirationManager() {
           contentLexical,
           imageDataUrl: imageDataUrl.trim() || undefined,
           attachCurrentStatus,
-          attachStatusDeviceHashes,
+          // Send the pre-computed snapshot text so the server can save it directly
+          // without re-querying the activity feed (which may have already expired).
+          preComputedStatusSnapshot: computedSnapshotText || undefined,
+          // Keep legacy fields for backward compatibility with external API clients
+          attachStatusDeviceHash: attachStatusDeviceHash.trim() || undefined,
+          attachStatusActivityKey: attachStatusActivityKey.trim() || undefined,
+          attachStatusIncludeDeviceInfo: attachStatusIncludeDeviceInfo || undefined,
         }),
       })
 
@@ -267,7 +410,9 @@ export function InspirationManager() {
       setContentLexical(createLexicalTextContent(''))
       setImageDataUrl('')
       setAttachCurrentStatus(false)
-      setAttachStatusDeviceHashes([])
+      setAttachStatusDeviceHash('')
+      setAttachStatusActivityKey('')
+      setAttachStatusIncludeDeviceInfo(false)
       localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
       toast.success('灵感已提交')
       setPage(0)
@@ -343,7 +488,13 @@ export function InspirationManager() {
                   onCheckedChange={(v) => {
                     const on = v === true
                     setAttachCurrentStatus(on)
-                    if (!on) setAttachStatusDeviceHashes([])
+                    if (!on) {
+                      setAttachStatusDeviceHash('')
+                      setAttachStatusActivityKey('')
+                      setAttachStatusIncludeDeviceInfo(false)
+                      setPublicActivityFeed(null)
+                      setPublicActivityError('')
+                    }
                   }}
                 />
                 <span>附上提交时首页「当前」状态快照</span>
@@ -352,25 +503,14 @@ export function InspirationManager() {
             {attachCurrentStatus ? (
               <div className="space-y-2 rounded-md border border-border/60 bg-muted/10 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">可选快照设备（默认全设备）</p>
+                  <p className="text-xs text-muted-foreground">可选快照设备（默认自动选择最近上报设备）</p>
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className="h-7 text-xs"
-                      onClick={() =>
-                        setAttachStatusDeviceHashes(inspirationDevices.map((d) => d.generatedHashKey))
-                      }
-                    >
-                      全选
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => setAttachStatusDeviceHashes([])}
+                      onClick={() => setAttachStatusDeviceHash('')}
                     >
                       清空
                     </Button>
@@ -378,7 +518,7 @@ export function InspirationManager() {
                 </div>
                 <div className="max-h-36 space-y-1 overflow-y-auto pr-1">
                   {inspirationDevices.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">暂无设备，快照将按全设备生成。</p>
+                    <p className="text-xs text-muted-foreground">暂无设备，快照将按最近上报设备生成。</p>
                   ) : (
                     inspirationDevices.map((d) => (
                       <label
@@ -386,14 +526,13 @@ export function InspirationManager() {
                         className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-muted/30"
                       >
                         <Checkbox
-                          checked={attachStatusDeviceHashes.includes(d.generatedHashKey)}
+                          checked={attachStatusDeviceHash === d.generatedHashKey}
                           onCheckedChange={(v) => {
                             const checked = v === true
-                            setAttachStatusDeviceHashes((prev) =>
-                              checked
-                                ? Array.from(new Set([...prev, d.generatedHashKey]))
-                                : prev.filter((k) => k !== d.generatedHashKey),
+                            setAttachStatusDeviceHash((prev) =>
+                              checked ? d.generatedHashKey : prev === d.generatedHashKey ? '' : prev,
                             )
+                            setAttachStatusActivityKey('')
                           }}
                         />
                         <span className="min-w-0 flex-1 truncate">{d.displayName}</span>
@@ -404,6 +543,82 @@ export function InspirationManager() {
                     ))
                   )}
                 </div>
+
+                {attachStatusDeviceHash ? (
+                  <div className="mt-2 space-y-2 border-t border-border/50 pt-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">选择用于快照显示的活动（当前 + 近期）</p>
+                      <label className="flex items-center gap-2 text-xs font-normal cursor-pointer">
+                        <Checkbox
+                          checked={attachStatusIncludeDeviceInfo}
+                          onCheckedChange={(v) => setAttachStatusIncludeDeviceInfo(v === true)}
+                        />
+                        <span>带上设备信息（电量）</span>
+                      </label>
+                    </div>
+
+                    {publicActivityLoading ? (
+                      <p className="text-xs text-muted-foreground">活动数据加载中…</p>
+                    ) : publicActivityError ? (
+                      <p className="text-xs text-destructive">{publicActivityError}</p>
+                    ) : snapshotCandidates.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">该设备暂无可用活动候选。</p>
+                    ) : (
+                      <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
+                        {snapshotCandidates.map((c) => {
+                          const label = (() => {
+                            const st = String(c.item.statusText ?? '').trim()
+                            if (st) return st
+                            const pn = String(c.item.processName ?? '').trim()
+                            const pt = c.item.processTitle != null ? String(c.item.processTitle).trim() : ''
+                            if (pt && pn) return `${pt} | ${pn}`
+                            return pn || pt || '（无标题）'
+                          })()
+                          return (
+                            <label
+                              key={c.key}
+                              className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-muted/30"
+                            >
+                              <Checkbox
+                                checked={attachStatusActivityKey === c.key}
+                                onCheckedChange={(v) => {
+                                  const checked = v === true
+                                  setAttachStatusActivityKey((prev) => (checked ? c.key : prev === c.key ? '' : prev))
+                                }}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="min-w-0 truncate text-foreground/90">
+                                  {c.group === 'active' ? '当前：' : '近期：'}
+                                  {label}
+                                </div>
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    <div className="text-[11px] text-muted-foreground">
+                      快照将使用你选中的那条活动；若不选，默认使用该设备「当前」活动。
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Snapshot preview — shows exactly what will be saved */}
+                {computedSnapshotText ? (
+                  <div className="mt-2 rounded-md border border-border/40 bg-muted/20 px-3 py-2">
+                    <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      快照预览
+                    </p>
+                    <p className="text-xs text-foreground/80 break-words">{computedSnapshotText}</p>
+                  </div>
+                ) : attachCurrentStatus && attachStatusDeviceHash && !publicActivityLoading ? (
+                  <div className="mt-2 rounded-md border border-border/40 bg-muted/10 px-3 py-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      该设备暂无活动数据，提交后快照将为空。
+                    </p>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
@@ -509,7 +724,9 @@ export function InspirationManager() {
                   setContentLexical(createLexicalTextContent(''))
                   setImageDataUrl('')
                   setAttachCurrentStatus(false)
-                  setAttachStatusDeviceHashes([])
+                  setAttachStatusDeviceHash('')
+                  setAttachStatusActivityKey('')
+                  setAttachStatusIncludeDeviceInfo(false)
                   localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
                 }}
               >
@@ -596,7 +813,7 @@ curl -X POST /api/inspiration/assets \\
 curl -X POST /api/inspiration/entries \\
   -H "Authorization: Bearer YOUR_TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"title":"可选","contentLexical":{"root":{"type":"root","children":[...]}},"imageDataUrl":null}'`}
+  -d '{"title":"可选","contentLexical":{"root":{"type":"root","children":[...]}},"imageDataUrl":null,"attachCurrentStatus":true,"attachStatusDeviceHash":"your_device_generated_hash_key"}'`}
           </pre>
         </CardContent>
       </Card>
