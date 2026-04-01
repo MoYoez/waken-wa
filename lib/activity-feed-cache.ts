@@ -1,11 +1,11 @@
 import 'server-only'
 
-import type { ActivityFeedData } from '@/types/activity'
 import {
   getRedisActivityCacheTtlSeconds,
   shouldUseRedisCache,
 } from '@/lib/cache-runtime-toggle'
 import { redisDel, redisGetJson, redisSetJson } from '@/lib/redis-client'
+import type { ActivityFeedData } from '@/types/activity'
 
 const ACTIVITY_FEED_CACHE_KEY = 'waken:activity:feed:v1'
 

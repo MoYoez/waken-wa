@@ -115,6 +115,9 @@ export const siteConfig = pgTable('site_config', {
   appWhitelist: jsonb('app_whitelist'),
   appFilterMode: varchar('app_filter_mode', { length: 20 }).notNull().default('blacklist'),
   appNameOnlyList: jsonb('app_name_only_list'),
+  /** Nullable on purpose: safe db:push on existing rows; app treats null as enabled. */
+  captureReportedAppsEnabled: boolean('capture_reported_apps_enabled').default(true),
+  mediaPlaySourceBlocklist: jsonb('media_play_source_blocklist'),
   processStaleSeconds: integer('process_stale_seconds').notNull().default(500),
   pageLockEnabled: boolean('page_lock_enabled').notNull().default(false),
   pageLockPasswordHash: text('page_lock_password_hash'),
@@ -161,6 +164,25 @@ export const siteConfig = pgTable('site_config', {
   redisCacheTtlSeconds: integer('redis_cache_ttl_seconds').default(3600),
   // Nullable on purpose: safe db:push on existing rows; app treats null as false.
   activityRejectLockappSleep: boolean('activity_reject_lockapp_sleep').default(false),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+export const activityAppHistory = pgTable('activity_app_history', {
+  id: serial('id').primaryKey(),
+  processName: varchar('process_name', { length: 200 }).notNull().unique(),
+  platformBuckets: jsonb('platform_buckets'),
+  firstSeenAt: timestamp('first_seen_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  lastSeenAt: timestamp('last_seen_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  seenCount: integer('seen_count').notNull().default(0),
   createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -227,6 +249,7 @@ export const pgSchema = {
   devices,
   userActivities,
   siteConfig,
+  activityAppHistory,
   systemSecrets,
   rateLimitBackups,
   inspirationEntries,

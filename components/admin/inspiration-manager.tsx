@@ -305,15 +305,14 @@ export function InspirationManager() {
     const batt = typeof battRaw === 'number' && Number.isFinite(battRaw) ? Math.round(battRaw) : null
     const suffix =
       batt !== null
-        ? `（${deviceName} · ${batt}%）`
-        : `（${deviceName}）`
+        ? `(${deviceName} · ${batt}%)`
+        : `(${deviceName})`
 
     return `${base} ${suffix}`.trim()
   }, [
     attachCurrentStatus,
     attachStatusDeviceHash,
     selectedSnapshotCandidate,
-    publicActivityFeed,
     selectedSnapshotDeviceName,
     attachStatusIncludeDeviceInfo,
   ])

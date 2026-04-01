@@ -13,13 +13,13 @@ import {
   resolveSchedulePeriodTemplate,
 } from '@/lib/schedule-courses'
 import { resolveScheduleGridByWeekday } from '@/lib/schedule-grid-by-weekday'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
-import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 
 async function requireAdmin() {
   const session = await getSession()
@@ -99,6 +99,8 @@ export async function GET(request: Request) {
         appWhitelist: cfg.appWhitelist,
         appFilterMode: cfg.appFilterMode,
         appNameOnlyList: cfg.appNameOnlyList,
+        captureReportedAppsEnabled: cfg.captureReportedAppsEnabled !== false,
+        mediaPlaySourceBlocklist: cfg.mediaPlaySourceBlocklist,
         pageLockEnabled: cfg.pageLockEnabled,
         currentlyText: cfg.currentlyText,
         earlierText: cfg.earlierText,

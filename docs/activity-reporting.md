@@ -35,6 +35,10 @@
 - `push_mode`: 推送模式（`realtime` / `active`）
 - `metadata`: 扩展 JSON 对象
 
+#### `metadata.play_source`（媒体来源，可选）
+
+用于标识本次上报的媒体来源（例如：`system_media`、`music_sdk`）。管理员可在后台设置「媒体来源屏蔽规则」中按该值屏蔽媒体展示（仅隐藏 `metadata.media`，不影响活动记录本身）。
+
 #### `metadata.media`（正在播放，可选）
 
 用于在首页「当前状态」与「最近活动」中展示**正在播放**的曲目信息（需配合非空的 `metadata.media.title` 才会显示整块媒体区域）。
@@ -146,7 +150,7 @@ await fetch('http://localhost:3000/api/activity', {
 
 成功返回：
 
-- HTTP `201`
+- HTTP `200`
 - `{"success": true, "data": ...}`
 
 常见错误：
@@ -186,3 +190,42 @@ const config = JSON.parse(decoded)
 console.log(config.token.reportEndpoint)
 console.log(config.token.items[0]?.token)
 ```
+
+## 9. 管理员导出「已使用应用」JSON
+
+管理员登录后可调用：
+
+- 方法：`GET`
+- 地址：`/api/admin/activity/apps-export`
+
+响应结构（示意）：
+
+```json
+{
+  "success": true,
+  "data": {
+    "version": 1,
+    "exportedAt": "2026-04-01T00:00:00.000Z",
+    "groups": {
+      "pc": [
+        { "appName": "code.exe", "titles": ["project-a"], "lastSeenAt": "2026-04-01T00:00:00.000Z" }
+      ],
+      "mobile": [
+        { "appName": "chrome", "titles": ["home"], "lastSeenAt": "2026-04-01T00:00:00.000Z" }
+      ]
+    }
+  }
+}
+```
+
+说明：
+
+- 分组规则：`device_type` 为 `mobile/tablet` 归入 `mobile`，其余归入 `pc`。
+- 同一应用以 `process_name` 为唯一；标题只保留最近 3 条（去重，最新优先）。
+
+## 10. 历史应用记录采集开关
+
+后台「Web 配置」提供开关「保存上报行为的应用记录（用于规则选择/导出）」：
+
+- 关闭后：不再新增历史记录，但保留已保存的历史数据。
+- 开启后：上报会进入缓冲并间隔写入历史表（Redis 优先；无 Redis 时回退直接写库）。

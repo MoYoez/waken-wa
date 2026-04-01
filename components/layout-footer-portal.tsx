@@ -12,6 +12,7 @@ export function LayoutFooterPortal({ adminText }: { adminText: string }) {
   const [el, setEl] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEl(document.getElementById(PORTAL_ID))
   }, [])
 

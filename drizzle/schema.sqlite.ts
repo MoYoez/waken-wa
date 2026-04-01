@@ -113,6 +113,11 @@ export const siteConfig = sqliteTable('site_config', {
   appWhitelist: text('app_whitelist', { mode: 'json' }),
   appFilterMode: text('app_filter_mode').notNull().default('blacklist'),
   appNameOnlyList: text('app_name_only_list', { mode: 'json' }),
+  /** Nullable on purpose: safe db:push on existing rows; app treats null as enabled. */
+  captureReportedAppsEnabled: integer('capture_reported_apps_enabled', {
+    mode: 'boolean',
+  }).default(true),
+  mediaPlaySourceBlocklist: text('media_play_source_blocklist', { mode: 'json' }),
   processStaleSeconds: integer('process_stale_seconds').notNull().default(500),
   pageLockEnabled: integer('page_lock_enabled', { mode: 'boolean' })
     .notNull()
@@ -191,6 +196,20 @@ export const siteConfig = sqliteTable('site_config', {
   updatedAt: ts('updated_at'),
 })
 
+export const activityAppHistory = sqliteTable(
+  'activity_app_history',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    processName: text('process_name').notNull().unique(),
+    platformBuckets: text('platform_buckets', { mode: 'json' }),
+    firstSeenAt: ts('first_seen_at'),
+    lastSeenAt: ts('last_seen_at'),
+    seenCount: integer('seen_count').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+)
+
 export const systemSecrets = sqliteTable('system_secrets', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
@@ -244,6 +263,7 @@ export const sqliteSchema = {
   devices,
   userActivities,
   siteConfig,
+  activityAppHistory,
   systemSecrets,
   rateLimitBackups,
   inspirationEntries,

@@ -76,6 +76,23 @@ function omitActivityMediaFromFeed(feed: ActivityFeedData): ActivityFeedData {
   }
 }
 
+function stripMediaByPlaySource(
+  item: ActivityFeedItem,
+  blockedSources: Set<string>,
+): ActivityFeedItem {
+  if (blockedSources.size === 0) return item
+  const meta = item.metadata
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return item
+  const source = String((meta as Record<string, unknown>).play_source ?? '')
+    .trim()
+    .toLowerCase()
+  if (!source) return item
+  if (!blockedSources.has(source)) return item
+  if (!Object.prototype.hasOwnProperty.call(meta, 'media')) return item
+  const { media: _omit, ...rest } = meta as Record<string, unknown>
+  return { ...item, metadata: rest }
+}
+
 export type GetActivityFeedOptions = {
   /**
    * When true and site `hideActivityMedia` is enabled, strip `metadata.media` from all items.
@@ -145,9 +162,13 @@ export async function getActivityFeedData(
   const appFilterModeRaw = String(config?.appFilterMode ?? 'blacklist').trim().toLowerCase()
   const appFilterMode = appFilterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
   const appNameOnlyList = parseProcessList(config?.appNameOnlyList)
+  const mediaPlaySourceBlocklist = parseProcessList(
+    (config as Record<string, unknown> | null)?.mediaPlaySourceBlocklist,
+  )
   const blacklistSet = new Set(appBlacklist)
   const whitelistSet = new Set(appWhitelist)
   const nameOnlySet = new Set(appNameOnlyList)
+  const blockedMediaSourceSet = new Set(mediaPlaySourceBlocklist)
 
   const passesAppFilter = (processName: string): boolean => {
     const key = normalizeProcessName(processName)
@@ -321,11 +342,13 @@ export async function getActivityFeedData(
   }
 
   const data = {
-    activeStatuses,
-    recentActivities: recentActivities as unknown as ActivityFeedItem[],
+    activeStatuses: activeStatuses.map((i) => stripMediaByPlaySource(i, blockedMediaSourceSet)),
+    recentActivities: (recentActivities as unknown as ActivityFeedItem[]).map((i) =>
+      stripMediaByPlaySource(i, blockedMediaSourceSet),
+    ),
     historyWindowMinutes,
     processStaleSeconds: defaultStaleSeconds,
-    recentTopApps,
+    recentTopApps: recentTopApps.map((i) => stripMediaByPlaySource(i, blockedMediaSourceSet)),
     generatedAt: new Date().toISOString(),
   } as ActivityFeedData
 

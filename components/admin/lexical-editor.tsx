@@ -31,9 +31,9 @@ import {
   $getSelection,
   $isRangeSelection,
   FORMAT_TEXT_COMMAND,
+  type LexicalEditor as LexicalEditorInstance,
   REDO_COMMAND,
   UNDO_COMMAND,
-  type LexicalEditor as LexicalEditorInstance,
 } from 'lexical'
 import {
   Bold,

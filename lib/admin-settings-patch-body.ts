@@ -62,6 +62,8 @@ export function buildAdminSettingsPatchBody(
     appWhitelist: data.appWhitelist ?? [],
     appFilterMode: data.appFilterMode ?? 'blacklist',
     appNameOnlyList: data.appNameOnlyList ?? [],
+    captureReportedAppsEnabled: (data as Record<string, unknown>).captureReportedAppsEnabled !== false,
+    mediaPlaySourceBlocklist: data.mediaPlaySourceBlocklist ?? [],
     pageLockEnabled: data.pageLockEnabled ?? false,
     currentlyText: data.currentlyText ?? '当前状态',
     earlierText: data.earlierText ?? '最近的随想录',

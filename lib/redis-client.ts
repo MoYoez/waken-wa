@@ -218,6 +218,29 @@ export async function redisDeleteByPrefix(prefix: string): Promise<void> {
   }
 }
 
+/** Best-effort: list keys matching `prefix*` (SCAN). */
+export async function redisListKeysByPrefix(prefix: string, limit = 2000): Promise<string[]> {
+  const client = getRedisClient()
+  if (!client || !prefix) return []
+  const safeLimit = Math.max(1, Math.min(20_000, Math.round(limit)))
+  try {
+    let cursor = '0'
+    const pattern = `${prefix}*`
+    const out: string[] = []
+    do {
+      const [next, keys] = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 200)
+      cursor = next
+      for (const k of keys) {
+        out.push(k)
+        if (out.length >= safeLimit) return out
+      }
+    } while (cursor !== '0')
+    return out
+  } catch {
+    return []
+  }
+}
+
 /** Fixed-window rate limit: count per key, TTL from first hit in window. */
 export async function redisIncrWithExpire(
   key: string,

@@ -119,6 +119,13 @@ flowchart TB
 
 推送 schema 使用 `pnpm db:push` 或 `pnpm db:push:postgres`（具体 config 文件见 [drizzle.config.pg.ts](drizzle.config.pg.ts)、[drizzle.config.sqlite.ts](drizzle.config.sqlite.ts)）。
 
+### SQLite JSON 绑定注意事项
+
+- **SQLite（better-sqlite3）参数绑定不接受对象/数组**：写入时只能 bind number/string/bigint/buffer/null。
+- 若你在 PG 用 `jsonb(...)`、在 SQLite 用 `text(..., { mode: 'json' })`：
+  - **写入 SQLite 时不要直接传 JS object**；请传 `JSON.stringify(value)`（或确保 Drizzle/driver 层会做 stringify）。
+  - **读取时兼容 string/object**：在应用层统一 `typeof raw === 'string' ? JSON.parse(raw) : raw`。
+
 ### 迁移与已有数据（数据优先）
 
 - **新增列不要加 `.notNull()`**（Agent / 协作者默认遵守）：优先**可空**列 + 可选 `.default(...)`；应用层用 `x === true`、`Boolean(x)` 等把 `null`/`undefined` 当关闭或默认，避免 `db:push` 对已有行触发 data-loss 警告或迁移摩擦。

@@ -8,6 +8,7 @@ import {
   DEVICE_BATTERY_PERCENT_MAX,
   DEVICE_BATTERY_PERCENT_MIN,
 } from '@/lib/activity-api-constants'
+import { recordReportedAppHistory } from '@/lib/activity-app-history'
 import {
   DEVICE_BATTERY_CHARGING_METADATA_KEY,
   parseIsChargingFromBody,
@@ -26,10 +27,10 @@ import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
 import { devices, userActivities } from '@/lib/drizzle-schema'
 import { isLockAppReporterProcessName } from '@/lib/lockapp-reporter'
 import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
+import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { parseProcessStaleSeconds } from '@/lib/site-config-constants'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
-import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -346,6 +347,16 @@ export async function POST(request: NextRequest) {
       processTitle: process_title,
       metadata: finalMetadata,
     })
+
+    try {
+      await recordReportedAppHistory({
+        processName: process_name,
+        processTitle: process_title,
+        deviceType: (finalMetadata as Record<string, unknown> | null)?.deviceType,
+      })
+    } catch {
+      // history capture should never block reporting
+    }
 
     const seenAt = sqlDate(new Date(reportAtMs))
     const lastSeenCutoff = sqlDate(new Date(reportAtMs - DEVICE_LAST_SEEN_WRITE_THROTTLE_MS))

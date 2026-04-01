@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { type CSSProperties,useEffect, useMemo, useState } from 'react'
 
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
 import { buildHitokotoRequestUrl } from '@/lib/hitokoto'

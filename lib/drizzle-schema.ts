@@ -11,6 +11,7 @@ export const apiTokens = usePg ? pg.apiTokens : sqlite.apiTokens
 export const devices = usePg ? pg.devices : sqlite.devices
 export const userActivities = usePg ? pg.userActivities : sqlite.userActivities
 export const siteConfig = usePg ? pg.siteConfig : sqlite.siteConfig
+export const activityAppHistory = usePg ? pg.activityAppHistory : sqlite.activityAppHistory
 export const systemSecrets = usePg ? pg.systemSecrets : sqlite.systemSecrets
 export const rateLimitBackups = usePg ? pg.rateLimitBackups : sqlite.rateLimitBackups
 export const inspirationEntries = usePg ? pg.inspirationEntries : sqlite.inspirationEntries

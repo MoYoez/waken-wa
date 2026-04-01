@@ -4,12 +4,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
 } from '@/lib/activity-api-constants'
-import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 import { clearActivityFeedDataCache } from '@/lib/activity-feed'
+import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 import { getSession } from '@/lib/auth'
-
+import {
+  isRedisCacheForcedOnServerless,
+  mergeRedisCacheAdminFields,
+  parseRedisCacheTtlSeconds,
+} from '@/lib/cache-runtime-toggle'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
-
 import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
@@ -31,6 +34,7 @@ import {
   minIntervalFromGrid,
   normalizeScheduleGridByWeekday,
 } from '@/lib/schedule-grid-by-weekday'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   parseHistoryWindowMinutes,
   parseProcessStaleSeconds,
@@ -41,12 +45,6 @@ import {
 import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
-import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
-import {
-  isRedisCacheForcedOnServerless,
-  mergeRedisCacheAdminFields,
-  parseRedisCacheTtlSeconds,
-} from '@/lib/cache-runtime-toggle'
 
 // 强制动态渲染，禁用缓存
 export const dynamic = 'force-dynamic'
@@ -125,10 +123,23 @@ export async function PATCH(request: NextRequest) {
           .map((item: unknown) => String(item ?? '').trim())
           .filter((item: string) => item.length > 0)
       : []
+    const mediaPlaySourceBlocklist = Array.isArray(body.mediaPlaySourceBlocklist)
+      ? body.mediaPlaySourceBlocklist
+          .map((item: unknown) => String(item ?? '').trim())
+          .filter((item: string) => item.length > 0)
+      : []
     const historyWindowMinutes = parseHistoryWindowMinutes(body.historyWindowMinutes)
     const processStaleSeconds = parseProcessStaleSeconds(body.processStaleSeconds)
 
     const existing = await getSiteConfigMemoryFirst()
+
+    let captureReportedAppsEnabled = existing?.captureReportedAppsEnabled !== false
+    if (
+      body.captureReportedAppsEnabled !== undefined &&
+      body.captureReportedAppsEnabled !== null
+    ) {
+      captureReportedAppsEnabled = Boolean(body.captureReportedAppsEnabled)
+    }
 
     let inspirationAllowedDeviceHashes: string[] | null = normalizeInspirationAllowedHashes(
       existing?.inspirationAllowedDeviceHashes ?? null,
@@ -443,6 +454,8 @@ export async function PATCH(request: NextRequest) {
         appWhitelist,
         appFilterMode,
         appNameOnlyList,
+        captureReportedAppsEnabled,
+        mediaPlaySourceBlocklist,
         processStaleSeconds,
         pageLockEnabled,
         pageLockPasswordHash,
@@ -498,6 +511,8 @@ export async function PATCH(request: NextRequest) {
         appWhitelist,
         appFilterMode,
         appNameOnlyList,
+        captureReportedAppsEnabled,
+        mediaPlaySourceBlocklist,
         processStaleSeconds,
         pageLockEnabled,
         pageLockPasswordHash,

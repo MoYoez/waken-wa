@@ -232,6 +232,91 @@ function normalizeStringListImport(items: unknown): string[] {
   return out
 }
 
+function exportAppRulesJson(cfg: {
+  appMessageRules: Array<{ match: string; text: string }>
+  appMessageRulesShowProcessName: boolean
+  appFilterMode: 'blacklist' | 'whitelist'
+  appBlacklist: string[]
+  appWhitelist: string[]
+  appNameOnlyList: string[]
+  mediaPlaySourceBlocklist: string[]
+}): string {
+  return JSON.stringify(
+    {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      rules: {
+        appMessageRules: cfg.appMessageRules,
+        appMessageRulesShowProcessName: cfg.appMessageRulesShowProcessName,
+        appFilterMode: cfg.appFilterMode,
+        appBlacklist: cfg.appBlacklist,
+        appWhitelist: cfg.appWhitelist,
+        appNameOnlyList: cfg.appNameOnlyList,
+        mediaPlaySourceBlocklist: cfg.mediaPlaySourceBlocklist,
+      },
+    },
+    null,
+    2,
+  )
+}
+
+function parseAppRulesJson(raw: string): {
+  ok: true
+  data: {
+    appMessageRules: Array<{ match: string; text: string }>
+    appMessageRulesShowProcessName: boolean
+    appFilterMode: 'blacklist' | 'whitelist'
+    appBlacklist: string[]
+    appWhitelist: string[]
+    appNameOnlyList: string[]
+    mediaPlaySourceBlocklist: string[]
+  }
+} | { ok: false; error: string } {
+  let json: unknown
+  try {
+    json = JSON.parse(raw)
+  } catch {
+    return { ok: false, error: 'JSON 解析失败' }
+  }
+  if (!json || typeof json !== 'object' || Array.isArray(json)) {
+    return { ok: false, error: 'JSON 顶层必须是对象' }
+  }
+  const o = json as Record<string, unknown>
+  if (typeof o.version === 'number' && o.version !== 1) {
+    return { ok: false, error: '不支持的 version' }
+  }
+  const rules = o.rules
+  if (!rules || typeof rules !== 'object' || Array.isArray(rules)) {
+    return { ok: false, error: '缺少 rules 对象' }
+  }
+  const r = rules as Record<string, unknown>
+  const appMessageRules = normalizeRulesImport(r.appMessageRules)
+  const appMessageRulesShowProcessName =
+    typeof r.appMessageRulesShowProcessName === 'boolean'
+      ? r.appMessageRulesShowProcessName
+      : true
+  const modeRaw = String(r.appFilterMode ?? 'blacklist').toLowerCase()
+  const appFilterMode = modeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
+  const appBlacklist = normalizeStringListImport(r.appBlacklist)
+  const appWhitelist = normalizeStringListImport(r.appWhitelist)
+  const appNameOnlyList = normalizeStringListImport(r.appNameOnlyList)
+  const mediaPlaySourceBlocklist = normalizeStringListImport(r.mediaPlaySourceBlocklist).map((s) =>
+    s.toLowerCase(),
+  )
+  return {
+    ok: true,
+    data: {
+      appMessageRules,
+      appMessageRulesShowProcessName,
+      appFilterMode,
+      appBlacklist,
+      appWhitelist,
+      appNameOnlyList,
+      mediaPlaySourceBlocklist,
+    },
+  }
+}
+
 /** Maps export `web` object into form fields (same shape as GET /api/admin/settings). */
 function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig> {
   const patch: Partial<SiteConfig> = {}
@@ -293,6 +378,14 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
     patch.appFilterMode = mode === 'whitelist' ? 'whitelist' : 'blacklist'
   }
   if ('appNameOnlyList' in web) patch.appNameOnlyList = normalizeStringListImport(web.appNameOnlyList)
+  if ('captureReportedAppsEnabled' in web && typeof web.captureReportedAppsEnabled === 'boolean') {
+    patch.captureReportedAppsEnabled = web.captureReportedAppsEnabled
+  }
+  if ('mediaPlaySourceBlocklist' in web) {
+    patch.mediaPlaySourceBlocklist = normalizeStringListImport(web.mediaPlaySourceBlocklist).map((s) =>
+      s.toLowerCase(),
+    )
+  }
   if ('pageLockEnabled' in web && typeof web.pageLockEnabled === 'boolean') {
     patch.pageLockEnabled = web.pageLockEnabled
   }
@@ -423,6 +516,10 @@ interface SiteConfig {
   appBlacklist: string[]
   appWhitelist: string[]
   appNameOnlyList: string[]
+  /** When false, stop capturing app history (keeps existing records). */
+  captureReportedAppsEnabled: boolean
+  /** Lowercased play_source values that should hide metadata.media. */
+  mediaPlaySourceBlocklist: string[]
   pageLockEnabled: boolean
   pageLockPassword: string
   hcaptchaEnabled: boolean
@@ -475,15 +572,21 @@ export function WebSettings() {
   const [blacklistInput, setBlacklistInput] = useState('')
   const [whitelistInput, setWhitelistInput] = useState('')
   const [nameOnlyListInput, setNameOnlyListInput] = useState('')
+  const [mediaSourceInput, setMediaSourceInput] = useState('')
   const [rulesListPage, setRulesListPage] = useState(0)
   const [blacklistListPage, setBlacklistListPage] = useState(0)
   const [whitelistListPage, setWhitelistListPage] = useState(0)
   const [nameOnlyListPage, setNameOnlyListPage] = useState(0)
+  const [mediaSourceListPage, setMediaSourceListPage] = useState(0)
   const [dialogAppRulesOpen, setDialogAppRulesOpen] = useState(false)
   const [dialogAppFilterOpen, setDialogAppFilterOpen] = useState(false)
   const [dialogNameOnlyOpen, setDialogNameOnlyOpen] = useState(false)
+  const [dialogMediaSourceOpen, setDialogMediaSourceOpen] = useState(false)
   const [importConfigDialogOpen, setImportConfigDialogOpen] = useState(false)
   const [importConfigInput, setImportConfigInput] = useState('')
+  const [importRulesDialogOpen, setImportRulesDialogOpen] = useState(false)
+  const [importRulesInput, setImportRulesInput] = useState('')
+  const [historyApps, setHistoryApps] = useState<string[]>([])
   // 裁剪弹窗状态
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
@@ -517,6 +620,8 @@ export function WebSettings() {
     appBlacklist: [],
     appWhitelist: [],
     appNameOnlyList: [],
+    captureReportedAppsEnabled: true,
+    mediaPlaySourceBlocklist: [],
     pageLockEnabled: false,
     pageLockPassword: '',
     hcaptchaEnabled: false,
@@ -608,6 +713,12 @@ export function WebSettings() {
             appBlacklist: blacklist,
             appWhitelist: whitelist,
             appNameOnlyList: nameOnlyList,
+            captureReportedAppsEnabled: data.data.captureReportedAppsEnabled !== false,
+            mediaPlaySourceBlocklist: Array.isArray(data.data.mediaPlaySourceBlocklist)
+              ? (data.data.mediaPlaySourceBlocklist as unknown[])
+                  .map((item) => String(item ?? '').trim().toLowerCase())
+                  .filter((item) => item.length > 0)
+              : [],
             pageLockEnabled: Boolean(data.data.pageLockEnabled),
             pageLockPassword: '',
             hcaptchaEnabled: Boolean(data.data.hcaptchaEnabled),
@@ -680,6 +791,27 @@ export function WebSettings() {
   }, [])
 
   useEffect(() => {
+    if (!form.captureReportedAppsEnabled) {
+      setHistoryApps([])
+      return
+    }
+    void (async () => {
+      try {
+        const res = await fetch('/api/admin/activity/history/apps?limit=200')
+        const data = await res.json()
+        if (data?.success && Array.isArray(data.data)) {
+          const apps = (data.data as Array<{ processName?: unknown }>)
+            .map((x) => String(x?.processName ?? '').trim())
+            .filter((x) => x.length > 0)
+          setHistoryApps(apps)
+        }
+      } catch {
+        // ignore
+      }
+    })()
+  }, [form.captureReportedAppsEnabled])
+
+  useEffect(() => {
     void (async () => {
       try {
         const res = await fetch('/api/admin/devices?limit=200')
@@ -708,6 +840,12 @@ export function WebSettings() {
   useEffect(() => {
     setNameOnlyListPage((p) => Math.min(p, listMaxPage(form.appNameOnlyList.length, SETTINGS_APP_LIST_PAGE_SIZE)))
   }, [form.appNameOnlyList.length])
+
+  useEffect(() => {
+    setMediaSourceListPage((p) =>
+      Math.min(p, listMaxPage(form.mediaPlaySourceBlocklist.length, SETTINGS_APP_LIST_PAGE_SIZE)),
+    )
+  }, [form.mediaPlaySourceBlocklist.length])
 
   const patch = <K extends keyof SiteConfig>(key: K, value: SiteConfig[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -761,6 +899,9 @@ export function WebSettings() {
       const parsedBlacklist = normalizeStringList(form.appBlacklist)
       const parsedWhitelist = normalizeStringList(form.appWhitelist)
       const parsedNameOnlyList = normalizeStringList(form.appNameOnlyList)
+      const parsedMediaSourceBlocklist = normalizeStringList(form.mediaPlaySourceBlocklist).map((s) =>
+        s.toLowerCase(),
+      )
 
       const poTrim = form.profileOnlineAccentColor.trim()
       if (poTrim && !normalizeProfileOnlineAccentColor(poTrim)) {
@@ -807,6 +948,8 @@ export function WebSettings() {
           appBlacklist: parsedBlacklist,
           appWhitelist: parsedWhitelist,
           appNameOnlyList: parsedNameOnlyList,
+          captureReportedAppsEnabled: form.captureReportedAppsEnabled,
+          mediaPlaySourceBlocklist: parsedMediaSourceBlocklist,
           inspirationAllowedDeviceHashes: inspirationDeviceRestrictionEnabled
             ? normalizeStringList(inspirationHashSelection)
             : null,
@@ -891,8 +1034,85 @@ export function WebSettings() {
     setBlacklistListPage(0)
     setWhitelistListPage(0)
     setNameOnlyListPage(0)
+    setMediaSourceListPage(0)
     setImportConfigDialogOpen(false)
     toast.success('已写入网页配置，请记得保存')
+  }
+
+  const copyRulesJson = async () => {
+    try {
+      const json = exportAppRulesJson({
+        appMessageRules: form.appMessageRules,
+        appMessageRulesShowProcessName: form.appMessageRulesShowProcessName,
+        appFilterMode: form.appFilterMode,
+        appBlacklist: form.appBlacklist,
+        appWhitelist: form.appWhitelist,
+        appNameOnlyList: form.appNameOnlyList,
+        mediaPlaySourceBlocklist: form.mediaPlaySourceBlocklist,
+      })
+      await navigator.clipboard.writeText(json)
+      toast.success('已复制规则 JSON 到剪贴板')
+    } catch {
+      toast.error('复制失败，请重试')
+    }
+  }
+
+  const exportUsedAppsJson = async () => {
+    try {
+      const res = await fetch('/api/admin/activity/apps-export')
+      const data = await res.json()
+      if (!res.ok || !data?.success || !data?.data) {
+        toast.error(typeof data?.error === 'string' ? data.error : '导出失败')
+        return
+      }
+      const payload = JSON.stringify(data.data, null, 2)
+      const blob = new Blob([payload], { type: 'application/json;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const ts = new Date().toISOString().replace(/[:.]/g, '-')
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `apps-export-${ts}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      toast.success('已导出已使用应用 JSON')
+    } catch {
+      toast.error('导出失败，请重试')
+    }
+  }
+
+  const openImportRules = () => {
+    setImportRulesInput('')
+    setImportRulesDialogOpen(true)
+  }
+
+  const confirmImportRules = () => {
+    const raw = importRulesInput.trim()
+    if (!raw) {
+      toast.error('请先粘贴规则 JSON')
+      return
+    }
+    const parsed = parseAppRulesJson(raw)
+    if (!parsed.ok) {
+      toast.error(parsed.error)
+      return
+    }
+    setForm((prev) => ({
+      ...prev,
+      ...parsed.data,
+    }))
+    setBlacklistInput('')
+    setWhitelistInput('')
+    setNameOnlyListInput('')
+    setMediaSourceInput('')
+    setRulesListPage(0)
+    setBlacklistListPage(0)
+    setWhitelistListPage(0)
+    setNameOnlyListPage(0)
+    setMediaSourceListPage(0)
+    setImportRulesDialogOpen(false)
+    toast.success('已写入规则到表单，请记得保存')
   }
 
   const rulesTotal = form.appMessageRules.length
@@ -915,6 +1135,11 @@ export function WebSettings() {
   const noPage = Math.min(nameOnlyListPage, noMaxPage)
   const noStart = noPage * SETTINGS_APP_LIST_PAGE_SIZE
 
+  const msTotal = form.mediaPlaySourceBlocklist.length
+  const msMaxPage = listMaxPage(msTotal, SETTINGS_APP_LIST_PAGE_SIZE)
+  const msPage = Math.min(mediaSourceListPage, msMaxPage)
+  const msStart = msPage * SETTINGS_APP_LIST_PAGE_SIZE
+
   const webSettingsDirty = useMemo(() => {
     if (!baselineForm) return false
     try {
@@ -931,6 +1156,11 @@ export function WebSettings() {
   return (
     <>
     <div className="rounded-xl border bg-card p-6 space-y-5">
+      <datalist id="history-apps">
+        {historyApps.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
       <h3 className="font-semibold text-foreground">Web 配置</h3>
 
       <div className="space-y-2">
@@ -1732,6 +1962,7 @@ export function WebSettings() {
                           <Label htmlFor={`rule-match-${idx}`}>match（进程/应用名）</Label>
                           <Input
                             id={`rule-match-${idx}`}
+                            list={form.captureReportedAppsEnabled ? 'history-apps' : undefined}
                             value={rule.match}
                             onChange={(e) => {
                               const next = [...form.appMessageRules]
@@ -1848,6 +2079,7 @@ export function WebSettings() {
               <Input
                 id="blacklist-input"
                 className="flex-1 min-w-[240px]"
+                list={form.captureReportedAppsEnabled ? 'history-apps' : undefined}
                 value={blacklistInput}
                 onChange={(e) => setBlacklistInput(e.target.value)}
                 placeholder="例如：WeChat.exe"
@@ -1921,6 +2153,7 @@ export function WebSettings() {
               <Input
                 id="whitelist-input"
                 className="flex-1 min-w-[240px]"
+                list={form.captureReportedAppsEnabled ? 'history-apps' : undefined}
                 value={whitelistInput}
                 onChange={(e) => setWhitelistInput(e.target.value)}
                 placeholder="例如：Code.exe"
@@ -2002,6 +2235,128 @@ export function WebSettings() {
         </Button>
       </div>
 
+      <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <Label className="text-base">媒体来源屏蔽规则（play_source）</Label>
+          <p className="text-xs text-muted-foreground">已配置 {msTotal} 条</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            关闭「保存上报行为的应用记录」后不会再新增历史记录，但会保留已保存的历史数据。
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          className="shrink-0"
+          onClick={() => setDialogMediaSourceOpen(true)}
+        >
+          在弹窗中编辑
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+        <div className="space-y-0.5 min-w-0">
+          <Label htmlFor="capture-reported-apps" className="font-normal cursor-pointer">
+            保存上报行为的应用记录（用于规则选择/导出）
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            关闭后不会再新增历史记录，但会保留已保存的历史数据。
+          </p>
+        </div>
+        <Switch
+          id="capture-reported-apps"
+          checked={form.captureReportedAppsEnabled}
+          onCheckedChange={(v) => patch('captureReportedAppsEnabled', v)}
+          className="shrink-0"
+        />
+      </div>
+
+      <Dialog open={dialogMediaSourceOpen} onOpenChange={setDialogMediaSourceOpen}>
+        <DialogContent
+          className="flex max-h-[min(90vh,48rem)] w-[calc(100vw-1.5rem)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
+          showCloseButton
+        >
+          <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 text-left">
+            <DialogTitle>媒体来源屏蔽规则</DialogTitle>
+            <DialogDescription>
+              当上报的 <code className="rounded bg-muted px-1">metadata.play_source</code> 命中时，将隐藏该条活动的媒体信息（仅移除 metadata.media）。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">输入来源值（建议小写）</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  id="mediaSource-input"
+                  className="flex-1 min-w-[240px] font-mono text-xs"
+                  value={mediaSourceInput}
+                  onChange={(e) => setMediaSourceInput(e.target.value)}
+                  placeholder="例如：system_media"
+                />
+                <Button
+                  type="button"
+                  className="shrink-0"
+                  onClick={() => {
+                    const value = mediaSourceInput.trim().toLowerCase()
+                    if (!value) return
+                    const exists = form.mediaPlaySourceBlocklist.some((x) => x.toLowerCase() === value)
+                    if (exists) return
+                    const next = [...form.mediaPlaySourceBlocklist, value]
+                    patch('mediaPlaySourceBlocklist', next)
+                    setMediaSourceInput('')
+                    setMediaSourceListPage(listMaxPage(next.length, SETTINGS_APP_LIST_PAGE_SIZE))
+                  }}
+                >
+                  添加
+                </Button>
+              </div>
+
+              {form.mediaPlaySourceBlocklist.length === 0 ? (
+                <p className="text-xs text-muted-foreground">暂无屏蔽规则</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">已有条目（分页）</p>
+                  <ul className="space-y-3">
+                    {form.mediaPlaySourceBlocklist
+                      .slice(msStart, msStart + SETTINGS_APP_LIST_PAGE_SIZE)
+                      .map((src, localIdx) => {
+                        const idx = msStart + localIdx
+                        return (
+                          <li
+                            key={`${src}-${idx}`}
+                            className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
+                          >
+                            <span className="text-sm text-foreground break-all font-mono">{src}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="shrink-0"
+                              onClick={() =>
+                                patch(
+                                  'mediaPlaySourceBlocklist',
+                                  form.mediaPlaySourceBlocklist.filter((_, i) => i !== idx),
+                                )
+                              }
+                            >
+                              删除
+                            </Button>
+                          </li>
+                        )
+                      })}
+                  </ul>
+                  <ListPaginationBar
+                    page={mediaSourceListPage}
+                    pageSize={SETTINGS_APP_LIST_PAGE_SIZE}
+                    total={msTotal}
+                    onPageChange={setMediaSourceListPage}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={dialogNameOnlyOpen} onOpenChange={setDialogNameOnlyOpen}>
         <DialogContent
           className="flex max-h-[min(90vh,48rem)] w-[calc(100vw-1.5rem)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
@@ -2020,6 +2375,7 @@ export function WebSettings() {
                 <Input
                   id="nameOnly-input"
                   className="flex-1 min-w-[240px]"
+                  list={form.captureReportedAppsEnabled ? 'history-apps' : undefined}
                   value={nameOnlyListInput}
                   onChange={(e) => setNameOnlyListInput(e.target.value)}
                   placeholder="例如：Code.exe"
@@ -2161,6 +2517,15 @@ export function WebSettings() {
         <Button type="button" variant="outline" onClick={() => void applyImportConfig()}>
           一键写入配置
         </Button>
+        <Button type="button" variant="outline" onClick={() => void exportUsedAppsJson()}>
+          导出已使用应用（JSON）
+        </Button>
+        <Button type="button" variant="outline" onClick={() => void copyRulesJson()}>
+          复制规则 JSON
+        </Button>
+        <Button type="button" variant="outline" onClick={openImportRules}>
+          导入规则 JSON
+        </Button>
       </div>
       <p className="text-xs text-muted-foreground">
         「一键写入配置」会尝试从剪贴板读取 Base64，并在弹窗中确认。仅合并导出包中的网页字段到本页表单，不包含 Token；
@@ -2196,6 +2561,35 @@ export function WebSettings() {
           </Button>
           <Button type="button" onClick={confirmImportConfig}>
             导入并覆盖网页配置
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    <Dialog open={importRulesDialogOpen} onOpenChange={setImportRulesDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>导入规则 JSON</DialogTitle>
+          <DialogDescription>
+            将覆盖当前表单中的应用规则与媒体来源规则。写入后请点击保存配置。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="import-rules-input">规则 JSON</Label>
+          <textarea
+            id="import-rules-input"
+            rows={10}
+            value={importRulesInput}
+            onChange={(e) => setImportRulesInput(e.target.value)}
+            placeholder='粘贴 JSON（包含 version 与 rules 字段）'
+            className="w-full px-3 py-2 border rounded-md bg-background text-xs font-mono leading-relaxed"
+          />
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setImportRulesDialogOpen(false)}>
+            取消
+          </Button>
+          <Button type="button" onClick={confirmImportRules}>
+            导入并覆盖规则
           </Button>
         </DialogFooter>
       </DialogContent>
