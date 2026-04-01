@@ -42,7 +42,6 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
             href="/admin"
             className="inline-flex items-center justify-center gap-1.5 text-center sm:text-right hover:text-foreground transition-colors shrink-0"
           >
-            <MdAutoFixHigh className="h-4 w-4" aria-hidden />
             {adminText}
           </Link>
         </div>
