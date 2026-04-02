@@ -20,6 +20,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import type { OrphanAssetRow } from '@/types'
+import Image from 'next/image'
 
 const ORPHAN_LIST_MAX_HEIGHT = 'min(75vh,56rem)'
 
@@ -243,7 +244,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                       </div>
 
                       <a href={r.url} target="_blank" rel="noreferrer" className="block">
-                        <img
+                        <Image
                           src={r.url}
                           alt={r.publicKey}
                           className="w-full h-40 object-contain rounded-md border bg-muted/10"
