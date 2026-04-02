@@ -2817,6 +2817,20 @@ export function WebSettings() {
             className="shrink-0"
           />
         </div>
+        {rulesTotal > 0 ? (
+          <div className="space-y-2 rounded-md border border-border/50 bg-background/35 px-3 py-3">
+            <p className="text-xs text-muted-foreground">规则预览（前 3 条）</p>
+            <ul className="space-y-2">
+              {form.appMessageRules.slice(0, 3).map((rule, idx) => (
+                <li key={`${rule.match}-${idx}`} className="rounded-md border border-border/40 bg-background/55 px-3 py-2">
+                  <p className="text-xs font-medium text-foreground/80 break-all font-mono">{rule.match || '未填写 match'}</p>
+                  <p className="mt-1 text-sm text-muted-foreground break-words">{rule.text || '未填写 text'}</p>
+                </li>
+              ))}
+            </ul>
+            {rulesTotal > 3 ? <p className="text-xs text-muted-foreground">其余 {rulesTotal - 3} 条可在弹窗中继续查看和编辑。</p> : null}
+          </div>
+        ) : null}
       </div>
 
       <Dialog open={dialogAppRulesOpen} onOpenChange={setDialogAppRulesOpen}>
@@ -2864,6 +2878,7 @@ export function WebSettings() {
                           <Label htmlFor={`rule-match-${idx}`}>match（进程/应用名）</Label>
                           <Combobox
                             items={form.captureReportedAppsEnabled ? historyApps : []}
+                            inputValue={rule.match}
                             onInputValueChange={(v) => {
                               const next = [...form.appMessageRules]
                               next[idx] = { ...next[idx], match: v }
@@ -3000,6 +3015,7 @@ export function WebSettings() {
             <div className="flex flex-wrap items-center gap-2">
               <Combobox
                 items={form.captureReportedAppsEnabled ? historyApps : []}
+                inputValue={blacklistInput}
                 onInputValueChange={setBlacklistInput}
                 onValueChange={(v) => setBlacklistInput(String(v ?? ''))}
               >
@@ -3085,6 +3101,7 @@ export function WebSettings() {
             <div className="flex flex-wrap items-center gap-2">
               <Combobox
                 items={form.captureReportedAppsEnabled ? historyApps : []}
+                inputValue={whitelistInput}
                 onInputValueChange={setWhitelistInput}
                 onValueChange={(v) => setWhitelistInput(String(v ?? ''))}
               >
@@ -3231,6 +3248,7 @@ export function WebSettings() {
               <div className="flex flex-wrap items-center gap-2">
                 <Combobox
                   items={form.mediaPlaySourceBlocklist}
+                  inputValue={mediaSourceInput}
                   onInputValueChange={setMediaSourceInput}
                   onValueChange={(v) => setMediaSourceInput(String(v ?? ''))}
                 >
@@ -3333,6 +3351,7 @@ export function WebSettings() {
               <div className="flex flex-wrap items-center gap-2">
                 <Combobox
                   items={form.captureReportedAppsEnabled ? historyApps : []}
+                  inputValue={nameOnlyListInput}
                   onInputValueChange={setNameOnlyListInput}
                   onValueChange={(v) => setNameOnlyListInput(String(v ?? ''))}
                 >
