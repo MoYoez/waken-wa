@@ -1,14 +1,4 @@
-type LexicalNode = {
-  type?: string
-  text?: string
-  url?: string
-  src?: string
-  children?: LexicalNode[]
-}
-
-type LexicalRoot = {
-  root: LexicalNode
-}
+import type { LexicalNode, LexicalRoot } from '@/types'
 
 const UUID_IN_PATH_RE =
   /\/api\/inspiration\/img\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi

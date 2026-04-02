@@ -4,16 +4,7 @@ import Image from 'next/image'
 import { Fragment } from 'react'
 
 import { parseLexicalJson } from '@/lib/inspiration-lexical'
-
-type LexicalNode = {
-  type?: string
-  text?: string
-  format?: number
-  tag?: string
-  listType?: string
-  url?: string
-  children?: LexicalNode[]
-}
+import type { LexicalNode } from '@/types'
 
 const IMAGE_MD_RE = /!\[[^\]]*]\(([^)]+)\)/g
 

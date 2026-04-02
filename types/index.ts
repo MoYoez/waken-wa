@@ -9,7 +9,15 @@ export type {
 } from './activity'
 export type { MediaDisplay } from './activity-media'
 export type { ActivityUpdateMode } from './activity-update-mode'
-export type { AdminUserRow, ApiTokenListRow, RecentDeviceRow } from './admin'
+export type {
+  AdminDeviceItem,
+  AdminDeviceSummary,
+  AdminTokenOption,
+  AdminUserRow,
+  ApiTokenListRow,
+  RecentDeviceRow,
+  ToolMode,
+} from './admin'
 export type { SessionPayload } from './auth'
 export type {
   ChartConfig,
@@ -22,7 +30,15 @@ export type {
 export type { AdminUser, ApiToken } from './db'
 export type { HCaptchaConfig } from './hcaptcha'
 export type { HitokotoJsonBody, UserNoteHitokotoEncode } from './hitokoto'
-export type { InspirationTokenGateResult } from './inspiration'
+export type {
+  AdminInspirationEntry,
+  InspirationDraft,
+  InspirationTokenGateResult,
+  LexicalNode,
+  LexicalRoot,
+  OrphanAssetRow,
+} from './inspiration'
+export type { LlmEndpoints, SkillsMode } from './llm'
 export type {
   ScheduleCourse,
   ScheduleDayGrid,

@@ -10,12 +10,10 @@ import {
   isLegacyMcpEnabled,
   normalizeAiClientId,
 } from '@/lib/skills-auth'
+import type { LlmEndpoints, SkillsMode, ToolMode } from '@/types'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-type SkillsMode = 'oauth' | 'apikey'
-type ToolMode = 'skills' | 'mcp'
 
 function normalizeMode(raw: string | null): 'oauth' | 'apikey' | null {
   const v = String(raw ?? '').trim().toLowerCase()
@@ -28,9 +26,10 @@ function resolvePreferredToolMode(raw: unknown): ToolMode {
   return String(raw ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills'
 }
 
-function buildEndpoints(origin: string) {
+function buildEndpoints(origin: string): LlmEndpoints {
   const llmBaseUrl = `${origin}/api/llm`
   return {
+    llmBase: llmBaseUrl,
     direct: `${llmBaseUrl}/direct`,
     markdown: `${llmBaseUrl}/md`,
     settings: `${llmBaseUrl}/settings`,

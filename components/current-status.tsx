@@ -29,6 +29,7 @@ import { useIsClient } from '@/hooks/use-is-client'
 import { isDeviceBatteryCharging } from '@/lib/activity-battery-metadata'
 import { getMediaDisplay, type MediaDisplay } from '@/lib/activity-media'
 import { cn } from '@/lib/utils'
+import type { SteamNowPlayingInfo } from '@/types'
 
 function getBatteryLabel(metadata: Record<string, unknown> | null | undefined): string | null {
   const value = metadata?.deviceBatteryPercent
@@ -48,12 +49,6 @@ function getDeviceType(
   if (/ipad|tablet|tab|平板/.test(source)) return 'tablet'
   if (/iphone|android|mobile|phone|手机/.test(source)) return 'mobile'
   return 'desktop'
-}
-
-type SteamNowPlayingClient = {
-  appId: string
-  name: string
-  imageUrl: string
 }
 
 /** When text is wider than its slot (~half row when paired), run horizontal marquee instead of clipping. */
@@ -149,7 +144,7 @@ function MediaAndSteamRow({
   steam,
 }: {
   media: MediaDisplay | null
-  steam: SteamNowPlayingClient | null
+  steam: SteamNowPlayingInfo | null
 }) {
   const [steamImgFailed, setSteamImgFailed] = useState(false)
 
@@ -280,7 +275,7 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
         const statusLine = typeof activity.statusText === 'string' ? activity.statusText.trim() : ''
         const media = hideActivityMedia ? null : getMediaDisplay(activity.metadata)
         const sp = activity.steamNowPlaying
-        const steam: SteamNowPlayingClient | null =
+        const steam: SteamNowPlayingInfo | null =
           sp && typeof sp.name === 'string' && sp.name.trim()
             ? {
                 appId: sp.appId,

@@ -5,6 +5,8 @@ export interface AdminUserRow {
   createdAt: string
 }
 
+export type ToolMode = 'skills' | 'mcp'
+
 export interface RecentDeviceRow {
   displayName: string
   generatedHashKey: string
@@ -20,4 +22,30 @@ export interface ApiTokenListRow {
   createdAt: string
   lastUsedAt: string | null
   recentDevices?: RecentDeviceRow[]
+}
+
+export interface AdminTokenOption {
+  id: number
+  name: string
+  isActive: boolean
+}
+
+export interface AdminDeviceItem {
+  id: number
+  displayName: string
+  generatedHashKey: string
+  showSteamNowPlaying?: boolean
+  status: 'active' | 'pending' | 'revoked'
+  apiTokenId: number | null
+  lastSeenAt: string | null
+  updatedAt: string
+  apiToken?: AdminTokenOption | null
+  approvalUrl?: string
+}
+
+export interface AdminDeviceSummary {
+  id: number
+  displayName: string
+  generatedHashKey: string
+  status: string
 }

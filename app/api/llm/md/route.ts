@@ -3,21 +3,10 @@ import { NextResponse } from 'next/server'
 
 import { getPublicOrigin } from '@/lib/public-request-url'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
+import type { LlmEndpoints, ToolMode } from '@/types'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-type ToolMode = 'skills' | 'mcp'
-
-type LlmEndpoints = {
-  llmBase: string
-  direct: string
-  markdown: string
-  settings: string
-  appsExport: string
-  legacyMcp: string
-  legacyMcpApiKeyVerify: string
-}
 
 function resolvePreferredToolMode(raw: unknown): ToolMode {
   return String(raw ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills'

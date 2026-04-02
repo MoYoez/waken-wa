@@ -36,33 +36,15 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { toastSwitchLabel } from '@/lib/admin-switch-toast'
 import { cn } from '@/lib/utils'
+import type { AdminDeviceItem, AdminTokenOption } from '@/types'
 
-interface DeviceItem {
-  id: number
-  displayName: string
-  generatedHashKey: string
-  showSteamNowPlaying?: boolean
-  status: 'active' | 'pending' | 'revoked'
-  apiTokenId: number | null
-  lastSeenAt: string | null
-  updatedAt: string
-  apiToken?: { id: number; name: string; isActive: boolean } | null
-  approvalUrl?: string
-}
-
-interface TokenOption {
-  id: number
-  name: string
-  isActive: boolean
-}
-
-const DEVICE_STATUS_LABEL: Record<DeviceItem['status'], string> = {
+const DEVICE_STATUS_LABEL: Record<AdminDeviceItem['status'], string> = {
   active: '已启用',
   pending: '待审核',
   revoked: '已撤销',
 }
 
-function deviceStatusLabel(status: DeviceItem['status']): string {
+function deviceStatusLabel(status: AdminDeviceItem['status']): string {
   return DEVICE_STATUS_LABEL[status]
 }
 
@@ -73,7 +55,7 @@ function DeviceListItemActions({
   onToggleActive,
   onReview,
 }: {
-  item: DeviceItem
+  item: AdminDeviceItem
   variant: 'mobile' | 'desktop'
   onCopyHash: () => void
   onToggleActive: () => void
@@ -137,18 +119,18 @@ export function DeviceManager({
   highlightHashKey?: string
 } = {}) {
   const [loading, setLoading] = useState(true)
-  const [items, setItems] = useState<DeviceItem[]>([])
+  const [items, setItems] = useState<AdminDeviceItem[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [q, setQ] = useState(() => initialHashKey?.trim() ?? '')
   const [status, setStatus] = useState('')
-  const [tokens, setTokens] = useState<TokenOption[]>([])
+  const [tokens, setTokens] = useState<AdminTokenOption[]>([])
 
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newTokenId, setNewTokenId] = useState('')
   const [newHashKey, setNewHashKey] = useState('')
-  const [reviewDevice, setReviewDevice] = useState<DeviceItem | null>(null)
+  const [reviewDevice, setReviewDevice] = useState<AdminDeviceItem | null>(null)
   const highlightHandledRef = useRef(false)
 
   const totalPages = useMemo(
@@ -675,4 +657,3 @@ export function DeviceManager({
     </div>
   )
 }
-

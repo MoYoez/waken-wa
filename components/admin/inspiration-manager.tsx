@@ -41,16 +41,13 @@ import {
   inspirationPlainPreviewAny,
 } from '@/lib/inspiration-preview'
 import { DEFAULT_TIMEZONE, formatDateTimeShort, normalizeTimezone } from '@/lib/timezone'
-
-interface InspirationEntry {
-  id: number
-  title: string | null
-  content: string
-  contentLexical?: string | null
-  imageDataUrl: string | null
-  statusSnapshot: string | null
-  createdAt: string
-}
+import type {
+  ActivityFeedData,
+  ActivityFeedItem,
+  AdminDeviceSummary,
+  AdminInspirationEntry,
+  InspirationDraft,
+} from '@/types'
 
 /** Server page size; keep small so tall markdown cards do not overflow the viewport. */
 const INSPIRATION_LIST_PAGE_SIZE = 8
@@ -62,36 +59,9 @@ const INSPIRATION_MAX_OUTPUT_EDGE = 1200
 const INSPIRATION_DRAFT_STORAGE_KEY_V1 = 'waken:admin:inspiration-draft:v1'
 const INSPIRATION_DRAFT_STORAGE_KEY = 'waken:admin:inspiration-draft:v2'
 
-type InspirationDraft = {
-  title: string
-  content: string
-  contentLexical: string
-  imageDataUrl: string
-  attachCurrentStatus: boolean
-  attachStatusDeviceHash: string
-  attachStatusActivityKey?: string
-  attachStatusIncludeDeviceInfo?: boolean
-}
-
-type ActivityFeedItem = {
-  id: number | string
-  device: string
-  processName: string
-  processTitle: string | null
-  metadata?: Record<string, unknown> | null
-  statusText?: string
-  lastReportAt?: string
-  updatedAt?: string
-}
-
-type ActivityFeedData = {
-  activeStatuses: ActivityFeedItem[]
-  recentActivities: ActivityFeedItem[]
-}
-
 export function InspirationManager() {
   const [loading, setLoading] = useState(true)
-  const [entries, setEntries] = useState<InspirationEntry[]>([])
+  const [entries, setEntries] = useState<AdminInspirationEntry[]>([])
   const [displayTimezone, setDisplayTimezone] = useState(DEFAULT_TIMEZONE)
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
@@ -109,10 +79,8 @@ export function InspirationManager() {
   const [publicActivityFeed, setPublicActivityFeed] = useState<ActivityFeedData | null>(null)
   const [publicActivityLoading, setPublicActivityLoading] = useState(false)
   const [publicActivityError, setPublicActivityError] = useState<string>('')
-  const [inspirationDevices, setInspirationDevices] = useState<
-    Array<{ id: number; displayName: string; generatedHashKey: string; status: string }>
-  >([])
-  const [previewEntry, setPreviewEntry] = useState<InspirationEntry | null>(null)
+  const [inspirationDevices, setInspirationDevices] = useState<AdminDeviceSummary[]>([])
+  const [previewEntry, setPreviewEntry] = useState<AdminInspirationEntry | null>(null)
   const [bodyImageBusy, setBodyImageBusy] = useState(false)
 
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)

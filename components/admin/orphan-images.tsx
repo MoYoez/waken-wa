@@ -19,14 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
-
-type OrphanAssetRow = {
-  publicKey: string
-  url: string
-  createdAt: string | null
-  ageMinutes: number | null
-  eligibleForDelete: boolean
-}
+import type { OrphanAssetRow } from '@/types'
 
 const ORPHAN_LIST_MAX_HEIGHT = 'min(75vh,56rem)'
 
@@ -283,4 +276,3 @@ export function OrphanImages() {
     </div>
   )
 }
-
