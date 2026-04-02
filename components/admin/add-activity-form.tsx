@@ -221,6 +221,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
           <Input
             id="battery-level"
             type="number"
+            onWheel={(e) => e.currentTarget.blur()}
             inputMode="numeric"
             min={DEVICE_BATTERY_PERCENT_MIN}
             max={DEVICE_BATTERY_PERCENT_MAX}
@@ -246,6 +247,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
         <Input
           id="persist"
           type="number"
+          onWheel={(e) => e.currentTarget.blur()}
           inputMode="numeric"
           min={USER_ACTIVITY_PERSIST_MIN_MINUTES_UI}
           max={USER_ACTIVITY_PERSIST_MAX_MINUTES}

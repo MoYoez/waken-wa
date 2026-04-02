@@ -1690,6 +1690,7 @@ export function WebSettings() {
                 <div className="max-w-xs space-y-2">
                   <Input
                     type="number"
+                    onWheel={(e) => e.currentTarget.blur()}
                     min={5}
                     max={1440}
                     step={1}
@@ -1699,9 +1700,8 @@ export function WebSettings() {
                         Math.min(1440, Math.max(5, Math.round(Number(e.target.value) || 60))),
                       )
                     }
-                    onWheel={(e) => e.currentTarget.blur()}
                     disabled={skillsSaving}
-                  />
+                  />  
                   <p className="text-[11px] text-muted-foreground">
                     当前设置：{skillsOauthTokenTtlMinutes} 分钟
                   </p>
@@ -2447,6 +2447,7 @@ export function WebSettings() {
         <Input
           id="redis-cache-ttl-seconds"
           type="number"
+          onWheel={(e) => e.currentTarget.blur()}
           min={1}
           max={REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS}
           value={form.redisCacheTtlSeconds}
@@ -2456,7 +2457,6 @@ export function WebSettings() {
               Number(e.target.value || REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS),
             )
           }
-          onWheel={(e) => e.currentTarget.blur()}
         />
         <p className="text-xs text-muted-foreground">
           聚合活动流（含数据库活动）在 Redis 中的缓存秒数。默认 3600（1 小时）；更短更实时，更长更省读库。
@@ -2533,6 +2533,7 @@ export function WebSettings() {
         <Label>历史窗口（分钟）</Label>
         <Input
           type="number"
+          onWheel={(e) => e.currentTarget.blur()}
           min={SITE_CONFIG_HISTORY_WINDOW_MIN_MINUTES}
           max={SITE_CONFIG_HISTORY_WINDOW_MAX_MINUTES}
           value={form.historyWindowMinutes}
@@ -2542,13 +2543,13 @@ export function WebSettings() {
               Number(e.target.value || SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES),
             )
           }
-          onWheel={(e) => e.currentTarget.blur()}
         />
       </div>
       <div className="space-y-2">
         <Label>进程超时判定（秒）</Label>
         <Input
           type="number"
+          onWheel={(e) => e.currentTarget.blur()}
           min={SITE_CONFIG_PROCESS_STALE_MIN_SECONDS}
           max={SITE_CONFIG_PROCESS_STALE_MAX_SECONDS}
           value={form.processStaleSeconds}
@@ -2558,7 +2559,6 @@ export function WebSettings() {
               Number(e.target.value || SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS),
             )
           }
-          onWheel={(e) => e.currentTarget.blur()}
         />
         <p className="text-xs text-muted-foreground">
           超过该时长仍未收到该进程新活动时，将自动判定为已结束。默认{' '}

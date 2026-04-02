@@ -290,6 +290,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   </p>
                   <input
                     type="number"
+                    onWheel={(e) => e.currentTarget.blur()}
                     min={10}
                     max={1440}
                     step={10}
@@ -299,7 +300,6 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                         Number(e.target.value || SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES),
                       )
                     }
-                    onWheel={(e) => e.currentTarget.blur()}
                     className="w-full px-3 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 </div>
