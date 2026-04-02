@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
 import { skillsOauthTokens, systemSecrets } from '@/lib/drizzle-schema'
+import { getPublicOrigin } from '@/lib/public-request-url'
 import { normalizeAiClientId } from '@/lib/skills-auth'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
@@ -35,12 +36,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
   }
 
+  const origin = getPublicOrigin(request)
   const h = (name: string) => (request.headers.get(name) ?? '').trim()
   const q = (name: string) => (request.nextUrl.searchParams.get(name) ?? '').trim()
   const modeFromInput = normalizeMode(h('LLM-Skills-Mode') || q('mode'))
   const token = h('LLM-Skills-Token') || q('token')
   const scope = h('LLM-Skills-Scope') || q('scope') || 'theme'
-  const ai = normalizeAiClientId(h('LLM-Skills-AI') || q('ai'))
+  const aiInput = h('LLM-Skills-AI') || q('ai')
+  const ai = normalizeAiClientId(aiInput)
 
   const configuredMode = normalizeMode(String(cfg.skillsAuthMode ?? ''))
   if (!configuredMode) {
@@ -65,26 +68,13 @@ export async function GET(request: NextRequest) {
   }
   const mode = modeFromInput ?? configuredMode
 
-  if (mode === 'oauth' && !ai) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'OAuth 模式缺少 AI 标识（LLM-Skills-AI 或 ai 参数）',
-        guide: {
-          nextStep: 'click_authorize_link',
-          authorizeLinkPath: '/admin/skills-authorize',
-          authorizeLinkTemplate: '/admin/skills-authorize?ai=YOUR_UNIQUE_AI_ID',
-          authorizeLink: null,
-        },
-      },
-      { status: 401 },
-    )
-  }
+  const effectiveAi = mode === 'oauth' ? (ai || 'waken-wa-default-ai') : ai
 
   if (!token) {
-    const authorizeLink = ai
-      ? `${request.nextUrl.origin}/admin/skills-authorize?ai=${encodeURIComponent(ai)}`
-      : null
+    const authorizeLink =
+      mode === 'oauth'
+        ? `${origin}/admin/skills-authorize?ai=${encodeURIComponent(effectiveAi)}`
+        : null
     return NextResponse.json(
       {
         success: false,
@@ -100,7 +90,7 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  let resolvedAiClientId: string | null = ai || null
+  let resolvedAiClientId: string | null = effectiveAi || null
   if (mode === 'oauth') {
     const now = sqlTimestamp()
     const candidates = await db
@@ -108,14 +98,14 @@ export async function GET(request: NextRequest) {
       .from(skillsOauthTokens)
       .where(
         and(
-          eq(skillsOauthTokens.aiClientId, ai),
+          eq(skillsOauthTokens.aiClientId, effectiveAi),
           gt(skillsOauthTokens.expiresAt, now as any),
           isNull(skillsOauthTokens.revokedAt),
         ),
       )
       .orderBy(desc(skillsOauthTokens.id))
     if (candidates.length === 0) {
-      const authorizeLink = `${request.nextUrl.origin}/admin/skills-authorize?ai=${encodeURIComponent(ai)}`
+      const authorizeLink = `${origin}/admin/skills-authorize?ai=${encodeURIComponent(effectiveAi)}`
       return NextResponse.json(
         {
           success: false,
@@ -165,7 +155,7 @@ export async function GET(request: NextRequest) {
 
   const oauthAuthorizeLink =
     mode === 'oauth' && resolvedAiClientId
-      ? `${request.nextUrl.origin}/admin/skills-authorize?ai=${encodeURIComponent(resolvedAiClientId)}`
+      ? `${origin}/admin/skills-authorize?ai=${encodeURIComponent(resolvedAiClientId)}`
       : null
 
   return NextResponse.json({

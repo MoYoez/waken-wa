@@ -1,15 +1,20 @@
+import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
+import { getPublicOrigin } from '@/lib/public-request-url'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const cfg = await getSiteConfigMemoryFirst()
   const enabled = cfg?.skillsDebugEnabled === true
   const modeRaw = String(cfg?.skillsAuthMode ?? '').trim().toLowerCase()
   const authMode = modeRaw === 'oauth' || modeRaw === 'apikey' ? modeRaw : 'unconfigured'
+  const origin = getPublicOrigin(request)
+  const mdUrl = `${origin}/api/admin/skills/md`
+  const directUrl = `${origin}/api/admin/skills/direct`
 
   const lines: string[] = []
 
@@ -43,14 +48,25 @@ export async function GET() {
   lines.push('')
   lines.push('| Endpoint | Purpose |')
   lines.push('|----------|---------|')
-  lines.push('| `GET /api/admin/skills/md` | This skill document (static reference) |')
-  lines.push('| `GET /api/admin/skills/direct?mode=...` | Runtime status check, OAuth authorize link generation, and token verification |')
+  lines.push(`| \`GET ${mdUrl}\` | This skill document (request-scoped; includes prefilled host URL) |`)
+  lines.push(
+    `| \`GET ${directUrl}?mode=...\` | Runtime status check, OAuth authorize link generation, and token verification |`,
+  )
   lines.push('')
 
   lines.push('## Current Status')
   lines.push('')
   lines.push(`- skillsEnabled: **${enabled ? 'true' : 'false'}**`)
   lines.push(`- authMode: **${authMode}**`)
+  lines.push('')
+
+  lines.push('## Prefilled From This Request')
+  lines.push('')
+  lines.push('The following values are prefilled based on the URL that requested this document:')
+  lines.push('')
+  lines.push('```')
+  lines.push(`waken-wa-host-url=${origin}`)
+  lines.push('```')
   lines.push('')
 
   lines.push('## Required Headers')
@@ -79,7 +95,7 @@ export async function GET() {
   lines.push('### Environment Priority (must check first)')
   lines.push('')
   lines.push('If runtime environment provides these values, use them first:')
-  lines.push('- `waken-wa-host-url`')
+  lines.push(`- \`waken-wa-host-url\` (prefilled for this request: \`${origin}\`)`)
   lines.push('- `waken-wa-host-apikey`')
   lines.push('')
   lines.push('Behavior rules:')
@@ -90,7 +106,13 @@ export async function GET() {
 
   lines.push('### OAuth Flow (requires user confirmation)')
   lines.push('')
-  lines.push('1. Call `GET /api/admin/skills/direct?mode=oauth&ai=YOUR_UNIQUE_AI_ID` to get backend-generated authorize link')
+  lines.push('AI ID note:')
+  lines.push('- Use any stable identifier string as YOUR_UNIQUE_AI_ID (e.g. `lobe-ai-agent`)')
+  lines.push('- If you do not have one, you can omit `ai=...`; the server will default it to `waken-wa-default-ai`')
+  lines.push('')
+  lines.push(
+    `1. Call \`GET ${directUrl}?mode=oauth&ai=YOUR_UNIQUE_AI_ID\` to get backend-generated authorize link`,
+  )
   lines.push('2. Read `guide.authorizeLink` from response, then send that link to the user')
   lines.push('3. The user opens the link and confirms in the dialog')
   lines.push('4. Only after user confirmation will a token be issued (valid for 1 hour by default)')
@@ -115,7 +137,7 @@ export async function GET() {
   lines.push('### Read Current Settings')
   lines.push('')
   lines.push('```')
-  lines.push('GET /api/admin/settings')
+  lines.push(`GET ${origin}/api/admin/settings`)
   lines.push('```')
   lines.push('')
   lines.push('Returns `{ success: true, data: { ... } }` with all current configuration fields.')
@@ -124,13 +146,13 @@ export async function GET() {
   lines.push('### Export Used Apps JSON')
   lines.push('')
   lines.push('```')
-  lines.push('GET /api/admin/activity/apps-export')
+  lines.push(`GET ${origin}/api/admin/activity/apps-export`)
   lines.push('```')
   lines.push('')
   lines.push('Default to curl with required headers:')
   lines.push('')
   lines.push('```bash')
-  lines.push('curl -s -X GET "${HOST_URL}/api/admin/activity/apps-export" \\')
+  lines.push(`curl -s -X GET "${origin}/api/admin/activity/apps-export" \\`)
   lines.push('  -H "LLM-Skills-Token: ${APIKEY}" \\')
   lines.push('  -H "LLM-Skills-Mode: apikey"')
   lines.push('```')
@@ -144,7 +166,7 @@ export async function GET() {
   lines.push('### Update Settings')
   lines.push('')
   lines.push('```')
-  lines.push('PATCH /api/admin/settings')
+  lines.push(`PATCH ${origin}/api/admin/settings`)
   lines.push('Content-Type: application/json')
   lines.push('')
   lines.push('{ "fieldName": "newValue", ... }')
