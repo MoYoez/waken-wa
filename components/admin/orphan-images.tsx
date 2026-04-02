@@ -1,6 +1,7 @@
 'use client'
 
 import { Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import Image from 'next/image'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -20,7 +21,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import type { OrphanAssetRow } from '@/types'
-import Image from 'next/image'
 
 const ORPHAN_LIST_MAX_HEIGHT = 'min(75vh,56rem)'
 
