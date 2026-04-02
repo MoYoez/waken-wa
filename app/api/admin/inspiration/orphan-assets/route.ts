@@ -1,4 +1,4 @@
-import { and, inArray, isNull, lt } from 'drizzle-orm'
+import { and, inArray, isNull } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
@@ -6,7 +6,6 @@ import { db } from '@/lib/db'
 import { inspirationAssets } from '@/lib/drizzle-schema'
 import {
   buildInspirationOrphanAssetRecord,
-  getInspirationOrphanAssetCutoff,
   listDeletableInspirationOrphanAssetKeys,
   normalizeInspirationAssetPublicKeys,
   scanReferencedInspirationAssetPublicKeys,
@@ -25,7 +24,6 @@ export async function GET() {
   try {
     const referenced = await scanReferencedInspirationAssetPublicKeys()
     const now = Date.now()
-    const cutoff = getInspirationOrphanAssetCutoff(now)
 
     const rows: Array<{ publicKey: string; createdAt: unknown }> = await db
       .select({
@@ -33,7 +31,7 @@ export async function GET() {
         createdAt: inspirationAssets.createdAt,
       })
       .from(inspirationAssets)
-      .where(and(isNull(inspirationAssets.inspirationEntryId), lt(inspirationAssets.createdAt, cutoff)))
+      .where(isNull(inspirationAssets.inspirationEntryId))
 
     const data = rows
       .map((row: { publicKey: string; createdAt: unknown }) =>
@@ -79,13 +77,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true, data: { deleted: 0, skipped: keys.length } })
     }
 
-    const cutoff = getInspirationOrphanAssetCutoff()
     await db
       .delete(inspirationAssets)
       .where(
         and(
           isNull(inspirationAssets.inspirationEntryId),
-          lt(inspirationAssets.createdAt, cutoff),
           inArray(inspirationAssets.publicKey as any, finalKeys),
         ),
       )

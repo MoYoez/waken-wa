@@ -28,6 +28,21 @@ export interface OrphanImagesHandle {
   refresh: () => void
 }
 
+function formatCreatedAt(value: string | null): string {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+}
+
 export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function OrphanImages(_, ref) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -155,7 +170,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                   <AlertDialogHeader>
                     <AlertDialogTitle>确认清理</AlertDialogTitle>
                     <AlertDialogDescription>
-                      将删除 {selectedEligibleKeys.length} 张创建超过 1 小时且未被引用的孤儿图片，此操作不可撤销。
+                      将删除 {selectedEligibleKeys.length} 张未被引用的孤儿图片，此操作不可撤销。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -189,7 +204,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                     <div
                       key={r.publicKey}
                       className={cn(
-                        'rounded-lg border bg-background p-3 space-y-2',
+                        'rounded-lg border bg-background p-3 space-y-3',
                         checked && 'ring-1 ring-primary/40',
                       )}
                     >
@@ -201,10 +216,23 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                             disabled={!r.eligibleForDelete && checked === false}
                           />
                           <div className="min-w-0">
-                            <div className="text-xs font-mono truncate">{r.publicKey}</div>
-                            <div className="text-[11px] text-muted-foreground">
-                              {typeof r.ageMinutes === 'number' ? `${r.ageMinutes} 分钟前` : '—'}
-                              {r.eligibleForDelete ? ' · 可清理' : ' · 未到 1 小时'}
+                            <div className="text-xs font-mono truncate" title={r.publicKey}>
+                              {r.publicKey}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                              <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5">
+                                {typeof r.ageMinutes === 'number' ? `${r.ageMinutes} 分钟前` : '时间未知'}
+                              </span>
+                              <span
+                                className={cn(
+                                  'rounded-full border px-2 py-0.5',
+                                  r.eligibleForDelete
+                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                    : 'border-border/60 bg-muted/30',
+                                )}
+                              >
+                                {r.eligibleForDelete ? '可删除' : '不可删除'}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -216,7 +244,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                               size="icon"
                               className="h-8 w-8"
                               disabled={busy || !r.eligibleForDelete}
-                              title={r.eligibleForDelete ? '删除' : '未到 1 小时不可删除'}
+                              title={r.eligibleForDelete ? '删除' : '当前不可删除'}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -225,7 +253,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                             <AlertDialogHeader>
                               <AlertDialogTitle>确认删除</AlertDialogTitle>
                               <AlertDialogDescription>
-                                将删除该孤儿图片（仅当仍未被引用且创建超过 1 小时）。此操作不可撤销。
+                                将删除该未被引用的孤儿图片。此操作不可撤销。
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -247,13 +275,16 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                         <Image
                           src={r.url}
                           alt={r.publicKey}
+                          width={640}
+                          height={160}
                           className="w-full h-40 object-contain rounded-md border bg-muted/10"
                           loading="lazy"
                         />
                       </a>
 
-                      <div className="text-[11px] text-muted-foreground truncate">
-                        {r.createdAt ? `创建时间：${r.createdAt}` : '创建时间：—'}
+                      <div className="rounded-md border border-border/60 bg-muted/10 px-2.5 py-2 text-[11px] text-muted-foreground">
+                        <div className="font-medium text-foreground/80">创建时间</div>
+                        <div className="mt-1 break-all">{formatCreatedAt(r.createdAt)}</div>
                       </div>
                     </div>
                   )

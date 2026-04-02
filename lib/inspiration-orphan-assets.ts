@@ -1,26 +1,21 @@
-import { and, eq, inArray, isNull, lt } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { inspirationAssets, inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
-import { INSPIRATION_ORPHAN_ASSET_GRACE_PERIOD_MS } from '@/lib/inspiration-admin-constants'
 import {
   extractInspirationImagePublicKeysFromText,
   inspirationInlineImageUrl,
 } from '@/lib/inspiration-inline-images'
 import { extractInspirationImagePublicKeysFromLexical } from '@/lib/inspiration-lexical'
-import { sqlDate } from '@/lib/sql-timestamp'
+import { coerceDbTimestampToIsoUtc } from '@/lib/timezone'
 
 export function toInspirationAssetDate(value: unknown): Date | null {
   if (!value) return null
   if (value instanceof Date) return value
   if (typeof value !== 'string') return null
 
-  const date = new Date(value)
+  const date = new Date(coerceDbTimestampToIsoUtc(value))
   return Number.isFinite(date.getTime()) ? date : null
-}
-
-export function getInspirationOrphanAssetCutoff(nowMs = Date.now()) {
-  return sqlDate(new Date(nowMs - INSPIRATION_ORPHAN_ASSET_GRACE_PERIOD_MS))
 }
 
 export function normalizeInspirationAssetPublicKeys(publicKeys: unknown[]) {
@@ -39,9 +34,7 @@ export function buildInspirationOrphanAssetRecord(
     ? Math.max(0, Math.floor((nowMs - createdAt.getTime()) / 60000))
     : null
   const referenced = referencedKeys.has(publicKey)
-  const eligibleForDelete = createdAt
-    ? nowMs - createdAt.getTime() >= INSPIRATION_ORPHAN_ASSET_GRACE_PERIOD_MS && !referenced
-    : false
+  const eligibleForDelete = !referenced
 
   return {
     publicKey,
@@ -89,8 +82,7 @@ export async function scanReferencedInspirationAssetPublicKeys() {
   return keys
 }
 
-export async function listDeletableInspirationOrphanAssetKeys(keys: string[], nowMs = Date.now()) {
-  const cutoff = getInspirationOrphanAssetCutoff(nowMs)
+export async function listDeletableInspirationOrphanAssetKeys(keys: string[]) {
   const rows = await db
     .select({
       publicKey: inspirationAssets.publicKey,
@@ -99,7 +91,6 @@ export async function listDeletableInspirationOrphanAssetKeys(keys: string[], no
     .where(
       and(
         isNull(inspirationAssets.inspirationEntryId),
-        lt(inspirationAssets.createdAt, cutoff),
         inArray(inspirationAssets.publicKey as any, keys),
       ),
     )
