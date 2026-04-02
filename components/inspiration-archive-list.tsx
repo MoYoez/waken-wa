@@ -135,7 +135,7 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                   className={cn(
                     'group relative block shrink-0 self-start overflow-hidden rounded-lg',
                     'w-14 h-14 sm:w-16 sm:h-16',
-                    'border border-border/70 bg-card shadow-sm ring-1 ring-black/[0.06] dark:ring-white/[0.08]',
+                    'border border-border/70 bg-card shadow-sm ring-1 ring-[color:var(--home-card-overlay)] dark:ring-[color:var(--home-card-overlay-dark)]',
                     'transition-[box-shadow,border-color,ring-color] duration-200',
                     'hover:border-primary/25 hover:shadow-md hover:ring-primary/15',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',

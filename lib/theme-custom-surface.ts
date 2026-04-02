@@ -98,13 +98,25 @@ export const THEME_CUSTOM_SURFACE_DEFAULTS: Required<
 > & { hideFloatingOrbs: boolean } = {
   background: 'oklch(0.97 0.018 85)',
   bodyBackground: '',
-  animatedBg:
-    'radial-gradient(ellipse 120% 70% at 50% -25%, oklch(0.9 0.05 72 / 0.42), transparent), radial-gradient(ellipse 75% 55% at 100% 100%, oklch(0.86 0.06 55 / 0.22), transparent), linear-gradient(168deg, oklch(0.98 0.014 82) 0%, oklch(0.936 0.022 78) 100%)',
+  animatedBg: '',
   primary: 'oklch(0.46 0.085 52)',
+  secondary: 'oklch(0.935 0.022 80)',
+  accent: 'oklch(0.9 0.045 70)',
+  online: 'oklch(0.58 0.15 150)',
   foreground: 'oklch(0.28 0.032 55)',
   card: 'oklch(0.995 0.012 85 / 0.78)',
   border: 'oklch(0.88 0.028 72)',
+  muted: 'oklch(0.94 0.018 82)',
   mutedForeground: 'oklch(0.5 0.038 58)',
+  homeCardOverlay: 'rgba(15, 23, 42, 0.06)',
+  homeCardOverlayDark: 'rgba(255, 255, 255, 0.08)',
+  homeCardInsetHighlight: 'rgba(255, 255, 255, 0.06)',
+  animatedBgTint1: 'rgba(120, 119, 198, 0.1)',
+  animatedBgTint2: 'rgba(255, 200, 150, 0.08)',
+  animatedBgTint3: 'rgba(150, 200, 255, 0.06)',
+  floatingOrbColor1: 'rgba(180, 160, 200, 0.15)',
+  floatingOrbColor2: 'rgba(255, 200, 170, 0.12)',
+  floatingOrbColor3: 'rgba(170, 200, 220, 0.1)',
   radius: '0.875rem',
   hideFloatingOrbs: true,
 }
@@ -156,10 +168,23 @@ export function parseThemeCustomSurface(raw: unknown): ThemeCustomSurfaceFields 
     bodyBackground: sanitizeThemeCssValue(o.bodyBackground, MAX_ANIMATED),
     animatedBg: sanitizeThemeCssValue(o.animatedBg, MAX_ANIMATED),
     primary: sanitizeThemeCssValue(o.primary, MAX_SHORT),
+    secondary: sanitizeThemeCssValue(o.secondary, MAX_SHORT),
+    accent: sanitizeThemeCssValue(o.accent, MAX_SHORT),
+    online: sanitizeThemeCssValue(o.online, MAX_SHORT),
     foreground: sanitizeThemeCssValue(o.foreground, MAX_SHORT),
     card: sanitizeThemeCssValue(o.card, MAX_SHORT),
     border: sanitizeThemeCssValue(o.border, MAX_SHORT),
+    muted: sanitizeThemeCssValue(o.muted, MAX_SHORT),
     mutedForeground: sanitizeThemeCssValue(o.mutedForeground, MAX_SHORT),
+    homeCardOverlay: sanitizeThemeCssValue(o.homeCardOverlay, MAX_SHORT),
+    homeCardOverlayDark: sanitizeThemeCssValue(o.homeCardOverlayDark, MAX_SHORT),
+    homeCardInsetHighlight: sanitizeThemeCssValue(o.homeCardInsetHighlight, MAX_SHORT),
+    animatedBgTint1: sanitizeThemeCssValue(o.animatedBgTint1, MAX_SHORT),
+    animatedBgTint2: sanitizeThemeCssValue(o.animatedBgTint2, MAX_SHORT),
+    animatedBgTint3: sanitizeThemeCssValue(o.animatedBgTint3, MAX_SHORT),
+    floatingOrbColor1: sanitizeThemeCssValue(o.floatingOrbColor1, MAX_SHORT),
+    floatingOrbColor2: sanitizeThemeCssValue(o.floatingOrbColor2, MAX_SHORT),
+    floatingOrbColor3: sanitizeThemeCssValue(o.floatingOrbColor3, MAX_SHORT),
     radius: sanitizeThemeCssValue(o.radius, MAX_RADIUS),
     hideFloatingOrbs:
       typeof o.hideFloatingOrbs === 'boolean' ? o.hideFloatingOrbs : undefined,
@@ -198,14 +223,29 @@ export function buildCustomSurfaceCss(themeCustomSurface: unknown): string {
   const parsed = parseThemeCustomSurface(themeCustomSurface)
   const background = pick(parsed, 'background')
   const bodyBackground = pick(parsed, 'bodyBackground')
-  const animatedBg = pick(parsed, 'animatedBg')
+  const animatedBgCustom = pick(parsed, 'animatedBg')
+  const animatedBgTint1 = pick(parsed, 'animatedBgTint1')
+  const animatedBgTint2 = pick(parsed, 'animatedBgTint2')
+  const animatedBgTint3 = pick(parsed, 'animatedBgTint3')
+  const animatedBgDefault = `radial-gradient(ellipse 80% 50% at 50% -20%, ${animatedBgTint1}, transparent), radial-gradient(ellipse 60% 40% at 100% 100%, ${animatedBgTint2}, transparent), radial-gradient(ellipse 50% 30% at 0% 80%, ${animatedBgTint3}, transparent)`
+  const animatedBg = animatedBgCustom.trim() || animatedBgDefault
   const transparentAnimatedBg = resolveTransparentAnimatedBg(parsed)
   const animatedBgPaint = transparentAnimatedBg ? 'transparent' : animatedBg
   const primary = pick(parsed, 'primary')
+  const secondary = pick(parsed, 'secondary')
+  const accent = pick(parsed, 'accent')
+  const online = pick(parsed, 'online')
   const foreground = pick(parsed, 'foreground')
   const card = pick(parsed, 'card')
   const border = pick(parsed, 'border')
+  const muted = pick(parsed, 'muted')
   const mutedForeground = pick(parsed, 'mutedForeground')
+  const homeCardOverlay = pick(parsed, 'homeCardOverlay')
+  const homeCardOverlayDark = pick(parsed, 'homeCardOverlayDark')
+  const homeCardInsetHighlight = pick(parsed, 'homeCardInsetHighlight')
+  const floatingOrbColor1 = pick(parsed, 'floatingOrbColor1')
+  const floatingOrbColor2 = pick(parsed, 'floatingOrbColor2')
+  const floatingOrbColor3 = pick(parsed, 'floatingOrbColor3')
   const radius = pick(parsed, 'radius')
   const hideFloatingOrbs = resolveHideOrbs(parsed)
 
@@ -234,21 +274,33 @@ export function buildCustomSurfaceCss(themeCustomSurface: unknown): string {
   --popover-foreground: ${foreground};
   --primary: ${primary};
   --primary-foreground: oklch(0.99 0.01 85);
-  --secondary: oklch(0.935 0.022 80);
+  --secondary: ${secondary};
   --secondary-foreground: ${foreground};
-  --muted: oklch(0.94 0.018 82);
+  --muted: ${muted};
   --muted-foreground: ${mutedForeground};
-  --accent: oklch(0.9 0.045 70);
+  --accent: ${accent};
   --accent-foreground: ${foreground};
   --border: ${border};
   --input: ${border};
   --ring: ${primary};
-  --online: oklch(0.58 0.15 150);
+  --online: ${online};
+  --home-card-overlay: ${homeCardOverlay};
+  --home-card-overlay-dark: ${homeCardOverlayDark};
+  --home-card-inset-highlight: ${homeCardInsetHighlight};
 }
 ${bodyBackgroundCss}
 .animated-bg {
   background: ${animatedBgPaint};
   animation: none;
+}
+.floating-orb-1 {
+  background: ${floatingOrbColor1};
+}
+.floating-orb-2 {
+  background: ${floatingOrbColor2};
+}
+.floating-orb-3 {
+  background: ${floatingOrbColor3};
 }
 ${hideOrbsCss}
 `.trim()

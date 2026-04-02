@@ -7,6 +7,21 @@ import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { getSafeSiteConfig, updateSiteConfigFromPayload } from '@/lib/llm-site-config'
 import { isLegacyMcpEnabled, verifyLegacyMcpApiKey } from '@/lib/skills-auth'
 
+const UPDATE_SITE_SETTINGS_TOOL_DESCRIPTION = [
+  'Update the current Waken site settings through the legacy MCP fallback.',
+  'Send only the minimal changed fields inside `payload`; never send the full settings object.',
+  'Restricted fields must never be written: useNoSqlAsCacheRedis, redisCacheTtlSeconds, activityUpdateMode, processStaleSeconds, historyWindowMinutes, steamApiKey, autoAcceptNewDevices, inspirationAllowedDeviceHashes, pageLockEnabled, pageLockPassword, hcaptchaEnabled, hcaptchaSiteKey, hcaptchaSecretKey.',
+  'For array/list fields such as appMessageRules, appBlacklist, appWhitelist, appNameOnlyList, mediaPlaySourceBlocklist, schedulePeriodTemplate, scheduleGridByWeekday, and scheduleCourses, send the full final value for that field rather than an incremental append instruction.',
+  'For `appMessageRules`, each item should be an object like `{ match, text }`; `match` should use a lowercase executable/process name such as `explorer.exe`, and `text` is the final rendered message.',
+  'For `appFilterMode`, only use `blacklist` or `whitelist`; when `appWhitelist` is empty under whitelist mode, no app activity is shown.',
+  'For `themePreset`, prefer one of: basic, midnight, forest, sakura, obsidian, ocean, amber, lavender, mono, nord, customSurface. If using `customSurface`, write the theme tokens under `themeCustomSurface`.',
+  'Useful `themeCustomSurface` fields include primary, secondary, accent, online, card, border, muted, mutedForeground, homeCardOverlay, homeCardOverlayDark, homeCardInsetHighlight, animatedBgTint1/2/3, floatingOrbColor1/2/3, and animatedBg.',
+  'For `scheduleSlotMinutes`, only use 15, 30, 45, or 60. When editing schedule structure fields, send complete valid JSON values.',
+  'For booleans and optional fields, omit the field to keep the existing value.',
+  'If a desired display detail is still not exposed via dedicated theme fields, use `customCss` as the fallback global override layer.',
+  'If you need to confirm a specific rendered visual effect, visit the live site URL directly and inspect the page instead of inferring appearance only from config values.',
+].join(' ')
+
 const mcpHandler = createMcpHandler(
   (server) => {
     server.registerTool(
@@ -37,7 +52,7 @@ const mcpHandler = createMcpHandler(
       'update_site_settings',
       {
         title: 'Update Site Settings',
-        description: 'Update the current Waken site settings through the legacy MCP fallback.',
+        description: UPDATE_SITE_SETTINGS_TOOL_DESCRIPTION,
         inputSchema: {
           payload: z.record(z.string(), z.unknown()),
         },

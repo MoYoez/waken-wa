@@ -148,10 +148,23 @@ type ThemeCustomSurfaceForm = {
   bodyBackground: string
   animatedBg: string
   primary: string
+  secondary: string
+  accent: string
+  online: string
   foreground: string
   card: string
   border: string
+  muted: string
   mutedForeground: string
+  homeCardOverlay: string
+  homeCardOverlayDark: string
+  homeCardInsetHighlight: string
+  animatedBgTint1: string
+  animatedBgTint2: string
+  animatedBgTint3: string
+  floatingOrbColor1: string
+  floatingOrbColor2: string
+  floatingOrbColor3: string
   radius: string
   hideFloatingOrbs: boolean
   transparentAnimatedBg: boolean
@@ -163,10 +176,23 @@ function emptyThemeCustomSurfaceForm(): ThemeCustomSurfaceForm {
     bodyBackground: '',
     animatedBg: '',
     primary: '',
+    secondary: '',
+    accent: '',
+    online: '',
     foreground: '',
     card: '',
     border: '',
+    muted: '',
     mutedForeground: '',
+    homeCardOverlay: '',
+    homeCardOverlayDark: '',
+    homeCardInsetHighlight: '',
+    animatedBgTint1: '',
+    animatedBgTint2: '',
+    animatedBgTint3: '',
+    floatingOrbColor1: '',
+    floatingOrbColor2: '',
+    floatingOrbColor3: '',
     radius: '',
     hideFloatingOrbs: THEME_CUSTOM_SURFACE_DEFAULTS.hideFloatingOrbs,
     transparentAnimatedBg: false,
@@ -180,10 +206,23 @@ function themeCustomSurfaceFromApi(raw: unknown): ThemeCustomSurfaceForm {
     bodyBackground: p.bodyBackground || '',
     animatedBg: p.animatedBg || '',
     primary: p.primary || '',
+    secondary: p.secondary || '',
+    accent: p.accent || '',
+    online: p.online || '',
     foreground: p.foreground || '',
     card: p.card || '',
     border: p.border || '',
+    muted: p.muted || '',
     mutedForeground: p.mutedForeground || '',
+    homeCardOverlay: p.homeCardOverlay || '',
+    homeCardOverlayDark: p.homeCardOverlayDark || '',
+    homeCardInsetHighlight: p.homeCardInsetHighlight || '',
+    animatedBgTint1: p.animatedBgTint1 || '',
+    animatedBgTint2: p.animatedBgTint2 || '',
+    animatedBgTint3: p.animatedBgTint3 || '',
+    floatingOrbColor1: p.floatingOrbColor1 || '',
+    floatingOrbColor2: p.floatingOrbColor2 || '',
+    floatingOrbColor3: p.floatingOrbColor3 || '',
     radius: p.radius || '',
     hideFloatingOrbs:
       p.hideFloatingOrbs !== undefined
@@ -2149,6 +2188,24 @@ export function WebSettings() {
               />
             </div>
             <div className="space-y-2">
+              <Label>次级底色 (--secondary)</Label>
+              <Input
+                value={form.themeCustomSurface.secondary}
+                onChange={(e) => patchThemeSurface('secondary', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.secondary}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>强调色 (--accent)</Label>
+              <Input
+                value={form.themeCustomSurface.accent}
+                onChange={(e) => patchThemeSurface('accent', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.accent}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
               <Label>卡片底色 (--card)</Label>
               <Input
                 value={form.themeCustomSurface.card}
@@ -2167,11 +2224,29 @@ export function WebSettings() {
               />
             </div>
             <div className="space-y-2">
+              <Label>弱化底色 (--muted)</Label>
+              <Input
+                value={form.themeCustomSurface.muted}
+                onChange={(e) => patchThemeSurface('muted', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.muted}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
               <Label>次要文字 (--muted-foreground)</Label>
               <Input
                 value={form.themeCustomSurface.mutedForeground}
                 onChange={(e) => patchThemeSurface('mutedForeground', e.target.value)}
                 placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.mutedForeground}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>在线强调 (--online)</Label>
+              <Input
+                value={form.themeCustomSurface.online}
+                onChange={(e) => patchThemeSurface('online', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.online}
                 className="font-mono text-xs"
               />
             </div>
@@ -2205,7 +2280,7 @@ export function WebSettings() {
           <div className="space-y-2">
             <Label>动效背景层 (.animated-bg)</Label>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              固定全屏、在正文后面；留空时使用内置默认渐变（不是透明）。只想让「页面底色」或「整页 background」露出来请勾选下一项。
+              固定全屏、在正文后面；留空时使用下方三组默认颜色生成的首页渐变。只想让「页面底色」或「整页 background」露出来请勾选下一项。
             </p>
             <Label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -2223,6 +2298,93 @@ export function WebSettings() {
               disabled={form.themeCustomSurface.transparentAnimatedBg}
               className="w-full px-3 py-2 border rounded-md bg-background text-xs font-mono leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
             />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>默认动效色 1</Label>
+              <Input
+                value={form.themeCustomSurface.animatedBgTint1}
+                onChange={(e) => patchThemeSurface('animatedBgTint1', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.animatedBgTint1}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>默认动效色 2</Label>
+              <Input
+                value={form.themeCustomSurface.animatedBgTint2}
+                onChange={(e) => patchThemeSurface('animatedBgTint2', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.animatedBgTint2}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>默认动效色 3</Label>
+              <Input
+                value={form.themeCustomSurface.animatedBgTint3}
+                onChange={(e) => patchThemeSurface('animatedBgTint3', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.animatedBgTint3}
+                className="font-mono text-xs"
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>浮动光斑 1</Label>
+              <Input
+                value={form.themeCustomSurface.floatingOrbColor1}
+                onChange={(e) => patchThemeSurface('floatingOrbColor1', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.floatingOrbColor1}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>浮动光斑 2</Label>
+              <Input
+                value={form.themeCustomSurface.floatingOrbColor2}
+                onChange={(e) => patchThemeSurface('floatingOrbColor2', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.floatingOrbColor2}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>浮动光斑 3</Label>
+              <Input
+                value={form.themeCustomSurface.floatingOrbColor3}
+                onChange={(e) => patchThemeSurface('floatingOrbColor3', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.floatingOrbColor3}
+                className="font-mono text-xs"
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>首页卡片叠层色</Label>
+              <Input
+                value={form.themeCustomSurface.homeCardOverlay}
+                onChange={(e) => patchThemeSurface('homeCardOverlay', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.homeCardOverlay}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>首页卡片暗色叠层</Label>
+              <Input
+                value={form.themeCustomSurface.homeCardOverlayDark}
+                onChange={(e) => patchThemeSurface('homeCardOverlayDark', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.homeCardOverlayDark}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>首页卡片内高光</Label>
+              <Input
+                value={form.themeCustomSurface.homeCardInsetHighlight}
+                onChange={(e) => patchThemeSurface('homeCardInsetHighlight', e.target.value)}
+                placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.homeCardInsetHighlight}
+                className="font-mono text-xs max-w-xl"
+              />
+            </div>
           </div>
           <Label className="flex items-center gap-2 cursor-pointer">
             <input

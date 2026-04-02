@@ -152,6 +152,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
     'Never send a full settings object when changing one or two fields',
     'Never PATCH restricted fields',
     'If any required credential is missing, stop and ask the user',
+    'If you need to confirm the actual rendered visual result or a specific display effect, open the site URL directly and inspect the live page instead of guessing from settings alone',
   ])
 
   pushSection(lines, '## Credential Priority')
@@ -349,8 +350,8 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   pushSection(lines, '### Theme and Appearance')
   pushBullets(lines, [
     '`themePreset`: Theme preset identifier. Use `customSurface` when editing custom theme surface fields',
-    '`themeCustomSurface`: Custom theme token object. Main fields are `background`, `bodyBackground`, `animatedBg`, `primary`, `foreground`, `card`, `border`, `mutedForeground`, `radius`, `hideFloatingOrbs`, `transparentAnimatedBg`',
-    '`customCss`: Extra sanitized custom CSS. Use only for targeted overrides, not for replacing the whole theme',
+    '`themeCustomSurface`: Custom theme token object. Main fields are `background`, `bodyBackground`, `animatedBg`, `primary`, `secondary`, `accent`, `online`, `foreground`, `card`, `border`, `muted`, `mutedForeground`, `homeCardOverlay`, `homeCardOverlayDark`, `homeCardInsetHighlight`, `animatedBgTint1`, `animatedBgTint2`, `animatedBgTint3`, `floatingOrbColor1`, `floatingOrbColor2`, `floatingOrbColor3`, `radius`, `hideFloatingOrbs`, `transparentAnimatedBg`',
+    '`customCss`: Extra sanitized custom CSS. Use only for targeted overrides, advanced selectors, or remaining display details that are not exposed as dedicated theme fields',
     '`globalMouseTiltEnabled`: Enables desktop tilt motion effect',
     '`globalMouseTiltGyroEnabled`: Enables gyro tilt on supported mobile devices',
     '`hideActivityMedia`: Hides media payload from public activity cards without deleting stored records',
@@ -359,6 +360,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
     `Existing theme presets: ${BUILT_IN_THEME_PRESETS.map((preset) => `\`${preset}\``).join(', ')}`,
     '`basic` is the default built-in baseline theme',
     '`customSurface` means the AI should edit `themeCustomSurface` fields instead of expecting a preset CSS file',
+    'If a very specific visual result still cannot be expressed by the exposed theme fields, use `customCss` as the fallback override layer',
   ])
 
   pushSection(lines, '### AI Debugging Mode')
