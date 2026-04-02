@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  Activity,
   CalendarDays,
   Clock3,
   Home,
@@ -15,6 +14,7 @@ import {
   UserCog,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { MdAutoFixHigh } from 'react-icons/md'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -351,7 +351,7 @@ curl -X POST ${origin}/api/inspiration/entries \\
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
               <div className="admin-brandmark">
-                <Activity className="h-5 w-5" />
+                <MdAutoFixHigh className="h-5 w-5" aria-hidden />
               </div>
               <div className="min-w-0 space-y-1">
                 <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">

@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { MdAutoFixHigh } from 'react-icons/md'
 
 const TEMPLATE_REPO_HREF = 'https://github.com/MoYoez/waken-wa'
 
