@@ -361,12 +361,7 @@ curl -X POST ${origin}/api/inspiration/entries \\
                     <span className="admin-tab-icon">
                       <Icon className="h-4 w-4" />
                     </span>
-                    <span className="min-w-0 text-left">
-                      <span className="block truncate text-sm font-medium">{item.label}</span>
-                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                        {item.description}
-                      </span>
-                    </span>
+                    <span className="min-w-0 truncate text-left text-sm font-medium">{item.label}</span>
                   </button>
                 )
               })}
