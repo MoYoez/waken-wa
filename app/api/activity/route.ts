@@ -28,6 +28,7 @@ import { devices, userActivities } from '@/lib/drizzle-schema'
 import { isLockAppReporterProcessName } from '@/lib/lockapp-reporter'
 import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
 import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
+import { DEVICE_LAST_SEEN_WRITE_THROTTLE_MS } from '@/lib/activity-report-constants'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { toDbJsonValue } from '@/lib/sqlite-json'
 import { parseProcessStaleSeconds } from '@/lib/site-config-constants'
@@ -35,8 +36,6 @@ import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-const DEVICE_LAST_SEEN_WRITE_THROTTLE_MS = 30_000
 
 async function validateToken(request: NextRequest): Promise<{ id: number } | null> {
   const authHeader = request.headers.get('authorization')

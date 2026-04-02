@@ -3,18 +3,17 @@ import { NextResponse } from 'next/server'
 import { ACTIVITY_FEED_DEFAULT_LIMIT } from '@/lib/activity-api-constants'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { getCachedActivityFeedData } from '@/lib/activity-feed-cache'
+import {
+  ACTIVITY_STREAM_MAX_CONCURRENT_CONNECTIONS,
+  ACTIVITY_STREAM_MAX_CONSECUTIVE_PUSH_FAILURES,
+  ACTIVITY_STREAM_MAX_IDLE_MS,
+  ACTIVITY_STREAM_POLL_INTERVAL_MS,
+} from '@/lib/activity-stream-constants'
 import { isSiteLockSatisfied } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-const MAX_CONCURRENT_STREAMS = 50
-/** Max time without a successful push; resets on each push (sliding lease). */
-const MAX_STREAM_IDLE_MS = 600 * 1000 // 10mins
-const POLL_INTERVAL_MS = 15 * 1000 // 15 秒轮询间隔
-/** After repeated fetch failures, keep stream alive but emit error events. */
-const MAX_CONSECUTIVE_PUSH_FAILURES = 3
 
 let activeStreams = 0
 let nextClientId = 1
@@ -71,7 +70,7 @@ function bumpClientIdleLease(client: StreamClient) {
     } catch {
       /* already closed */
     }
-  }, MAX_STREAM_IDLE_MS)
+  }, ACTIVITY_STREAM_MAX_IDLE_MS)
 }
 
 function safeEnqueue(client: StreamClient, chunk: Uint8Array): boolean {
@@ -116,9 +115,9 @@ async function pushSharedActivity() {
       error: 'stream update failed',
       failures: consecutivePushFailures,
     })
-    if (consecutivePushFailures >= MAX_CONSECUTIVE_PUSH_FAILURES) {
+    if (consecutivePushFailures >= ACTIVITY_STREAM_MAX_CONSECUTIVE_PUSH_FAILURES) {
       // Keep trying on next ticks; avoid hard-closing all clients on transient upstream failures.
-      consecutivePushFailures = MAX_CONSECUTIVE_PUSH_FAILURES
+      consecutivePushFailures = ACTIVITY_STREAM_MAX_CONSECUTIVE_PUSH_FAILURES
     }
   } finally {
     broadcasterPushInFlight = false
@@ -132,11 +131,11 @@ function ensureBroadcasterRunning(options?: { skipImmediatePush?: boolean }) {
   }
   broadcasterTimer = setInterval(() => {
     void pushSharedActivity()
-  }, POLL_INTERVAL_MS)
+  }, ACTIVITY_STREAM_POLL_INTERVAL_MS)
 }
 
 export async function GET() {
-  if (activeStreams >= MAX_CONCURRENT_STREAMS) {
+  if (activeStreams >= ACTIVITY_STREAM_MAX_CONCURRENT_CONNECTIONS) {
     return NextResponse.json(
       { success: false, error: '连接数已达上限，请稍后再试' },
       { status: 503 },

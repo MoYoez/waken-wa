@@ -9,6 +9,7 @@ import {
   inspirationInlineImageUrl,
 } from '@/lib/inspiration-inline-images'
 import { extractInspirationImagePublicKeysFromLexical } from '@/lib/inspiration-lexical'
+import { INSPIRATION_ORPHAN_ASSET_GRACE_PERIOD_MS } from '@/lib/inspiration-admin-constants'
 import { sqlDate } from '@/lib/sql-timestamp'
 
 export const dynamic = 'force-dynamic'
@@ -74,7 +75,7 @@ export async function GET() {
   try {
     const referenced = await scanReferencedAssetPublicKeys()
     const now = Date.now()
-    const cutoff = sqlDate(new Date(now - 60 * 60 * 1000))
+    const cutoff = sqlDate(new Date(now - INSPIRATION_ORPHAN_ASSET_GRACE_PERIOD_MS))
 
     const rows: Array<{ publicKey: string; createdAt: unknown }> = await db
       .select({
@@ -90,7 +91,8 @@ export async function GET() {
         const created = toDate(row.createdAt)
         const createdAtIso = created ? created.toISOString() : null
         const ageMinutes = created ? Math.max(0, Math.floor((now - created.getTime()) / 60000)) : null
-        const eligibleForDelete = created ? now - created.getTime() >= 60 * 60 * 1000 : false
+        const eligibleForDelete =
+          created ? now - created.getTime() >= INSPIRATION_ORPHAN_ASSET_GRACE_PERIOD_MS : false
         const referencedNow = referenced.has(key)
         return {
           publicKey: key,
@@ -139,7 +141,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true, data: { deleted: 0, skipped: keys.length } })
     }
 
-    const cutoff = sqlDate(new Date(Date.now() - 60 * 60 * 1000))
+    const cutoff = sqlDate(new Date(Date.now() - INSPIRATION_ORPHAN_ASSET_GRACE_PERIOD_MS))
 
     const existing = await db
       .select({
@@ -183,4 +185,3 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: false, error: '删除失败' }, { status: 500 })
   }
 }
-

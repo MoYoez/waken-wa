@@ -10,11 +10,14 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { skillsOauthTokens, systemSecrets } from '@/lib/drizzle-schema'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
+import {
+  SKILLS_AUTHORIZE_CODE_DEFAULT_TTL_MS,
+  SKILLS_HEADER_PREFIX,
+  SKILLS_MIN_TOKEN_TTL_MS,
+  SKILLS_OAUTH_TOKEN_DEFAULT_TTL_MS,
+  SKILLS_SECRET_KEYS,
+} from '@/lib/skills-constants'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
-
-const SKILLS_APIKEY_SECRET_KEY = 'skills_apikey_bcrypt'
-const LEGACY_MCP_APIKEY_SECRET_KEY = 'mcp_theme_tools_key_bcrypt'
-const SKILLS_OAUTH_AUTHORIZE_CODE_PREFIX = 'skills_oauth_authorize_code:'
 
 export type SkillsAuthMode = 'oauth' | 'apikey'
 export type SkillsScope = 'feature' | 'theme' | 'content'
@@ -32,15 +35,13 @@ type GuardFail = { ok: false; response: NextResponse }
 export type SkillsVerifyOk = GuardOk
 export type SkillsVerifyFail = { ok: false; error: string; status: number }
 
-const HEADER_PREFIX = 'llm-skills-'
-
 function getHeader(request: NextRequest, name: string): string {
   return (request.headers.get(name) ?? '').trim()
 }
 
 export function hasLlmSkillsHeaders(request: NextRequest): boolean {
   for (const [k] of request.headers.entries()) {
-    if (k.toLowerCase().startsWith(HEADER_PREFIX)) return true
+    if (k.toLowerCase().startsWith(SKILLS_HEADER_PREFIX)) return true
   }
   return false
 }
@@ -67,6 +68,22 @@ export function normalizeAiClientId(raw: unknown): string {
     .replace(/[^a-z0-9._-]+/g, '-')
     .slice(0, 128)
   return normalized
+}
+
+function getSkillsAuthorizeCodeSecretKey(code: string): string {
+  return `${SKILLS_SECRET_KEYS.skillsOauthAuthorizeCodePrefix}${code}`
+}
+
+function getConfiguredSkillsMode(raw: unknown): SkillsAuthMode | null {
+  return parseMode(String(raw ?? ''))
+}
+
+function isSkillsHttpMode(raw: unknown): boolean {
+  return String(raw ?? '').trim().toLowerCase() === 'skills'
+}
+
+function createRandomSecretToken(): string {
+  return randomBytes(32).toString('base64url')
 }
 
 async function readSecretValue(key: string): Promise<string | null> {
@@ -102,12 +119,12 @@ async function setSecretValue(key: string, value: string): Promise<void> {
 }
 
 export async function hasSkillsApiKeyConfigured(): Promise<boolean> {
-  const v = await readSecretValue(SKILLS_APIKEY_SECRET_KEY)
+  const v = await readSecretValue(SKILLS_SECRET_KEYS.skillsApiKey)
   return Boolean(v)
 }
 
 export async function hasLegacyMcpApiKeyConfigured(): Promise<boolean> {
-  const v = await readSecretValue(LEGACY_MCP_APIKEY_SECRET_KEY)
+  const v = await readSecretValue(SKILLS_SECRET_KEYS.legacyMcpApiKey)
   return Boolean(v)
 }
 
@@ -127,30 +144,32 @@ export async function hasSkillsOauthTokenConfigured(): Promise<boolean> {
 }
 
 export async function rotateSkillsApiKey(): Promise<string> {
-  const plain = randomBytes(32).toString('base64url')
-  await setSecretBcrypt(SKILLS_APIKEY_SECRET_KEY, plain)
+  const plain = createRandomSecretToken()
+  await setSecretBcrypt(SKILLS_SECRET_KEYS.skillsApiKey, plain)
   return plain
 }
 
 export async function rotateLegacyMcpApiKey(): Promise<string> {
-  const plain = randomBytes(32).toString('base64url')
-  await setSecretBcrypt(LEGACY_MCP_APIKEY_SECRET_KEY, plain)
+  const plain = createRandomSecretToken()
+  await setSecretBcrypt(SKILLS_SECRET_KEYS.legacyMcpApiKey, plain)
   return plain
 }
 
 export async function createSkillsOauthAuthorizeCode(
   aiClientIdRaw: string,
-  ttlMs: number = 15 * 60_000,
+  ttlMs: number = SKILLS_AUTHORIZE_CODE_DEFAULT_TTL_MS,
 ): Promise<{ code: string; aiClientId: string; expiresAt: Date }> {
   const aiClientId = normalizeAiClientId(aiClientIdRaw)
   if (!aiClientId) {
     throw new Error('Missing aiClientId')
   }
-  const ms = Number.isFinite(ttlMs) ? Math.max(60_000, Math.round(ttlMs)) : 15 * 60_000
+  const ms = Number.isFinite(ttlMs)
+    ? Math.max(SKILLS_MIN_TOKEN_TTL_MS, Math.round(ttlMs))
+    : SKILLS_AUTHORIZE_CODE_DEFAULT_TTL_MS
   const code = randomBytes(32).toString('hex')
   const expiresAt = new Date(Date.now() + ms)
   await setSecretValue(
-    `${SKILLS_OAUTH_AUTHORIZE_CODE_PREFIX}${code}`,
+    getSkillsAuthorizeCodeSecretKey(code),
     JSON.stringify({
       aiClientId,
       expiresAt: expiresAt.toISOString(),
@@ -164,7 +183,7 @@ export async function getSkillsOauthAuthorizeRequest(
 ): Promise<{ aiClientId: string; expiresAt: Date } | null> {
   const code = String(codeRaw ?? '').trim().toLowerCase()
   if (!code) return null
-  const stored = await readSecretValue(`${SKILLS_OAUTH_AUTHORIZE_CODE_PREFIX}${code}`)
+  const stored = await readSecretValue(getSkillsAuthorizeCodeSecretKey(code))
   if (!stored) return null
   try {
     const parsed = JSON.parse(stored) as { aiClientId?: unknown; expiresAt?: unknown }
@@ -188,11 +207,11 @@ export async function revokeAllSkillsOauthTokens(): Promise<void> {
 }
 
 export async function clearSkillsApiKey(): Promise<void> {
-  await db.delete(systemSecrets).where(eq(systemSecrets.key, SKILLS_APIKEY_SECRET_KEY))
+  await db.delete(systemSecrets).where(eq(systemSecrets.key, SKILLS_SECRET_KEYS.skillsApiKey))
 }
 
 export async function verifyLegacyMcpApiKey(token: string): Promise<boolean> {
-  const stored = await readSecretValue(LEGACY_MCP_APIKEY_SECRET_KEY)
+  const stored = await readSecretValue(SKILLS_SECRET_KEYS.legacyMcpApiKey)
   if (!stored || !token) return false
   return bcrypt.compare(token, stored)
 }
@@ -201,7 +220,7 @@ export async function isLegacyMcpEnabled(): Promise<boolean> {
   const cfg = await getSiteConfigMemoryFirst()
   return (
     cfg?.skillsDebugEnabled === true &&
-    String(cfg?.aiToolMode ?? '').trim().toLowerCase() === 'mcp' &&
+    !isSkillsHttpMode(cfg?.aiToolMode) &&
     cfg?.mcpThemeToolsEnabled === true
   )
 }
@@ -214,8 +233,10 @@ export async function rotateSkillsOauthToken(
   if (!aiClientId) {
     throw new Error('Missing aiClientId')
   }
-  const ms = Number.isFinite(ttlMs) ? Math.max(60_000, Math.round(ttlMs)) : 60 * 60_000
-  const token = randomBytes(32).toString('base64url')
+  const ms = Number.isFinite(ttlMs)
+    ? Math.max(SKILLS_MIN_TOKEN_TTL_MS, Math.round(ttlMs))
+    : SKILLS_OAUTH_TOKEN_DEFAULT_TTL_MS
+  const token = createRandomSecretToken()
   const tokenHash = await bcrypt.hash(token, 12)
 
   const expiresAt = new Date(Date.now() + ms)
@@ -247,7 +268,7 @@ export async function verifySkillsRequest(
   if (cfg?.skillsDebugEnabled !== true) {
     return { ok: false, error: 'Not found', status: 404 }
   }
-  if (String(cfg?.aiToolMode ?? '').trim().toLowerCase() !== 'skills') {
+  if (!isSkillsHttpMode(cfg?.aiToolMode)) {
     return { ok: false, error: '当前已切换为 MCP 模式，Skills HTTP 接口已关闭', status: 403 }
   }
 
@@ -257,7 +278,7 @@ export async function verifySkillsRequest(
   const scope = parseScope(getHeader(request, 'LLM-Skills-Scope'))
   const aiClientId = normalizeAiClientId(getHeader(request, 'LLM-Skills-AI'))
 
-  const configuredMode = parseMode(String(cfg.skillsAuthMode ?? ''))
+  const configuredMode = getConfiguredSkillsMode(cfg.skillsAuthMode)
   if (!configuredMode) {
     return { ok: false, error: 'Skills 未配置认证模式，请先在后台设置中选择 OAuth 或 APIKEY', status: 503 }
   }
@@ -267,7 +288,7 @@ export async function verifySkillsRequest(
   const mode = modeFromHeader ?? configuredMode
 
   if (mode === 'apikey') {
-    const r = await verifyBcryptSecret(SKILLS_APIKEY_SECRET_KEY, token)
+    const r = await verifyBcryptSecret(SKILLS_SECRET_KEYS.skillsApiKey, token)
     if (!r.ok) return r
     return { ok: true, mode, scope, requestId, aiClientId: aiClientId || null, isAdmin: false }
   }

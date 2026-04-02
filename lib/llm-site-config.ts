@@ -56,12 +56,38 @@ export const LLM_DENIED_SITE_CONFIG_KEYS = [
   'hcaptchaSecretKey',
 ] as const
 
+type SiteConfigRecord = Record<string, any>
+
+function ensureJsonObject(body: Record<string, unknown>) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    const error = new Error('请求体必须为 JSON 对象')
+    ;(error as any).status = 400
+    throw error
+  }
+}
+
+function assertAllowedLlmFields(
+  body: Record<string, unknown>,
+  options?: { allowRestrictedFields?: boolean },
+) {
+  if (options?.allowRestrictedFields) return
+
+  const denied = new Set<string>(LLM_DENIED_SITE_CONFIG_KEYS)
+  const presentDeniedKeys = Object.keys(body ?? {}).filter((k) => denied.has(k))
+  if (presentDeniedKeys.length > 0) {
+    const error = new Error(`该请求包含禁止由 AI Skills 修改的字段: ${presentDeniedKeys.join(', ')}`)
+    ;(error as any).status = 403
+    ;(error as any).deniedKeys = presentDeniedKeys
+    throw error
+  }
+}
+
 function normalizeAiToolMode(raw: unknown): 'skills' | 'mcp' {
   return String(raw ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills'
 }
 
-function redactSiteConfigForClient(config: Record<string, any>) {
-  const normalized = normalizeSiteConfigShape(config) as Record<string, any>
+function redactSiteConfigForClient(config: SiteConfigRecord) {
+  const normalized = normalizeSiteConfigShape(config) as SiteConfigRecord
   const redisAdmin = mergeRedisCacheAdminFields(normalized)
   return {
     ...normalized,
@@ -76,34 +102,22 @@ function redactSiteConfigForClient(config: Record<string, any>) {
 export async function getSafeSiteConfig() {
   const config = await getSiteConfigMemoryFirst()
   if (!config) return null
-  return redactSiteConfigForClient(config as Record<string, any>)
+  return redactSiteConfigForClient(config as SiteConfigRecord)
+}
+
+async function getNormalizedExistingSiteConfig(): Promise<SiteConfigRecord | null> {
+  const existingRaw = await getSiteConfigMemoryFirst()
+  return existingRaw ? normalizeSiteConfigShape(existingRaw as SiteConfigRecord) : null
 }
 
 export async function updateSiteConfigFromPayload(
   body: Record<string, unknown>,
   options?: { allowRestrictedFields?: boolean },
 ) {
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    const error = new Error('请求体必须为 JSON 对象')
-    ;(error as any).status = 400
-    throw error
-  }
+  ensureJsonObject(body)
+  assertAllowedLlmFields(body, options)
 
-  if (!options?.allowRestrictedFields) {
-    const denied = new Set<string>(LLM_DENIED_SITE_CONFIG_KEYS)
-    const presentDeniedKeys = Object.keys(body ?? {}).filter((k) => denied.has(k))
-    if (presentDeniedKeys.length > 0) {
-      const error = new Error(`该请求包含禁止由 AI Skills 修改的字段: ${presentDeniedKeys.join(', ')}`)
-      ;(error as any).status = 403
-      ;(error as any).deniedKeys = presentDeniedKeys
-      throw error
-    }
-  }
-
-  const existingRaw = await getSiteConfigMemoryFirst()
-  const existing = existingRaw
-    ? normalizeSiteConfigShape(existingRaw as Record<string, any>)
-    : null
+  const existing = await getNormalizedExistingSiteConfig()
 
   const has = (k: string) => k in body
   const strField = (k: string, fallback: string) => {
@@ -459,124 +473,71 @@ export async function updateSiteConfigFromPayload(
     profileOnlinePulseEnabled = Boolean(body.profileOnlinePulseEnabled)
   }
 
+  const siteConfigValues = {
+    pageTitle,
+    userName,
+    userBio,
+    avatarUrl,
+    profileOnlineAccentColor,
+    profileOnlinePulseEnabled,
+    userNote,
+    userNoteHitokotoEnabled,
+    userNoteHitokotoCategories,
+    userNoteHitokotoEncode,
+    themePreset,
+    themeCustomSurface,
+    customCss,
+    mcpThemeToolsEnabled,
+    aiToolMode,
+    historyWindowMinutes,
+    appMessageRules,
+    appMessageRulesShowProcessName,
+    appBlacklist,
+    appWhitelist,
+    appFilterMode,
+    appNameOnlyList,
+    captureReportedAppsEnabled,
+    mediaPlaySourceBlocklist,
+    processStaleSeconds,
+    pageLockEnabled,
+    pageLockPasswordHash,
+    currentlyText,
+    earlierText,
+    adminText,
+    autoAcceptNewDevices,
+    inspirationAllowedDeviceHashes,
+    scheduleSlotMinutes,
+    schedulePeriodTemplate,
+    scheduleGridByWeekday,
+    scheduleCourses,
+    scheduleIcs,
+    scheduleInClassOnHome,
+    scheduleHomeShowLocation,
+    scheduleHomeShowTeacher,
+    scheduleHomeShowNextUpcoming,
+    scheduleHomeAfterClassesLabel,
+    globalMouseTiltEnabled,
+    globalMouseTiltGyroEnabled,
+    hideActivityMedia,
+    hcaptchaEnabled,
+    hcaptchaSiteKey,
+    hcaptchaSecretKey,
+    displayTimezone,
+    activityUpdateMode,
+    useNoSqlAsCacheRedis,
+    redisCacheTtlSeconds,
+    steamEnabled,
+    steamId,
+    steamApiKey,
+    activityRejectLockappSleep,
+  }
+
   await safeSiteConfigUpsert({
     where: { id: 1 },
-    update: {
-      pageTitle,
-      userName,
-      userBio,
-      avatarUrl,
-      profileOnlineAccentColor,
-      profileOnlinePulseEnabled,
-      userNote,
-      userNoteHitokotoEnabled,
-      userNoteHitokotoCategories,
-      userNoteHitokotoEncode,
-      themePreset,
-      themeCustomSurface,
-      customCss,
-      mcpThemeToolsEnabled,
-      aiToolMode,
-      historyWindowMinutes,
-      appMessageRules,
-      appMessageRulesShowProcessName,
-      appBlacklist,
-      appWhitelist,
-      appFilterMode,
-      appNameOnlyList,
-      captureReportedAppsEnabled,
-      mediaPlaySourceBlocklist,
-      processStaleSeconds,
-      pageLockEnabled,
-      pageLockPasswordHash,
-      currentlyText,
-      earlierText,
-      adminText,
-      autoAcceptNewDevices,
-      inspirationAllowedDeviceHashes,
-      scheduleSlotMinutes,
-      schedulePeriodTemplate,
-      scheduleGridByWeekday,
-      scheduleCourses,
-      scheduleIcs,
-      scheduleInClassOnHome,
-      scheduleHomeShowLocation,
-      scheduleHomeShowTeacher,
-      scheduleHomeShowNextUpcoming,
-      scheduleHomeAfterClassesLabel,
-      globalMouseTiltEnabled,
-      globalMouseTiltGyroEnabled,
-      hideActivityMedia,
-      hcaptchaEnabled,
-      hcaptchaSiteKey,
-      hcaptchaSecretKey,
-      displayTimezone,
-      activityUpdateMode,
-      useNoSqlAsCacheRedis,
-      redisCacheTtlSeconds,
-      steamEnabled,
-      steamId,
-      steamApiKey,
-      activityRejectLockappSleep,
-    },
+    update: siteConfigValues,
     create: {
       id: 1,
-      pageTitle,
-      userName,
-      userBio,
-      avatarUrl,
-      profileOnlineAccentColor,
-      profileOnlinePulseEnabled,
-      userNote,
-      userNoteHitokotoEnabled,
-      userNoteHitokotoCategories,
-      userNoteHitokotoEncode,
-      themePreset,
-      themeCustomSurface,
-      customCss,
-      mcpThemeToolsEnabled,
-      aiToolMode,
-      historyWindowMinutes,
-      appMessageRules,
-      appMessageRulesShowProcessName,
-      appBlacklist,
-      appWhitelist,
-      appFilterMode,
-      appNameOnlyList,
-      captureReportedAppsEnabled,
-      mediaPlaySourceBlocklist,
-      processStaleSeconds,
-      pageLockEnabled,
-      pageLockPasswordHash,
-      currentlyText,
-      earlierText,
-      adminText,
-      autoAcceptNewDevices,
-      inspirationAllowedDeviceHashes,
-      scheduleSlotMinutes,
-      schedulePeriodTemplate,
-      scheduleGridByWeekday,
-      scheduleCourses,
-      scheduleIcs,
-      scheduleInClassOnHome,
-      scheduleHomeShowLocation,
-      scheduleHomeShowTeacher,
-      scheduleHomeShowNextUpcoming,
-      scheduleHomeAfterClassesLabel,
-      globalMouseTiltEnabled,
-      globalMouseTiltGyroEnabled,
-      hideActivityMedia,
-      hcaptchaEnabled,
-      hcaptchaSiteKey,
-      hcaptchaSecretKey,
-      displayTimezone,
-      activityUpdateMode,
-      useNoSqlAsCacheRedis,
-      redisCacheTtlSeconds,
-      steamEnabled,
-      steamId,
-      steamApiKey,
-      activityRejectLockappSleep,
+      ...siteConfigValues,
     },
   })
   await clearActivityFeedDataCache()
@@ -588,5 +549,5 @@ export async function updateSiteConfigFromPayload(
     throw error
   }
 
-  return redactSiteConfigForClient(config as Record<string, any>)
+  return redactSiteConfigForClient(config as SiteConfigRecord)
 }

@@ -14,11 +14,34 @@ import {
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+type SkillsMode = 'oauth' | 'apikey'
+type ToolMode = 'skills' | 'mcp'
+
 function normalizeMode(raw: string | null): 'oauth' | 'apikey' | null {
   const v = String(raw ?? '').trim().toLowerCase()
   if (v === 'oauth') return 'oauth'
   if (v === 'apikey') return 'apikey'
   return null
+}
+
+function resolvePreferredToolMode(raw: unknown): ToolMode {
+  return String(raw ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills'
+}
+
+function buildEndpoints(origin: string) {
+  const llmBaseUrl = `${origin}/api/llm`
+  return {
+    direct: `${llmBaseUrl}/direct`,
+    markdown: `${llmBaseUrl}/md`,
+    settings: `${llmBaseUrl}/settings`,
+    appsExport: `${llmBaseUrl}/activity/apps-export`,
+    legacyMcp: `${llmBaseUrl}/mcp`,
+    legacyMcpApiKeyVerify: `${llmBaseUrl}/mcp/apikey`,
+  }
+}
+
+function getInputValue(request: NextRequest, headerName: string, queryName: string): string {
+  return (request.headers.get(headerName) ?? '').trim() || (request.nextUrl.searchParams.get(queryName) ?? '').trim()
 }
 
 export async function GET(request: NextRequest) {
@@ -28,26 +51,15 @@ export async function GET(request: NextRequest) {
   }
 
   const origin = getPublicOrigin(request)
-  const h = (name: string) => (request.headers.get(name) ?? '').trim()
-  const q = (name: string) => (request.nextUrl.searchParams.get(name) ?? '').trim()
-  const modeFromInput = normalizeMode(h('LLM-Skills-Mode') || q('mode'))
-  const token = h('LLM-Skills-Token') || q('token')
-  const scope = h('LLM-Skills-Scope') || q('scope') || 'theme'
-  const aiInput = h('LLM-Skills-AI') || q('ai')
-  const ai = normalizeAiClientId(aiInput)
+  const modeFromInput = normalizeMode(getInputValue(request, 'LLM-Skills-Mode', 'mode'))
+  const token = getInputValue(request, 'LLM-Skills-Token', 'token')
+  const scope = getInputValue(request, 'LLM-Skills-Scope', 'scope') || 'theme'
+  const ai = normalizeAiClientId(getInputValue(request, 'LLM-Skills-AI', 'ai'))
 
   const configuredMode = normalizeMode(String(cfg.skillsAuthMode ?? ''))
-  const preferredToolMode = String(cfg.aiToolMode ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills'
+  const preferredToolMode = resolvePreferredToolMode(cfg.aiToolMode)
   const finalUrl = origin
-  const llmBaseUrl = `${origin}/api/llm`
-  const endpoints = {
-    direct: `${llmBaseUrl}/direct`,
-    markdown: `${llmBaseUrl}/md`,
-    settings: `${llmBaseUrl}/settings`,
-    appsExport: `${llmBaseUrl}/activity/apps-export`,
-    legacyMcp: `${llmBaseUrl}/mcp`,
-    legacyMcpApiKeyVerify: `${llmBaseUrl}/mcp/apikey`,
-  }
+  const endpoints = buildEndpoints(origin)
   const legacyMcpEnabled = await isLegacyMcpEnabled()
   const legacyMcpConfigured = await hasLegacyMcpApiKeyConfigured()
 
@@ -157,7 +169,7 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const mode = modeFromInput ?? configuredMode
+  const mode = (modeFromInput ?? configuredMode) as SkillsMode
   const effectiveAi = mode === 'oauth' ? (ai || 'waken-wa-default-ai') : ai
 
   if (!token) {
@@ -217,14 +229,14 @@ export async function GET(request: NextRequest) {
         'LLM-Skills-Scope': scope,
         'LLM-Skills-Request-Id': 'ANY_REQUEST_ID',
       },
-        capabilities: {
-          supportsOauth: configuredMode === 'oauth',
-          supportsApiKey: configuredMode === 'apikey',
-          oauthConfigured: await hasSkillsOauthTokenConfigured(),
-          apiKeyConfigured: await hasSkillsApiKeyConfigured(),
-          legacyMcpConfigured: legacyMcpConfigured,
-          legacyMcpEnabled,
-        },
+      capabilities: {
+        supportsOauth: configuredMode === 'oauth',
+        supportsApiKey: configuredMode === 'apikey',
+        oauthConfigured: await hasSkillsOauthTokenConfigured(),
+        apiKeyConfigured: await hasSkillsApiKeyConfigured(),
+        legacyMcpConfigured,
+        legacyMcpEnabled,
+      },
       guide: {
         detectModeBy: `GET ${endpoints.direct}`,
         useMarkdownAt: endpoints.markdown,
