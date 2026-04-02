@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
   REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
@@ -80,7 +81,7 @@ import {
   parseThemeCustomSurface,
   THEME_CUSTOM_SURFACE_DEFAULTS,
 } from '@/lib/theme-custom-surface'
-import { DEFAULT_TIMEZONE, normalizeTimezone,TIMEZONE_OPTIONS } from '@/lib/timezone'
+import { DEFAULT_TIMEZONE, normalizeTimezone, TIMEZONE_OPTIONS } from '@/lib/timezone'
 
 /** Paginate tall “规则” cards */
 const SETTINGS_RULES_PAGE_SIZE = 5
@@ -1228,32 +1229,133 @@ export function WebSettings() {
     <div className="rounded-xl border bg-card p-6 space-y-5">
       <h3 className="font-semibold text-foreground">Web 配置</h3>
 
-      <div className="space-y-2">
-        <Label>网页标题（浏览器标签页）</Label>
-        <Input
-          value={form.pageTitle}
-          maxLength={PAGE_TITLE_MAX_LEN}
-          onChange={(e) => patch('pageTitle', e.target.value)}
-          placeholder={DEFAULT_PAGE_TITLE}
-        />
-        <p className="text-xs text-muted-foreground">显示在浏览器标签上的站点标题，最多 {PAGE_TITLE_MAX_LEN} 字。</p>
-      </div>
+      <Tabs defaultValue="basic" className="space-y-5">
+        <TabsList>
+          <TabsTrigger value="basic">基础设置</TabsTrigger>
+          <TabsTrigger value="advanced">进阶设置</TabsTrigger>
+        </TabsList>
 
-      <div className="space-y-2">
-        <Label>首页名称</Label>
-        <Input value={form.userName} onChange={(e) => patch('userName', e.target.value)} />
-      </div>
+        <TabsContent value="basic" className="space-y-5">
+          <div className="space-y-2">
+            <Label>网页标题（浏览器标签页）</Label>
+            <Input
+              value={form.pageTitle}
+              maxLength={PAGE_TITLE_MAX_LEN}
+              onChange={(e) => patch('pageTitle', e.target.value)}
+              placeholder={DEFAULT_PAGE_TITLE}
+            />
+          </div>
 
-      <div className="space-y-2">
-        <Label>首页简介</Label>
-        <Input value={form.userBio} onChange={(e) => patch('userBio', e.target.value)} />
-      </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>首页名称</Label>
+              <Input value={form.userName} onChange={(e) => patch('userName', e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>首页简介</Label>
+              <Input value={form.userBio} onChange={(e) => patch('userBio', e.target.value)} />
+            </div>
+          </div>
 
-      <div className="space-y-2">
-        <Label>首页备注</Label>
-        <Input value={form.userNote} onChange={(e) => patch('userNote', e.target.value)} />
-      </div>
+          <div className="space-y-2">
+            <Label>首页备注</Label>
+            <Input value={form.userNote} onChange={(e) => patch('userNote', e.target.value)} />
+          </div>
 
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+            <div className="space-y-0.5 min-w-0">
+              <Label htmlFor="hitokoto-home-note-basic" className="font-normal cursor-pointer">
+                首页备注使用一言（hitokoto.cn）
+              </Label>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                开启后由访客浏览器请求 <code className="rounded bg-muted px-1">v1.hitokoto.cn</code>。
+              </p>
+            </div>
+            <Switch
+              id="hitokoto-home-note-basic"
+              checked={form.userNoteHitokotoEnabled}
+              onCheckedChange={(v) => patch('userNoteHitokotoEnabled', v)}
+              className="shrink-0"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="theme-preset-basic">主题预设</Label>
+            <Select value={form.themePreset} onValueChange={(v) => patch('themePreset', v)}>
+              <SelectTrigger id="theme-preset-basic" className="w-full">
+                <SelectValue placeholder="选择主题预设" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="basic">Basic - 默认主题</SelectItem>
+                <SelectItem value="obsidian">Obsidian - 纯黑极简</SelectItem>
+                <SelectItem value="mono">Mono - 纯白极简</SelectItem>
+                <SelectItem value="midnight">Midnight - 深邃蓝紫</SelectItem>
+                <SelectItem value="ocean">Ocean - 深海蓝绿</SelectItem>
+                <SelectItem value="nord">Nord - 北欧冷淡</SelectItem>
+                <SelectItem value="forest">Forest - 自然森林</SelectItem>
+                <SelectItem value="sakura">Sakura - 柔和樱花</SelectItem>
+                <SelectItem value="lavender">Lavender - 淡雅薰衣草</SelectItem>
+                <SelectItem value="amber">Amber - 温暖琥珀</SelectItem>
+                <SelectItem value="customSurface">Custom surface - 自定义背景 / 圆角 / 配色</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">自定义背景 / CSS / 规则等请去「进阶设置」。</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>头像地址（URL / DataURL）</Label>
+            <Input value={form.avatarUrl} onChange={(e) => patch('avatarUrl', e.target.value)} />
+            <p className="text-xs text-muted-foreground">可直接填写图片链接，或通过下方上传并裁剪后自动生成。</p>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                onFileSelected(e.target.files?.[0])
+                e.target.value = ''
+              }}
+              className="w-full text-xs text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border file:border-border file:bg-muted/50 file:text-foreground hover:file:bg-muted file:cursor-pointer"
+            />
+            {cropSourceUrl ? (
+              <button
+                type="button"
+                onClick={() => setCropDialogOpen(true)}
+                className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
+              >
+                重新打开裁剪
+              </button>
+            ) : null}
+            {form.avatarUrl ? (
+              <div className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3">
+                <Image
+                  src={form.avatarUrl}
+                  alt="头像预览"
+                  width={40}
+                  height={40}
+                  className="w-10 h-10 rounded-full border border-border object-cover"
+                />
+                <span className="text-xs text-muted-foreground">头像预览</span>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>当前区块标题</Label>
+              <Input value={form.currentlyText} onChange={(e) => patch('currentlyText', e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>随想录区块标题</Label>
+              <Input value={form.earlierText} onChange={(e) => patch('earlierText', e.target.value)} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>后台入口文案</Label>
+            <Input value={form.adminText} onChange={(e) => patch('adminText', e.target.value)} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="advanced" className="space-y-5">
       <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
         <div className="flex items-center justify-between gap-3">
           <Label htmlFor="hitokoto-home-note" className="font-normal cursor-pointer">
@@ -1318,32 +1420,6 @@ export function WebSettings() {
             </div>
           </div>
         ) : null}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="theme-preset">主题预设</Label>
-        <Select value={form.themePreset} onValueChange={(v) => patch('themePreset', v)}>
-          <SelectTrigger id="theme-preset" className="w-full">
-            <SelectValue placeholder="选择主题预设" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="basic">Basic - 默认主题</SelectItem>
-            <SelectItem value="obsidian">Obsidian - 纯黑极简</SelectItem>
-            <SelectItem value="mono">Mono - 纯白极简</SelectItem>
-            <SelectItem value="midnight">Midnight - 深邃蓝紫</SelectItem>
-            <SelectItem value="ocean">Ocean - 深海蓝绿</SelectItem>
-            <SelectItem value="nord">Nord - 北欧冷淡</SelectItem>
-            <SelectItem value="forest">Forest - 自然森林</SelectItem>
-            <SelectItem value="sakura">Sakura - 柔和樱花</SelectItem>
-            <SelectItem value="lavender">Lavender - 淡雅薰衣草</SelectItem>
-            <SelectItem value="amber">Amber - 温暖琥珀</SelectItem>
-            <SelectItem value="customSurface">Custom surface - 自定义背景 / 圆角 / 配色</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          深色系：Obsidian、Midnight、Ocean、Nord | 浅色系：Mono、Forest、Sakura、Lavender、Amber |
-          Custom surface：可配页面色、渐变背景、圆角与是否显示光斑
-        </p>
       </div>
 
       {form.themePreset === 'customSurface' ? (
@@ -1616,39 +1692,6 @@ export function WebSettings() {
         </div>
       ) : null}
 
-      <div className="space-y-2">
-        <Label>头像地址（URL / DataURL）</Label>
-        <Input value={form.avatarUrl} onChange={(e) => patch('avatarUrl', e.target.value)} />
-        <p className="text-xs text-muted-foreground">可直接填写图片链接，或通过下方上传并裁剪后自动生成。</p>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => { onFileSelected(e.target.files?.[0]); e.target.value = '' }}
-          className="w-full text-xs text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border file:border-border file:bg-muted/50 file:text-foreground hover:file:bg-muted file:cursor-pointer"
-        />
-        {cropSourceUrl && (
-          <button
-            type="button"
-            onClick={() => setCropDialogOpen(true)}
-            className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
-          >
-            重新打开裁剪
-          </button>
-        )}
-        {form.avatarUrl && (
-          <div className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3">
-            <Image
-              src={form.avatarUrl}
-              alt="头像预览"
-              width={40}
-              height={40}
-              className="w-10 h-10 rounded-full border border-border object-cover"
-            />
-            <span className="text-xs text-muted-foreground">头像预览</span>
-          </div>
-        )}
-      </div>
-
       {/* Profile avatar online ring/dot accent; empty = theme --online */}
       <div className="space-y-2">
         <Label htmlFor="profile-online-accent">头像在线态强调色</Label>
@@ -1691,25 +1734,6 @@ export function WebSettings() {
           className="shrink-0"
         />
       </div>
-
-      <ImageCropDialog
-        open={cropDialogOpen}
-        onOpenChange={(open) => {
-          setCropDialogOpen(open)
-          if (!open) {
-            setCropSourceUrl((prev) => {
-              if (prev) URL.revokeObjectURL(prev)
-              return null
-            })
-          }
-        }}
-        sourceUrl={cropSourceUrl}
-        aspectMode="square"
-        outputSize={128}
-        title="裁剪头像"
-        description="拖动选区或边角调整范围，确认后生成 128×128 头像。"
-        onComplete={(dataUrl) => patch('avatarUrl', dataUrl)}
-      />
 
       <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
         <div className="space-y-0.5 min-w-0">
@@ -1942,31 +1966,6 @@ export function WebSettings() {
           超过该时长仍未收到该进程新活动时，将自动判定为已结束。默认{' '}
           {SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS} 秒。
         </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label>当前区块标题</Label>
-          <Input value={form.currentlyText} onChange={(e) => patch('currentlyText', e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>随想录区块标题</Label>
-          <Input
-            value={form.earlierText}
-            onChange={(e) => patch('earlierText', e.target.value)}
-            placeholder="例如：最近的随想录"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>后台入口文案</Label>
-        <Input
-          value={form.adminText}
-          onChange={(e) => patch('adminText', e.target.value)}
-          placeholder="例如：admin / 后台"
-        />
-        <p className="text-xs text-muted-foreground">显示在首页页脚右侧，链向后台。</p>
       </div>
 
       <div className="space-y-2">
@@ -2742,6 +2741,27 @@ export function WebSettings() {
         「一键写入配置」会尝试从剪贴板读取 Base64，并在弹窗中确认。仅合并导出包中的网页字段到本页表单，不包含 Token；
         写入后请用底部悬浮条保存。
       </p>
+        </TabsContent>
+      </Tabs>
+
+      <ImageCropDialog
+        open={cropDialogOpen}
+        onOpenChange={(open) => {
+          setCropDialogOpen(open)
+          if (!open) {
+            setCropSourceUrl((prev) => {
+              if (prev) URL.revokeObjectURL(prev)
+              return null
+            })
+          }
+        }}
+        sourceUrl={cropSourceUrl}
+        aspectMode="square"
+        outputSize={128}
+        title="裁剪头像"
+        description="拖动选区或边角调整范围，确认后生成 128×128 头像。"
+        onComplete={(dataUrl) => patch('avatarUrl', dataUrl)}
+      />
     </div>
     <Dialog open={importConfigDialogOpen} onOpenChange={setImportConfigDialogOpen}>
       <DialogContent>
