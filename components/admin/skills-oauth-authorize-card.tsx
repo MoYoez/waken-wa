@@ -16,9 +16,10 @@ import { Input } from '@/components/ui/input'
 type Props = {
   publicOrigin: string
   aiClientId: string
+  authorizeCode: string
 }
 
-export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
+export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId, authorizeCode }: Props) {
   const [loading, setLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [token, setToken] = useState('')
@@ -27,8 +28,8 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
   const directExample = useMemo(() => {
     const base = publicOrigin || ''
     return base
-      ? `${base}/api/admin/skills/direct?mode=oauth&ai=${encodeURIComponent(aiClientId)}&token=...`
-      : `/api/admin/skills/direct?mode=oauth&ai=${encodeURIComponent(aiClientId)}&token=...`
+      ? `${base}/api/llm/direct?mode=oauth&ai=${encodeURIComponent(aiClientId)}&token=...`
+      : `/api/llm/direct?mode=oauth&ai=${encodeURIComponent(aiClientId)}&token=...`
   }, [publicOrigin, aiClientId])
 
   const authorize = async () => {
@@ -39,7 +40,7 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
       const res = await fetch('/api/admin/skills/oauth/authorize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm: true, aiClientId }),
+        body: JSON.stringify({ confirm: true, authorizeCode }),
       })
       const json = await res.json().catch(() => null)
       if (!json?.success) {
@@ -58,7 +59,7 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
     <div className="mx-auto max-w-2xl p-6 space-y-4">
       <h1 className="text-lg font-semibold">Skills OAuth 授权</h1>
       <p className="text-sm text-muted-foreground">
-        当前 AI 标识：<code>{aiClientId}</code>。点击授权会弹窗确认；同意后才会签发 token（默认 1 小时）。后端仅存 hash，本页刷新不会自动生成。
+        点击授权会弹窗确认；同意后才会签发 token（默认 1 小时）。后端仅存 hash，本页刷新不会自动生成。
       </p>
 
       <Button type="button" onClick={() => setConfirmOpen(true)} disabled={loading}>
@@ -69,13 +70,9 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
           <DialogHeader>
             <DialogTitle>确认签发 OAuth 授权</DialogTitle>
             <DialogDescription>
-              允许该 AI 使用 Skills（OAuth）辅助调试修改。授权默认有效期 1 小时，后端仅存 token hash。
+              允许该 AI 使用 Skills（OAuth）执行调试操作。授权默认有效期 1 小时，后端仅存 token hash。
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
-            <div className="text-muted-foreground">AI 标识</div>
-            <code className="break-all rounded bg-muted px-1.5 py-0.5 text-xs">{aiClientId}</code>
-          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)} disabled={loading}>
               取消

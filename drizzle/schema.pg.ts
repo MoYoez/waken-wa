@@ -114,6 +114,8 @@ export const siteConfig = pgTable('site_config', {
   skillsAuthMode: varchar('skills_auth_mode', { length: 20 }),
   // Nullable on purpose: safe db:push on existing rows; null = no active OAuth token.
   skillsOauthExpiresAt: timestamp('skills_oauth_expires_at', { mode: 'date', withTimezone: true }),
+  // Nullable on purpose: safe db:push on existing rows; null = default to skills.
+  aiToolMode: varchar('ai_tool_mode', { length: 20 }).default('skills'),
   historyWindowMinutes: integer('history_window_minutes').notNull().default(120),
   appMessageRules: jsonb('app_message_rules'),
   appMessageRulesShowProcessName: boolean('app_message_rules_show_process_name')

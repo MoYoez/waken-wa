@@ -13,9 +13,6 @@ const RATE_LIMITED_PATHS = new Set([
 
 const ADMIN_API_PREFIX = '/api/admin/'
 const ADMIN_SETUP_PREFIX = '/api/admin/setup'
-const SKILLS_HEADER_PREFIX = 'llm-skills-'
-const ADMIN_SKILLS_DIRECT_PATH = '/api/admin/skills/direct'
-const ADMIN_SKILLS_MD_PATH = '/api/admin/skills/md'
 
 function getClientIp(request: NextRequest): string {
   return (
@@ -66,17 +63,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith(ADMIN_API_PREFIX) &&
     !pathname.startsWith(ADMIN_SETUP_PREFIX)
   ) {
-    const isSkillsDirect = pathname === ADMIN_SKILLS_DIRECT_PATH
-    const isSkillsMd = pathname === ADMIN_SKILLS_MD_PATH
-    const hasSkillsHeaders = (() => {
-      for (const [k] of request.headers.entries()) {
-        if (k.toLowerCase().startsWith(SKILLS_HEADER_PREFIX)) return true
-      }
-      return false
-    })()
-
     const sessionCookie = request.cookies.get('session')
-    if (!sessionCookie?.value && !hasSkillsHeaders && !isSkillsDirect && !isSkillsMd) {
+    if (!sessionCookie?.value) {
       return addSecurityHeaders(
         NextResponse.json(
           { success: false, error: '未授权' },

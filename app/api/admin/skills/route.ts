@@ -6,9 +6,12 @@ import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
 import {
   clearSkillsApiKey,
+  hasLegacyMcpApiKeyConfigured,
   hasSkillsApiKeyConfigured,
   hasSkillsOauthTokenConfigured,
+  isLegacyMcpEnabled,
   revokeAllSkillsOauthTokens,
+  rotateLegacyMcpApiKey,
   rotateSkillsApiKey,
 } from '@/lib/skills-auth'
 import { clearSiteConfigCaches, getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
@@ -44,13 +47,18 @@ export async function GET() {
       oauthExpiresAt: null,
       apiKeyConfigured: await hasSkillsApiKeyConfigured(),
       oauthConfigured: await hasSkillsOauthTokenConfigured(),
-      directLinkPath: '/api/admin/skills/direct',
+      directLinkPath: '/api/llm/direct',
       authorizeLinkPath: '/admin/skills-authorize',
-      authorizeLinkTemplate: '/admin/skills-authorize?ai=YOUR_UNIQUE_AI_ID',
       oauthAiScoped: true,
       oauthMultiToken: true,
       modeSwitchRevokesOther: true,
       headerPrefix: 'LLM-Skills-',
+      aiToolMode: String(cfg?.aiToolMode ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills',
+      legacyMcpEnabled: await isLegacyMcpEnabled(),
+      legacyMcpConfigured: await hasLegacyMcpApiKeyConfigured(),
+      legacyMcpPath: '/api/llm/mcp',
+      legacyMcpApiKeyVerifyPath: '/api/llm/mcp/apikey',
+      skillsMdPath: '/api/llm/md',
     },
   })
 }
@@ -70,10 +78,15 @@ export async function PATCH(request: NextRequest) {
     const authMode = modeInBody ? normalizeAuthMode(body.authMode) : undefined
 
     const rotateApiKey = body.rotateApiKey === true
+    const rotateLegacyMcpKey = body.rotateLegacyMcpKey === true
     let generatedApiKey: string | null = null
+    let generatedLegacyMcpApiKey: string | null = null
 
     if (rotateApiKey) {
       generatedApiKey = await rotateSkillsApiKey()
+    }
+    if (rotateLegacyMcpKey) {
+      generatedLegacyMcpApiKey = await rotateLegacyMcpApiKey()
     }
 
     if (enabled !== undefined || authMode !== undefined) {
@@ -120,6 +133,10 @@ export async function PATCH(request: NextRequest) {
         oauthMultiToken: true,
         modeSwitchRevokesOther: true,
         generatedApiKey,
+        generatedLegacyMcpApiKey,
+        aiToolMode: String(cfg?.aiToolMode ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills',
+        legacyMcpEnabled: await isLegacyMcpEnabled(),
+        legacyMcpConfigured: await hasLegacyMcpApiKeyConfigured(),
       },
     })
   } catch (error) {

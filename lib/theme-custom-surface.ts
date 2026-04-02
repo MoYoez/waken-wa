@@ -123,6 +123,17 @@ export function sanitizeThemeCssValue(input: unknown, maxLen: number): string {
   return s
 }
 
+function parseThemeCustomSurfaceRaw(raw: unknown): unknown {
+  if (typeof raw !== 'string') return raw
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    return raw
+  }
+}
+
 function readBackgroundField(o: Record<string, unknown>): unknown {
   const v =
     o.background ??
@@ -135,10 +146,11 @@ function readBackgroundField(o: Record<string, unknown>): unknown {
 
 /** Normalizes client/API payload for DB and CSS generation. */
 export function parseThemeCustomSurface(raw: unknown): ThemeCustomSurfaceFields {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+  const parsedRaw = parseThemeCustomSurfaceRaw(raw)
+  if (!parsedRaw || typeof parsedRaw !== 'object' || Array.isArray(parsedRaw)) {
     return {}
   }
-  const o = raw as Record<string, unknown>
+  const o = parsedRaw as Record<string, unknown>
   return {
     background: sanitizeThemeCssValue(readBackgroundField(o), MAX_SHORT),
     bodyBackground: sanitizeThemeCssValue(o.bodyBackground, MAX_ANIMATED),

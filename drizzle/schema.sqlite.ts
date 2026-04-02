@@ -110,6 +110,8 @@ export const siteConfig = sqliteTable('site_config', {
   skillsAuthMode: text('skills_auth_mode'),
   // Nullable on purpose: safe db:push on existing rows; null = no active OAuth token.
   skillsOauthExpiresAt: tsOpt('skills_oauth_expires_at'),
+  // Nullable on purpose: safe db:push on existing rows; null = default to skills.
+  aiToolMode: text('ai_tool_mode').default('skills'),
   historyWindowMinutes: integer('history_window_minutes').notNull().default(120),
   appMessageRules: text('app_message_rules', { mode: 'json' }),
   appMessageRulesShowProcessName: integer('app_message_rules_show_process_name', {

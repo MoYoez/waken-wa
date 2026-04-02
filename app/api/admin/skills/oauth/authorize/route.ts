@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getSession } from '@/lib/auth'
-import { normalizeAiClientId, rotateSkillsOauthToken } from '@/lib/skills-auth'
+import {
+  getSkillsOauthAuthorizeRequest,
+  rotateSkillsOauthToken,
+} from '@/lib/skills-auth'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 
 export const dynamic = 'force-dynamic'
@@ -33,21 +36,25 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => ({}))
-  const aiClientId = normalizeAiClientId(body?.aiClientId)
+  const authorizeCode = String(body?.authorizeCode ?? '').trim()
   if (body?.confirm !== true) {
     return NextResponse.json(
       { success: false, error: '用户未确认授权' },
       { status: 400 },
     )
   }
-  if (!aiClientId) {
+  const authorizeRequest = await getSkillsOauthAuthorizeRequest(authorizeCode)
+  if (!authorizeRequest) {
     return NextResponse.json(
-      { success: false, error: '缺少 AI 标识（aiClientId）' },
+      { success: false, error: '授权链接无效或已过期，请重新打开新的授权链接' },
       { status: 400 },
     )
   }
 
-  const { token, expiresAt } = await rotateSkillsOauthToken(60 * 60_000, aiClientId)
+  const { token, expiresAt, aiClientId } = await rotateSkillsOauthToken(
+    60 * 60_000,
+    authorizeRequest.aiClientId,
+  )
   return NextResponse.json({
     success: true,
     data: {

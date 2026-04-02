@@ -12,6 +12,7 @@ function safeNextPath(raw: string | null): string {
     const p = u.pathname
     if (p === '/admin') return `/admin${u.search}`
     if (p === '/admin/setup') return `/admin/setup${u.search}`
+    if (p === '/admin/skills-authorize') return `/admin/skills-authorize${u.search}`
     return '/admin'
   } catch {
     return '/admin'

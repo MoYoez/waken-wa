@@ -13,6 +13,8 @@ import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
 
 const SKILLS_APIKEY_SECRET_KEY = 'skills_apikey_bcrypt'
+const LEGACY_MCP_APIKEY_SECRET_KEY = 'mcp_theme_tools_key_bcrypt'
+const SKILLS_OAUTH_AUTHORIZE_CODE_PREFIX = 'skills_oauth_authorize_code:'
 
 export type SkillsAuthMode = 'oauth' | 'apikey'
 export type SkillsScope = 'feature' | 'theme' | 'content'
@@ -88,8 +90,24 @@ async function setSecretBcrypt(key: string, plain: string): Promise<void> {
     .onConflictDoUpdate({ target: systemSecrets.key, set: { value: hash } })
 }
 
+async function setSecretValue(key: string, value: string): Promise<void> {
+  const trimmedKey = String(key ?? '').trim()
+  const normalizedValue = String(value ?? '')
+  if (!trimmedKey) throw new Error('Empty secret key')
+  if (!normalizedValue) throw new Error('Empty secret value')
+  await db
+    .insert(systemSecrets)
+    .values({ key: trimmedKey, value: normalizedValue })
+    .onConflictDoUpdate({ target: systemSecrets.key, set: { value: normalizedValue } })
+}
+
 export async function hasSkillsApiKeyConfigured(): Promise<boolean> {
   const v = await readSecretValue(SKILLS_APIKEY_SECRET_KEY)
+  return Boolean(v)
+}
+
+export async function hasLegacyMcpApiKeyConfigured(): Promise<boolean> {
+  const v = await readSecretValue(LEGACY_MCP_APIKEY_SECRET_KEY)
   return Boolean(v)
 }
 
@@ -114,6 +132,53 @@ export async function rotateSkillsApiKey(): Promise<string> {
   return plain
 }
 
+export async function rotateLegacyMcpApiKey(): Promise<string> {
+  const plain = randomBytes(32).toString('base64url')
+  await setSecretBcrypt(LEGACY_MCP_APIKEY_SECRET_KEY, plain)
+  return plain
+}
+
+export async function createSkillsOauthAuthorizeCode(
+  aiClientIdRaw: string,
+  ttlMs: number = 15 * 60_000,
+): Promise<{ code: string; aiClientId: string; expiresAt: Date }> {
+  const aiClientId = normalizeAiClientId(aiClientIdRaw)
+  if (!aiClientId) {
+    throw new Error('Missing aiClientId')
+  }
+  const ms = Number.isFinite(ttlMs) ? Math.max(60_000, Math.round(ttlMs)) : 15 * 60_000
+  const code = randomBytes(32).toString('hex')
+  const expiresAt = new Date(Date.now() + ms)
+  await setSecretValue(
+    `${SKILLS_OAUTH_AUTHORIZE_CODE_PREFIX}${code}`,
+    JSON.stringify({
+      aiClientId,
+      expiresAt: expiresAt.toISOString(),
+    }),
+  )
+  return { code, aiClientId, expiresAt }
+}
+
+export async function getSkillsOauthAuthorizeRequest(
+  codeRaw: string,
+): Promise<{ aiClientId: string; expiresAt: Date } | null> {
+  const code = String(codeRaw ?? '').trim().toLowerCase()
+  if (!code) return null
+  const stored = await readSecretValue(`${SKILLS_OAUTH_AUTHORIZE_CODE_PREFIX}${code}`)
+  if (!stored) return null
+  try {
+    const parsed = JSON.parse(stored) as { aiClientId?: unknown; expiresAt?: unknown }
+    const aiClientId = normalizeAiClientId(parsed?.aiClientId)
+    const expiresAt = new Date(String(parsed?.expiresAt ?? ''))
+    if (!aiClientId || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
+      return null
+    }
+    return { aiClientId, expiresAt }
+  } catch {
+    return null
+  }
+}
+
 export async function revokeAllSkillsOauthTokens(): Promise<void> {
   const now = sqlTimestamp()
   await db
@@ -124,6 +189,21 @@ export async function revokeAllSkillsOauthTokens(): Promise<void> {
 
 export async function clearSkillsApiKey(): Promise<void> {
   await db.delete(systemSecrets).where(eq(systemSecrets.key, SKILLS_APIKEY_SECRET_KEY))
+}
+
+export async function verifyLegacyMcpApiKey(token: string): Promise<boolean> {
+  const stored = await readSecretValue(LEGACY_MCP_APIKEY_SECRET_KEY)
+  if (!stored || !token) return false
+  return bcrypt.compare(token, stored)
+}
+
+export async function isLegacyMcpEnabled(): Promise<boolean> {
+  const cfg = await getSiteConfigMemoryFirst()
+  return (
+    cfg?.skillsDebugEnabled === true &&
+    String(cfg?.aiToolMode ?? '').trim().toLowerCase() === 'mcp' &&
+    cfg?.mcpThemeToolsEnabled === true
+  )
 }
 
 export async function rotateSkillsOauthToken(
@@ -166,6 +246,9 @@ export async function verifySkillsRequest(
   const cfg = await getSiteConfigMemoryFirst()
   if (cfg?.skillsDebugEnabled !== true) {
     return { ok: false, error: 'Not found', status: 404 }
+  }
+  if (String(cfg?.aiToolMode ?? '').trim().toLowerCase() !== 'skills') {
+    return { ok: false, error: '当前已切换为 MCP 模式，Skills HTTP 接口已关闭', status: 403 }
   }
 
   const modeFromHeader = parseMode(getHeader(request, 'LLM-Skills-Mode'))

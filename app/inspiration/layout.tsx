@@ -3,13 +3,12 @@ import { redirect } from 'next/navigation'
 
 import { SiteLockForm } from '@/components/site-lock-form'
 import { verifySiteLockSession } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { siteConfig } from '@/lib/drizzle-schema'
 import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { getThemePresetCss } from '@/lib/theme-css'
 
 export default async function InspirationLayout({ children }: { children: React.ReactNode }) {
-  const [config] = await db.select().from(siteConfig).limit(1)
+  const config = await getSiteConfigMemoryFirst()
   if (!config) {
     redirect('/admin/setup')
   }
