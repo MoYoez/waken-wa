@@ -6,6 +6,7 @@ export interface LlmEndpoints {
   markdown: string
   settings: string
   appsExport: string
+  oauthExchange: string
   legacyMcp: string
   legacyMcpApiKeyVerify: string
 }

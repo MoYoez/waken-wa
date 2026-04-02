@@ -115,6 +115,8 @@ export const siteConfig = pgTable('site_config', {
   skillsAuthMode: varchar('skills_auth_mode', { length: 20 }),
   // Nullable on purpose: safe db:push on existing rows; null = no active OAuth token.
   skillsOauthExpiresAt: timestamp('skills_oauth_expires_at', { mode: 'date', withTimezone: true }),
+  // Nullable on purpose: safe db:push on existing rows; null = use default 60 minutes.
+  skillsOauthTokenTtlMinutes: integer('skills_oauth_token_ttl_minutes').default(60),
   // Nullable on purpose: safe db:push on existing rows; null = default to skills.
   aiToolMode: varchar('ai_tool_mode', { length: 20 }).default('skills'),
   historyWindowMinutes: integer('history_window_minutes').notNull().default(120),
@@ -222,6 +224,23 @@ export const skillsOauthTokens = pgTable(
   (t) => [index('skills_oauth_tokens_ai_client_id_idx').on(t.aiClientId)],
 )
 
+export const skillsOauthAuthorizeCodes = pgTable(
+  'skills_oauth_authorize_codes',
+  {
+    id: serial('id').primaryKey(),
+    authorizeCode: varchar('authorize_code', { length: 128 }).notNull().unique(),
+    aiClientId: varchar('ai_client_id', { length: 128 }).notNull(),
+    expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }).notNull(),
+    approvedAt: timestamp('approved_at', { mode: 'date', withTimezone: true }),
+    approvedBy: integer('approved_by').references(() => adminUsers.id, { onDelete: 'set null' }),
+    exchangeAt: timestamp('exchange_at', { mode: 'date', withTimezone: true }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index('skills_oauth_authorize_codes_ai_client_id_idx').on(t.aiClientId)],
+)
+
 export const rateLimitBackups = pgTable(
   'rate_limit_backups',
   {
@@ -278,6 +297,7 @@ export const pgSchema = {
   activityAppHistory,
   systemSecrets,
   skillsOauthTokens,
+  skillsOauthAuthorizeCodes,
   rateLimitBackups,
   inspirationEntries,
   inspirationAssets,

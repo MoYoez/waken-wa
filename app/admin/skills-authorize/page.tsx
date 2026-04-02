@@ -56,6 +56,16 @@ export default async function SkillsAuthorizePage({
       </div>
     )
   }
+  if (authorizeRequest.exchangeAt) {
+    return (
+      <div className="mx-auto max-w-2xl p-6 space-y-3">
+        <h1 className="text-lg font-semibold">Skills 授权</h1>
+        <p className="text-sm text-muted-foreground">
+          该授权码已兑换完成。请让 AI 重新发起授权流程。
+        </p>
+      </div>
+    )
+  }
   const publicOrigin =
     (process.env.PUBLIC_APP_URL?.trim() || '').replace(/\/+$/, '') || ''
 

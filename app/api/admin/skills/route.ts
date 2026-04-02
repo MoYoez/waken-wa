@@ -13,7 +13,10 @@ import {
   hasSkillsApiKeyConfigured,
   hasSkillsOauthTokenConfigured,
   isLegacyMcpEnabled,
+  listSkillsOauthAuthorizeSummary,
+  normalizeSkillsOauthTokenTtlMinutes,
   revokeAllSkillsOauthTokens,
+  revokeSkillsOauthTokensByAiClientId,
   rotateLegacyMcpApiKey,
   rotateSkillsApiKey,
 } from '@/lib/skills-auth'
@@ -45,6 +48,7 @@ export async function GET() {
       oauthExpiresAt: null,
       apiKeyConfigured: await hasSkillsApiKeyConfigured(),
       oauthConfigured: await hasSkillsOauthTokenConfigured(),
+      oauthTokenTtlMinutes: normalizeSkillsOauthTokenTtlMinutes(cfg?.skillsOauthTokenTtlMinutes),
       directLinkPath: '/api/llm/direct',
       authorizeLinkPath: '/admin/skills-authorize',
       oauthAiScoped: true,
@@ -61,6 +65,8 @@ export async function GET() {
       legacyMcpPath: '/api/llm/mcp',
       legacyMcpApiKeyVerifyPath: '/api/llm/mcp/apikey',
       skillsMdPath: '/api/llm/md',
+      oauthExchangePath: '/api/llm/oauth/exchange',
+      aiAuthorizations: await listSkillsOauthAuthorizeSummary(),
     },
   })
 }
@@ -81,6 +87,15 @@ export async function PATCH(request: NextRequest) {
 
     const rotateApiKey = body.rotateApiKey === true
     const rotateLegacyMcpKey = body.rotateLegacyMcpKey === true
+    const oauthTokenTtlMinutesInBody =
+      body.oauthTokenTtlMinutes !== undefined && body.oauthTokenTtlMinutes !== null
+    const oauthTokenTtlMinutes = oauthTokenTtlMinutesInBody
+      ? normalizeSkillsOauthTokenTtlMinutes(body.oauthTokenTtlMinutes)
+      : undefined
+    const revokeOauthForAiClientId = String(body.revokeOauthForAiClientId ?? '')
+      .trim()
+      .toLowerCase()
+    let revokedOauthTokenCount = 0
     const envStatus = getSkillsSecretEnvStatus()
     if (rotateApiKey && envStatus.skillsApiKeyEnvManaged) {
       return NextResponse.json(
@@ -103,8 +118,11 @@ export async function PATCH(request: NextRequest) {
     if (rotateLegacyMcpKey) {
       generatedLegacyMcpApiKey = await rotateLegacyMcpApiKey()
     }
+    if (revokeOauthForAiClientId) {
+      revokedOauthTokenCount = await revokeSkillsOauthTokensByAiClientId(revokeOauthForAiClientId)
+    }
 
-    if (enabled !== undefined || authMode !== undefined) {
+    if (enabled !== undefined || authMode !== undefined || oauthTokenTtlMinutes !== undefined) {
       const existing = await getSiteConfigMemoryFirst()
       if (!existing) {
         return NextResponse.json(
@@ -117,6 +135,10 @@ export async function PATCH(request: NextRequest) {
         .set({
           skillsDebugEnabled: enabled === undefined ? existing.skillsDebugEnabled : enabled,
           skillsAuthMode: authMode === undefined ? existing.skillsAuthMode : authMode,
+          skillsOauthTokenTtlMinutes:
+            oauthTokenTtlMinutes === undefined
+              ? existing.skillsOauthTokenTtlMinutes
+              : oauthTokenTtlMinutes,
         })
         .where(eq(siteConfig.id, 1))
       await clearSiteConfigCaches()
@@ -144,6 +166,7 @@ export async function PATCH(request: NextRequest) {
         oauthExpiresAt: null,
         apiKeyConfigured: await hasSkillsApiKeyConfigured(),
         oauthConfigured: await hasSkillsOauthTokenConfigured(),
+        oauthTokenTtlMinutes: normalizeSkillsOauthTokenTtlMinutes(cfg?.skillsOauthTokenTtlMinutes),
         oauthAiScoped: true,
         oauthMultiToken: true,
         modeSwitchRevokesOther: true,
@@ -156,6 +179,8 @@ export async function PATCH(request: NextRequest) {
         aiToolMode: String(cfg?.aiToolMode ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills',
         legacyMcpEnabled: await isLegacyMcpEnabled(),
         legacyMcpConfigured: await hasLegacyMcpApiKeyConfigured(),
+        aiAuthorizations: await listSkillsOauthAuthorizeSummary(),
+        revokedOauthTokenCount,
       },
     })
   } catch (error) {

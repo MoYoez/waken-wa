@@ -113,6 +113,8 @@ export const siteConfig = sqliteTable('site_config', {
   skillsAuthMode: text('skills_auth_mode'),
   // Nullable on purpose: safe db:push on existing rows; null = no active OAuth token.
   skillsOauthExpiresAt: tsOpt('skills_oauth_expires_at'),
+  // Nullable on purpose: safe db:push on existing rows; null = use default 60 minutes.
+  skillsOauthTokenTtlMinutes: integer('skills_oauth_token_ttl_minutes').default(60),
   // Nullable on purpose: safe db:push on existing rows; null = default to skills.
   aiToolMode: text('ai_tool_mode').default('skills'),
   historyWindowMinutes: integer('history_window_minutes').notNull().default(120),
@@ -241,6 +243,21 @@ export const skillsOauthTokens = sqliteTable(
   (t) => [index('skills_oauth_tokens_ai_client_id_idx').on(t.aiClientId)],
 )
 
+export const skillsOauthAuthorizeCodes = sqliteTable(
+  'skills_oauth_authorize_codes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    authorizeCode: text('authorize_code').notNull().unique(),
+    aiClientId: text('ai_client_id').notNull(),
+    expiresAt: textCol('expires_at', { mode: 'timestamp' }).notNull(),
+    approvedAt: tsOpt('approved_at'),
+    approvedBy: integer('approved_by').references(() => adminUsers.id, { onDelete: 'set null' }),
+    exchangeAt: tsOpt('exchange_at'),
+    createdAt: ts('created_at'),
+  },
+  (t) => [index('skills_oauth_authorize_codes_ai_client_id_idx').on(t.aiClientId)],
+)
+
 export const rateLimitBackups = sqliteTable('rate_limit_backups', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   rlKey: text('rl_key').notNull().unique(),
@@ -288,6 +305,7 @@ export const sqliteSchema = {
   activityAppHistory,
   systemSecrets,
   skillsOauthTokens,
+  skillsOauthAuthorizeCodes,
   rateLimitBackups,
   inspirationEntries,
   inspirationAssets,

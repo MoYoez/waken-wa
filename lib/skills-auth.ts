@@ -8,7 +8,7 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
-import { skillsOauthTokens, systemSecrets } from '@/lib/drizzle-schema'
+import { skillsOauthAuthorizeCodes, skillsOauthTokens, systemSecrets } from '@/lib/drizzle-schema'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   SKILLS_AUTHORIZE_CODE_DEFAULT_TTL_MS,
@@ -22,6 +22,10 @@ import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
 
 export type SkillsAuthMode = 'oauth' | 'apikey'
 export type SkillsScope = 'feature' | 'theme' | 'content'
+
+const SKILLS_OAUTH_TOKEN_TTL_MINUTES_DEFAULT = 60
+const SKILLS_OAUTH_TOKEN_TTL_MINUTES_MIN = 5
+const SKILLS_OAUTH_TOKEN_TTL_MINUTES_MAX = 24 * 60
 
 type GuardOk = {
   ok: true
@@ -71,8 +75,31 @@ export function normalizeAiClientId(raw: unknown): string {
   return normalized
 }
 
-function getSkillsAuthorizeCodeSecretKey(code: string): string {
-  return `${SKILLS_SECRET_KEYS.skillsOauthAuthorizeCodePrefix}${code}`
+export function normalizeSkillsOauthTokenTtlMinutes(raw: unknown): number {
+  const value = Number(raw)
+  if (!Number.isFinite(value)) return SKILLS_OAUTH_TOKEN_TTL_MINUTES_DEFAULT
+  return Math.min(
+    SKILLS_OAUTH_TOKEN_TTL_MINUTES_MAX,
+    Math.max(SKILLS_OAUTH_TOKEN_TTL_MINUTES_MIN, Math.round(value)),
+  )
+}
+
+type SkillsOauthAuthorizeRequest = {
+  id: number
+  aiClientId: string
+  expiresAt: Date
+  approvedAt: Date | null
+  approvedBy: number | null
+  exchangeAt: Date | null
+}
+
+export type SkillsOauthAuthorizeSummaryRow = {
+  aiClientId: string
+  pendingCodeCount: number
+  approvedCodeCount: number
+  activeTokenCount: number
+  lastApprovedAt: string | null
+  lastExchangedAt: string | null
 }
 
 function getConfiguredSkillsMode(raw: unknown): SkillsAuthMode | null {
@@ -132,17 +159,6 @@ async function setSecretBcrypt(key: string, plain: string): Promise<void> {
     .onConflictDoUpdate({ target: systemSecrets.key, set: { value: hash } })
 }
 
-async function setSecretValue(key: string, value: string): Promise<void> {
-  const trimmedKey = String(key ?? '').trim()
-  const normalizedValue = String(value ?? '')
-  if (!trimmedKey) throw new Error('Empty secret key')
-  if (!normalizedValue) throw new Error('Empty secret value')
-  await db
-    .insert(systemSecrets)
-    .values({ key: trimmedKey, value: normalizedValue })
-    .onConflictDoUpdate({ target: systemSecrets.key, set: { value: normalizedValue } })
-}
-
 export async function hasSkillsApiKeyConfigured(): Promise<boolean> {
   const v = await readSecretValue(SKILLS_SECRET_KEYS.skillsApiKey)
   return Boolean(v)
@@ -199,34 +215,155 @@ export async function createSkillsOauthAuthorizeCode(
     : SKILLS_AUTHORIZE_CODE_DEFAULT_TTL_MS
   const code = randomBytes(32).toString('hex')
   const expiresAt = new Date(Date.now() + ms)
-  await setSecretValue(
-    getSkillsAuthorizeCodeSecretKey(code),
-    JSON.stringify({
-      aiClientId,
-      expiresAt: expiresAt.toISOString(),
-    }),
-  )
+  await db.insert(skillsOauthAuthorizeCodes).values({
+    authorizeCode: code,
+    aiClientId,
+    expiresAt: sqlDate(expiresAt) as any,
+  } as any)
   return { code, aiClientId, expiresAt }
 }
 
 export async function getSkillsOauthAuthorizeRequest(
   codeRaw: string,
-): Promise<{ aiClientId: string; expiresAt: Date } | null> {
+): Promise<SkillsOauthAuthorizeRequest | null> {
   const code = String(codeRaw ?? '').trim().toLowerCase()
   if (!code) return null
-  const stored = await readSecretValue(getSkillsAuthorizeCodeSecretKey(code))
-  if (!stored) return null
-  try {
-    const parsed = JSON.parse(stored) as { aiClientId?: unknown; expiresAt?: unknown }
-    const aiClientId = normalizeAiClientId(parsed?.aiClientId)
-    const expiresAt = new Date(String(parsed?.expiresAt ?? ''))
-    if (!aiClientId || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
-      return null
+  const [row] = await db
+    .select({
+      id: skillsOauthAuthorizeCodes.id,
+      aiClientId: skillsOauthAuthorizeCodes.aiClientId,
+      expiresAt: skillsOauthAuthorizeCodes.expiresAt,
+      approvedAt: skillsOauthAuthorizeCodes.approvedAt,
+      approvedBy: skillsOauthAuthorizeCodes.approvedBy,
+      exchangeAt: skillsOauthAuthorizeCodes.exchangeAt,
+    })
+    .from(skillsOauthAuthorizeCodes)
+    .where(eq(skillsOauthAuthorizeCodes.authorizeCode, code))
+    .limit(1)
+  if (!row) return null
+  return {
+    id: row.id,
+    aiClientId: row.aiClientId,
+    expiresAt: new Date(row.expiresAt as any),
+    approvedAt: row.approvedAt ? new Date(row.approvedAt as any) : null,
+    approvedBy: row.approvedBy == null ? null : Number(row.approvedBy),
+    exchangeAt: row.exchangeAt ? new Date(row.exchangeAt as any) : null,
+  }
+}
+
+export async function approveSkillsOauthAuthorizeCode(
+  codeRaw: string,
+  approvedByRaw: number,
+): Promise<{
+  aiClientId: string
+  approvedAt: Date
+  approvedBy: number
+  expiresAt: Date
+} | null> {
+  const code = String(codeRaw ?? '').trim().toLowerCase()
+  const approvedBy = Number.isFinite(approvedByRaw) ? Math.max(1, Math.trunc(approvedByRaw)) : 0
+  if (!code || approvedBy <= 0) return null
+
+  const request = await getSkillsOauthAuthorizeRequest(code)
+  if (!request) return null
+  if (request.expiresAt.getTime() <= Date.now()) return null
+  if (request.exchangeAt) return null
+
+  const now = new Date()
+  if (!request.approvedAt) {
+    const updated = await db
+      .update(skillsOauthAuthorizeCodes)
+      .set({
+        approvedAt: sqlDate(now) as any,
+        approvedBy,
+      } as any)
+      .where(
+        and(
+          eq(skillsOauthAuthorizeCodes.id, request.id),
+          isNull(skillsOauthAuthorizeCodes.approvedAt),
+        ),
+      )
+      .returning({
+        approvedAt: skillsOauthAuthorizeCodes.approvedAt,
+        approvedBy: skillsOauthAuthorizeCodes.approvedBy,
+      })
+    if (updated.length > 0) {
+      return {
+        aiClientId: request.aiClientId,
+        approvedAt: new Date(updated[0].approvedAt as any),
+        approvedBy: Number(updated[0].approvedBy ?? approvedBy),
+        expiresAt: request.expiresAt,
+      }
     }
-    return { aiClientId, expiresAt }
-  } catch {
+  }
+
+  const latest = await getSkillsOauthAuthorizeRequest(code)
+  if (!latest || !latest.approvedAt || latest.expiresAt.getTime() <= Date.now() || latest.exchangeAt) {
     return null
   }
+  return {
+    aiClientId: latest.aiClientId,
+    approvedAt: latest.approvedAt,
+    approvedBy: latest.approvedBy ?? approvedBy,
+    expiresAt: latest.expiresAt,
+  }
+}
+
+export type SkillsOauthExchangeResult =
+  | {
+      ok: true
+      token: string
+      expiresAt: Date
+      aiClientId: string
+    }
+  | {
+      ok: false
+      reason:
+        | 'missing_code'
+        | 'missing_ai'
+        | 'invalid_code'
+        | 'expired'
+        | 'not_approved'
+        | 'already_exchanged'
+        | 'ai_mismatch'
+    }
+
+export async function exchangeSkillsOauthCodeForToken(
+  codeRaw: string,
+  aiClientIdRaw: string,
+  ttlMs: number = SKILLS_OAUTH_TOKEN_DEFAULT_TTL_MS,
+): Promise<SkillsOauthExchangeResult> {
+  const code = String(codeRaw ?? '').trim().toLowerCase()
+  if (!code) return { ok: false, reason: 'missing_code' }
+
+  const aiClientId = normalizeAiClientId(aiClientIdRaw)
+  if (!aiClientId) return { ok: false, reason: 'missing_ai' }
+
+  const request = await getSkillsOauthAuthorizeRequest(code)
+  if (!request) return { ok: false, reason: 'invalid_code' }
+  if (request.aiClientId !== aiClientId) return { ok: false, reason: 'ai_mismatch' }
+  if (request.expiresAt.getTime() <= Date.now()) return { ok: false, reason: 'expired' }
+  if (!request.approvedAt) return { ok: false, reason: 'not_approved' }
+  if (request.exchangeAt) return { ok: false, reason: 'already_exchanged' }
+
+  const exchangeAt = new Date()
+  const exchanged = await db
+    .update(skillsOauthAuthorizeCodes)
+    .set({ exchangeAt: sqlDate(exchangeAt) as any })
+    .where(
+      and(
+        eq(skillsOauthAuthorizeCodes.id, request.id),
+        isNull(skillsOauthAuthorizeCodes.exchangeAt),
+      ),
+    )
+    .returning({ id: skillsOauthAuthorizeCodes.id })
+
+  if (exchanged.length === 0) {
+    return { ok: false, reason: 'already_exchanged' }
+  }
+
+  const issued = await rotateSkillsOauthToken(ttlMs, aiClientId)
+  return { ok: true, token: issued.token, expiresAt: issued.expiresAt, aiClientId: issued.aiClientId }
 }
 
 export async function revokeAllSkillsOauthTokens(): Promise<void> {
@@ -235,6 +372,90 @@ export async function revokeAllSkillsOauthTokens(): Promise<void> {
     .update(skillsOauthTokens)
     .set({ revokedAt: now as any })
     .where(isNull(skillsOauthTokens.revokedAt))
+}
+
+export async function revokeSkillsOauthTokensByAiClientId(aiClientIdRaw: string): Promise<number> {
+  const aiClientId = normalizeAiClientId(aiClientIdRaw)
+  if (!aiClientId) return 0
+  const now = sqlTimestamp()
+  const revoked = await db
+    .update(skillsOauthTokens)
+    .set({ revokedAt: now as any })
+    .where(and(eq(skillsOauthTokens.aiClientId, aiClientId), isNull(skillsOauthTokens.revokedAt)))
+    .returning({ id: skillsOauthTokens.id })
+  return revoked.length
+}
+
+export async function listSkillsOauthAuthorizeSummary(): Promise<SkillsOauthAuthorizeSummaryRow[]> {
+  const now = Date.now()
+  const codes = await db
+    .select({
+      aiClientId: skillsOauthAuthorizeCodes.aiClientId,
+      expiresAt: skillsOauthAuthorizeCodes.expiresAt,
+      approvedAt: skillsOauthAuthorizeCodes.approvedAt,
+      exchangeAt: skillsOauthAuthorizeCodes.exchangeAt,
+    })
+    .from(skillsOauthAuthorizeCodes)
+
+  const tokens = await db
+    .select({
+      aiClientId: skillsOauthTokens.aiClientId,
+      expiresAt: skillsOauthTokens.expiresAt,
+      revokedAt: skillsOauthTokens.revokedAt,
+    })
+    .from(skillsOauthTokens)
+
+  const summaryMap = new Map<string, SkillsOauthAuthorizeSummaryRow>()
+  const getOrCreate = (aiClientId: string) => {
+    const existed = summaryMap.get(aiClientId)
+    if (existed) return existed
+    const created: SkillsOauthAuthorizeSummaryRow = {
+      aiClientId,
+      pendingCodeCount: 0,
+      approvedCodeCount: 0,
+      activeTokenCount: 0,
+      lastApprovedAt: null,
+      lastExchangedAt: null,
+    }
+    summaryMap.set(aiClientId, created)
+    return created
+  }
+  const setLatest = (current: string | null, value: Date | null): string | null => {
+    if (!value) return current
+    const iso = value.toISOString()
+    return !current || current < iso ? iso : current
+  }
+
+  for (const row of codes) {
+    const aiClientId = normalizeAiClientId(row.aiClientId)
+    if (!aiClientId) continue
+    const item = getOrCreate(aiClientId)
+    const expiresAt = new Date(row.expiresAt as any)
+    if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= now) continue
+    const approvedAt = row.approvedAt ? new Date(row.approvedAt as any) : null
+    const exchangeAt = row.exchangeAt ? new Date(row.exchangeAt as any) : null
+    if (exchangeAt) {
+      item.lastExchangedAt = setLatest(item.lastExchangedAt, exchangeAt)
+      continue
+    }
+    if (approvedAt) {
+      item.approvedCodeCount += 1
+      item.lastApprovedAt = setLatest(item.lastApprovedAt, approvedAt)
+    } else {
+      item.pendingCodeCount += 1
+    }
+  }
+
+  for (const row of tokens) {
+    const aiClientId = normalizeAiClientId(row.aiClientId)
+    if (!aiClientId) continue
+    const item = getOrCreate(aiClientId)
+    const expiresAt = new Date(row.expiresAt as any)
+    if (row.revokedAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= now) continue
+    item.activeTokenCount += 1
+  }
+
+  return Array.from(summaryMap.values()).sort((a, b) => a.aiClientId.localeCompare(b.aiClientId))
 }
 
 export async function clearSkillsApiKey(): Promise<void> {
@@ -351,6 +572,17 @@ export async function verifySkillsRequest(
     )
     .orderBy(desc(skillsOauthTokens.id))
   if (candidates.length === 0) {
+    const activeTokens = await db
+      .select({ tokenHash: skillsOauthTokens.tokenHash })
+      .from(skillsOauthTokens)
+      .where(and(gt(skillsOauthTokens.expiresAt, now as any), isNull(skillsOauthTokens.revokedAt)))
+      .orderBy(desc(skillsOauthTokens.id))
+      .limit(50)
+    for (const row of activeTokens) {
+      if (await bcrypt.compare(token, row.tokenHash)) {
+        return { ok: false, error: 'AI 标识与授权 token 不匹配，请携带签发时的 LLM-Skills-AI', status: 401 }
+      }
+    }
     return { ok: false, error: 'OAuth 授权不存在或已过期，请重新授权', status: 401 }
   }
   for (const row of candidates) {

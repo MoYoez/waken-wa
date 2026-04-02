@@ -24,6 +24,7 @@ function buildEndpoints(origin: string): LlmEndpoints {
     markdown: `${llmBase}/md`,
     settings: `${llmBase}/settings`,
     appsExport: `${llmBase}/activity/apps-export`,
+    oauthExchange: `${llmBase}/oauth/exchange`,
     legacyMcp: `${llmBase}/mcp`,
     legacyMcpApiKeyVerify: `${llmBase}/mcp/apikey`,
   }
@@ -104,6 +105,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   lines.push(`| \`GET ${endpoints.settings}\` | Read site settings |`)
   lines.push(`| \`PATCH ${endpoints.settings}\` | Update site settings |`)
   lines.push(`| \`GET ${endpoints.appsExport}\` | Export used activity apps |`)
+  lines.push(`| \`POST ${endpoints.oauthExchange}\` | Exchange OAuth code for key (TTL from admin settings) |`)
   lines.push(`| \`${endpoints.legacyMcp}\` | Legacy MCP fallback endpoint |`)
   lines.push(`| \`POST ${endpoints.legacyMcpApiKeyVerify}\` | Verify dedicated MCP API key |`)
   lines.push('')
@@ -154,17 +156,23 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   pushCodeLines(lines, [
     'LLM-Skills-Mode: oauth | apikey',
     'LLM-Skills-Token: YOUR_TOKEN',
-    'LLM-Skills-AI: YOUR_UNIQUE_AI_ID   # required in OAuth mode',
+    'LLM-Skills-AI: YOUR_UNIQUE_AI_ID   # required in OAuth mode, must be your own stable AI name',
     'LLM-Skills-Scope: feature | theme | content',
     'LLM-Skills-Request-Id: ANY_REQUEST_ID',
+  ])
+  pushBullets(lines, [
+    'In OAuth mode, the AI must choose and keep using its own stable name via `LLM-Skills-AI`',
+    'Do not use a shared/default/common name across multiple different AIs',
+    'The same AI name must be used consistently for authorize, exchange, and business requests',
   ])
 
   pushSection(lines, '### OAuth Procedure')
   pushNumbered(lines, [
-    `Call \`GET ${endpoints.direct}?mode=oauth&ai=YOUR_UNIQUE_AI_ID\``,
+    `Choose your own stable AI name first, then call \`GET ${endpoints.direct}?mode=oauth&ai=YOUR_UNIQUE_AI_ID\``,
     'Read the short-lived authorize link from the response',
     'Ask the user to open and confirm that authorize link',
-    'After confirmation, retry using the newly issued token',
+    `Call \`POST ${endpoints.oauthExchange}\` with headers: LLM-Skills-Mode, LLM-Skills-Token(code), LLM-Skills-AI`,
+    'Read the returned key (TTL follows admin setting), then use that key as LLM-Skills-Token for business calls',
     'Use `/api/llm/settings` or `/api/llm/activity/apps-export` only after auth succeeds',
   ])
 

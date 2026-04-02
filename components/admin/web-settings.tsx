@@ -581,6 +581,67 @@ interface SiteConfig {
   steamApiKey: string
 }
 
+type SkillsAiAuthorizationItem = {
+  aiClientId: string
+  pendingCodeCount: number
+  approvedCodeCount: number
+  activeTokenCount: number
+  lastApprovedAt: string | null
+  lastExchangedAt: string | null
+}
+
+type SkillsEditableConfig = {
+  enabled: boolean
+  authMode: 'oauth' | 'apikey' | ''
+  oauthTokenTtlMinutes: number
+}
+
+function normalizeSkillsAiAuthorizations(raw: unknown): SkillsAiAuthorizationItem[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((item) => {
+      const row = item as Record<string, unknown>
+      const aiClientId = String(row.aiClientId ?? '').trim().toLowerCase()
+      if (!aiClientId) return null
+      const normalizeCount = (value: unknown) =>
+        Number.isFinite(Number(value)) ? Math.max(0, Math.trunc(Number(value))) : 0
+      const normalizeTime = (value: unknown): string | null => {
+        const str = String(value ?? '').trim()
+        if (!str) return null
+        const date = new Date(str)
+        return Number.isNaN(date.getTime()) ? null : date.toISOString()
+      }
+      return {
+        aiClientId,
+        pendingCodeCount: normalizeCount(row.pendingCodeCount),
+        approvedCodeCount: normalizeCount(row.approvedCodeCount),
+        activeTokenCount: normalizeCount(row.activeTokenCount),
+        lastApprovedAt: normalizeTime(row.lastApprovedAt),
+        lastExchangedAt: normalizeTime(row.lastExchangedAt),
+      } satisfies SkillsAiAuthorizationItem
+    })
+    .filter((item): item is SkillsAiAuthorizationItem => item !== null)
+}
+
+function formatIsoDatetime(value: string | null): string {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleString()
+}
+
+function normalizeSkillsEditableConfig(raw: Partial<SkillsEditableConfig>): SkillsEditableConfig {
+  const authMode = raw.authMode === 'oauth' || raw.authMode === 'apikey' ? raw.authMode : ''
+  const oauthTokenTtlMinutes = Number.isFinite(Number(raw.oauthTokenTtlMinutes))
+    ? Math.min(1440, Math.max(5, Math.round(Number(raw.oauthTokenTtlMinutes))))
+    : 60
+  return {
+    enabled: raw.enabled === true,
+    authMode,
+    oauthTokenTtlMinutes,
+  }
+}
+
 export function WebSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -589,6 +650,11 @@ export function WebSettings() {
   const [skillsAuthMode, setSkillsAuthMode] = useState<'oauth' | 'apikey' | ''>('')
   const [skillsApiKeyConfigured, setSkillsApiKeyConfigured] = useState(false)
   const [skillsOauthConfigured, setSkillsOauthConfigured] = useState(false)
+  const [skillsOauthTokenTtlMinutes, setSkillsOauthTokenTtlMinutes] = useState(60)
+  const [skillsAiAuthorizations, setSkillsAiAuthorizations] = useState<SkillsAiAuthorizationItem[]>([])
+  const [skillsAiAuthDialogOpen, setSkillsAiAuthDialogOpen] = useState(false)
+  const [revokeDialogAiClientId, setRevokeDialogAiClientId] = useState('')
+  const [skillsRevokingAiClientId, setSkillsRevokingAiClientId] = useState('')
   const [skillsGeneratedApiKey, setSkillsGeneratedApiKey] = useState('')
   const [legacyMcpConfigured, setLegacyMcpConfigured] = useState(false)
   const [legacyMcpGeneratedApiKey, setLegacyMcpGeneratedApiKey] = useState('')
@@ -619,6 +685,7 @@ export function WebSettings() {
   >([])
 
   const [baselineForm, setBaselineForm] = useState<SiteConfig | null>(null)
+  const [baselineSkillsConfig, setBaselineSkillsConfig] = useState<SkillsEditableConfig | null>(null)
   /** Vercel + Redis: serverless forces activity-feed Redis cache on; switch is read-only. */
   const [redisCacheServerlessForced, setRedisCacheServerlessForced] = useState(false)
 
@@ -702,14 +769,21 @@ export function WebSettings() {
         ])
 
         if (skillsData?.success && skillsData?.data) {
-          setSkillsEnabled(skillsData.data.enabled === true)
-          setSkillsAuthMode(
-            skillsData.data.authMode === 'oauth' || skillsData.data.authMode === 'apikey'
-              ? skillsData.data.authMode
-              : '',
-          )
+          const loadedSkills = normalizeSkillsEditableConfig({
+            enabled: skillsData.data.enabled === true,
+            authMode:
+              skillsData.data.authMode === 'oauth' || skillsData.data.authMode === 'apikey'
+                ? skillsData.data.authMode
+                : '',
+            oauthTokenTtlMinutes: skillsData.data.oauthTokenTtlMinutes,
+          })
+          setSkillsEnabled(loadedSkills.enabled)
+          setSkillsAuthMode(loadedSkills.authMode)
           setSkillsApiKeyConfigured(skillsData.data.apiKeyConfigured === true)
           setSkillsOauthConfigured(skillsData.data.oauthConfigured === true)
+          setSkillsOauthTokenTtlMinutes(loadedSkills.oauthTokenTtlMinutes)
+          setBaselineSkillsConfig(structuredClone(loadedSkills))
+          setSkillsAiAuthorizations(normalizeSkillsAiAuthorizations(skillsData.data.aiAuthorizations))
           setSkillsGeneratedApiKey('')
           setLegacyMcpConfigured(skillsData.data.legacyMcpConfigured === true)
           setLegacyMcpGeneratedApiKey('')
@@ -857,6 +931,8 @@ export function WebSettings() {
       authMode?: 'oauth' | 'apikey'
       rotateApiKey?: boolean
       rotateLegacyMcpKey?: boolean
+      revokeOauthForAiClientId?: string
+      oauthTokenTtlMinutes?: number
     },
   ) => {
     setSkillsSaving(true)
@@ -877,6 +953,12 @@ export function WebSettings() {
       )
       setSkillsApiKeyConfigured(json.data?.apiKeyConfigured === true)
       setSkillsOauthConfigured(json.data?.oauthConfigured === true)
+      setSkillsOauthTokenTtlMinutes(
+        Number.isFinite(Number(json.data?.oauthTokenTtlMinutes))
+          ? Number(json.data.oauthTokenTtlMinutes)
+          : 60,
+      )
+      setSkillsAiAuthorizations(normalizeSkillsAiAuthorizations(json.data?.aiAuthorizations))
       setSkillsGeneratedApiKey(typeof json.data?.generatedApiKey === 'string' ? json.data.generatedApiKey : '')
       setLegacyMcpConfigured(json.data?.legacyMcpConfigured === true)
       setLegacyMcpGeneratedApiKey(
@@ -888,6 +970,19 @@ export function WebSettings() {
       toast.error('保存失败')
     } finally {
       setSkillsSaving(false)
+    }
+  }
+
+  const revokeSkillsOauthByAiClientId = async (aiClientId: string) => {
+    const normalized = String(aiClientId ?? '').trim().toLowerCase()
+    if (!normalized) return
+    setSkillsRevokingAiClientId(normalized)
+    try {
+      await saveSkillsConfig({ revokeOauthForAiClientId: normalized })
+      toast.success(`已撤销 AI ${normalized} 的 OAuth 授权`)
+    } finally {
+      setSkillsRevokingAiClientId('')
+      setRevokeDialogAiClientId('')
     }
   }
 
@@ -1064,6 +1159,43 @@ export function WebSettings() {
         toast.error(data?.error || '保存失败')
         return
       }
+      const skillsPatch = normalizeSkillsEditableConfig({
+        enabled: skillsEnabled,
+        authMode: skillsAuthMode,
+        oauthTokenTtlMinutes: skillsOauthTokenTtlMinutes,
+      })
+      const skillsRes = await fetch('/api/admin/skills', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: skillsPatch.enabled,
+          authMode: skillsPatch.authMode || undefined,
+          oauthTokenTtlMinutes: skillsPatch.oauthTokenTtlMinutes,
+        }),
+      })
+      const skillsJson = await skillsRes.json().catch(() => null)
+      if (!skillsRes.ok || !skillsJson?.success) {
+        toast.error(skillsJson?.error || 'Skills 设置保存失败，请重试')
+        return
+      }
+
+      const serverSkills = normalizeSkillsEditableConfig({
+        enabled: skillsJson.data?.enabled === true,
+        authMode:
+          skillsJson.data?.authMode === 'oauth' || skillsJson.data?.authMode === 'apikey'
+            ? skillsJson.data.authMode
+            : '',
+        oauthTokenTtlMinutes: skillsJson.data?.oauthTokenTtlMinutes,
+      })
+      setSkillsEnabled(serverSkills.enabled)
+      setSkillsAuthMode(serverSkills.authMode)
+      setSkillsOauthTokenTtlMinutes(serverSkills.oauthTokenTtlMinutes)
+      setSkillsApiKeyConfigured(skillsJson.data?.apiKeyConfigured === true)
+      setSkillsOauthConfigured(skillsJson.data?.oauthConfigured === true)
+      setLegacyMcpConfigured(skillsJson.data?.legacyMcpConfigured === true)
+      setSkillsAiAuthorizations(normalizeSkillsAiAuthorizations(skillsJson.data?.aiAuthorizations))
+      setBaselineSkillsConfig(structuredClone(serverSkills))
+
       toast.success('保存成功，主页刷新后生效')
       setRedisCacheServerlessForced(data?.data?.redisCacheServerlessForced === true)
       const nextForm =
@@ -1082,6 +1214,11 @@ export function WebSettings() {
   const revertUnsavedWebSettings = () => {
     if (!baselineForm) return
     setForm(structuredClone(baselineForm))
+    if (baselineSkillsConfig) {
+      setSkillsEnabled(baselineSkillsConfig.enabled)
+      setSkillsAuthMode(baselineSkillsConfig.authMode)
+      setSkillsOauthTokenTtlMinutes(baselineSkillsConfig.oauthTokenTtlMinutes)
+    }
   }
 
   const copyExportConfig = async () => {
@@ -1252,13 +1389,27 @@ export function WebSettings() {
   const msStart = msPage * SETTINGS_APP_LIST_PAGE_SIZE
 
   const webSettingsDirty = useMemo(() => {
-    if (!baselineForm) return false
+    if (!baselineForm || !baselineSkillsConfig) return false
     try {
-      return JSON.stringify(form) !== JSON.stringify(baselineForm)
+      const formDirty = JSON.stringify(form) !== JSON.stringify(baselineForm)
+      if (formDirty) return true
+      const currentSkills = normalizeSkillsEditableConfig({
+        enabled: skillsEnabled,
+        authMode: skillsAuthMode,
+        oauthTokenTtlMinutes: skillsOauthTokenTtlMinutes,
+      })
+      return JSON.stringify(currentSkills) !== JSON.stringify(baselineSkillsConfig)
     } catch {
       return true
     }
-  }, [form, baselineForm])
+  }, [
+    form,
+    baselineForm,
+    baselineSkillsConfig,
+    skillsEnabled,
+    skillsAuthMode,
+    skillsOauthTokenTtlMinutes,
+  ])
 
   if (loading) {
     return <div className="text-sm text-muted-foreground">加载配置中...</div>
@@ -1421,9 +1572,7 @@ export function WebSettings() {
           </div>
           <Switch
             checked={skillsEnabled}
-            onCheckedChange={(v) => {
-              void saveSkillsConfig({ enabled: Boolean(v) })
-            }}
+            onCheckedChange={(v) => setSkillsEnabled(Boolean(v))}
             disabled={skillsSaving}
             className="shrink-0"
           />
@@ -1468,7 +1617,7 @@ export function WebSettings() {
                   value={skillsAuthMode || ''}
                   onValueChange={(v) => {
                     const mode = v === 'oauth' || v === 'apikey' ? v : ''
-                    if (mode) void saveSkillsConfig({ authMode: mode })
+                    setSkillsAuthMode(mode)
                   }}
                   disabled={skillsSaving}
                 >
@@ -1476,7 +1625,7 @@ export function WebSettings() {
                     <SelectValue placeholder="选择 OAuth / APIKEY" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="oauth">OAuth 授权链接（默认 1 小时）</SelectItem>
+                    <SelectItem value="oauth">OAuth 授权链接（有效期可配置）</SelectItem>
                     <SelectItem value="apikey">APIKEY 认证（默认无限）</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1528,6 +1677,38 @@ export function WebSettings() {
               </div>
             ) : null}
 
+            {skillsAuthMode === 'oauth' ? (
+              <div className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <Label className="text-sm font-normal">OAuth Key 有效期</Label>
+                    <p className="text-xs text-muted-foreground">
+                      code 兑换后的 key 有效期（分钟）。范围 5-1440。
+                    </p>
+                  </div>
+                </div>
+                <div className="max-w-xs space-y-2">
+                  <Input
+                    type="number"
+                    min={5}
+                    max={1440}
+                    step={1}
+                    value={skillsOauthTokenTtlMinutes}
+                    onChange={(e) =>
+                      setSkillsOauthTokenTtlMinutes(
+                        Math.min(1440, Math.max(5, Math.round(Number(e.target.value) || 60))),
+                      )
+                    }
+                    onWheel={(e) => e.currentTarget.blur()}
+                    disabled={skillsSaving}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    当前设置：{skillsOauthTokenTtlMinutes} 分钟
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             {skillsAuthMode ? (
               <div className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3">
                 <Label className="text-xs">固定技能说明（完整链接）</Label>
@@ -1553,7 +1734,7 @@ export function WebSettings() {
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  AI 必须先读取该文档，再决定走 OAuth 还是 APIKEY。
+                  AI 必须先读取该文档；如使用 OAuth，必须声明并持续使用一个自己的固定 AI 名字。
                 </p>
 
                 <Label className="text-xs">Skills 直连链接（验证/指引）</Label>
@@ -1561,14 +1742,14 @@ export function WebSettings() {
                   该链接用于验证 token 是否可用，并返回 AI 需要的{' '}
                   <code className="rounded bg-muted px-1">LLM-Skills-*</code> 请求头模板。
                   APIKEY 模式请在请求头填写 <code className="rounded bg-muted px-1">LLM-Skills-Token</code>；
-                  OAuth 模式由 AI 生成授权链接给用户确认后获取 token。
+                  OAuth 模式必须先确定一个自己的固定 AI 名字，再由 AI 自己携带该名字请求；这里不预填 AI 名字。
                 </p>
                 <div className="flex gap-2">
                   <Input
                     value={
                       publicOrigin
-                        ? `${publicOrigin}/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID`
-                        : `/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID`
+                        ? `${publicOrigin}/api/llm/direct?mode=${skillsAuthMode}`
+                        : `/api/llm/direct?mode=${skillsAuthMode}`
                     }
                     readOnly
                     className="font-mono text-xs"
@@ -1581,8 +1762,8 @@ export function WebSettings() {
                     onClick={() =>
                       void copyPlainText(
                         publicOrigin
-                          ? `${publicOrigin}/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID`
-                          : `/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID`,
+                          ? `${publicOrigin}/api/llm/direct?mode=${skillsAuthMode}`
+                          : `/api/llm/direct?mode=${skillsAuthMode}`,
                         '已复制 Skills 直连链接',
                       )
                     }
@@ -1590,6 +1771,116 @@ export function WebSettings() {
                     一键复制
                   </Button>
                 </div>
+              </div>
+            ) : null}
+
+            {skillsAuthMode === 'oauth' ? (
+              <div className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <Label className="text-xs">AI 授权情况</Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      按 AI 标识展示；仅显示脱敏状态，不显示 code/key 明文。
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSkillsAiAuthDialogOpen(true)}
+                  >
+                    查看授权情况
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  当前记录数：{skillsAiAuthorizations.length}（点击「查看授权情况」在弹窗中管理）
+                </p>
+                <Dialog open={skillsAiAuthDialogOpen} onOpenChange={setSkillsAiAuthDialogOpen}>
+                  <DialogContent className="sm:max-w-3xl">
+                    <DialogHeader>
+                      <DialogTitle>AI 授权情况</DialogTitle>
+                      <DialogDescription>
+                        按 AI 标识查看授权统计与有效 token，可在此执行按 AI 撤销授权。
+                      </DialogDescription>
+                    </DialogHeader>
+                    {skillsAiAuthorizations.length > 0 ? (
+                      <div className="max-h-[60vh] overflow-auto space-y-2 pr-1">
+                        {skillsAiAuthorizations.map((item) => (
+                          <div
+                            key={item.aiClientId}
+                            className="rounded-md border border-border/60 bg-muted/20 px-3 py-3 space-y-2"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <code className="text-xs rounded bg-muted px-1.5 py-0.5">{item.aiClientId}</code>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={skillsSaving || skillsRevokingAiClientId === item.aiClientId}
+                                onClick={() => setRevokeDialogAiClientId(item.aiClientId)}
+                              >
+                                {skillsRevokingAiClientId === item.aiClientId ? '撤销中…' : '撤销该 AI 授权'}
+                              </Button>
+                            </div>
+                            <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                              <span>待确认 code：{item.pendingCodeCount}</span>
+                              <span>已确认未兑换 code：{item.approvedCodeCount}</span>
+                              <span>有效 token：{item.activeTokenCount}</span>
+                            </div>
+                            <div className="grid gap-2 text-[11px] text-muted-foreground sm:grid-cols-2">
+                              <span>最近确认：{formatIsoDatetime(item.lastApprovedAt)}</span>
+                              <span>最近兑换：{formatIsoDatetime(item.lastExchangedAt)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">暂无 AI 授权记录</p>
+                    )}
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setSkillsAiAuthDialogOpen(false)}>
+                        关闭
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Dialog
+                  open={Boolean(revokeDialogAiClientId)}
+                  onOpenChange={(open) => {
+                    if (!open) setRevokeDialogAiClientId('')
+                  }}
+                >
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>确认撤销 AI OAuth 授权</DialogTitle>
+                      <DialogDescription>
+                        将撤销该 AI 标识下所有仍有效的 OAuth token。此操作会立即生效。
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs">
+                      AI 标识：<code>{revokeDialogAiClientId || '—'}</code>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setRevokeDialogAiClientId('')}
+                        disabled={skillsSaving || Boolean(skillsRevokingAiClientId)}
+                      >
+                        取消
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => void revokeSkillsOauthByAiClientId(revokeDialogAiClientId)}
+                        disabled={
+                          !revokeDialogAiClientId || skillsSaving || Boolean(skillsRevokingAiClientId)
+                        }
+                      >
+                        确认撤销
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             ) : null}
           </div>
@@ -2165,6 +2456,7 @@ export function WebSettings() {
               Number(e.target.value || REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS),
             )
           }
+          onWheel={(e) => e.currentTarget.blur()}
         />
         <p className="text-xs text-muted-foreground">
           聚合活动流（含数据库活动）在 Redis 中的缓存秒数。默认 3600（1 小时）；更短更实时，更长更省读库。
@@ -2250,6 +2542,7 @@ export function WebSettings() {
               Number(e.target.value || SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES),
             )
           }
+          onWheel={(e) => e.currentTarget.blur()}
         />
       </div>
       <div className="space-y-2">
@@ -2265,6 +2558,7 @@ export function WebSettings() {
               Number(e.target.value || SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS),
             )
           }
+          onWheel={(e) => e.currentTarget.blur()}
         />
         <p className="text-xs text-muted-foreground">
           超过该时长仍未收到该进程新活动时，将自动判定为已结束。默认{' '}

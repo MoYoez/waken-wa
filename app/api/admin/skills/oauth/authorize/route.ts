@@ -4,8 +4,8 @@ import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { readJsonObject } from '@/lib/request-json'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
+  approveSkillsOauthAuthorizeCode,
   getSkillsOauthAuthorizeRequest,
-  rotateSkillsOauthToken,
 } from '@/lib/skills-auth'
 
 export const dynamic = 'force-dynamic'
@@ -46,18 +46,42 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     )
   }
+  if (authorizeRequest.expiresAt.getTime() <= Date.now()) {
+    return NextResponse.json(
+      { success: false, error: '授权链接已过期，请重新从 AI 获取授权链接' },
+      { status: 400 },
+    )
+  }
+  if (authorizeRequest.exchangeAt) {
+    return NextResponse.json(
+      { success: false, error: '该授权码已兑换，请让 AI 重新申请新的授权链接' },
+      { status: 400 },
+    )
+  }
 
-  const { token, expiresAt, aiClientId } = await rotateSkillsOauthToken(
-    60 * 60_000,
-    authorizeRequest.aiClientId,
+  const approved = await approveSkillsOauthAuthorizeCode(
+    authorizeCode,
+    Number((session as any)?.userId ?? 0),
   )
+  if (!approved) {
+    return NextResponse.json(
+      { success: false, error: '授权确认失败，请刷新后重试' },
+      { status: 400 },
+    )
+  }
+
   return NextResponse.json({
     success: true,
     data: {
-      token,
-      aiClientId,
-      expiresAt: expiresAt.toISOString(),
+      approved: true,
+      aiClientId: approved.aiClientId,
+      approvedAt: approved.approvedAt.toISOString(),
+      expiresAt: approved.expiresAt.toISOString(),
       headerPrefix: 'LLM-Skills-',
+      guide: {
+        nextStep: 'ai_exchange_code_for_key',
+        exchangePath: '/api/llm/oauth/exchange',
+      },
     },
   })
 }

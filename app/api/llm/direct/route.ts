@@ -38,6 +38,7 @@ function buildEndpoints(origin: string): LlmEndpoints {
     markdown: `${llmBaseUrl}/md`,
     settings: `${llmBaseUrl}/settings`,
     appsExport: `${llmBaseUrl}/activity/apps-export`,
+    oauthExchange: `${llmBaseUrl}/oauth/exchange`,
     legacyMcp: `${llmBaseUrl}/mcp`,
     legacyMcpApiKeyVerify: `${llmBaseUrl}/mcp/apikey`,
   }
@@ -198,7 +199,25 @@ export async function GET(request: NextRequest) {
   }
 
   const mode = (modeFromInput ?? configuredMode) as SkillsMode
-  const effectiveAi = mode === 'oauth' ? (ai || 'waken-wa-default-ai') : ai
+  const effectiveAi = mode === 'oauth' ? ai : ai
+  if (mode === 'oauth' && !effectiveAi) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'OAuth 模式必须携带 AI 标识（LLM-Skills-AI 或 ai 参数），并使用你自己的固定 AI 名字',
+        finalUrl,
+        preferredToolMode,
+        endpoints,
+        guide: {
+          nextStep: 'provide_ai_tag',
+          requiredHeader: 'LLM-Skills-AI',
+          requiredQuery: 'ai',
+          rule: 'use_your_own_stable_ai_name',
+        },
+      },
+      { status: 400 },
+    )
+  }
 
   if (!token) {
     const authorizeCode =
@@ -223,6 +242,10 @@ export async function GET(request: NextRequest) {
             mode === 'oauth'
               ? ['LLM-Skills-Mode', 'LLM-Skills-Token', 'LLM-Skills-AI', 'LLM-Skills-Scope']
               : ['LLM-Skills-Mode', 'LLM-Skills-Token', 'LLM-Skills-Scope'],
+          aiRule:
+            mode === 'oauth'
+              ? 'LLM-Skills-AI must be your own stable AI name and must stay the same across authorize, exchange, and business calls.'
+              : null,
           legacyMcp: {
             url: endpoints.legacyMcp,
             auth: 'apikey',
@@ -235,6 +258,11 @@ export async function GET(request: NextRequest) {
           nextStep: mode === 'oauth' ? 'click_authorize_link' : 'provide_apikey',
           detectedMode: mode,
           authorizeLink,
+          exchangeUrl: mode === 'oauth' ? endpoints.oauthExchange : null,
+          flow:
+            mode === 'oauth'
+              ? ['open_authorize_link', 'confirm_authorize_on_page', 'exchange_code_for_key']
+              : ['provide_apikey'],
           finalUrl,
         },
       },
@@ -253,7 +281,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'LLM-Skills-Mode': mode,
         'LLM-Skills-Token': 'YOUR_TOKEN',
-        'LLM-Skills-AI': effectiveAi || 'YOUR_UNIQUE_AI_ID',
+        'LLM-Skills-AI': effectiveAi || 'YOUR_OWN_STABLE_AI_NAME',
         'LLM-Skills-Scope': scope,
         'LLM-Skills-Request-Id': 'ANY_REQUEST_ID',
       },
@@ -268,6 +296,7 @@ export async function GET(request: NextRequest) {
       guide: {
         detectModeBy: `GET ${endpoints.direct}`,
         useMarkdownAt: endpoints.markdown,
+        exchangeOauthCodeAt: endpoints.oauthExchange,
         useSettingsAt: endpoints.settings,
         useAppsExportAt: endpoints.appsExport,
         useLegacyMcpAt: endpoints.legacyMcp,

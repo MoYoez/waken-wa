@@ -14,6 +14,9 @@ export const siteConfig = usePg ? pg.siteConfig : sqlite.siteConfig
 export const activityAppHistory = usePg ? pg.activityAppHistory : sqlite.activityAppHistory
 export const systemSecrets = usePg ? pg.systemSecrets : sqlite.systemSecrets
 export const skillsOauthTokens = usePg ? pg.skillsOauthTokens : sqlite.skillsOauthTokens
+export const skillsOauthAuthorizeCodes = usePg
+  ? pg.skillsOauthAuthorizeCodes
+  : sqlite.skillsOauthAuthorizeCodes
 export const rateLimitBackups = usePg ? pg.rateLimitBackups : sqlite.rateLimitBackups
 export const inspirationEntries = usePg ? pg.inspirationEntries : sqlite.inspirationEntries
 export const inspirationAssets = usePg ? pg.inspirationAssets : sqlite.inspirationAssets
