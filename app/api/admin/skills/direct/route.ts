@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         guide: {
           nextStep: mode === 'oauth' ? 'click_authorize_link' : 'rotate_apikey',
           authorizeLinkPath: '/admin/skills-authorize',
-          authorizeLinkTemplate: '/admin/skills-authorize?ai=<unique-ai-id>',
+          authorizeLinkTemplate: '/admin/skills-authorize?ai=YOUR_UNIQUE_AI_ID',
         },
       },
       { status: 401 },
@@ -82,11 +82,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: '缺少 ai 标识。请使用唯一 AI 标识访问，例如 /admin/skills-authorize?ai=<id>',
+          error: '缺少 ai 标识。请使用唯一 AI 标识访问，例如 /admin/skills-authorize?ai=YOUR_AI_ID',
           guide: {
             nextStep: 'click_authorize_link',
             authorizeLinkPath: '/admin/skills-authorize',
-            authorizeLinkTemplate: '/admin/skills-authorize?ai=<unique-ai-id>',
+            authorizeLinkTemplate: '/admin/skills-authorize?ai=YOUR_UNIQUE_AI_ID',
           },
         },
         { status: 401 },
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
           guide: {
             nextStep: 'click_authorize_link',
             authorizeLinkPath: '/admin/skills-authorize',
-            authorizeLinkTemplate: '/admin/skills-authorize?ai=<unique-ai-id>',
+            authorizeLinkTemplate: '/admin/skills-authorize?ai=YOUR_UNIQUE_AI_ID',
           },
         },
         { status: 401 },
@@ -158,13 +158,13 @@ export async function GET(request: NextRequest) {
       skillsMdPath: '/api/admin/skills/md',
       headers: {
         'LLM-Skills-Mode': mode,
-        'LLM-Skills-Token': '<your-token>',
-        'LLM-Skills-AI': '<unique-ai-id>',
+        'LLM-Skills-Token': 'YOUR_TOKEN',
+        'LLM-Skills-AI': 'YOUR_UNIQUE_AI_ID',
         'LLM-Skills-Scope': scope,
-        'LLM-Skills-Request-Id': '<uuid-or-any-id>',
+        'LLM-Skills-Request-Id': 'ANY_REQUEST_ID',
       },
       noteForAi:
-        '固定先读取 /api/admin/skills/md。若用户未配置 Skills：让用户去后台 Web 配置 → 进阶设置，启用“允许AI使用Skills辅助调试修改”，选择 OAuth 或 APIKEY。OAuth 模式由 AI 发 /admin/skills-authorize?ai=<unique-ai-id> 链接，用户确认同意后才签发该 AI 的 1 小时 token（可并存多 token）；APIKEY 模式在后台生成/轮换 Key 后提供给 AI（无需二次确认）。',
+        '固定先读取 /api/admin/skills/md。若用户未配置 Skills：让用户去后台 Web 配置 → 进阶设置，启用“允许AI使用Skills辅助调试修改”，选择 OAuth 或 APIKEY。OAuth 模式由 AI 发 /admin/skills-authorize?ai=YOUR_AI_ID 链接，用户确认同意后才签发该 AI 的 1 小时 token（可并存多 token）；APIKEY 模式在后台生成/轮换 Key 后提供给 AI（无需二次确认）。',
     },
   })
 }

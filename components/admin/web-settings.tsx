@@ -1468,24 +1468,6 @@ export function WebSettings() {
           </div>
         ) : null}
 
-        {skillsEnabled && skillsAuthMode === 'oauth' ? (
-          <div className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3">
-            <Label className="text-sm font-normal">OAuth 授权链接</Label>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              该链接必须携带唯一 AI 标识参数：<code className="rounded bg-muted px-1">?ai=...</code>。AI 发给你后，打开会先弹窗确认；同意后才会签发该 AI 的 token（默认 1 小时，支持同一 AI 多 token 并存）。
-            </p>
-            <Input
-              value={
-                publicOrigin
-                  ? `${publicOrigin}/admin/skills-authorize?ai=<unique-ai-id>`
-                  : '/admin/skills-authorize?ai=<unique-ai-id>'
-              }
-              readOnly
-              className="font-mono text-xs"
-            />
-          </div>
-        ) : null}
-
         {skillsEnabled && skillsAuthMode ? (
           <div className="space-y-2 rounded-md border border-border/60 bg-muted/20 px-3 py-3">
             <Label className="text-xs">第一步：固定技能说明（完整链接）</Label>

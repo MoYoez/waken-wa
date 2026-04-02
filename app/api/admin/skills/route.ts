@@ -44,7 +44,7 @@ export async function GET() {
       oauthConfigured: await hasSkillsOauthTokenConfigured(),
       directLinkPath: '/api/admin/skills/direct',
       authorizeLinkPath: '/admin/skills-authorize',
-      authorizeLinkTemplate: '/admin/skills-authorize?ai=<unique-ai-id>',
+      authorizeLinkTemplate: '/admin/skills-authorize?ai=YOUR_UNIQUE_AI_ID',
       oauthAiScoped: true,
       oauthMultiToken: true,
       headerPrefix: 'LLM-Skills-',

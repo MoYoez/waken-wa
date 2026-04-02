@@ -69,7 +69,7 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
 LLM-Skills-Token: ${token}
 LLM-Skills-AI: ${aiClientId}
 LLM-Skills-Scope: theme
-LLM-Skills-Request-Id: <any-id>`}</pre>
+LLM-Skills-Request-Id: ANY_REQUEST_ID`}</pre>
           </div>
 
           <p className="text-xs text-muted-foreground">
