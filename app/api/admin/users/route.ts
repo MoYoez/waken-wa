@@ -1,19 +1,16 @@
 import { desc } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getSession, hashPassword, validatePasswordStrength } from '@/lib/auth'
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
+import { hashPassword, validatePasswordStrength } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { adminUsers } from '@/lib/drizzle-schema'
-
-async function requireAdmin() {
-  const session = await getSession()
-  return session ?? null
-}
+import { readJsonObject } from '@/lib/request-json'
 
 export async function GET() {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   const users = await db
@@ -28,13 +25,13 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
-    const { username, password } = await request.json()
+    const { username, password } = await readJsonObject(request)
     const name = String(username ?? '').trim()
     const rawPassword = String(password ?? '')
     if (!name || !rawPassword) {

@@ -8,7 +8,7 @@ import {
   ADMIN_LIST_DEFAULT_PAGE_SIZE,
   ADMIN_LIST_MAX_PAGE_SIZE,
 } from '@/lib/admin-list-constants'
-import { getSession } from '@/lib/auth'
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { db } from '@/lib/db'
 import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
 import {
@@ -17,16 +17,13 @@ import {
   WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY,
 } from '@/lib/device-constants'
 import { apiTokens, devices } from '@/lib/drizzle-schema'
+import { parsePaginationParams } from '@/lib/pagination'
 import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
+import { readJsonObject } from '@/lib/request-json'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-async function requireAdmin() {
-  const session = await getSession()
-  return session ?? null
-}
 
 function generateHashKey(seed = ''): string {
   const raw = `${seed}:${Date.now()}:${randomBytes(24).toString('hex')}`
@@ -34,18 +31,17 @@ function generateHashKey(seed = ''): string {
 }
 
 export async function GET(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
     const { searchParams } = new URL(request.url)
-    const limit = Math.min(
-      parseInt(searchParams.get('limit') || String(ADMIN_LIST_DEFAULT_PAGE_SIZE), 10),
-      ADMIN_LIST_MAX_PAGE_SIZE,
-    )
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const { limit, offset } = parsePaginationParams(searchParams, {
+      defaultLimit: ADMIN_LIST_DEFAULT_PAGE_SIZE,
+      maxLimit: ADMIN_LIST_MAX_PAGE_SIZE,
+    })
     const status = String(searchParams.get('status') ?? '').trim()
     const q = String(searchParams.get('q') ?? '').trim()
 
@@ -113,13 +109,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
-    const body = await request.json()
+    const body = await readJsonObject(request)
     const displayName = String(body?.displayName ?? '').trim()
     const apiTokenIdRaw = body?.apiTokenId
     const apiTokenId =
@@ -203,13 +199,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
-    const body = await request.json()
+    const body = await readJsonObject(request)
     const id = Number(body?.id)
     if (!Number.isFinite(id) || id <= 0) {
       return NextResponse.json({ success: false, error: '缺少有效的 id' }, { status: 400 })
@@ -266,9 +262,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {

@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getSession } from '@/lib/auth'
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
+import { readJsonObject } from '@/lib/request-json'
 import {
   clearSkillsApiKey,
   hasLegacyMcpApiKeyConfigured,
@@ -19,11 +20,6 @@ import { clearSiteConfigCaches, getSiteConfigMemoryFirst } from '@/lib/site-conf
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-async function requireAdmin() {
-  const session = await getSession()
-  return session ?? null
-}
-
 function normalizeAuthMode(raw: unknown): 'oauth' | 'apikey' | null {
   const v = String(raw ?? '').trim().toLowerCase()
   if (v === 'oauth') return 'oauth'
@@ -32,9 +28,9 @@ function normalizeAuthMode(raw: unknown): 'oauth' | 'apikey' | null {
 }
 
 export async function GET() {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   const cfg = await getSiteConfigMemoryFirst()
@@ -64,13 +60,13 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
-    const body = await request.json().catch(() => ({}))
+    const body = await readJsonObject(request)
     const enableInBody = body.enabled !== undefined && body.enabled !== null
     const enabled = enableInBody ? Boolean(body.enabled) : undefined
 

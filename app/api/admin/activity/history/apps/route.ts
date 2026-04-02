@@ -2,28 +2,28 @@ import { and, desc, like } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { flushPendingReportedAppHistory } from '@/lib/activity-app-history'
-import { getSession } from '@/lib/auth'
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
+import {
+  ADMIN_LIST_DEFAULT_PAGE_SIZE,
+  ADMIN_LIST_MAX_PAGE_SIZE,
+} from '@/lib/admin-list-constants'
 import { db } from '@/lib/db'
 import { activityAppHistory } from '@/lib/drizzle-schema'
-
-async function requireAdmin() {
-  const session = await getSession()
-  return session ?? null
-}
+import { parsePaginationParams } from '@/lib/pagination'
 
 export async function GET(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
     const { searchParams } = new URL(request.url)
     const qRaw = String(searchParams.get('q') ?? '').trim()
-    const limitRaw = Number(searchParams.get('limit') ?? 50)
-    const offsetRaw = Number(searchParams.get('offset') ?? 0)
-    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(200, Math.round(limitRaw))) : 50
-    const offset = Number.isFinite(offsetRaw) ? Math.max(0, Math.round(offsetRaw)) : 0
+    const { limit, offset } = parsePaginationParams(searchParams, {
+      defaultLimit: ADMIN_LIST_DEFAULT_PAGE_SIZE,
+      maxLimit: Math.max(ADMIN_LIST_MAX_PAGE_SIZE, 200),
+    })
 
     // Best-effort flush so picker sees recent items.
     try {

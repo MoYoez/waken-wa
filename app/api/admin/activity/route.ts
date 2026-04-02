@@ -1,17 +1,12 @@
 import { and, eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
-import {
-  ACTIVITY_METADATA_MAX_JSON_LENGTH,
-  ACTIVITY_METADATA_MAX_KEYS,
-  DEVICE_BATTERY_PERCENT_MAX,
-  DEVICE_BATTERY_PERCENT_MIN,
-} from '@/lib/activity-api-constants'
 import { recordReportedAppHistory } from '@/lib/activity-app-history'
 import {
-  DEVICE_BATTERY_CHARGING_METADATA_KEY,
-  parseIsChargingFromBody,
-} from '@/lib/activity-battery-metadata'
+  ADMIN_ACTIVITY_RESERVED_METADATA_KEYS,
+  parseActivityReportBody,
+  parseAdminPersistSeconds,
+} from '@/lib/activity-report-parser'
 import {
   clearActivityFeedDataCache,
 } from '@/lib/activity-feed'
@@ -22,7 +17,7 @@ import {
   USER_ACTIVITY_DB_SYNCED_METADATA_KEY,
   USER_PERSIST_EXPIRES_AT_METADATA_KEY,
 } from '@/lib/activity-store'
-import { getSession } from '@/lib/auth'
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { db } from '@/lib/db'
 import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
 import {
@@ -35,121 +30,40 @@ import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { toDbJsonValue } from '@/lib/sqlite-json'
 import { parseProcessStaleSeconds } from '@/lib/site-config-constants'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
-import { USER_ACTIVITY_PERSIST_MAX_SEC, USER_ACTIVITY_PERSIST_MIN_SEC } from '@/lib/user-activity-persist'
 
 // Force dynamic rendering; disable caching
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-async function requireAdmin() {
-  const session = await getSession()
-  if (!session) return null
-  return session
-}
-
 /** POST: admin manual activity (writes activity-store like public report). */
 export async function POST(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
     const body = await request.json()
-    const generatedHashKeyRaw = body?.generatedHashKey
-    const deviceRaw = body?.device
-    const processNameRaw = body?.process_name
-    const processTitleRaw = body?.process_title
-    const batteryRaw = body?.battery_level ?? body?.device_battery
-    const deviceTypeRaw = body?.device_type
-    const pushModeRaw = body?.push_mode
-    const metadataRaw = body?.metadata
-    const persistMinutesRaw = body?.persist_minutes ?? body?.persistMinutes
-
-    const generatedHashKey =
-      typeof generatedHashKeyRaw === 'string'
-        ? generatedHashKeyRaw.trim()
-        : ''
-    const device =
-      typeof deviceRaw === 'string'
-        ? deviceRaw.trim()
-        : 'Unknown Device'
-    const process_name =
-      typeof processNameRaw === 'string'
-        ? processNameRaw.trim()
-        : ''
-    const process_title =
-      typeof processTitleRaw === 'string'
-        ? processTitleRaw.trim()
-        : null
-
-    let metadata: Record<string, unknown> | null = null
-    if (metadataRaw && typeof metadataRaw === 'object' && !Array.isArray(metadataRaw)) {
-      metadata = { ...(metadataRaw as Record<string, unknown>) }
-      delete metadata[ADMIN_PERSIST_SECONDS_METADATA_KEY]
-      delete metadata[USER_PERSIST_EXPIRES_AT_METADATA_KEY]
-      delete metadata[USER_ACTIVITY_DB_SYNCED_METADATA_KEY]
-      const metaKeys = Object.keys(metadata)
-      if (
-        metaKeys.length > ACTIVITY_METADATA_MAX_KEYS ||
-        JSON.stringify(metadata).length > ACTIVITY_METADATA_MAX_JSON_LENGTH
-      ) {
-        return NextResponse.json(
-          { success: false, error: 'metadata 数据过大' },
-          { status: 400 },
-        )
-      }
-    }
-    if (typeof batteryRaw === 'number' && Number.isFinite(batteryRaw)) {
-      const batteryLevel = Math.min(
-        Math.max(Math.round(batteryRaw), DEVICE_BATTERY_PERCENT_MIN),
-        DEVICE_BATTERY_PERCENT_MAX,
-      )
-      metadata = {
-        ...(metadata || {}),
-        deviceBatteryPercent: batteryLevel,
-      }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ success: false, error: '请求体格式无效' }, { status: 400 })
     }
 
-    const isCharging = parseIsChargingFromBody(body)
-    if (isCharging !== undefined) {
-      metadata = {
-        ...(metadata || {}),
-        [DEVICE_BATTERY_CHARGING_METADATA_KEY]: isCharging,
-      }
+    const parsedBody = parseActivityReportBody(body as Record<string, unknown>, {
+      stripMetadataKeysBeforeValidate: ADMIN_ACTIVITY_RESERVED_METADATA_KEYS,
+    })
+    if (!parsedBody.ok) {
+      return NextResponse.json({ success: false, error: parsedBody.error }, { status: parsedBody.status })
     }
 
-    if (typeof deviceTypeRaw === 'string') {
-      const normalizedType = deviceTypeRaw.trim().toLowerCase()
-      if (normalizedType === 'mobile' || normalizedType === 'tablet' || normalizedType === 'desktop') {
-        metadata = {
-          ...(metadata || {}),
-          deviceType: normalizedType,
-        }
-      }
-    }
+    const {
+      generatedHashKey,
+      device,
+      processName: process_name,
+      processTitle: process_title,
+      metadata,
+    } = parsedBody.data
+    const adminPersistSeconds = parseAdminPersistSeconds(body as Record<string, unknown>)
 
-    if (typeof pushModeRaw === 'string') {
-      const normalizedMode = pushModeRaw.trim().toLowerCase()
-      if (normalizedMode === 'realtime' || normalizedMode === 'active' || normalizedMode === 'persistent') {
-        metadata = {
-          ...(metadata || {}),
-          pushMode: normalizedMode === 'persistent' ? 'active' : normalizedMode,
-        }
-      }
-    }
-
-    let adminPersistSeconds: number | undefined
-    if (persistMinutesRaw !== undefined && persistMinutesRaw !== null) {
-      const mins = Number(persistMinutesRaw)
-      if (Number.isFinite(mins) && mins > 0) {
-        const sec = Math.round(mins * 60)
-        adminPersistSeconds = Math.min(
-          Math.max(sec, USER_ACTIVITY_PERSIST_MIN_SEC),
-          USER_ACTIVITY_PERSIST_MAX_SEC,
-        )
-      }
-    }
     const siteCfg = await getSiteConfigMemoryFirst()
     const realtimeTtlSeconds = parseProcessStaleSeconds(siteCfg?.processStaleSeconds)
     let finalMetadata = metadata

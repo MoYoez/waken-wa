@@ -1,17 +1,12 @@
 import { NextResponse } from 'next/server'
 
 import { exportActivityAppsSnapshot } from '@/lib/activity-app-export'
-import { getSession } from '@/lib/auth'
-
-async function requireAdmin() {
-  const session = await getSession()
-  return session ?? null
-}
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 
 export async function GET() {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {

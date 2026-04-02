@@ -17,6 +17,7 @@ import {
   lexicalTextContent,
   normalizeLexicalJsonString,
 } from '@/lib/inspiration-lexical'
+import { parsePaginationParams } from '@/lib/pagination'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { normalizeTimezone } from '@/lib/timezone'
 
@@ -64,11 +65,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const limit = Math.min(
-      parseInt(searchParams.get('limit') || String(ADMIN_LIST_DEFAULT_PAGE_SIZE), 10),
-      ADMIN_LIST_MAX_PAGE_SIZE,
-    )
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const { limit, offset } = parsePaginationParams(searchParams, {
+      defaultLimit: ADMIN_LIST_DEFAULT_PAGE_SIZE,
+      maxLimit: ADMIN_LIST_MAX_PAGE_SIZE,
+    })
     const q = searchParams.get('q')?.trim()
 
     const pattern = q ? `%${q}%` : null

@@ -1,7 +1,7 @@
 import { desc, eq } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 
-import { getSession } from '@/lib/auth'
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { db } from '@/lib/db'
 import { apiTokens } from '@/lib/drizzle-schema'
 import {
@@ -21,11 +21,6 @@ import {
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
 
-async function requireAdmin() {
-  const session = await getSession()
-  return session ?? null
-}
-
 function getBaseUrl(request: Request): string {
   const envUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim()
   if (envUrl) return envUrl.replace(/\/+$/, '')
@@ -34,9 +29,9 @@ function getBaseUrl(request: Request): string {
 }
 
 export async function GET(request: Request) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {

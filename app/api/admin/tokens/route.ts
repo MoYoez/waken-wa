@@ -8,23 +8,19 @@ import {
   ADMIN_LIST_MAX_PAGE_SIZE,
 } from '@/lib/admin-list-constants'
 import { clearApiTokenAuthCache, storedFormFromPlainSecret } from '@/lib/api-token-secret'
-import { getSession } from '@/lib/auth'
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { db } from '@/lib/db'
 import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
 import { apiTokens, devices } from '@/lib/drizzle-schema'
+import { parsePaginationParams } from '@/lib/pagination'
 import { getPublicOrigin } from '@/lib/public-request-url'
-
-async function requireAdmin() {
-  const session = await getSession()
-  if (!session) return null
-  return session
-}
+import { readJsonObject } from '@/lib/request-json'
 
 // GET - list API tokens (masked); plaintext secret is only returned once on POST create.
 export async function GET(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
@@ -49,11 +45,10 @@ export async function GET(request: NextRequest) {
       }))
 
     if (usePagination) {
-      const limit = Math.min(
-        Math.max(parseInt(rawLimit, 10) || ADMIN_API_TOKENS_PAGE_DEFAULT_SIZE, 1),
-        ADMIN_LIST_MAX_PAGE_SIZE,
-      )
-      const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0)
+      const { limit, offset } = parsePaginationParams(searchParams, {
+        defaultLimit: ADMIN_API_TOKENS_PAGE_DEFAULT_SIZE,
+        maxLimit: ADMIN_LIST_MAX_PAGE_SIZE,
+      })
 
       const [tokens, [totalRow]] = await Promise.all([
         db
@@ -119,13 +114,13 @@ export async function GET(request: NextRequest) {
 
 // POST - 创建新 Token
 export async function POST(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
-    const { name } = await request.json()
+    const { name } = await readJsonObject(request)
 
     if (!name) {
       return NextResponse.json({ success: false, error: '请输入名称' }, { status: 400 })
@@ -169,13 +164,13 @@ export async function POST(request: NextRequest) {
 
 // PATCH - 切换 Token 状态
 export async function PATCH(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
-    const { id, is_active } = await request.json()
+    const { id, is_active } = await readJsonObject(request)
 
     if (typeof id !== 'number' || !Number.isFinite(id)) {
       return NextResponse.json({ success: false, error: '无效的 ID' }, { status: 400 })
@@ -197,9 +192,9 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE - 删除 Token
 export async function DELETE(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {

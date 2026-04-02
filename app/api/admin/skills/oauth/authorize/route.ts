@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getSession } from '@/lib/auth'
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
+import { readJsonObject } from '@/lib/request-json'
 import {
   getSkillsOauthAuthorizeRequest,
   rotateSkillsOauthToken,
@@ -10,15 +11,10 @@ import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-async function requireAdmin() {
-  const session = await getSession()
-  return session ?? null
-}
-
 export async function POST(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   const cfg = await getSiteConfigMemoryFirst()
@@ -35,7 +31,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const body = await request.json().catch(() => ({}))
+  const body = await readJsonObject(request)
   const authorizeCode = String(body?.authorizeCode ?? '').trim()
   if (body?.confirm !== true) {
     return NextResponse.json(

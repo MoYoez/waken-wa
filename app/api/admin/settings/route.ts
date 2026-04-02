@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { getSession } from '@/lib/auth'
+import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { getSafeSiteConfig, updateSiteConfigFromPayload } from '@/lib/llm-site-config'
+import { readJsonObject } from '@/lib/request-json'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-async function requireAdmin() {
-  const session = await getSession()
-  return session ?? null
-}
-
 export async function GET(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
@@ -29,13 +25,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return unauthorizedJson()
   }
 
   try {
-    const body = await request.json().catch(() => null)
+    const body = await readJsonObject(request)
     const data = await updateSiteConfigFromPayload(body, {
       allowRestrictedFields: true,
     })
