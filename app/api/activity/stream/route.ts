@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { ACTIVITY_FEED_DEFAULT_LIMIT } from '@/lib/activity-api-constants'
-import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { getCachedActivityFeedData } from '@/lib/activity-feed-cache'
 import {
@@ -10,6 +9,7 @@ import {
   ACTIVITY_STREAM_MAX_IDLE_MS,
   ACTIVITY_STREAM_POLL_INTERVAL_MS,
 } from '@/lib/activity-stream-constants'
+import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { isSiteLockSatisfied } from '@/lib/auth'
 
 export const runtime = 'nodejs'

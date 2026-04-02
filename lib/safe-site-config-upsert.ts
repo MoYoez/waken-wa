@@ -1,8 +1,8 @@
 import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
 import { clearSiteConfigCaches } from '@/lib/site-config-cache'
-import { normalizeJsonFieldsForDb } from '@/lib/sqlite-json'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
+import { normalizeJsonFieldsForDb } from '@/lib/sqlite-json'
 
 type SiteConfigUpsertArgs = {
   where: { id: number }

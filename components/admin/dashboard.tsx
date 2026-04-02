@@ -7,8 +7,8 @@ import {
   Home,
   Key,
   LayoutDashboard,
-  Link2Off,
   Lightbulb,
+  Link2Off,
   LogOut,
   MonitorSmartphone,
   Plus,
@@ -18,8 +18,8 @@ import {
   UserCog,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { MdAutoFixHigh } from 'react-icons/md'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MdAutoFixHigh } from 'react-icons/md'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -127,7 +127,10 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
   const [activeTab, setActiveTab] = useState<AdminTabValue>(() =>
     isAdminTabValue(initialTab) ? initialTab : 'overview',
   )
-  const [origin, setOrigin] = useState('')
+  const origin = useMemo(
+    () => (typeof window !== 'undefined' ? window.location.origin : ''),
+    [],
+  )
 
   const [indicatorStyle, setIndicatorStyle] = useState<IndicatorStyle>({
     width: 0,
@@ -169,10 +172,6 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
       ready: true,
     })
   }, [activeTab])
-
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
 
   useEffect(() => {
     const rail = tabsRailRef.current

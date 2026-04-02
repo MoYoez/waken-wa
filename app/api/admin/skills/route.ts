@@ -5,6 +5,7 @@ import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
 import { readJsonObject } from '@/lib/request-json'
+import { clearSiteConfigCaches, getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   clearSkillsApiKey,
   getSkillsSecretEnvStatus,
@@ -16,7 +17,6 @@ import {
   rotateLegacyMcpApiKey,
   rotateSkillsApiKey,
 } from '@/lib/skills-auth'
-import { clearSiteConfigCaches, getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0

@@ -12,10 +12,10 @@ import { skillsOauthTokens, systemSecrets } from '@/lib/drizzle-schema'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   SKILLS_AUTHORIZE_CODE_DEFAULT_TTL_MS,
-  SKILLS_SECRET_ENV_KEYS,
   SKILLS_HEADER_PREFIX,
   SKILLS_MIN_TOKEN_TTL_MS,
   SKILLS_OAUTH_TOKEN_DEFAULT_TTL_MS,
+  SKILLS_SECRET_ENV_KEYS,
   SKILLS_SECRET_KEYS,
 } from '@/lib/skills-constants'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
@@ -354,7 +354,7 @@ export async function verifySkillsRequest(
     return { ok: false, error: 'OAuth 授权不存在或已过期，请重新授权', status: 401 }
   }
   for (const row of candidates) {
-    // eslint-disable-next-line no-await-in-loop
+     
     if (await bcrypt.compare(token, row.tokenHash)) {
       return { ok: true, mode, scope, requestId, aiClientId: row.aiClientId, isAdmin: false }
     }

@@ -4,19 +4,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   ACTIVITY_FEED_DEFAULT_LIMIT,
 } from '@/lib/activity-api-constants'
-import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { recordReportedAppHistory } from '@/lib/activity-app-history'
+import { clearActivityFeedDataCache, getActivityFeedData } from '@/lib/activity-feed'
+import { DEVICE_LAST_SEEN_WRITE_THROTTLE_MS } from '@/lib/activity-report-constants'
 import {
   parseActivityReportBody,
   PUBLIC_ACTIVITY_RESERVED_METADATA_KEYS,
 } from '@/lib/activity-report-parser'
-import { clearActivityFeedDataCache, getActivityFeedData } from '@/lib/activity-feed'
 import {
   redactGeneratedHashKeyForClient,
   upsertActivity,
   USER_ACTIVITY_DB_SYNCED_METADATA_KEY,
   USER_PERSIST_EXPIRES_AT_METADATA_KEY,
 } from '@/lib/activity-store'
+import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -25,11 +26,10 @@ import { devices, userActivities } from '@/lib/drizzle-schema'
 import { isLockAppReporterProcessName } from '@/lib/lockapp-reporter'
 import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
 import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
-import { DEVICE_LAST_SEEN_WRITE_THROTTLE_MS } from '@/lib/activity-report-constants'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
-import { toDbJsonValue } from '@/lib/sqlite-json'
 import { parseProcessStaleSeconds } from '@/lib/site-config-constants'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
+import { toDbJsonValue } from '@/lib/sqlite-json'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0

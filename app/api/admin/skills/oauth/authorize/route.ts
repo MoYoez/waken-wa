@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { readJsonObject } from '@/lib/request-json'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   getSkillsOauthAuthorizeRequest,
   rotateSkillsOauthToken,
 } from '@/lib/skills-auth'
-import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
