@@ -15,7 +15,7 @@ import {
   UserCog,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -150,6 +150,19 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     [activeTab],
   )
 
+  const syncIndicatorToActiveTab = useCallback(() => {
+    const trigger = triggerRefs.current[activeTab]
+    if (!trigger) return
+
+    setIndicatorStyle({
+      width: trigger.offsetWidth,
+      height: trigger.offsetHeight,
+      x: trigger.offsetLeft,
+      y: trigger.offsetTop,
+      ready: true,
+    })
+  }, [activeTab])
+
   useEffect(() => {
     setOrigin(window.location.origin)
   }, [])
@@ -159,45 +172,79 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     const trigger = triggerRefs.current[activeTab]
     if (!rail || !trigger) return
 
-    const railRect = rail.getBoundingClientRect()
-    const triggerRect = trigger.getBoundingClientRect()
-    setIndicatorStyle({
-      width: triggerRect.width,
-      height: triggerRect.height,
-      x: triggerRect.left - railRect.left,
-      y: triggerRect.top - railRect.top,
-      ready: true,
-    })
+    syncIndicatorToActiveTab()
 
-    trigger.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      inline: 'center',
-    })
-  }, [activeTab])
+    if (rail.scrollWidth > rail.clientWidth) {
+      trigger.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      })
+    }
+  }, [activeTab, syncIndicatorToActiveTab])
 
   useEffect(() => {
-    const handleResize = () => {
-      const rail = tabsRailRef.current
-      const trigger = triggerRefs.current[activeTab]
-      if (!rail || !trigger) return
+    const rail = tabsRailRef.current
+    const trigger = triggerRefs.current[activeTab]
+    if (!rail || !trigger) return
 
-      const railRect = rail.getBoundingClientRect()
-      const triggerRect = trigger.getBoundingClientRect()
-      setIndicatorStyle((prev) => ({
-        ...prev,
-        width: triggerRect.width,
-        height: triggerRect.height,
-        x: triggerRect.left - railRect.left,
-        y: triggerRect.top - railRect.top,
-        ready: true,
-      }))
+    syncIndicatorToActiveTab()
+
+    const observer = new ResizeObserver(() => {
+      syncIndicatorToActiveTab()
+    })
+    observer.observe(rail)
+    observer.observe(trigger)
+
+    window.addEventListener('resize', syncIndicatorToActiveTab)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', syncIndicatorToActiveTab)
+    }
+  }, [activeTab, syncIndicatorToActiveTab])
+
+  useEffect(() => {
+    const trigger = triggerRefs.current[activeTab]
+    if (!trigger) return
+
+    // First entry can measure before animation/font metrics settle.
+    let canceled = false
+    let rafId1 = 0
+    let rafId2 = 0
+    const timeoutId = window.setTimeout(() => {
+      syncIndicatorToActiveTab()
+    }, 420)
+
+    const handleAnimationEnd = () => {
+      syncIndicatorToActiveTab()
     }
 
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [activeTab])
+    trigger.addEventListener('animationend', handleAnimationEnd)
+
+    rafId1 = window.requestAnimationFrame(() => {
+      syncIndicatorToActiveTab()
+      rafId2 = window.requestAnimationFrame(() => {
+        syncIndicatorToActiveTab()
+      })
+    })
+
+    const fontSet = (document as Document & { fonts?: FontFaceSet }).fonts
+    if (fontSet) {
+      void fontSet.ready.then(() => {
+        if (!canceled) {
+          syncIndicatorToActiveTab()
+        }
+      })
+    }
+
+    return () => {
+      canceled = true
+      trigger.removeEventListener('animationend', handleAnimationEnd)
+      window.clearTimeout(timeoutId)
+      if (rafId1) window.cancelAnimationFrame(rafId1)
+      if (rafId2) window.cancelAnimationFrame(rafId2)
+    }
+  }, [activeTab, syncIndicatorToActiveTab])
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -361,7 +408,7 @@ curl -X POST ${origin}/api/inspiration/entries \\
                     <span className="admin-tab-icon">
                       <Icon className="h-4 w-4" />
                     </span>
-                    <span className="min-w-0 truncate text-left text-sm font-medium">{item.label}</span>
+                    <span className="block min-w-0 truncate text-left text-sm font-medium">{item.label}</span>
                   </button>
                 )
               })}
