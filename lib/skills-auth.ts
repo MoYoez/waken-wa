@@ -431,19 +431,18 @@ export async function listSkillsOauthAuthorizeSummary(): Promise<SkillsOauthAuth
     if (!aiClientId) continue
     const item = getOrCreate(aiClientId)
     const expiresAt = new Date(row.expiresAt as any)
-    if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= now) continue
     const approvedAt = row.approvedAt ? new Date(row.approvedAt as any) : null
     const exchangeAt = row.exchangeAt ? new Date(row.exchangeAt as any) : null
-    if (exchangeAt) {
-      item.lastExchangedAt = setLatest(item.lastExchangedAt, exchangeAt)
-      continue
-    }
+    item.lastApprovedAt = setLatest(item.lastApprovedAt, approvedAt)
+    item.lastExchangedAt = setLatest(item.lastExchangedAt, exchangeAt)
+
+    if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= now) continue
+    if (exchangeAt) continue
     if (approvedAt) {
       item.approvedCodeCount += 1
-      item.lastApprovedAt = setLatest(item.lastApprovedAt, approvedAt)
-    } else {
-      item.pendingCodeCount += 1
+      continue
     }
+    item.pendingCodeCount += 1
   }
 
   for (const row of tokens) {
