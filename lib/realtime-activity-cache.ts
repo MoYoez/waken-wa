@@ -21,6 +21,7 @@ export type RealtimeActivityRow = {
 type RealtimeActivityState = Record<string, RealtimeActivityRow>
 
 let memoryState: RealtimeActivityState = {}
+let memoryLoaded = false
 
 function cacheKey(generatedHashKey: string, processName: string): string {
   return `${generatedHashKey}:${processName}`.toLowerCase()
@@ -42,21 +43,31 @@ function prune(state: RealtimeActivityState): RealtimeActivityState {
 }
 
 async function loadState(): Promise<RealtimeActivityState> {
-  if (await shouldUseRedisCache()) {
-    const fromRedis = await redisGetJson<RealtimeActivityState>(REALTIME_ACTIVITY_CACHE_KEY)
-    return prune(fromRedis ?? {})
-  }
   memoryState = prune(memoryState)
+  if (memoryLoaded) {
+    return memoryState
+  }
+
+  const useRedis = await shouldUseRedisCache()
+  if (!useRedis) {
+    memoryLoaded = true
+    return memoryState
+  }
+
+  const fromRedis = await redisGetJson<RealtimeActivityState>(REALTIME_ACTIVITY_CACHE_KEY)
+  memoryState = prune(fromRedis ?? {})
+  memoryLoaded = true
   return memoryState
 }
 
 async function saveState(state: RealtimeActivityState, ttlSeconds: number): Promise<void> {
+  memoryState = prune(state)
+  memoryLoaded = true
+
   if (await shouldUseRedisCache()) {
     const safeTtl = Math.max(1, Math.round(ttlSeconds))
-    await redisSetJson(REALTIME_ACTIVITY_CACHE_KEY, state, safeTtl)
-    return
+    await redisSetJson(REALTIME_ACTIVITY_CACHE_KEY, memoryState, safeTtl)
   }
-  memoryState = state
 }
 
 export async function upsertRealtimeActivity(
@@ -85,4 +96,3 @@ export async function listRealtimeActivities(): Promise<RealtimeActivityRow[]> {
   const state = await loadState()
   return Object.values(prune(state))
 }
-

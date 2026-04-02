@@ -139,6 +139,12 @@ flowchart TB
 - **站点锁**：与 `site_lock` 等 Cookie 相关，见 [lib/auth.ts](lib/auth.ts) 与首页 [app/page.tsx](app/page.tsx)。
 - **限流**：[proxy.ts](proxy.ts) 对登录、站点解锁、改密等 POST 路径限流；实现依赖 [lib/rate-limit.ts](lib/rate-limit.ts)。
 
+### 缓存策略
+
+- 默认缓存模式采用**进程内内存优先，Redis 次级，数据库/原始源最终源**。
+- 适用与例外、serverless 注意事项、以及本仓库的特殊模块说明，统一见 [docs/cache-strategy.md](docs/cache-strategy.md)。
+- 新增缓存前，先判断该场景是否需要跨实例原子性；若需要，**不要**强行套用 Standard A。
+
 ---
 
 ## 6. 功能模块索引（关键文件）

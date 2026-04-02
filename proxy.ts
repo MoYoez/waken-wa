@@ -1,4 +1,4 @@
-import { type NextRequest,NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 import { isRateLimited } from '@/lib/rate-limit'
 
@@ -23,10 +23,23 @@ function getClientIp(request: NextRequest): string {
 }
 
 function addSecurityHeaders(response: NextResponse): NextResponse {
+  const cspDirectives = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== 'production' ? " 'unsafe-eval'" : ''}`,
+    "connect-src 'self' https: wss: ws:",
+  ]
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Content-Security-Policy', cspDirectives.join('; '))
   response.headers.set(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=()',

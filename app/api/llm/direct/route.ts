@@ -43,6 +43,10 @@ function getInputValue(request: NextRequest, headerName: string, queryName: stri
   return (request.headers.get(headerName) ?? '').trim() || (request.nextUrl.searchParams.get(queryName) ?? '').trim()
 }
 
+function getHeaderValue(request: NextRequest, headerName: string): string {
+  return (request.headers.get(headerName) ?? '').trim()
+}
+
 export async function GET(request: NextRequest) {
   const cfg = await getSiteConfigMemoryFirst()
   if (cfg?.skillsDebugEnabled !== true) {
@@ -51,7 +55,7 @@ export async function GET(request: NextRequest) {
 
   const origin = getPublicOrigin(request)
   const modeFromInput = normalizeMode(getInputValue(request, 'LLM-Skills-Mode', 'mode'))
-  const token = getInputValue(request, 'LLM-Skills-Token', 'token')
+  const token = getHeaderValue(request, 'LLM-Skills-Token')
   const scope = getInputValue(request, 'LLM-Skills-Scope', 'scope') || 'theme'
   const ai = normalizeAiClientId(getInputValue(request, 'LLM-Skills-AI', 'ai'))
 

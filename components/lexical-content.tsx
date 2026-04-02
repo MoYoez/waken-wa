@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { Fragment } from 'react'
 
+import { getSafeUserFacingHref } from '@/lib/external-link'
 import { parseLexicalJson } from '@/lib/inspiration-lexical'
 import type { LexicalNode } from '@/types'
 
@@ -108,9 +109,9 @@ function renderNode(node: LexicalNode, key: string): React.ReactNode {
     return <li key={key}>{renderChildren(node.children, key)}</li>
   }
   if (type === 'link') {
-    const href = String(node.url ?? '').trim()
+    const href = getSafeUserFacingHref(String(node.url ?? ''))
     return (
-      <a key={key} href={href || '#'} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
+      <a key={key} href={href || '#'} rel="noopener noreferrer nofollow" className="text-primary underline underline-offset-2">
         {renderChildren(node.children, key)}
       </a>
     )

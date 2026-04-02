@@ -8,6 +8,14 @@ import { inspirationAssets } from '@/lib/drizzle-schema'
 import { extractInspirationImagePublicKeysFromLexical } from '@/lib/inspiration-lexical'
 
 export const INSPIRATION_IMG_URL_PREFIX = '/api/inspiration/img/'
+const ALLOWED_INLINE_IMAGE_MIME_TYPES = new Set([
+  'image/avif',
+  'image/bmp',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+])
 
 const UUID_IN_PATH_RE =
   /\/api\/inspiration\/img\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi
@@ -35,7 +43,7 @@ export function parseDataImagePayload(dataUrl: string): { mime: string; buffer: 
   const m = /^data:([^;]+);base64,(.+)$/i.exec(raw)
   if (!m) return null
   const mime = m[1].trim().toLowerCase()
-  if (!mime.startsWith('image/')) return null
+  if (!ALLOWED_INLINE_IMAGE_MIME_TYPES.has(mime)) return null
   try {
     const buffer = Buffer.from(m[2], 'base64')
     if (!buffer.length) return null
@@ -49,7 +57,12 @@ const MAX_INLINE_IMAGE_BYTES = 6 * 1024 * 1024
 
 export function validateInlineImageDataUrl(dataUrl: string): { ok: true } | { ok: false; error: string } {
   const parsed = parseDataImagePayload(dataUrl)
-  if (!parsed) return { ok: false, error: 'Invalid image data URL' }
+  if (!parsed) {
+    return {
+      ok: false,
+      error: 'Invalid image data URL or unsupported image type (allowed: PNG, JPEG, GIF, WebP, AVIF, BMP)',
+    }
+  }
   if (parsed.buffer.length > MAX_INLINE_IMAGE_BYTES) {
     return { ok: false, error: `Image too large (max ${MAX_INLINE_IMAGE_BYTES / (1024 * 1024)}MB)` }
   }

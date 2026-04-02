@@ -6,6 +6,8 @@ import type { Components } from 'react-markdown'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
+import { getSafeUserFacingHref } from '@/lib/external-link'
+
 const DEFAULT_IMG_CLASS = 'max-h-48 rounded-md border border-border my-2'
 
 const baseMarkdownComponents: Omit<Components, 'img'> = {
@@ -27,9 +29,8 @@ const baseMarkdownComponents: Omit<Components, 'img'> = {
   li: ({ children }) => <li>{children}</li>,
   a: ({ href, children }) => (
     <a
-      href={href}
-      rel="noopener noreferrer"
-      target="_blank"
+      href={getSafeUserFacingHref(String(href ?? ''))}
+      rel="noopener noreferrer nofollow"
       className="text-primary underline underline-offset-2"
     >
       {children}

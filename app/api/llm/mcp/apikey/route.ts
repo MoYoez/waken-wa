@@ -17,8 +17,7 @@ function readToken(request: NextRequest) {
 
   const headerToken = (request.headers.get('x-waken-mcp-key') ?? '').trim()
   if (headerToken) return headerToken
-
-  return (request.nextUrl.searchParams.get('token') ?? '').trim()
+  return ''
 }
 
 async function handle(request: NextRequest) {

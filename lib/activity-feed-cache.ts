@@ -34,21 +34,32 @@ function setMemoryCached(value: ActivityFeedData, ttlSeconds: number): void {
 }
 
 export async function getCachedActivityFeedData(): Promise<ActivityFeedData | null> {
-  const useRedis = await shouldUseRedisCache()
-  if (useRedis) {
-    return redisGetJson<ActivityFeedData>(ACTIVITY_FEED_CACHE_KEY)
+  const memoryHit = getMemoryCached()
+  if (memoryHit) {
+    return memoryHit
   }
-  return getMemoryCached()
+
+  const useRedis = await shouldUseRedisCache()
+  if (!useRedis) {
+    return null
+  }
+
+  const redisHit = await redisGetJson<ActivityFeedData>(ACTIVITY_FEED_CACHE_KEY)
+  if (redisHit) {
+    const ttlSeconds = await getRedisActivityCacheTtlSeconds()
+    setMemoryCached(redisHit, Math.min(ttlSeconds, 3))
+  }
+  return redisHit
 }
 
 export async function setCachedActivityFeedData(value: ActivityFeedData): Promise<void> {
   const ttlSeconds = await getRedisActivityCacheTtlSeconds()
+  setMemoryCached(value, Math.min(ttlSeconds, 3))
+
   const useRedis = await shouldUseRedisCache()
   if (useRedis) {
     await redisSetJson(ACTIVITY_FEED_CACHE_KEY, value, ttlSeconds)
-    return
   }
-  setMemoryCached(value, Math.min(ttlSeconds, 3))
 }
 
 export async function clearCachedActivityFeedData(): Promise<void> {
@@ -58,4 +69,3 @@ export async function clearCachedActivityFeedData(): Promise<void> {
     await redisDel(ACTIVITY_FEED_CACHE_KEY)
   }
 }
-

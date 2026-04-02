@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { randomUUID } from 'node:crypto'
+
 import { eq, inArray } from 'drizzle-orm'
 
 import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
@@ -33,10 +35,12 @@ type PendingAppHistory = {
   platform: Platform
   seenAt: string
   titles: string[]
+  sourceInstanceId: string
 }
 
 const PENDING_PREFIX = 'waken:appHistory:pending:v1:'
 const FLUSH_LOCK_KEY = 'waken:appHistory:flushLock:v1'
+const APP_HISTORY_INSTANCE_ID = randomUUID()
 
 const MEMORY_FLUSH_INTERVAL_MS = 30_000
 const MEMORY_FLUSH_MAX_ITEMS = 400
@@ -131,6 +135,19 @@ function parseBuckets(raw: unknown): AppHistoryBuckets | null {
   return null
 }
 
+function isSamePendingRecord(
+  left: PendingAppHistory | null | undefined,
+  right: PendingAppHistory | null | undefined,
+): boolean {
+  if (!left || !right) return false
+  if (left.processName !== right.processName) return false
+  if (left.platform !== right.platform) return false
+  if (left.seenAt !== right.seenAt) return false
+  if (left.sourceInstanceId !== right.sourceInstanceId) return false
+  if (left.titles.length !== right.titles.length) return false
+  return left.titles.every((title, index) => title === right.titles[index])
+}
+
 async function writeToDb(
   processName: string,
   platform: Platform,
@@ -206,6 +223,13 @@ async function flushMemoryPendingReportedAppHistory(): Promise<{ flushed: number
   let flushed = 0
   for (const p of batch) {
     await writeToDb(p.processName, p.platform, p.titles, p.seenAt)
+    if (await shouldUseRedisCache()) {
+      const redisKey = pendingKey(p.platform, p.processName)
+      const mirrored = await redisGetJson<PendingAppHistory>(redisKey)
+      if (isSamePendingRecord(mirrored, p)) {
+        await redisDel(redisKey)
+      }
+    }
     flushed += 1
   }
 
@@ -226,33 +250,28 @@ export async function recordReportedAppHistory(input: {
   const platform = platformFromDeviceType(input.deviceType)
   const title = normalizeTitle(input.processTitle)
   const seenAtIso = new Date().toISOString()
-
-  const useRedis = await shouldUseRedisCache()
-  if (!useRedis) {
-    const key = memoryPendingKey(platform, processName)
-    const prev = memoryPending.get(key)
-    const nextTitles = bumpRecentTitles(prev?.titles ?? [], title)
-    memoryPending.set(key, {
-      processName,
-      platform,
-      seenAt: seenAtIso,
-      titles: nextTitles,
-    })
-    scheduleMemoryFlush()
-    return
-  }
-
-  const key = pendingKey(platform, processName)
-  const prev = await redisGetJson<PendingAppHistory>(key)
+  const memoryKey = memoryPendingKey(platform, processName)
+  const prev = memoryPending.get(memoryKey)
   const nextTitles = bumpRecentTitles(prev?.titles ?? [], title)
-  const next: PendingAppHistory = {
+  const nextPending: PendingAppHistory = {
     processName,
     platform,
     seenAt: seenAtIso,
     titles: nextTitles,
+    sourceInstanceId: APP_HISTORY_INSTANCE_ID,
   }
-  // Keep pending entries for a while; flush worker will delete on success.
-  await redisSetJson(key, next, 60 * 60 * 24 * 3)
+
+  memoryPending.set(memoryKey, nextPending)
+  scheduleMemoryFlush()
+
+  const useRedis = await shouldUseRedisCache()
+  if (!useRedis) {
+    return
+  }
+
+  const redisKey = pendingKey(platform, processName)
+  // Mirror pending entries to Redis for cross-instance continuity.
+  await redisSetJson(redisKey, nextPending, 60 * 60 * 24 * 3)
 
   // Best-effort: allow only one flusher per ~30s window.
   const lock = await redisIncrWithExpire(FLUSH_LOCK_KEY, 30)
@@ -276,7 +295,11 @@ export async function flushPendingReportedAppHistory(options?: {
   const pendings: PendingAppHistory[] = []
   for (const key of keys) {
     const p = await redisGetJson<PendingAppHistory>(key)
-    if (p?.processName && (p.platform === 'pc' || p.platform === 'mobile')) {
+    if (
+      p?.processName &&
+      (p.platform === 'pc' || p.platform === 'mobile') &&
+      p.sourceInstanceId !== APP_HISTORY_INSTANCE_ID
+    ) {
       pendings.push(p)
     }
   }
@@ -343,4 +366,3 @@ export async function flushPendingReportedAppHistory(options?: {
 
   return { flushed: flushed + mem.flushed }
 }
-
