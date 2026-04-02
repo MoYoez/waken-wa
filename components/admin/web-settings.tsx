@@ -357,6 +357,9 @@ function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig
   if ('userNoteHitokotoEncode' in web) {
     patch.userNoteHitokotoEncode = normalizeHitokotoEncode(web.userNoteHitokotoEncode)
   }
+  if ('userNoteHitokotoFallbackToNote' in web && typeof web.userNoteHitokotoFallbackToNote === 'boolean') {
+    patch.userNoteHitokotoFallbackToNote = web.userNoteHitokotoFallbackToNote
+  }
   if ('themePreset' in web && typeof web.themePreset === 'string') {
     patch.themePreset = web.themePreset.trim() || 'basic'
   }
@@ -514,6 +517,7 @@ interface SiteConfig {
   userNoteHitokotoEnabled: boolean
   userNoteHitokotoCategories: string[]
   userNoteHitokotoEncode: UserNoteHitokotoEncode
+  userNoteHitokotoFallbackToNote: boolean
   themePreset: string
   themeCustomSurface: ThemeCustomSurfaceForm
   customCss: string
@@ -629,6 +633,7 @@ export function WebSettings() {
     userNoteHitokotoEnabled: false,
     userNoteHitokotoCategories: [],
     userNoteHitokotoEncode: 'json',
+    userNoteHitokotoFallbackToNote: false,
     themePreset: 'basic',
     themeCustomSurface: emptyThemeCustomSurfaceForm(),
     customCss: '',
@@ -749,6 +754,9 @@ export function WebSettings() {
               data.data.userNoteHitokotoCategories,
             ),
             userNoteHitokotoEncode: normalizeHitokotoEncode(data.data.userNoteHitokotoEncode),
+            userNoteHitokotoFallbackToNote: Boolean(
+              data.data.userNoteHitokotoFallbackToNote,
+            ),
             themePreset: data.data.themePreset ?? 'basic',
             themeCustomSurface: themeCustomSurfaceFromApi(data.data.themeCustomSurface),
             customCss: data.data.customCss ?? '',
@@ -1729,7 +1737,7 @@ export function WebSettings() {
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
           开启后由访客浏览器请求 <code className="rounded bg-muted px-1">v1.hitokoto.cn</code>；
-          请求失败时显示上方静态备注。句子类型可多选；不选表示不限制类型（与官方默认一致）。
+          句子类型可多选；不选表示不限制类型（与官方默认一致）。
         </p>
         {form.userNoteHitokotoEnabled ? (
           <div className="space-y-4 pt-1">
@@ -1749,6 +1757,19 @@ export function WebSettings() {
                   <SelectItem value="text">text（纯文本）</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">一言不可用时使用备注回退</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  关闭后会直接显示“一言暂不可用”，不再自动使用上方静态备注。
+                </p>
+              </div>
+              <Switch
+                id="hitokoto-home-note-fallback"
+                checked={form.userNoteHitokotoFallbackToNote}
+                onCheckedChange={(v) => patch('userNoteHitokotoFallbackToNote', v)}
+              />
             </div>
             <div className="space-y-2">
               <Label>句子类型 c（可多选）</Label>

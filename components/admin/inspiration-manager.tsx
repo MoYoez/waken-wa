@@ -766,37 +766,6 @@ export function InspirationManager() {
           })()
         }}
       />
-
-      <Card>
-        <CardHeader>
-          <h3 className="text-base font-semibold">API 提交（可从脚本/设备直接上报）</h3>
-          <p className="text-sm text-muted-foreground">
-            使用与「活动上报」相同的 `API Token`。字段 `contentLexical` 为 Lexical JSON，`content` 可选作为兼容纯文本；
-            `imageDataUrl` 为可选封面图 DataURL。正文内嵌图请先 `POST /api/inspiration/assets`（JSON 字段
-            `imageDataUrl`），再在正文中插入返回 `url`；提交条目后会自动绑定到该条记录。
-            若在「网站设置」中开启了「仅允许所选设备提交随想录」，请在两个请求上都加请求头{' '}
-            <code className="rounded bg-muted px-1">X-Device-Key: {'<设备身份牌>'}</code>
-            （与设备管理中的值一致）。
-          </p>
-        </CardHeader>
-        <CardContent>
-          <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">
-            {`# If site setting restricts inspiration by device, add:
-#   -H "X-Device-Key: YOUR_DEVICE_GENERATED_HASH_KEY"
-
-curl -X POST /api/inspiration/assets \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"imageDataUrl":"data:image/png;base64,..."}'
-
-curl -X POST /api/inspiration/entries \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"title":"可选","contentLexical":{"root":{"type":"root","children":[...]}},"imageDataUrl":null,"attachCurrentStatus":true,"attachStatusDeviceHash":"your_device_generated_hash_key"}'`}
-          </pre>
-        </CardContent>
-      </Card>
-
       <div className="mt-8 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">搜索记录</h3>
         <div className="flex items-center gap-3 flex-wrap">

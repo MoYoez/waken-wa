@@ -349,6 +349,14 @@ export async function updateSiteConfigFromPayload(
     userNoteHitokotoEncode = normalizeHitokotoEncode(body.userNoteHitokotoEncode)
   }
 
+  let userNoteHitokotoFallbackToNote = existing?.userNoteHitokotoFallbackToNote === true
+  if (
+    body.userNoteHitokotoFallbackToNote !== undefined &&
+    body.userNoteHitokotoFallbackToNote !== null
+  ) {
+    userNoteHitokotoFallbackToNote = Boolean(body.userNoteHitokotoFallbackToNote)
+  }
+
   if (!userName || !userBio || !avatarUrl) {
     const error = new Error('请填写首页必填信息')
     ;(error as any).status = 400
@@ -484,6 +492,7 @@ export async function updateSiteConfigFromPayload(
     userNoteHitokotoEnabled,
     userNoteHitokotoCategories,
     userNoteHitokotoEncode,
+    userNoteHitokotoFallbackToNote,
     themePreset,
     themeCustomSurface,
     customCss,

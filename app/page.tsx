@@ -115,6 +115,7 @@ export default async function Home() {
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
+  const noteHitokotoFallbackToNote = Boolean(cfg.userNoteHitokotoFallbackToNote)
   const activityUpdateMode = normalizeActivityUpdateMode(cfg.activityUpdateMode)
 
   return (
@@ -179,6 +180,7 @@ export default async function Home() {
                   noteHitokotoEnabled={noteHitokotoEnabled}
                   noteHitokotoCategories={noteHitokotoCategories}
                   noteHitokotoEncode={noteHitokotoEncode}
+                  noteHitokotoFallbackToNote={noteHitokotoFallbackToNote}
                 />
 
                 <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />

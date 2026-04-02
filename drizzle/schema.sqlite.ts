@@ -99,6 +99,9 @@ export const siteConfig = sqliteTable('site_config', {
   userNoteHitokotoEncode: text('user_note_hitokoto_encode')
     .notNull()
     .default('json'),
+  userNoteHitokotoFallbackToNote: integer('user_note_hitokoto_fallback_to_note', {
+    mode: 'boolean',
+  }).default(false),
   themePreset: text('theme_preset').notNull().default('basic'),
   themeCustomSurface: text('theme_custom_surface', { mode: 'json' }),
   customCss: text('custom_css'),

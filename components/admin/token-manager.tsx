@@ -536,36 +536,6 @@ export function TokenManager() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* 使用说明 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">API 使用说明</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">上报活动数据:</p>
-            <p className="text-xs text-muted-foreground mb-2">
-              字段 <code className="rounded bg-muted px-1">generatedHashKey</code> 即设备在后台的「设备身份牌」。
-            </p>
-            <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">
-{`curl -X POST ${typeof window !== 'undefined' ? window.location.origin : ''}/api/activity \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "generatedHashKey": "YOUR_DEVICE_HASH_KEY",
-    "device": "MacBook Pro",
-    "device_type": "desktop",
-    "process_name": "VS Code",
-    "process_title": "编辑 index.tsx",
-    "battery_level": 82,
-    "is_charging": true,
-    "push_mode": "realtime"
-  }'`}
-            </pre>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

@@ -19,6 +19,7 @@ export interface UserProfileNoteSectionProps {
   noteHitokotoEnabled?: boolean
   noteHitokotoCategories?: string[]
   noteHitokotoEncode?: UserNoteHitokotoEncode
+  noteHitokotoFallbackToNote?: boolean
 }
 
 export type ImageCropAspectMode = 'square' | 'free'

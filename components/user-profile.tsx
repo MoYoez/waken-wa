@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { type CSSProperties,useEffect, useMemo, useState } from 'react'
+import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
 import { buildHitokotoRequestUrl } from '@/lib/hitokoto'
@@ -21,10 +21,12 @@ function ProfileHitokotoNote({
   categories,
   encode,
   fallbackNote,
+  fallbackToNote,
 }: {
   categories: string[]
   encode: UserNoteHitokotoEncode
   fallbackNote: string
+  fallbackToNote: boolean
 }) {
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [text, setText] = useState('')
@@ -78,7 +80,7 @@ function ProfileHitokotoNote({
   }
 
   if (phase === 'error') {
-    if (fallbackNote.trim()) {
+    if (fallbackToNote && fallbackNote.trim()) {
       return <p className={NOTE_BOX_CLASS}>{fallbackNote}</p>
     }
     return <p className={NOTE_BOX_CLASS}>一言暂不可用</p>
@@ -117,6 +119,7 @@ export function UserProfileNoteSection({
   noteHitokotoEnabled = false,
   noteHitokotoCategories = [],
   noteHitokotoEncode = 'json',
+  noteHitokotoFallbackToNote = false,
 }: UserProfileNoteSectionProps) {
   const showNoteBlock = Boolean(note.trim()) || noteHitokotoEnabled
   if (!showNoteBlock) return null
@@ -128,6 +131,7 @@ export function UserProfileNoteSection({
           categories={noteHitokotoCategories}
           encode={noteHitokotoEncode}
           fallbackNote={note}
+          fallbackToNote={noteHitokotoFallbackToNote}
         />
       ) : (
         <p className={NOTE_BOX_CLASS}>{note}</p>

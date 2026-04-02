@@ -103,6 +103,7 @@ export const siteConfig = pgTable('site_config', {
   userNoteHitokotoEncode: varchar('user_note_hitokoto_encode', { length: 10 })
     .notNull()
     .default('json'),
+  userNoteHitokotoFallbackToNote: boolean('user_note_hitokoto_fallback_to_note').default(false),
   themePreset: varchar('theme_preset', { length: 50 }).notNull().default('basic'),
   themeCustomSurface: jsonb('theme_custom_surface'),
   customCss: text('custom_css'),

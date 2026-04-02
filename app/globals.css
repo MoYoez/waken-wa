@@ -329,3 +329,269 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
     transform: translateX(0);
   }
 }
+
+@keyframes admin-float-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes admin-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.admin-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.admin-shell-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--primary) 10%, transparent), transparent 32%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 12%, transparent), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 82%, white 18%) 0%, var(--background) 44%, color-mix(in srgb, var(--muted) 28%, transparent) 100%);
+  pointer-events: none;
+}
+
+.admin-brandmark {
+  display: inline-flex;
+  height: 3rem;
+  width: 3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.2rem;
+  color: var(--primary-foreground);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 92%, white 8%), color-mix(in srgb, var(--accent) 68%, var(--primary) 32%));
+  box-shadow:
+    0 20px 40px color-mix(in srgb, var(--primary) 20%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.admin-section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.admin-section-kicker::before {
+  content: '';
+  display: inline-block;
+  width: 0.65rem;
+  height: 1px;
+  background: color-mix(in srgb, var(--primary) 52%, var(--border) 48%);
+}
+
+.admin-stat-card,
+.admin-info-card,
+.admin-panel-card,
+.admin-panel-shell,
+.admin-rail-shell {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  background: color-mix(in srgb, var(--card) 92%, rgba(255, 255, 255, 0.55) 8%);
+  box-shadow:
+    0 18px 42px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(18px);
+}
+
+.admin-stat-card,
+.admin-info-card {
+  border-radius: 1.25rem;
+  padding: 1rem 1.05rem;
+}
+
+.admin-info-icon {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+}
+
+.admin-panel-card,
+.admin-panel-shell,
+.admin-rail-shell {
+  border-radius: 1.6rem;
+}
+
+.admin-panel-card {
+  padding: 1.15rem;
+}
+
+.admin-panel-card-elevated {
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-panel-card-elevated::after {
+  content: '';
+  position: absolute;
+  inset: -35% auto auto 55%;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent), transparent 68%);
+  pointer-events: none;
+}
+
+.admin-soft-button {
+  border-radius: 999px;
+  transition:
+    transform 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.admin-soft-button:hover {
+  transform: translateY(-1px);
+}
+
+.admin-tabs-shell {
+  padding: 0.9rem;
+}
+
+.admin-tabs-rail {
+  position: relative;
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding: 0.2rem;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.admin-tabs-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-tab-indicator {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.2rem;
+  border-radius: 1.1rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 92%, white 8%), color-mix(in srgb, var(--accent) 70%, var(--primary) 30%));
+  box-shadow:
+    0 16px 30px color-mix(in srgb, var(--primary) 22%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition:
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+  will-change: transform, width, height;
+}
+
+.admin-tab-trigger {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 11.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.8rem;
+  border-radius: 1.1rem;
+  padding: 0.85rem 0.95rem;
+  text-align: left;
+  color: var(--foreground);
+  scroll-snap-align: start;
+  transition:
+    color 220ms ease,
+    transform 220ms ease,
+    opacity 220ms ease;
+  animation: admin-float-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.admin-tab-trigger:hover {
+  transform: translateY(-1px);
+}
+
+.admin-tab-trigger:not(.is-active) {
+  opacity: 0.8;
+}
+
+.admin-tab-trigger.is-active {
+  color: var(--primary-foreground);
+}
+
+.admin-tab-trigger.is-active .text-muted-foreground {
+  color: color-mix(in srgb, var(--primary-foreground) 72%, transparent);
+}
+
+.admin-tab-icon {
+  display: inline-flex;
+  height: 2.15rem;
+  width: 2.15rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--background) 62%, transparent);
+  color: inherit;
+  transition: background-color 220ms ease;
+}
+
+.admin-tab-trigger.is-active .admin-tab-icon {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.admin-panel-shell {
+  padding: 1rem;
+}
+
+.admin-float-in {
+  animation: admin-float-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.admin-panel-enter {
+  animation: admin-panel-in 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 640px) {
+  .admin-tabs-rail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    align-items: stretch;
+  }
+
+  .admin-tab-trigger {
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .admin-panel-card,
+  .admin-panel-shell {
+    padding: 1.35rem;
+  }
+}
+
+@media (min-width: 960px) {
+  .admin-tabs-rail {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
