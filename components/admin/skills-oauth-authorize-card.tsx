@@ -110,6 +110,20 @@ LLM-Skills-Mode: oauth
 LLM-Skills-Token: ${authorizeCode}
 LLM-Skills-AI: ${aiClientId}
 LLM-Skills-Request-Id: ANY_REQUEST_ID`}</pre>
+            <pre className="text-xs font-mono whitespace-pre-wrap">{`$headers = @{
+  'LLM-Skills-Mode' = 'oauth'
+  'LLM-Skills-Token' = '${authorizeCode}'
+  'LLM-Skills-AI' = '${aiClientId}'
+}
+
+$body = [System.Text.Encoding]::UTF8.GetBytes('{}')
+
+Invoke-RestMethod -Method Post -Uri '${publicOrigin || ''}/api/llm/oauth/exchange' -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $body`}</pre>
+            <p className="text-xs text-muted-foreground">
+              Windows PowerShell 发送中文或 emoji JSON 时，请先转成 UTF-8 bytes，再以
+              <code className="mx-1">application/json; charset=utf-8</code>
+              发送，避免被写成 <code className="mx-1">???</code>。
+            </p>
           </div>
 
           <p className="text-xs text-muted-foreground">

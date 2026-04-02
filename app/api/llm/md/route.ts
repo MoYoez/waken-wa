@@ -11,6 +11,19 @@ export const revalidate = 0
 
 const LLM_MD_RATE_LIMIT_MAX = 60
 const LLM_MD_RATE_LIMIT_WINDOW_MS = 60_000
+const BUILT_IN_THEME_PRESETS = [
+  'basic',
+  'midnight',
+  'forest',
+  'sakura',
+  'obsidian',
+  'ocean',
+  'amber',
+  'lavender',
+  'mono',
+  'nord',
+  'customSurface',
+] as const
 
 function resolvePreferredToolMode(raw: unknown): ToolMode {
   return String(raw ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills'
@@ -175,6 +188,29 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
     'Read the returned key (TTL follows admin setting), then use that key as LLM-Skills-Token for business calls',
     'Use `/api/llm/settings` or `/api/llm/activity/apps-export` only after auth succeeds',
   ])
+  pushBullets(lines, [
+    'On Windows, prefer PowerShell examples instead of Bash multiline `curl` examples',
+    'When sending non-ASCII content such as Chinese text or emoji from Windows PowerShell, explicitly send UTF-8 bytes',
+  ])
+  pushSection(lines, '### OAuth Exchange Example (PowerShell)')
+  pushCodeBlock(
+    lines,
+    [
+      "[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)",
+      "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)",
+      '',
+      "$headers = @{",
+      "  'LLM-Skills-Mode' = 'oauth'",
+      "  'LLM-Skills-Token' = 'YOUR_AUTHORIZE_CODE'",
+      "  'LLM-Skills-AI' = 'YOUR_UNIQUE_AI_ID'",
+      "}",
+      '',
+      "$body = [System.Text.Encoding]::UTF8.GetBytes('{}')",
+      '',
+      `Invoke-RestMethod -Method Post -Uri '${endpoints.oauthExchange}' -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $body`,
+    ].join('\n'),
+    'powershell',
+  )
 
   pushSection(lines, '### API Key Procedure')
   pushNumbered(lines, [
@@ -229,7 +265,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   pushSection(lines, '### Update Settings')
   pushCodeLines(lines, [
     `PATCH ${endpoints.settings}`,
-    'Content-Type: application/json',
+    'Content-Type: application/json; charset=utf-8',
     '',
     '{ "fieldName": "newValue" }',
   ])
@@ -237,6 +273,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   pushBullets(lines, [
     'Send only fields that must change',
     'Do not send the whole settings object',
+    'In Windows PowerShell, if JSON contains Chinese text or emoji, convert the JSON string to UTF-8 bytes before sending',
   ])
 
   pushSection(lines, '### Export Used Apps')
@@ -317,6 +354,11 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
     '`globalMouseTiltEnabled`: Enables desktop tilt motion effect',
     '`globalMouseTiltGyroEnabled`: Enables gyro tilt on supported mobile devices',
     '`hideActivityMedia`: Hides media payload from public activity cards without deleting stored records',
+  ])
+  pushBullets(lines, [
+    `Existing theme presets: ${BUILT_IN_THEME_PRESETS.map((preset) => `\`${preset}\``).join(', ')}`,
+    '`basic` is the default built-in baseline theme',
+    '`customSurface` means the AI should edit `themeCustomSurface` fields instead of expecting a preset CSS file',
   ])
 
   pushSection(lines, '### AI Debugging Mode')
