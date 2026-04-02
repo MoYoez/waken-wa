@@ -1,7 +1,7 @@
 'use client'
 
 import { Loader2, RefreshCw, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -16,14 +16,18 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import type { OrphanAssetRow } from '@/types'
 
 const ORPHAN_LIST_MAX_HEIGHT = 'min(75vh,56rem)'
 
-export function OrphanImages() {
+export interface OrphanImagesHandle {
+  refresh: () => void
+}
+
+export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function OrphanImages(_, ref) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [tick, setTick] = useState(0)
@@ -88,6 +92,10 @@ export function OrphanImages() {
 
   const clearSelection = () => setSelected({})
 
+  useImperativeHandle(ref, () => ({
+    refresh: () => setTick((t) => t + 1),
+  }))
+
   const doDelete = async (keys: string[]) => {
     if (keys.length === 0) return
     setBusy(true)
@@ -117,26 +125,9 @@ export function OrphanImages() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className='py-2'>孤儿图片</CardTitle>
-              <CardDescription className="px-0.5 py-0.5">
-                仅展示“未被任何内容引用”的图片；清理只会删除创建超过 1 小时的孤儿图片，避免误删正在编辑中的图片。
-              </CardDescription>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                disabled={loading || busy}
-                onClick={() => setTick((t) => t + 1)}
-              >
-                <RefreshCw className={cn('h-4 w-4', (loading || busy) && 'opacity-70')} />
-                刷新
-              </Button>
+        <CardContent className="pt-4">
+          {rows.length > 0 && !loading && (
+            <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -163,7 +154,7 @@ export function OrphanImages() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>确认清理</AlertDialogTitle>
                     <AlertDialogDescription>
-                      将删除 {selectedEligibleKeys.length} 张“创建超过 1 小时且未被引用”的孤儿图片。此操作不可撤销。
+                      将删除 {selectedEligibleKeys.length} 张创建超过 1 小时且未被引用的孤儿图片，此操作不可撤销。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -180,9 +171,7 @@ export function OrphanImages() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+          )}
           {loading ? (
             <div className="text-sm text-muted-foreground">加载中…</div>
           ) : rows.length === 0 ? (
@@ -275,4 +264,4 @@ export function OrphanImages() {
       </Card>
     </div>
   )
-}
+})

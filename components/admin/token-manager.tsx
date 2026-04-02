@@ -4,7 +4,7 @@ import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Check, Copy, Plus, QrCode, Trash2 } from 'lucide-react'
 import Image from 'next/image'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -37,7 +37,11 @@ import type { ApiTokenListRow } from '@/types/admin'
 const TOKEN_LIST_PAGE_SIZE = 10
 const TOKEN_LIST_MAX_HEIGHT = 'min(70vh,48rem)'
 
-export function TokenManager() {
+export interface TokenManagerHandle {
+  openCreate: () => void
+}
+
+export const TokenManager = forwardRef<TokenManagerHandle, object>(function TokenManager(_, ref) {
   const [tokens, setTokens] = useState<ApiTokenListRow[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
@@ -215,23 +219,15 @@ export function TokenManager() {
     return format(date, fmt, { locale: zhCN })
   }
 
+  useImperativeHandle(ref, () => ({
+    openCreate: () => setDialogOpen(true),
+  }))
+
   return (
     <div className="space-y-6">
-      {/* 创建按钮 */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold">API Token</h3>
-          <p className="text-sm text-muted-foreground">管理用于上报活动的 API Token</p>
-        </div>
-        
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4" />
-              创建 Token
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        {/* DialogTrigger intentionally omitted – opened via ref from parent */}
+        <DialogContent>
             <DialogHeader>
               <DialogTitle>创建 API Token</DialogTitle>
               <DialogDescription>
@@ -326,8 +322,7 @@ export function TokenManager() {
               </>
             )}
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
 
       {/* Token list (paginated + scroll) */}
       <div className="space-y-3">
@@ -346,7 +341,7 @@ export function TokenManager() {
         ) : tokens.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              暂无 Token，点击上方按钮创建
+              暂无 Token，点击「创建 Token」开始
             </CardContent>
           </Card>
         ) : (
@@ -538,4 +533,4 @@ export function TokenManager() {
       </Dialog>
     </div>
   )
-}
+})

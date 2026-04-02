@@ -2,7 +2,6 @@
 
 import { addWeeks, format, startOfWeek } from 'date-fns'
 import {
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -10,7 +9,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { SortablePeriodTemplatePart } from '@/components/admin/sortable-period-template-part'
@@ -117,7 +116,12 @@ function formatCourseTimeRanges(
   return getCourseTimeSessions(c, periodTemplate).map((s) => `${s.startTime}–${s.endTime}`).join('、')
 }
 
-export function ScheduleManager() {
+export interface ScheduleManagerHandle {
+  openImport: () => void
+  downloadIcs: () => void
+}
+
+export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(function ScheduleManager(_, ref) {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
@@ -487,6 +491,11 @@ export function ScheduleManager() {
     URL.revokeObjectURL(url)
   }
 
+  useImperativeHandle(ref, () => ({
+    openImport: () => setIcsDialogOpen(true),
+    downloadIcs,
+  }))
+
   const applyIcsImport = () => {
     const text = icsPaste.trim()
     if (!text) {
@@ -559,34 +568,6 @@ export function ScheduleManager() {
   return (
     <>
     <div className="rounded-xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm space-y-4 sm:space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold text-foreground flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" />
-            课表
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            仅管理员可见；支持周视图、ICS 导入/导出与开课日期周期。
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => setIcsDialogOpen(true)}>
-            <Upload className="h-4 w-4 mr-1" />
-            导入 ICS
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={downloadIcs}
-            disabled={courses.length === 0}
-          >
-            <Download className="h-4 w-4 mr-1" />
-            导出 ICS
-          </Button>
-        </div>
-      </div>
-
       {message ? (
         <div className="text-sm text-muted-foreground border border-border/60 rounded-md px-3 py-2 bg-muted/20">
           {message}
@@ -1197,4 +1178,4 @@ export function ScheduleManager() {
     />
     </>
   )
-}
+})

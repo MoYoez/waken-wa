@@ -1267,8 +1267,6 @@ export function WebSettings() {
   return (
     <>
     <div className="rounded-xl border bg-card p-6 space-y-5">
-      <h3 className="font-semibold text-foreground">Web 配置</h3>
-
       <Tabs defaultValue="basic" className="space-y-5">
         <TabsList>
           <TabsTrigger value="basic">基础设置</TabsTrigger>

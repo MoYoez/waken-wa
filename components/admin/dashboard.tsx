@@ -3,6 +3,7 @@
 import {
   CalendarDays,
   Clock3,
+  Download,
   Home,
   Key,
   LayoutDashboard,
@@ -10,7 +11,10 @@ import {
   Lightbulb,
   LogOut,
   MonitorSmartphone,
+  Plus,
+  RefreshCw,
   Settings,
+  Upload,
   UserCog,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -24,9 +28,9 @@ import { AccountSettings } from './account-settings'
 import { AddActivityForm } from './add-activity-form'
 import { DeviceManager } from './device-manager'
 import { InspirationManager } from './inspiration-manager'
-import { OrphanImages } from './orphan-images'
-import { ScheduleManager } from './schedule-manager'
-import { TokenManager } from './token-manager'
+import { OrphanImages, type OrphanImagesHandle } from './orphan-images'
+import { ScheduleManager, type ScheduleManagerHandle } from './schedule-manager'
+import { TokenManager, type TokenManagerHandle } from './token-manager'
 import { WebSettings } from './web-settings'
 
 const TAB_ITEMS = [
@@ -133,6 +137,9 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     ready: false,
   })
 
+  const tokenManagerRef = useRef<TokenManagerHandle | null>(null)
+  const orphanImagesRef = useRef<OrphanImagesHandle | null>(null)
+  const scheduleManagerRef = useRef<ScheduleManagerHandle | null>(null)
   const tabsRailRef = useRef<HTMLDivElement | null>(null)
   const triggerRefs = useRef<Record<AdminTabValue, HTMLButtonElement | null>>({
     overview: null,
@@ -258,13 +265,13 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
       return <InspirationManager />
     }
     if (activeTab === 'orphan-images') {
-      return <OrphanImages />
+      return <OrphanImages ref={orphanImagesRef} />
     }
     if (activeTab === 'devices') {
       return <DeviceManager initialHashKey={initialDeviceHash} highlightHashKey={initialDeviceHash} />
     }
     if (activeTab === 'tokens') {
-      return <TokenManager />
+      return <TokenManager ref={tokenManagerRef} />
     }
     if (activeTab === 'account') {
       return <AccountSettings />
@@ -272,7 +279,7 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     if (activeTab === 'settings') {
       return <WebSettings />
     }
-    return <ScheduleManager />
+    return <ScheduleManager ref={scheduleManagerRef} />
   }
 
   const renderBottomGuide = () => {
@@ -417,13 +424,44 @@ curl -X POST ${origin}/api/inspiration/entries \\
         </section>
 
         <section className="admin-panel-shell admin-panel-enter" key={activeTab}>
-          <div className="mb-5 border-b border-border/60 pb-4">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              {activeTabMeta.label}
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              {activeTabMeta.description}
-            </p>
+          <div className="mb-5 flex items-start justify-between gap-4 border-b border-border/60 pb-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                {activeTabMeta.label}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {activeTabMeta.description}
+              </p>
+            </div>
+            {activeTab === 'tokens' && (
+              <Button size="sm" className="shrink-0" onClick={() => tokenManagerRef.current?.openCreate()}>
+                <Plus className="h-4 w-4" />
+                创建 Token
+              </Button>
+            )}
+            {activeTab === 'orphan-images' && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0"
+                onClick={() => orphanImagesRef.current?.refresh()}
+              >
+                <RefreshCw className="h-4 w-4" />
+                刷新
+              </Button>
+            )}
+            {activeTab === 'schedule' && (
+              <div className="flex shrink-0 gap-2">
+                <Button size="sm" variant="outline" onClick={() => scheduleManagerRef.current?.openImport()}>
+                  <Upload className="h-4 w-4" />
+                  导入 ICS
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => scheduleManagerRef.current?.downloadIcs()}>
+                  <Download className="h-4 w-4" />
+                  导出 ICS
+                </Button>
+              </div>
+            )}
           </div>
 
           {activeTab === 'overview' ? (

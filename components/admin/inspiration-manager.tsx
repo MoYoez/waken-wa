@@ -421,16 +421,6 @@ export function InspirationManager() {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold">灵感随想录</h3>
-              <p className="text-sm text-muted-foreground">
-                正文使用 Lexical 富文本编辑；正文配图经裁剪后上传到服务器。
-              </p>
-            </div>
-          </div>
-        </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">

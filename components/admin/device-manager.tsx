@@ -347,8 +347,6 @@ export function DeviceManager({
   return (
     <div className="space-y-6">
       <div className="rounded-xl border bg-card p-6 space-y-4">
-        <h3 className="font-semibold text-foreground">设备管理</h3>
-
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="new-device-name">设备显示名</Label>
