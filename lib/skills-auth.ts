@@ -114,6 +114,18 @@ export async function rotateSkillsApiKey(): Promise<string> {
   return plain
 }
 
+export async function revokeAllSkillsOauthTokens(): Promise<void> {
+  const now = sqlTimestamp()
+  await db
+    .update(skillsOauthTokens)
+    .set({ revokedAt: now as any })
+    .where(isNull(skillsOauthTokens.revokedAt))
+}
+
+export async function clearSkillsApiKey(): Promise<void> {
+  await db.delete(systemSecrets).where(eq(systemSecrets.key, SKILLS_APIKEY_SECRET_KEY))
+}
+
 export async function rotateSkillsOauthToken(
   ttlMs: number,
   aiClientIdRaw: string,
@@ -156,7 +168,7 @@ export async function verifySkillsRequest(
     return { ok: false, error: 'Not found', status: 404 }
   }
 
-  const mode = parseMode(getHeader(request, 'LLM-Skills-Mode'))
+  const modeFromHeader = parseMode(getHeader(request, 'LLM-Skills-Mode'))
   const token = getHeader(request, 'LLM-Skills-Token')
   const requestId = getHeader(request, 'LLM-Skills-Request-Id') || null
   const scope = parseScope(getHeader(request, 'LLM-Skills-Scope'))
@@ -166,12 +178,10 @@ export async function verifySkillsRequest(
   if (!configuredMode) {
     return { ok: false, error: 'Skills 未配置认证模式，请先在后台设置中选择 OAuth 或 APIKEY', status: 503 }
   }
-  if (!mode) {
-    return { ok: false, error: '缺少认证模式（LLM-Skills-Mode）', status: 401 }
-  }
-  if (mode !== configuredMode) {
+  if (modeFromHeader && modeFromHeader !== configuredMode) {
     return { ok: false, error: '认证模式不匹配，请在后台切换一致的模式', status: 403 }
   }
+  const mode = modeFromHeader ?? configuredMode
 
   if (mode === 'apikey') {
     const r = await verifyBcryptSecret(SKILLS_APIKEY_SECRET_KEY, token)
@@ -179,14 +189,14 @@ export async function verifySkillsRequest(
     return { ok: true, mode, scope, requestId, aiClientId: aiClientId || null, isAdmin: false }
   }
   if (!aiClientId) {
-    return { ok: false, error: '缺少 AI 标识（LLM-Skills-AI）', status: 401 }
+    return { ok: false, error: 'OAuth 模式缺少 AI 标识（LLM-Skills-AI）', status: 401 }
   }
   if (!token) {
     return { ok: false, error: '缺少 token', status: 401 }
   }
   const now = sqlTimestamp()
   const candidates = await db
-    .select({ tokenHash: skillsOauthTokens.tokenHash })
+    .select({ tokenHash: skillsOauthTokens.tokenHash, aiClientId: skillsOauthTokens.aiClientId })
     .from(skillsOauthTokens)
     .where(
       and(
@@ -202,7 +212,7 @@ export async function verifySkillsRequest(
   for (const row of candidates) {
     // eslint-disable-next-line no-await-in-loop
     if (await bcrypt.compare(token, row.tokenHash)) {
-      return { ok: true, mode, scope, requestId, aiClientId, isAdmin: false }
+      return { ok: true, mode, scope, requestId, aiClientId: row.aiClientId, isAdmin: false }
     }
   }
   return { ok: false, error: '未授权', status: 401 }

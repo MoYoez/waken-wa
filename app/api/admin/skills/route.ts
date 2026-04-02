@@ -5,8 +5,10 @@ import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
 import {
+  clearSkillsApiKey,
   hasSkillsApiKeyConfigured,
   hasSkillsOauthTokenConfigured,
+  revokeAllSkillsOauthTokens,
   rotateSkillsApiKey,
 } from '@/lib/skills-auth'
 import { clearSiteConfigCaches, getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
@@ -47,6 +49,7 @@ export async function GET() {
       authorizeLinkTemplate: '/admin/skills-authorize?ai=YOUR_UNIQUE_AI_ID',
       oauthAiScoped: true,
       oauthMultiToken: true,
+      modeSwitchRevokesOther: true,
       headerPrefix: 'LLM-Skills-',
     },
   })
@@ -89,6 +92,17 @@ export async function PATCH(request: NextRequest) {
         })
         .where(eq(siteConfig.id, 1))
       await clearSiteConfigCaches()
+
+      const existingMode = normalizeAuthMode(existing.skillsAuthMode)
+      if (authMode && authMode !== existingMode) {
+        if (authMode === 'oauth') {
+          // Switch to OAuth: invalidate APIKEY immediately.
+          await clearSkillsApiKey()
+        } else {
+          // Switch to APIKEY: revoke OAuth tokens immediately.
+          await revokeAllSkillsOauthTokens()
+        }
+      }
     }
 
     const cfg = await getSiteConfigMemoryFirst()
@@ -104,6 +118,7 @@ export async function PATCH(request: NextRequest) {
         oauthConfigured: await hasSkillsOauthTokenConfigured(),
         oauthAiScoped: true,
         oauthMultiToken: true,
+        modeSwitchRevokesOther: true,
         generatedApiKey,
       },
     })

@@ -37,13 +37,10 @@ export async function GET(request: NextRequest) {
 
   const h = (name: string) => (request.headers.get(name) ?? '').trim()
   const q = (name: string) => (request.nextUrl.searchParams.get(name) ?? '').trim()
-  const mode = normalizeMode(h('LLM-Skills-Mode') || q('mode'))
+  const modeFromInput = normalizeMode(h('LLM-Skills-Mode') || q('mode'))
   const token = h('LLM-Skills-Token') || q('token')
   const scope = h('LLM-Skills-Scope') || q('scope') || 'theme'
   const ai = normalizeAiClientId(h('LLM-Skills-AI') || q('ai'))
-  const authorizeLink = ai
-    ? `${request.nextUrl.origin}/admin/skills-authorize?ai=${encodeURIComponent(ai)}`
-    : null
 
   const configuredMode = normalizeMode(String(cfg.skillsAuthMode ?? ''))
   if (!configuredMode) {
@@ -60,14 +57,34 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (!mode || mode !== configuredMode) {
+  if (modeFromInput && modeFromInput !== configuredMode) {
     return NextResponse.json(
       { success: false, error: '认证模式不匹配或缺失，请使用后台显示的 direct link' },
       { status: 403 },
     )
   }
+  const mode = modeFromInput ?? configuredMode
+
+  if (mode === 'oauth' && !ai) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'OAuth 模式缺少 AI 标识（LLM-Skills-AI 或 ai 参数）',
+        guide: {
+          nextStep: 'click_authorize_link',
+          authorizeLinkPath: '/admin/skills-authorize',
+          authorizeLinkTemplate: '/admin/skills-authorize?ai=YOUR_UNIQUE_AI_ID',
+          authorizeLink: null,
+        },
+      },
+      { status: 401 },
+    )
+  }
 
   if (!token) {
+    const authorizeLink = ai
+      ? `${request.nextUrl.origin}/admin/skills-authorize?ai=${encodeURIComponent(ai)}`
+      : null
     return NextResponse.json(
       {
         success: false,
@@ -83,25 +100,11 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  let resolvedAiClientId: string | null = ai || null
   if (mode === 'oauth') {
-    if (!ai) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '缺少 ai 标识。请使用唯一 AI 标识访问，例如 /admin/skills-authorize?ai=YOUR_AI_ID',
-          guide: {
-            nextStep: 'click_authorize_link',
-            authorizeLinkPath: '/admin/skills-authorize',
-            authorizeLinkTemplate: '/admin/skills-authorize?ai=YOUR_UNIQUE_AI_ID',
-            authorizeLink: null,
-          },
-        },
-        { status: 401 },
-      )
-    }
     const now = sqlTimestamp()
     const candidates = await db
-      .select({ tokenHash: skillsOauthTokens.tokenHash })
+      .select({ tokenHash: skillsOauthTokens.tokenHash, aiClientId: skillsOauthTokens.aiClientId })
       .from(skillsOauthTokens)
       .where(
         and(
@@ -112,6 +115,7 @@ export async function GET(request: NextRequest) {
       )
       .orderBy(desc(skillsOauthTokens.id))
     if (candidates.length === 0) {
+      const authorizeLink = `${request.nextUrl.origin}/admin/skills-authorize?ai=${encodeURIComponent(ai)}`
       return NextResponse.json(
         {
           success: false,
@@ -131,6 +135,7 @@ export async function GET(request: NextRequest) {
       // eslint-disable-next-line no-await-in-loop
       if (await bcrypt.compare(token, row.tokenHash)) {
         ok = true
+        resolvedAiClientId = row.aiClientId
         break
       }
     }
@@ -158,21 +163,26 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const oauthAuthorizeLink =
+    mode === 'oauth' && resolvedAiClientId
+      ? `${request.nextUrl.origin}/admin/skills-authorize?ai=${encodeURIComponent(resolvedAiClientId)}`
+      : null
+
   return NextResponse.json({
     success: true,
     data: {
       headerPrefix: 'LLM-Skills-',
       skillsMdPath: '/api/admin/skills/md',
-      oauthAuthorizeLink: authorizeLink,
+      oauthAuthorizeLink,
       headers: {
         'LLM-Skills-Mode': mode,
         'LLM-Skills-Token': 'YOUR_TOKEN',
-        'LLM-Skills-AI': 'YOUR_UNIQUE_AI_ID',
+        'LLM-Skills-AI': resolvedAiClientId || 'YOUR_UNIQUE_AI_ID',
         'LLM-Skills-Scope': scope,
         'LLM-Skills-Request-Id': 'ANY_REQUEST_ID',
       },
       noteForAi:
-        '固定先读取 /api/admin/skills/md。若用户未配置 Skills：让用户去后台 Web 配置 → 进阶设置，启用“允许AI使用Skills辅助调试修改”，选择 OAuth 或 APIKEY。OAuth 模式先请求本接口获取 guide.authorizeLink（后端生成），再发给用户确认；确认后才签发该 AI 的 1 小时 token（可并存多 token）。APIKEY 模式在后台生成/轮换 Key 后提供给 AI（无需二次确认）。',
+        '固定先读取 /api/admin/skills/md。若有环境配置优先读取 waken-wa-host-url 与 waken-wa-host-apikey；若不可用则停止使用并询问用户。若用户未配置 Skills：让用户去后台 Web 配置 → 进阶设置，启用“允许AI使用Skills辅助调试修改”，选择 OAuth 或 APIKEY。OAuth 模式先请求本接口获取 guide.authorizeLink（后端生成），再发给用户确认；确认后才签发该 AI 的 1 小时 token（可并存多 token），并且 OAuth 请求必须携带 LLM-Skills-AI。APIKEY 模式在后台生成/轮换 Key 后提供给 AI（无需二次确认）。',
     },
   })
 }
