@@ -126,48 +126,63 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const pageTitleRaw = String(body.pageTitle ?? '').trim() || DEFAULT_PAGE_TITLE
-    const pageTitle = pageTitleRaw.slice(0, PAGE_TITLE_MAX_LEN)
-    const userName = String(body.userName ?? '').trim()
-    const userBio = String(body.userBio ?? '').trim()
-    const avatarUrl = String(body.avatarUrl ?? '').trim()
-    const userNote = String(body.userNote ?? '').trim()
-    const themePreset = String(body.themePreset ?? 'basic').trim() || 'basic'
-    const themeCustomSurface = parseThemeCustomSurface(body.themeCustomSurface)
-    const customCss = normalizeCustomCss(body.customCss)
-    const currentlyText = String(body.currentlyText ?? '').trim() || '当前状态'
-    const earlierText = String(body.earlierText ?? '').trim() || '最近的随想录'
-    const adminText = String(body.adminText ?? '').trim() || 'admin'
-    const pageLockEnabled = Boolean(body.pageLockEnabled)
-    const autoAcceptNewDevices = Boolean(body.autoAcceptNewDevices)
-    const rawPageLockPassword = String(body.pageLockPassword ?? '')
-    const appMessageRules = Array.isArray(body.appMessageRules) ? body.appMessageRules : []
-    const appBlacklist = Array.isArray(body.appBlacklist)
-      ? body.appBlacklist
-          .map((item: unknown) => String(item ?? '').trim())
-          .filter((item: string) => item.length > 0)
-      : []
-    const appWhitelist = Array.isArray(body.appWhitelist)
-      ? body.appWhitelist
-          .map((item: unknown) => String(item ?? '').trim())
-          .filter((item: string) => item.length > 0)
-      : []
-    const appFilterModeRaw = String(body.appFilterMode ?? 'blacklist').trim().toLowerCase()
-    const appFilterMode = appFilterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
-    const appNameOnlyList = Array.isArray(body.appNameOnlyList)
-      ? body.appNameOnlyList
-          .map((item: unknown) => String(item ?? '').trim())
-          .filter((item: string) => item.length > 0)
-      : []
-    const mediaPlaySourceBlocklist = Array.isArray(body.mediaPlaySourceBlocklist)
-      ? body.mediaPlaySourceBlocklist
-          .map((item: unknown) => String(item ?? '').trim())
-          .filter((item: string) => item.length > 0)
-      : []
-    const historyWindowMinutes = parseHistoryWindowMinutes(body.historyWindowMinutes)
-    const processStaleSeconds = parseProcessStaleSeconds(body.processStaleSeconds)
-
     const existing = await getSiteConfigMemoryFirst()
+
+    const has = (k: string) => k in body
+    const strField = (k: string, fallback: string) => {
+      const raw = has(k) ? body[k] : (existing as Record<string, unknown> | null)?.[k]
+      return String(raw ?? '').trim() || fallback
+    }
+    const trimStr = (k: string) => {
+      const raw = has(k) ? body[k] : (existing as Record<string, unknown> | null)?.[k]
+      return String(raw ?? '').trim()
+    }
+    const strArr = (k: string): string[] => {
+      const raw = has(k) ? body[k] : (existing as Record<string, unknown> | null)?.[k]
+      return Array.isArray(raw)
+        ? raw.map((item: unknown) => String(item ?? '').trim()).filter((s: string) => s.length > 0)
+        : []
+    }
+
+    const pageTitle = strField('pageTitle', DEFAULT_PAGE_TITLE).slice(0, PAGE_TITLE_MAX_LEN)
+    const userName = trimStr('userName')
+    const userBio = trimStr('userBio')
+    const avatarUrl = trimStr('avatarUrl')
+    const userNote = trimStr('userNote')
+    const themePreset = strField('themePreset', 'basic')
+    const themeCustomSurface = parseThemeCustomSurface(
+      has('themeCustomSurface') ? body.themeCustomSurface : existing?.themeCustomSurface,
+    )
+    const customCss = normalizeCustomCss(
+      has('customCss') ? body.customCss : existing?.customCss,
+    )
+    const currentlyText = strField('currentlyText', '当前状态')
+    const earlierText = strField('earlierText', '最近的随想录')
+    const adminText = strField('adminText', 'admin')
+    const pageLockEnabled = has('pageLockEnabled')
+      ? Boolean(body.pageLockEnabled)
+      : Boolean(existing?.pageLockEnabled)
+    const autoAcceptNewDevices = has('autoAcceptNewDevices')
+      ? Boolean(body.autoAcceptNewDevices)
+      : Boolean(existing?.autoAcceptNewDevices)
+    const rawPageLockPassword = has('pageLockPassword') ? String(body.pageLockPassword ?? '') : ''
+    const appMessageRules = has('appMessageRules')
+      ? (Array.isArray(body.appMessageRules) ? body.appMessageRules : [])
+      : (Array.isArray(existing?.appMessageRules) ? existing!.appMessageRules : [])
+    const appBlacklist = strArr('appBlacklist')
+    const appWhitelist = strArr('appWhitelist')
+    const appFilterModeRaw = has('appFilterMode')
+      ? String(body.appFilterMode ?? 'blacklist').trim().toLowerCase()
+      : String(existing?.appFilterMode ?? 'blacklist').trim().toLowerCase()
+    const appFilterMode = appFilterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
+    const appNameOnlyList = strArr('appNameOnlyList')
+    const mediaPlaySourceBlocklist = strArr('mediaPlaySourceBlocklist')
+    const historyWindowMinutes = parseHistoryWindowMinutes(
+      has('historyWindowMinutes') ? body.historyWindowMinutes : existing?.historyWindowMinutes,
+    )
+    const processStaleSeconds = parseProcessStaleSeconds(
+      has('processStaleSeconds') ? body.processStaleSeconds : existing?.processStaleSeconds,
+    )
 
     let captureReportedAppsEnabled = existing?.captureReportedAppsEnabled !== false
     if (
