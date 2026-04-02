@@ -973,6 +973,9 @@ export function WebSettings() {
       revokeOauthForAiClientId?: string
       oauthTokenTtlMinutes?: number
     },
+    options?: {
+      successMessage?: string | null
+    },
   ) => {
     setSkillsSaving(true)
     try {
@@ -1003,7 +1006,9 @@ export function WebSettings() {
       setLegacyMcpGeneratedApiKey(
         typeof json.data?.generatedLegacyMcpApiKey === 'string' ? json.data.generatedLegacyMcpApiKey : '',
       )
-      toast.success('已保存 Skills 设置')
+      if (options?.successMessage !== null) {
+        toast.success(options?.successMessage || '已保存 Skills 设置')
+      }
     } catch (e) {
       console.error(e)
       toast.error('保存失败')
@@ -1017,7 +1022,7 @@ export function WebSettings() {
     if (!normalized) return
     setSkillsRevokingAiClientId(normalized)
     try {
-      await saveSkillsConfig({ revokeOauthForAiClientId: normalized })
+      await saveSkillsConfig({ revokeOauthForAiClientId: normalized }, { successMessage: null })
       toast.success(`已撤销 AI ${normalized} 的 OAuth 授权`)
     } finally {
       setSkillsRevokingAiClientId('')
