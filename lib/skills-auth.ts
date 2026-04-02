@@ -12,6 +12,7 @@ import { skillsOauthTokens, systemSecrets } from '@/lib/drizzle-schema'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   SKILLS_AUTHORIZE_CODE_DEFAULT_TTL_MS,
+  SKILLS_SECRET_ENV_KEYS,
   SKILLS_HEADER_PREFIX,
   SKILLS_MIN_TOKEN_TTL_MS,
   SKILLS_OAUTH_TOKEN_DEFAULT_TTL_MS,
@@ -86,7 +87,31 @@ function createRandomSecretToken(): string {
   return randomBytes(32).toString('base64url')
 }
 
+function getEnvSecretValue(secretDbKey: string): string | null {
+  let envName: string | null = null
+  if (secretDbKey === SKILLS_SECRET_KEYS.skillsApiKey) {
+    envName = SKILLS_SECRET_ENV_KEYS.skillsApiKey
+  } else if (secretDbKey === SKILLS_SECRET_KEYS.legacyMcpApiKey) {
+    envName = SKILLS_SECRET_ENV_KEYS.legacyMcpApiKey
+  }
+  if (!envName) return null
+  const value = String(process.env[envName] ?? '').trim()
+  return value || null
+}
+
+export function getSkillsSecretEnvStatus(): {
+  skillsApiKeyEnvManaged: boolean
+  legacyMcpApiKeyEnvManaged: boolean
+} {
+  return {
+    skillsApiKeyEnvManaged: Boolean(getEnvSecretValue(SKILLS_SECRET_KEYS.skillsApiKey)),
+    legacyMcpApiKeyEnvManaged: Boolean(getEnvSecretValue(SKILLS_SECRET_KEYS.legacyMcpApiKey)),
+  }
+}
+
 async function readSecretValue(key: string): Promise<string | null> {
+  const fromEnv = getEnvSecretValue(key)
+  if (fromEnv) return fromEnv
   const [row] = await db
     .select({ value: systemSecrets.value })
     .from(systemSecrets)
@@ -144,12 +169,18 @@ export async function hasSkillsOauthTokenConfigured(): Promise<boolean> {
 }
 
 export async function rotateSkillsApiKey(): Promise<string> {
+  if (getEnvSecretValue(SKILLS_SECRET_KEYS.skillsApiKey)) {
+    throw new Error('SKILLS_API_KEY is env-managed')
+  }
   const plain = createRandomSecretToken()
   await setSecretBcrypt(SKILLS_SECRET_KEYS.skillsApiKey, plain)
   return plain
 }
 
 export async function rotateLegacyMcpApiKey(): Promise<string> {
+  if (getEnvSecretValue(SKILLS_SECRET_KEYS.legacyMcpApiKey)) {
+    throw new Error('LEGACY_MCP_API_KEY is env-managed')
+  }
   const plain = createRandomSecretToken()
   await setSecretBcrypt(SKILLS_SECRET_KEYS.legacyMcpApiKey, plain)
   return plain
@@ -211,6 +242,10 @@ export async function clearSkillsApiKey(): Promise<void> {
 }
 
 export async function verifyLegacyMcpApiKey(token: string): Promise<boolean> {
+  const envSecret = getEnvSecretValue(SKILLS_SECRET_KEYS.legacyMcpApiKey)
+  if (envSecret) {
+    return Boolean(token) && token === envSecret
+  }
   const stored = await readSecretValue(SKILLS_SECRET_KEYS.legacyMcpApiKey)
   if (!stored || !token) return false
   return bcrypt.compare(token, stored)
@@ -254,6 +289,11 @@ async function verifyBcryptSecret(
   plain: string,
 ): Promise<SkillsVerifyFail | { ok: true }> {
   if (!plain) return { ok: false, error: '未授权', status: 401 }
+  const envSecret = getEnvSecretValue(secretKey)
+  if (envSecret) {
+    if (plain !== envSecret) return { ok: false, error: '未授权', status: 401 }
+    return { ok: true }
+  }
   const stored = await readSecretValue(secretKey)
   if (!stored) return { ok: false, error: '未配置授权信息', status: 503 }
   const ok = await bcrypt.compare(plain, stored)

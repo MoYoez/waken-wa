@@ -7,6 +7,7 @@ import { siteConfig } from '@/lib/drizzle-schema'
 import { readJsonObject } from '@/lib/request-json'
 import {
   clearSkillsApiKey,
+  getSkillsSecretEnvStatus,
   hasLegacyMcpApiKeyConfigured,
   hasSkillsApiKeyConfigured,
   hasSkillsOauthTokenConfigured,
@@ -33,6 +34,7 @@ export async function GET() {
     return unauthorizedJson()
   }
 
+  const envStatus = getSkillsSecretEnvStatus()
   const cfg = await getSiteConfigMemoryFirst()
   const authMode = normalizeAuthMode(cfg?.skillsAuthMode)
   return NextResponse.json({
@@ -49,6 +51,10 @@ export async function GET() {
       oauthMultiToken: true,
       modeSwitchRevokesOther: true,
       headerPrefix: 'LLM-Skills-',
+      secretSource: {
+        skillsApiKey: envStatus.skillsApiKeyEnvManaged ? 'env' : 'db',
+        legacyMcpApiKey: envStatus.legacyMcpApiKeyEnvManaged ? 'env' : 'db',
+      },
       aiToolMode: String(cfg?.aiToolMode ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills',
       legacyMcpEnabled: await isLegacyMcpEnabled(),
       legacyMcpConfigured: await hasLegacyMcpApiKeyConfigured(),
@@ -75,6 +81,19 @@ export async function PATCH(request: NextRequest) {
 
     const rotateApiKey = body.rotateApiKey === true
     const rotateLegacyMcpKey = body.rotateLegacyMcpKey === true
+    const envStatus = getSkillsSecretEnvStatus()
+    if (rotateApiKey && envStatus.skillsApiKeyEnvManaged) {
+      return NextResponse.json(
+        { success: false, error: 'SKILLS_API_KEY 由环境变量接管，请在部署环境中轮换' },
+        { status: 409 },
+      )
+    }
+    if (rotateLegacyMcpKey && envStatus.legacyMcpApiKeyEnvManaged) {
+      return NextResponse.json(
+        { success: false, error: 'LEGACY_MCP_API_KEY 由环境变量接管，请在部署环境中轮换' },
+        { status: 409 },
+      )
+    }
     let generatedApiKey: string | null = null
     let generatedLegacyMcpApiKey: string | null = null
 
@@ -130,6 +149,10 @@ export async function PATCH(request: NextRequest) {
         modeSwitchRevokesOther: true,
         generatedApiKey,
         generatedLegacyMcpApiKey,
+        secretSource: {
+          skillsApiKey: envStatus.skillsApiKeyEnvManaged ? 'env' : 'db',
+          legacyMcpApiKey: envStatus.legacyMcpApiKeyEnvManaged ? 'env' : 'db',
+        },
         aiToolMode: String(cfg?.aiToolMode ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills',
         legacyMcpEnabled: await isLegacyMcpEnabled(),
         legacyMcpConfigured: await hasLegacyMcpApiKeyConfigured(),

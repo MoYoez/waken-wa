@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import {
   hasLegacyMcpApiKeyConfigured,
   isLegacyMcpEnabled,
@@ -8,6 +9,9 @@ import {
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+const LLM_MCP_APIKEY_RATE_LIMIT_MAX = 60
+const LLM_MCP_APIKEY_RATE_LIMIT_WINDOW_MS = 60_000
 
 function readToken(request: NextRequest) {
   const auth = (request.headers.get('authorization') ?? '').trim()
@@ -20,7 +24,28 @@ function readToken(request: NextRequest) {
   return ''
 }
 
+function hasQueryToken(request: NextRequest): boolean {
+  return (request.nextUrl.searchParams.get('token') ?? '').trim().length > 0
+}
+
 async function handle(request: NextRequest) {
+  if (hasQueryToken(request)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Query token 已废弃，请改用 Authorization 或 X-Waken-MCP-Key 请求头',
+      },
+      { status: 400 },
+    )
+  }
+
+  const limitedResponse = await enforceApiRateLimit(request, {
+    bucket: 'llm-mcp-apikey',
+    maxRequests: LLM_MCP_APIKEY_RATE_LIMIT_MAX,
+    windowMs: LLM_MCP_APIKEY_RATE_LIMIT_WINDOW_MS,
+  })
+  if (limitedResponse) return limitedResponse
+
   const enabled = await isLegacyMcpEnabled()
   const configured = await hasLegacyMcpApiKeyConfigured()
   const token = readToken(request)

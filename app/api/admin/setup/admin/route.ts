@@ -203,8 +203,13 @@ export async function POST(request: NextRequest) {
           .returning({ id: adminUsers.id, username: adminUsers.username })
         admin = row ?? null
       }
-      await safeSiteConfigUpsert(upsertPayload, executor)
-      return admin
+      const upsertResult = await safeSiteConfigUpsert(upsertPayload, executor)
+      if (upsertResult.strippedColumns.length > 0) {
+        console.warn(
+          `[setup-admin] unknown DB columns stripped during setup upsert: ${upsertResult.strippedColumns.join(', ')}`,
+        )
+      }
+      return { admin, schemaWarnings: upsertResult.strippedColumns }
     }
 
     const result = isPostgresDb()
@@ -212,7 +217,12 @@ export async function POST(request: NextRequest) {
       : await applySetup(db)
 
     return NextResponse.json(
-      { success: true, data: result, adminCreated: !hasAdmin },
+      {
+        success: true,
+        data: result.admin,
+        adminCreated: !hasAdmin,
+        schemaWarnings: result.schemaWarnings,
+      },
       { status: hasAdmin ? 200 : 201 }
     )
   } catch (error: unknown) {

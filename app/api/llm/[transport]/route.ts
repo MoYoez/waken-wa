@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { createMcpHandler, experimental_withMcpAuth } from 'mcp-handler'
+import { NextRequest } from 'next/server'
 
+import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { exportActivityAppsSnapshot } from '@/lib/activity-app-export'
 import { getSafeSiteConfig, updateSiteConfigFromPayload } from '@/lib/llm-site-config'
 import { isLegacyMcpEnabled, verifyLegacyMcpApiKey } from '@/lib/skills-auth'
@@ -110,5 +112,19 @@ const authedHandler = experimental_withMcpAuth(
   { required: true },
 )
 
-export const GET = authedHandler
-export const POST = authedHandler
+const LLM_MCP_TRANSPORT_RATE_LIMIT_MAX = 60
+const LLM_MCP_TRANSPORT_RATE_LIMIT_WINDOW_MS = 60_000
+
+async function withRateLimit(request: Request) {
+  const nextRequest = request instanceof NextRequest ? request : new NextRequest(request)
+  const limitedResponse = await enforceApiRateLimit(nextRequest, {
+    bucket: 'llm-mcp-transport',
+    maxRequests: LLM_MCP_TRANSPORT_RATE_LIMIT_MAX,
+    windowMs: LLM_MCP_TRANSPORT_RATE_LIMIT_WINDOW_MS,
+  })
+  if (limitedResponse) return limitedResponse
+  return authedHandler(request)
+}
+
+export const GET = withRateLimit
+export const POST = withRateLimit

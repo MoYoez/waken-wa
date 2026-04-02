@@ -7,6 +7,13 @@ import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
 const memoryStore = new Map<string, { count: number; resetAt: number }>()
 let memoryOpCount = 0
 
+export type RateLimitCheckResult = {
+  limited: boolean
+  count: number
+  resetAt: number
+  backend: 'redis' | 'memory'
+}
+
 function isRateLimitedFromMemory(
   key: string,
   maxRequests: number,
@@ -65,16 +72,35 @@ export async function isRateLimited(
   maxRequests: number,
   windowMs: number,
 ): Promise<boolean> {
+  const result = await checkRateLimit(key, maxRequests, windowMs)
+  return result.limited
+}
+
+export async function checkRateLimit(
+  key: string,
+  maxRequests: number,
+  windowMs: number,
+): Promise<RateLimitCheckResult> {
   const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000))
   const redisCount =
     (await shouldUseRedisCache()) ? await redisIncrWithExpire(`waken:rl:${key}`, windowSeconds) : null
   if (redisCount != null) {
     const now = Date.now()
     await backupRateLimitCounter(key, redisCount, windowMs, now + windowMs)
-    return redisCount > maxRequests
+    return {
+      limited: redisCount > maxRequests,
+      count: redisCount,
+      resetAt: now + windowMs,
+      backend: 'redis',
+    }
   }
 
   const memory = isRateLimitedFromMemory(key, maxRequests, windowMs)
   await backupRateLimitCounter(key, memory.count, windowMs, memory.resetAt)
-  return memory.limited
+  return {
+    limited: memory.limited,
+    count: memory.count,
+    resetAt: memory.resetAt,
+    backend: 'memory',
+  }
 }

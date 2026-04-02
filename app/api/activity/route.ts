@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   ACTIVITY_FEED_DEFAULT_LIMIT,
 } from '@/lib/activity-api-constants'
+import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { recordReportedAppHistory } from '@/lib/activity-app-history'
 import {
   parseActivityReportBody,
@@ -32,6 +33,9 @@ import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+const ACTIVITY_REPORT_RATE_LIMIT_MAX = 120
+const ACTIVITY_REPORT_RATE_LIMIT_WINDOW_MS = 60_000
 
 async function validateToken(request: NextRequest): Promise<{ id: number } | null> {
   const authHeader = request.headers.get('authorization')
@@ -93,6 +97,14 @@ export async function POST(request: NextRequest) {
         { status: 401 },
       )
     }
+
+    const limitedResponse = await enforceApiRateLimit(request, {
+      bucket: 'activity-report',
+      maxRequests: ACTIVITY_REPORT_RATE_LIMIT_MAX,
+      windowMs: ACTIVITY_REPORT_RATE_LIMIT_WINDOW_MS,
+      tokenKey: tokenInfo.id,
+    })
+    if (limitedResponse) return limitedResponse
 
     const body = await request.json()
     if (!body || typeof body !== 'object' || Array.isArray(body)) {

@@ -1560,14 +1560,15 @@ export function WebSettings() {
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   该链接用于验证 token 是否可用，并返回 AI 需要的{' '}
                   <code className="rounded bg-muted px-1">LLM-Skills-*</code> 请求头模板。
-                  APIKEY 模式把 token 参数替换为本次生成的 Key；OAuth 模式由 AI 生成授权链接给用户确认后获取 token。
+                  APIKEY 模式请在请求头填写 <code className="rounded bg-muted px-1">LLM-Skills-Token</code>；
+                  OAuth 模式由 AI 生成授权链接给用户确认后获取 token。
                 </p>
                 <div className="flex gap-2">
                   <Input
                     value={
                       publicOrigin
-                        ? `${publicOrigin}/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID&token=...`
-                        : `/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID&token=...`
+                        ? `${publicOrigin}/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID`
+                        : `/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID`
                     }
                     readOnly
                     className="font-mono text-xs"
@@ -1580,8 +1581,8 @@ export function WebSettings() {
                     onClick={() =>
                       void copyPlainText(
                         publicOrigin
-                          ? `${publicOrigin}/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID&token=...`
-                          : `/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID&token=...`,
+                          ? `${publicOrigin}/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID`
+                          : `/api/llm/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID`,
                         '已复制 Skills 直连链接',
                       )
                     }

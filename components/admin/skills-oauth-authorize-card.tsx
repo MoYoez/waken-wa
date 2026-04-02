@@ -28,8 +28,8 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId, authorizeCo
   const directExample = useMemo(() => {
     const base = publicOrigin || ''
     return base
-      ? `${base}/api/llm/direct?mode=oauth&ai=${encodeURIComponent(aiClientId)}&token=...`
-      : `/api/llm/direct?mode=oauth&ai=${encodeURIComponent(aiClientId)}&token=...`
+      ? `${base}/api/llm/direct?mode=oauth&ai=${encodeURIComponent(aiClientId)}`
+      : `/api/llm/direct?mode=oauth&ai=${encodeURIComponent(aiClientId)}`
   }, [publicOrigin, aiClientId])
 
   const authorize = async () => {
@@ -108,7 +108,7 @@ LLM-Skills-Request-Id: ANY_REQUEST_ID`}</pre>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            验证链接（把 token 填进去测试）：<code>{directExample.replace('...', token)}</code>
+            验证链接（请使用上方请求头中的 token 访问）：<code>{directExample}</code>
           </p>
         </>
       ) : null}

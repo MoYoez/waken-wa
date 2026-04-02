@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { getPublicOrigin } from '@/lib/public-request-url'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
@@ -14,6 +15,9 @@ import type { LlmEndpoints, SkillsMode, ToolMode } from '@/types'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+const LLM_DIRECT_RATE_LIMIT_MAX = 120
+const LLM_DIRECT_RATE_LIMIT_WINDOW_MS = 60_000
 
 function normalizeMode(raw: string | null): 'oauth' | 'apikey' | null {
   const v = String(raw ?? '').trim().toLowerCase()
@@ -47,7 +51,28 @@ function getHeaderValue(request: NextRequest, headerName: string): string {
   return (request.headers.get(headerName) ?? '').trim()
 }
 
+function hasQueryToken(request: NextRequest): boolean {
+  return (request.nextUrl.searchParams.get('token') ?? '').trim().length > 0
+}
+
 export async function GET(request: NextRequest) {
+  if (hasQueryToken(request)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Query token 已废弃，请改用 LLM-Skills-Token 请求头',
+      },
+      { status: 400 },
+    )
+  }
+
+  const limitedResponse = await enforceApiRateLimit(request, {
+    bucket: 'llm-direct',
+    maxRequests: LLM_DIRECT_RATE_LIMIT_MAX,
+    windowMs: LLM_DIRECT_RATE_LIMIT_WINDOW_MS,
+  })
+  if (limitedResponse) return limitedResponse
+
   const cfg = await getSiteConfigMemoryFirst()
   if (cfg?.skillsDebugEnabled !== true) {
     return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })

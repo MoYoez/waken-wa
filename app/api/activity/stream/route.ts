@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 import { ACTIVITY_FEED_DEFAULT_LIMIT } from '@/lib/activity-api-constants'
+import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { getCachedActivityFeedData } from '@/lib/activity-feed-cache'
 import {
@@ -14,6 +15,9 @@ import { isSiteLockSatisfied } from '@/lib/auth'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+const ACTIVITY_STREAM_OPEN_RATE_LIMIT_MAX = 30
+const ACTIVITY_STREAM_OPEN_RATE_LIMIT_WINDOW_MS = 60_000
 
 let activeStreams = 0
 let nextClientId = 1
@@ -134,7 +138,14 @@ function ensureBroadcasterRunning(options?: { skipImmediatePush?: boolean }) {
   }, ACTIVITY_STREAM_POLL_INTERVAL_MS)
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const limitedResponse = await enforceApiRateLimit(request, {
+    bucket: 'activity-stream-open',
+    maxRequests: ACTIVITY_STREAM_OPEN_RATE_LIMIT_MAX,
+    windowMs: ACTIVITY_STREAM_OPEN_RATE_LIMIT_WINDOW_MS,
+  })
+  if (limitedResponse) return limitedResponse
+
   if (activeStreams >= ACTIVITY_STREAM_MAX_CONCURRENT_CONNECTIONS) {
     return NextResponse.json(
       { success: false, error: '连接数已达上限，请稍后再试' },

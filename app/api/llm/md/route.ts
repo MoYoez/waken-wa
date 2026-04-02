@@ -1,12 +1,16 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
+import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { getPublicOrigin } from '@/lib/public-request-url'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import type { LlmEndpoints, ToolMode } from '@/types'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+const LLM_MD_RATE_LIMIT_MAX = 60
+const LLM_MD_RATE_LIMIT_WINDOW_MS = 60_000
 
 function resolvePreferredToolMode(raw: unknown): ToolMode {
   return String(raw ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills'
@@ -414,6 +418,13 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
 }
 
 export async function GET(request: NextRequest) {
+  const limitedResponse = await enforceApiRateLimit(request, {
+    bucket: 'llm-markdown',
+    maxRequests: LLM_MD_RATE_LIMIT_MAX,
+    windowMs: LLM_MD_RATE_LIMIT_WINDOW_MS,
+  })
+  if (limitedResponse) return limitedResponse
+
   const cfg = await getSiteConfigMemoryFirst()
   const origin = getPublicOrigin(request)
   const preferredToolMode = resolvePreferredToolMode(cfg?.aiToolMode)

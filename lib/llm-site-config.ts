@@ -541,7 +541,7 @@ export async function updateSiteConfigFromPayload(
     activityRejectLockappSleep,
   }
 
-  await safeSiteConfigUpsert({
+  const upsertResult = await safeSiteConfigUpsert({
     where: { id: 1 },
     update: siteConfigValues,
     create: {
@@ -549,6 +549,11 @@ export async function updateSiteConfigFromPayload(
       ...siteConfigValues,
     },
   })
+  if (upsertResult.strippedColumns.length > 0) {
+    console.warn(
+      `[site-config] unknown DB columns stripped during upsert: ${upsertResult.strippedColumns.join(', ')}`,
+    )
+  }
   await clearActivityFeedDataCache()
 
   const config = await getSiteConfigMemoryFirst()
@@ -558,5 +563,14 @@ export async function updateSiteConfigFromPayload(
     throw error
   }
 
-  return redactSiteConfigForClient(config as SiteConfigRecord)
+  const redacted = redactSiteConfigForClient(config as SiteConfigRecord)
+  if (upsertResult.strippedColumns.length === 0) {
+    return redacted
+  }
+  return {
+    ...redacted,
+    schemaWarnings: {
+      strippedColumns: upsertResult.strippedColumns,
+    },
+  }
 }

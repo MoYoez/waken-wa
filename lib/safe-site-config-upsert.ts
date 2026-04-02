@@ -57,6 +57,7 @@ export async function safeSiteConfigUpsert(
     { ...args.create, id, updatedAt: now },
     SITE_CONFIG_JSON_FIELDS,
   )
+  const strippedColumns = new Set<string>()
 
   for (let i = 0; i < 30; i += 1) {
     try {
@@ -68,7 +69,7 @@ export async function safeSiteConfigUpsert(
           set: update as never,
         })
       await clearSiteConfigCaches()
-      return
+      return { strippedColumns: Array.from(strippedColumns) }
     } catch (error) {
       const unknownCol = getUnknownColumnName(error)
       if (!unknownCol) {
@@ -92,6 +93,7 @@ export async function safeSiteConfigUpsert(
       if (!stripped) {
         throw error
       }
+      strippedColumns.add(unknownCol)
     }
   }
 

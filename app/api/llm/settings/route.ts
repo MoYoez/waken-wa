@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { getSafeSiteConfig, updateSiteConfigFromPayload } from '@/lib/llm-site-config'
 import { verifySkillsRequest } from '@/lib/skills-auth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const LLM_SETTINGS_RATE_LIMIT_MAX = 60
+const LLM_SETTINGS_RATE_LIMIT_WINDOW_MS = 60_000
+
 export async function GET(request: NextRequest) {
+  const limitedResponse = await enforceApiRateLimit(request, {
+    bucket: 'llm-settings-get',
+    maxRequests: LLM_SETTINGS_RATE_LIMIT_MAX,
+    windowMs: LLM_SETTINGS_RATE_LIMIT_WINDOW_MS,
+  })
+  if (limitedResponse) return limitedResponse
+
   const auth = await verifySkillsRequest(request)
   if (!auth.ok) {
     return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })
@@ -24,6 +35,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const limitedResponse = await enforceApiRateLimit(request, {
+    bucket: 'llm-settings-patch',
+    maxRequests: LLM_SETTINGS_RATE_LIMIT_MAX,
+    windowMs: LLM_SETTINGS_RATE_LIMIT_WINDOW_MS,
+  })
+  if (limitedResponse) return limitedResponse
+
   const auth = await verifySkillsRequest(request)
   if (!auth.ok) {
     return NextResponse.json({ success: false, error: auth.error }, { status: auth.status })

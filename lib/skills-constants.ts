@@ -4,6 +4,11 @@ export const SKILLS_SECRET_KEYS = {
   skillsOauthAuthorizeCodePrefix: 'skills_oauth_authorize_code:',
 } as const
 
+export const SKILLS_SECRET_ENV_KEYS = {
+  skillsApiKey: 'SKILLS_API_KEY',
+  legacyMcpApiKey: 'LEGACY_MCP_API_KEY',
+} as const
+
 export const SKILLS_HEADER_PREFIX = 'llm-skills-'
 
 export const SKILLS_AUTHORIZE_CODE_DEFAULT_TTL_MS = 15 * 60_000
