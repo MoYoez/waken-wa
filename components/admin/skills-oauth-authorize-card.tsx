@@ -14,6 +14,7 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
   const [loading, setLoading] = useState(false)
   const [token, setToken] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
+  const [error, setError] = useState('')
   const directExample = useMemo(() => {
     const base = publicOrigin || ''
     return base
@@ -25,6 +26,7 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
     const ok = window.confirm('允许 AI 使用 Skills（OAuth）辅助调试修改？该授权有效期 1 小时。')
     if (!ok) return
     setLoading(true)
+    setError('')
     try {
       const res = await fetch('/api/admin/skills/oauth/authorize', {
         method: 'POST',
@@ -37,6 +39,8 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
       }
       setToken(String(json.data?.token ?? ''))
       setExpiresAt(String(json.data?.expiresAt ?? ''))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '授权失败')
     } finally {
       setLoading(false)
     }
@@ -52,6 +56,10 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
       <Button type="button" onClick={authorize} disabled={loading}>
         {loading ? '处理中…' : '生成授权 Token'}
       </Button>
+
+      {error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : null}
 
       {token ? (
         <>

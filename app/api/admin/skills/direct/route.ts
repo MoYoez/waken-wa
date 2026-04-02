@@ -35,10 +35,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
   }
 
-  const mode = normalizeMode(request.nextUrl.searchParams.get('mode'))
-  const token = String(request.nextUrl.searchParams.get('token') ?? '').trim()
-  const scope = String(request.nextUrl.searchParams.get('scope') ?? 'theme').trim()
-  const ai = normalizeAiClientId(request.nextUrl.searchParams.get('ai'))
+  const h = (name: string) => (request.headers.get(name) ?? '').trim()
+  const q = (name: string) => (request.nextUrl.searchParams.get(name) ?? '').trim()
+  const mode = normalizeMode(h('LLM-Skills-Mode') || q('mode'))
+  const token = h('LLM-Skills-Token') || q('token')
+  const scope = h('LLM-Skills-Scope') || q('scope') || 'theme'
+  const ai = normalizeAiClientId(h('LLM-Skills-AI') || q('ai'))
 
   const configuredMode = normalizeMode(String(cfg.skillsAuthMode ?? ''))
   if (!configuredMode) {
@@ -104,7 +106,6 @@ export async function GET(request: NextRequest) {
         ),
       )
       .orderBy(desc(skillsOauthTokens.id))
-      .limit(50)
     if (candidates.length === 0) {
       return NextResponse.json(
         {

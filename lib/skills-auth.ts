@@ -196,7 +196,6 @@ export async function verifySkillsRequest(
       ),
     )
     .orderBy(desc(skillsOauthTokens.id))
-    .limit(50)
   if (candidates.length === 0) {
     return { ok: false, error: 'OAuth 授权不存在或已过期，请重新授权', status: 401 }
   }

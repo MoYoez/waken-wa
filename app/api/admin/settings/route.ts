@@ -88,7 +88,10 @@ export async function PATCH(request: NextRequest) {
   if (!guard.ok) return guard.response
 
   try {
-    const body = await request.json()
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ success: false, error: '请求体必须为 JSON 对象' }, { status: 400 })
+    }
 
     if (!guard.isAdmin) {
       const denied = new Set([

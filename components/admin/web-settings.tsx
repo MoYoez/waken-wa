@@ -685,7 +685,10 @@ export function WebSettings() {
           fetch('/api/admin/settings'),
           fetch('/api/admin/skills'),
         ])
-        const [data, skillsData] = await Promise.all([settingsRes.json(), skillsRes.json()])
+        const [data, skillsData] = await Promise.all([
+          settingsRes.json().catch(() => null),
+          skillsRes.json().catch(() => null),
+        ])
 
         if (skillsData?.success && skillsData?.data) {
           setSkillsEnabled(skillsData.data.enabled === true)
@@ -697,6 +700,8 @@ export function WebSettings() {
           setSkillsApiKeyConfigured(skillsData.data.apiKeyConfigured === true)
           setSkillsOauthConfigured(skillsData.data.oauthConfigured === true)
           setSkillsGeneratedApiKey('')
+        } else if (skillsData !== null) {
+          toast.error('加载 Skills 配置失败')
         }
 
         if (data?.success && data?.data) {
@@ -1392,10 +1397,9 @@ export function WebSettings() {
           <Switch
             checked={skillsEnabled}
             onCheckedChange={(v) => {
-              const next = Boolean(v)
-              setSkillsEnabled(next)
-              void saveSkillsConfig({ enabled: next })
+              void saveSkillsConfig({ enabled: Boolean(v) })
             }}
+            disabled={skillsSaving}
             className="shrink-0"
           />
         </div>
@@ -1407,10 +1411,9 @@ export function WebSettings() {
               value={skillsAuthMode || ''}
               onValueChange={(v) => {
                 const mode = v === 'oauth' || v === 'apikey' ? v : ''
-                setSkillsAuthMode(mode as any)
                 if (mode) void saveSkillsConfig({ authMode: mode })
               }}
-              disabled={!skillsEnabled}
+              disabled={!skillsEnabled || skillsSaving}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="选择 OAuth / APIKEY" />
@@ -1506,14 +1509,14 @@ export function WebSettings() {
             <p className="text-xs text-muted-foreground leading-relaxed">
               该链接用于验证 token 是否可用，并返回 AI 需要的{' '}
               <code className="rounded bg-muted px-1">LLM-Skills-*</code> 请求头模板。
-              APIKEY 模式可把 token 参数替换为本次生成的 Key；OAuth 模式请先访问上面的授权链接拿到 token。
+              APIKEY 模式把 token 参数替换为本次生成的 Key；OAuth 模式由 AI 生成授权链接给用户确认后获取 token。
             </p>
             <div className="flex gap-2">
               <Input
                 value={
                   publicOrigin
-                    ? `${publicOrigin}/api/admin/skills/direct?mode=${skillsAuthMode}&ai=<unique-ai-id>&token=...`
-                    : `/api/admin/skills/direct?mode=${skillsAuthMode}&ai=<unique-ai-id>&token=...`
+                    ? `${publicOrigin}/api/admin/skills/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID&token=...`
+                    : `/api/admin/skills/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID&token=...`
                 }
                 readOnly
                 className="font-mono text-xs"
@@ -1526,8 +1529,8 @@ export function WebSettings() {
                 onClick={() =>
                   void copyPlainText(
                     publicOrigin
-                      ? `${publicOrigin}/api/admin/skills/direct?mode=${skillsAuthMode}&ai=<unique-ai-id>&token=...`
-                      : `/api/admin/skills/direct?mode=${skillsAuthMode}&ai=<unique-ai-id>&token=...`,
+                      ? `${publicOrigin}/api/admin/skills/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID&token=...`
+                      : `/api/admin/skills/direct?mode=${skillsAuthMode}&ai=YOUR_AI_ID&token=...`,
                     '已复制 Skills 直连链接',
                   )
                 }

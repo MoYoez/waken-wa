@@ -236,18 +236,14 @@ export const skillsOauthTokens = sqliteTable(
   (t) => [index('skills_oauth_tokens_ai_client_id_idx').on(t.aiClientId)],
 )
 
-export const rateLimitBackups = sqliteTable(
-  'rate_limit_backups',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    rlKey: text('rl_key').notNull().unique(),
-    count: integer('count').notNull().default(0),
-    windowMs: integer('window_ms').notNull(),
-    resetAt: textCol('reset_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: ts('updated_at'),
-  },
-  (t) => [index('rate_limit_backups_rl_key_idx').on(t.rlKey)],
-)
+export const rateLimitBackups = sqliteTable('rate_limit_backups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  rlKey: text('rl_key').notNull().unique(),
+  count: integer('count').notNull().default(0),
+  windowMs: integer('window_ms').notNull(),
+  resetAt: textCol('reset_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: ts('updated_at'),
+})
 
 export const inspirationEntries = sqliteTable('inspiration_entries', {
   id: integer('id').primaryKey({ autoIncrement: true }),
