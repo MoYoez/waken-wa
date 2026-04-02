@@ -3,6 +3,14 @@
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 
 type Props = {
@@ -12,6 +20,7 @@ type Props = {
 
 export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
   const [loading, setLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [token, setToken] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
   const [error, setError] = useState('')
@@ -23,8 +32,7 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
   }, [publicOrigin, aiClientId])
 
   const authorize = async () => {
-    const ok = window.confirm('允许 AI 使用 Skills（OAuth）辅助调试修改？该授权有效期 1 小时。')
-    if (!ok) return
+    setConfirmOpen(false)
     setLoading(true)
     setError('')
     try {
@@ -53,9 +61,31 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId }: Props) {
         当前 AI 标识：<code>{aiClientId}</code>。点击授权会弹窗确认；同意后才会签发 token（默认 1 小时）。后端仅存 hash，本页刷新不会自动生成。
       </p>
 
-      <Button type="button" onClick={authorize} disabled={loading}>
+      <Button type="button" onClick={() => setConfirmOpen(true)} disabled={loading}>
         {loading ? '处理中…' : '生成授权 Token'}
       </Button>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认签发 OAuth 授权</DialogTitle>
+            <DialogDescription>
+              允许该 AI 使用 Skills（OAuth）辅助调试修改。授权默认有效期 1 小时，后端仅存 token hash。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
+            <div className="text-muted-foreground">AI 标识</div>
+            <code className="break-all rounded bg-muted px-1.5 py-0.5 text-xs">{aiClientId}</code>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)} disabled={loading}>
+              取消
+            </Button>
+            <Button type="button" onClick={() => void authorize()} disabled={loading}>
+              {loading ? '处理中…' : '确认并签发'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {error ? (
         <p className="text-sm text-destructive">{error}</p>
