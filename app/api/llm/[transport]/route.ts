@@ -131,7 +131,8 @@ const LLM_MCP_TRANSPORT_RATE_LIMIT_MAX = 60
 const LLM_MCP_TRANSPORT_RATE_LIMIT_WINDOW_MS = 60_000
 
 async function withRateLimit(request: Request) {
-  const nextRequest = request instanceof NextRequest ? request : new NextRequest(request)
+  const nextRequest =
+    request instanceof NextRequest ? request : new NextRequest(request.clone())
   const limitedResponse = await enforceApiRateLimit(nextRequest, {
     bucket: 'llm-mcp-transport',
     maxRequests: LLM_MCP_TRANSPORT_RATE_LIMIT_MAX,
