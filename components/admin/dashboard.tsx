@@ -127,10 +127,7 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
   const [activeTab, setActiveTab] = useState<AdminTabValue>(() =>
     isAdminTabValue(initialTab) ? initialTab : 'overview',
   )
-  const origin = useMemo(
-    () => (typeof window !== 'undefined' ? window.location.origin : ''),
-    [],
-  )
+  const [origin, setOrigin] = useState('')
 
   const [indicatorStyle, setIndicatorStyle] = useState<IndicatorStyle>({
     width: 0,
@@ -158,6 +155,37 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
   const activeTabMeta = useMemo(
     () => TAB_ITEMS.find((item) => item.value === activeTab) ?? TAB_ITEMS[0],
     [activeTab],
+  )
+  const activeDeviceHash = initialDeviceHash
+
+  const updateAdminLocation = useCallback(
+    (nextTab: AdminTabValue) => {
+      if (typeof window === 'undefined') return
+      const nextSearch = new URLSearchParams(window.location.search)
+
+      if (nextTab === 'overview') {
+        nextSearch.delete('tab')
+      } else {
+        nextSearch.set('tab', nextTab)
+      }
+
+      if (nextTab !== 'devices') {
+        nextSearch.delete('hash')
+      }
+
+      const query = nextSearch.toString()
+      const nextUrl = query ? `/admin?${query}` : '/admin'
+      window.history.replaceState(window.history.state, '', nextUrl)
+    },
+    [],
+  )
+
+  const handleTabChange = useCallback(
+    (nextTab: AdminTabValue) => {
+      setActiveTab(nextTab)
+      updateAdminLocation(nextTab)
+    },
+    [updateAdminLocation],
   )
 
   const syncIndicatorToActiveTab = useCallback(() => {
@@ -252,6 +280,10 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     }
   }, [activeTab, syncIndicatorToActiveTab])
 
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
+
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
     toast.success('已登出')
@@ -267,7 +299,7 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
       return <OrphanImages ref={orphanImagesRef} />
     }
     if (activeTab === 'devices') {
-      return <DeviceManager initialHashKey={initialDeviceHash} highlightHashKey={initialDeviceHash} />
+      return <DeviceManager initialHashKey={activeDeviceHash} highlightHashKey={activeDeviceHash} />
     }
     if (activeTab === 'tokens') {
       return <TokenManager ref={tokenManagerRef} />
@@ -406,7 +438,7 @@ curl -X POST ${origin}/api/inspiration/entries \\
                       triggerRefs.current[item.value] = node
                     }}
                     type="button"
-                    onClick={() => setActiveTab(item.value)}
+                    onClick={() => handleTabChange(item.value)}
                     className={`admin-tab-trigger ${selected ? 'is-active' : ''}`}
                     style={{ animationDelay: `${index * 35}ms` }}
                     aria-pressed={selected}
@@ -470,7 +502,7 @@ curl -X POST ${origin}/api/inspiration/entries \\
                   <Clock3 className="h-4 w-4" />
                   快速添加活动
                 </h3>
-                <Button type="button" variant="outline" size="sm" onClick={() => setActiveTab('devices')}>
+                <Button type="button" variant="outline" size="sm" onClick={() => handleTabChange('devices')}>
                   <MonitorSmartphone className="h-4 w-4 mr-1" />
                   打开设备管理
                 </Button>
