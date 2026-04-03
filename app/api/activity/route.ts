@@ -5,8 +5,8 @@ import {
   ACTIVITY_FEED_DEFAULT_LIMIT,
 } from '@/lib/activity-api-constants'
 import { recordReportedAppHistory } from '@/lib/activity-app-history'
-import { recordReportedPlaySourceHistory } from '@/lib/activity-play-source-history'
 import { clearActivityFeedDataCache, getActivityFeedData } from '@/lib/activity-feed'
+import { recordReportedPlaySourceHistory } from '@/lib/activity-play-source-history'
 import { DEVICE_LAST_SEEN_WRITE_THROTTLE_MS } from '@/lib/activity-report-constants'
 import {
   parseActivityReportBody,

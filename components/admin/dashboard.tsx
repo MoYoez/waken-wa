@@ -17,6 +17,7 @@ import {
   Settings,
   Upload,
   UserCog,
+  Users,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
@@ -24,6 +25,7 @@ import { MdAutoFixHigh } from 'react-icons/md'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import { useViewerCount } from '@/hooks/use-viewer-count'
 import type { ActivityFeedData, ActivityFeedItem } from '@/types/activity'
 
 import { AccountSettings } from './account-settings'
@@ -227,6 +229,15 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
   const [recentActivityUsage, setRecentActivityUsage] = useState<ActivityFeedItem[]>([])
   const [recentActivityUsageLoading, setRecentActivityUsageLoading] = useState(false)
   const [recentActivityUsageLoaded, setRecentActivityUsageLoaded] = useState(false)
+  const {
+    count: viewerCount,
+    loading: viewerCountLoading,
+    error: viewerCountError,
+    lastUpdatedAt: viewerCountUpdatedAt,
+  } = useViewerCount({
+    mode: 'readonly',
+    enabled: activeTab === 'overview',
+  })
 
   const tokenManagerRef = useRef<TokenManagerHandle | null>(null)
   const orphanImagesRef = useRef<OrphanImagesHandle | null>(null)
@@ -437,6 +448,44 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
 
   const renderOverviewPanel = () => (
     <div className="space-y-4">
+      <div className="rounded-xl border bg-card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              当前在线访客
+            </h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              与首页公开展示同步，后台只读查看，不参与人数统计。
+            </p>
+          </div>
+          <div className="rounded-full border border-primary/15 bg-primary/8 p-3 text-primary shadow-sm">
+            <Users className="h-5 w-5" />
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-4xl font-semibold tracking-tight tabular-nums text-foreground">
+              {viewerCount}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {viewerCountError
+                ? '读取在线访客数失败'
+                : viewerCountLoading && !viewerCountUpdatedAt
+                  ? '正在读取最新人数...'
+                  : viewerCountUpdatedAt
+                    ? `最后更新 ${formatOverviewRelativeTime(viewerCountUpdatedAt)}`
+                    : '等待首个访客心跳'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs text-muted-foreground">
+            <RefreshCw className={`h-3.5 w-3.5 ${viewerCountLoading && !viewerCountUpdatedAt ? 'animate-spin' : ''}`} />
+            <span>{viewerCountUpdatedAt ? formatOverviewClock(viewerCountUpdatedAt) : '--:--:--'}</span>
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-xl border bg-card p-6 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
@@ -492,8 +541,11 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
               const recordTime = record.lastReportAt || record.updatedAt || record.startedAt
               const summary = buildRecentRecordSummary(record)
               return (
-                <div key={record.id} className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
-                  <div className="pt-1 text-right">
+                <div
+                  key={record.id}
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-4"
+                >
+                  <div className="hidden pt-1 text-right sm:block">
                     <p className="text-sm font-semibold tabular-nums text-foreground">
                       {formatOverviewClock(recordTime)}
                     </p>
@@ -502,18 +554,26 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
                     </p>
                   </div>
 
-                  <div className="relative pb-5">
+                  <div className="relative pb-5 pl-7 sm:pl-0">
                     {index !== recentActivityUsage.length - 1 ? (
-                      <div className="absolute left-[7px] top-7 h-[calc(100%-1rem)] w-px bg-border" />
+                      <div className="absolute left-[7px] top-7 h-[calc(100%-1rem)] w-px bg-border sm:left-[7px]" />
                     ) : null}
                     <div className="absolute left-0 top-1.5 h-4 w-4 rounded-full border border-primary/20 bg-primary/12">
                       <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary" />
                     </div>
 
-                    <div className="ml-7 rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                    <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3 sm:ml-7">
+                      <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
+                        <span className="font-semibold tabular-nums text-foreground">
+                          {formatOverviewClock(recordTime)}
+                        </span>
+                        <span>{formatOverviewDate(recordTime)}</span>
+                        <span>·</span>
+                        <span>{formatOverviewRelativeTime(recordTime)}</span>
+                      </div>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <p className="text-sm font-medium leading-6 text-foreground">{summary}</p>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="hidden text-xs text-muted-foreground sm:inline">
                           {formatOverviewRelativeTime(recordTime)}
                         </span>
                       </div>

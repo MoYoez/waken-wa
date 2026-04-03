@@ -257,3 +257,42 @@ export async function redisIncrWithExpire(
     return null
   }
 }
+
+export async function redisZAdd(key: string, score: number, member: string): Promise<boolean> {
+  const client = getRedisClient()
+  if (!client) return false
+  try {
+    await client.zadd(key, String(score), member)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function redisZRemRangeByScore(
+  key: string,
+  minScore: number,
+  maxScore: number,
+): Promise<number> {
+  const client = getRedisClient()
+  if (!client) return 0
+  try {
+    const removed = await client.zremrangebyscore(key, String(minScore), String(maxScore))
+    const count = Number(removed)
+    return Number.isFinite(count) ? count : 0
+  } catch {
+    return 0
+  }
+}
+
+export async function redisZCard(key: string): Promise<number | null> {
+  const client = getRedisClient()
+  if (!client) return null
+  try {
+    const size = await client.zcard(key)
+    const count = Number(size)
+    return Number.isFinite(count) ? count : null
+  } catch {
+    return null
+  }
+}

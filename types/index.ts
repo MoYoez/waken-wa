@@ -57,3 +57,4 @@ export type {
   SteamStatusResponse,
 } from './steam'
 export type { ThemeCustomSurfaceFields, ThemePreset } from './theme'
+export type { ViewerCountData, ViewerCountResponse } from './viewers'

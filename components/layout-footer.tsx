@@ -1,4 +1,9 @@
+'use client'
+
+import { ArrowUpRight, Users } from 'lucide-react'
 import Link from 'next/link'
+
+import { useViewerCount } from '@/hooks/use-viewer-count'
 
 const TEMPLATE_REPO_HREF = 'https://github.com/MoYoez/waken-wa'
 
@@ -22,27 +27,56 @@ function GitHubMark({ className }: { className?: string }) {
 }
 
 export function LayoutFooter({ adminText }: { adminText: string }) {
+  const { count: viewerCount, error, loading } = useViewerCount({ mode: 'heartbeat' })
+
   return (
-    <footer className="layout-footer border-t border-border/50 bg-card/90 backdrop-blur-md">
-      <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground">
-          <p className="flex flex-wrap items-center justify-center gap-x-1 gap-y-1 text-center sm:justify-start sm:text-left">
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-inherit underline inline-flex items-center gap-1"
-              href={TEMPLATE_REPO_HREF}
-            >
-              <GitHubMark />
-              Fork this Project on GitHub
-            </a>
-          </p>
-          <Link
-            href="/admin"
-            className="inline-flex items-center justify-center gap-1.5 text-center sm:text-right hover:text-foreground transition-colors shrink-0"
-          >
-            {adminText}
-          </Link>
+    <footer className="layout-footer px-4 pb-5 sm:px-6 sm:pb-8">
+      <div className="mx-auto max-w-3xl">
+        <div className="overflow-hidden rounded-[20px] border border-border bg-card/95 text-card-foreground shadow-sm backdrop-blur-md sm:rounded-[24px]">
+          <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 sm:py-5">
+            <div className="flex items-center justify-center sm:justify-start">
+              <div
+                className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-sm font-medium text-muted-foreground shadow-sm"
+                aria-live="polite"
+                title={error ?? '当前在线访客'}
+              >
+                <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
+                <span className="text-muted-foreground">此刻</span>
+                <span className="tabular-nums text-foreground">{viewerCount}</span>
+                <span>人在看</span>
+                <span
+                  className={`ml-1 h-2 w-2 rounded-full ${loading ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                  aria-hidden
+                />
+              </div>
+            </div>
+
+            <div className="h-px bg-[linear-gradient(90deg,color-mix(in_srgb,var(--border)_0%,transparent),var(--border),color-mix(in_srgb,var(--border)_0%,transparent))]" />
+
+            <div className="grid gap-2 text-xs text-muted-foreground sm:flex sm:items-center sm:justify-between">
+              <div className="flex items-center justify-center sm:justify-start">
+                <a
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-2 font-medium text-foreground transition-colors hover:bg-accent/60 hover:text-foreground sm:w-auto sm:py-1"
+                  href={TEMPLATE_REPO_HREF}
+                >
+                  <GitHubMark />
+                  <span>Fork this Project</span>
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                </a>
+              </div>
+
+              <div className="flex items-center justify-center sm:justify-end">
+                <Link
+                  href="/admin"
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-center font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:w-auto sm:py-1.5 sm:text-right"
+                >
+                  {adminText}
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </footer>

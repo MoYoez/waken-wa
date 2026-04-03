@@ -1,0 +1,5 @@
+export const VIEWER_PRESENCE_COOKIE_NAME = 'viewer_presence'
+export const VIEWER_HEARTBEAT_INTERVAL_MS = 25_000
+export const VIEWER_PRESENCE_TTL_MS = 75_000
+export const VIEWER_PRESENCE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+
