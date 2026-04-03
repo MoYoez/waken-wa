@@ -1,15 +1,12 @@
-import { count } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 
 import { LoginForm } from '@/components/admin/login-form'
-import { db } from '@/lib/db'
-import { adminUsers } from '@/lib/drizzle-schema'
 import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
+import { getAdminInitState } from '@/lib/is-config-ok'
 
 export default async function LoginPage() {
-  const [cntRow] = await db.select({ c: count() }).from(adminUsers)
-  const hasAdmin = Number(cntRow?.c ?? 0) > 0
+  const { hasAdmin } = await getAdminInitState()
   if (!hasAdmin) {
     redirect('/admin/setup')
   }

@@ -1,11 +1,9 @@
-import { count } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { AdminDashboard } from '@/components/admin/dashboard'
 import { verifySession } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { adminUsers } from '@/lib/drizzle-schema'
+import { getAdminInitState } from '@/lib/is-config-ok'
 
 function firstString(v: string | string[] | undefined): string {
   if (typeof v === 'string') return v
@@ -29,15 +27,16 @@ export default async function AdminPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const sp = await searchParams
-  const [cntRow] = await db.select({ c: count() }).from(adminUsers)
-  const hasAdmin = Number(cntRow?.c ?? 0) > 0
+  const { hasAdmin } = await getAdminInitState()
+
+  if (!hasAdmin) {
+    redirect('/admin/setup')
+  }
+
   const cookieStore = await cookies()
   const token = cookieStore.get('session')?.value
 
   if (!token) {
-    if (!hasAdmin) {
-      redirect('/admin/setup')
-    }
     const next = adminPathWithQuery(sp)
     redirect(`/admin/login?next=${encodeURIComponent(next)}`)
   }
@@ -45,9 +44,6 @@ export default async function AdminPage({
   const session = await verifySession(token)
 
   if (!session) {
-    if (!hasAdmin) {
-      redirect('/admin/setup')
-    }
     const next = adminPathWithQuery(sp)
     redirect(`/admin/login?next=${encodeURIComponent(next)}`)
   }
