@@ -304,18 +304,17 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
                   )}
                   <span className="font-medium">{deviceName}</span>
                 </div>
-                {batteryLabel || charging ? (
+                {batteryLabel ? (
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     {charging ? (
                       <BatteryCharging
                         className="h-3.5 w-3.5 shrink-0"
-                        aria-label={batteryLabel ? undefined : '充电中'}
-                        aria-hidden={batteryLabel ? true : undefined}
+                        aria-hidden
                       />
                     ) : (
                       <Battery className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     )}
-                    {batteryLabel ? <span>电量 {batteryLabel}</span> : null}
+                    <span>电量 {batteryLabel}</span>
                   </div>
                 ) : null}
               </div>

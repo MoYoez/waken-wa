@@ -129,20 +129,17 @@ export function ActivityTimeline({
                       )}
                       <span className="min-w-0 inline-flex items-center gap-1.5 flex-wrap">
                         <span>{deviceName}</span>
-                        {batteryLabel || charging ? (
+                        {batteryLabel ? (
                           <span className="inline-flex items-center gap-1">
                             {charging ? (
                               <BatteryCharging
                                 className="h-3.5 w-3.5 shrink-0"
-                                aria-label={batteryLabel ? undefined : '充电中'}
-                                aria-hidden={batteryLabel ? true : undefined}
+                                aria-hidden
                               />
                             ) : (
                               <Battery className="h-3.5 w-3.5 shrink-0" aria-hidden />
                             )}
-                            {batteryLabel ? (
-                              <span>{` · 电量 ${batteryLabel}`}</span>
-                            ) : null}
+                            <span>{` · 电量 ${batteryLabel}`}</span>
                           </span>
                         ) : null}
                       </span>
