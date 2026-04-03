@@ -18,7 +18,7 @@ import {
   UserCog,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { MdAutoFixHigh } from 'react-icons/md'
 import { toast } from 'sonner'
 
@@ -100,6 +100,18 @@ interface DashboardProps {
 
 type IndicatorStyle = { width: number; height: number; x: number; y: number; ready: boolean }
 
+function subscribeToWindowLocationOrigin() {
+  return () => {}
+}
+
+function getWindowLocationOrigin() {
+  return window.location.origin
+}
+
+function getServerLocationOriginSnapshot() {
+  return ''
+}
+
 function BottomGuide({
   title,
   description,
@@ -127,7 +139,11 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
   const [activeTab, setActiveTab] = useState<AdminTabValue>(() =>
     isAdminTabValue(initialTab) ? initialTab : 'overview',
   )
-  const [origin, setOrigin] = useState('')
+  const origin = useSyncExternalStore(
+    subscribeToWindowLocationOrigin,
+    getWindowLocationOrigin,
+    getServerLocationOriginSnapshot,
+  )
 
   const [indicatorStyle, setIndicatorStyle] = useState<IndicatorStyle>({
     width: 0,
@@ -279,10 +295,6 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
       if (rafId2) window.cancelAnimationFrame(rafId2)
     }
   }, [activeTab, syncIndicatorToActiveTab])
-
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
