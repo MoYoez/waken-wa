@@ -2855,7 +2855,7 @@ export function WebSettings() {
                 <p className="text-xs text-muted-foreground">暂无规则</p>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">已有规则（分页浏览）</p>
+                  <p className="text-xs text-muted-foreground">已有规则</p>
                   {form.appMessageRules.slice(rulesStart, rulesStart + SETTINGS_RULES_PAGE_SIZE).map((rule, localIdx) => {
                     const idx = rulesStart + localIdx
                     return (
