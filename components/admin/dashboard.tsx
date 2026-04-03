@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   Link2Off,
+  Loader2,
   LogOut,
   MonitorSmartphone,
   Plus,
@@ -23,6 +24,7 @@ import { MdAutoFixHigh } from 'react-icons/md'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import type { ActivityFeedData, ActivityFeedItem } from '@/types/activity'
 
 import { AccountSettings } from './account-settings'
 import { AddActivityForm } from './add-activity-form'
@@ -85,6 +87,8 @@ const TAB_ITEMS = [
 ] as const
 
 const VALID_TABS = new Set(TAB_ITEMS.map((item) => item.value))
+const RECENT_ACTIVITY_USAGE_LIMIT = 5
+const SHORT_EVENT_FILTER_MS = 30_000
 
 type AdminTabValue = (typeof TAB_ITEMS)[number]['value']
 
@@ -110,6 +114,74 @@ function getWindowLocationOrigin() {
 
 function getServerLocationOriginSnapshot() {
   return ''
+}
+
+function formatOverviewDateTime(value: string | null | undefined): string {
+  const time = Date.parse(String(value ?? ''))
+  if (!Number.isFinite(time)) return '—'
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(time))
+}
+
+function formatOverviewClock(value: string | null | undefined): string {
+  const time = Date.parse(String(value ?? ''))
+  if (!Number.isFinite(time)) return '--:--'
+  return new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date(time))
+}
+
+function formatOverviewDate(value: string | null | undefined): string {
+  const time = Date.parse(String(value ?? ''))
+  if (!Number.isFinite(time)) return '未知时间'
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(time))
+}
+
+function formatOverviewRelativeTime(value: string | null | undefined): string {
+  const time = Date.parse(String(value ?? ''))
+  if (!Number.isFinite(time)) return '刚刚'
+
+  const diffMs = time - Date.now()
+  const absMs = Math.abs(diffMs)
+  const rtf = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' })
+
+  if (absMs < 60_000) return '刚刚'
+  if (absMs < 3_600_000) return rtf.format(Math.round(diffMs / 60_000), 'minute')
+  if (absMs < 86_400_000) return rtf.format(Math.round(diffMs / 3_600_000), 'hour')
+  return rtf.format(Math.round(diffMs / 86_400_000), 'day')
+}
+
+function buildRecentRecordSummary(record: ActivityFeedItem): string {
+  const statusLine = typeof record.statusText === 'string' ? record.statusText.trim() : ''
+  if (statusLine) return statusLine
+  if (record.processTitle?.trim()) return record.processTitle.trim()
+  if (record.processName?.trim()) return record.processName.trim()
+  return '暂无状态描述'
+}
+
+function shouldShowRecentRecord(record: ActivityFeedItem): boolean {
+  const startedAtMs = Date.parse(String(record.startedAt ?? ''))
+  if (!Number.isFinite(startedAtMs)) return true
+
+  const reportedAtMs = Date.parse(
+    String(record.endedAt || record.lastReportAt || record.updatedAt || record.startedAt || ''),
+  )
+  const fallbackEndMs = Number.isFinite(reportedAtMs) ? reportedAtMs : startedAtMs
+  const effectiveEndMs = record.endedAt ? fallbackEndMs : Math.max(fallbackEndMs, Date.now())
+
+  return effectiveEndMs - startedAtMs >= SHORT_EVENT_FILTER_MS
 }
 
 function BottomGuide({
@@ -152,6 +224,9 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     y: 0,
     ready: false,
   })
+  const [recentActivityUsage, setRecentActivityUsage] = useState<ActivityFeedItem[]>([])
+  const [recentActivityUsageLoading, setRecentActivityUsageLoading] = useState(false)
+  const [recentActivityUsageLoaded, setRecentActivityUsageLoaded] = useState(false)
 
   const tokenManagerRef = useRef<TokenManagerHandle | null>(null)
   const orphanImagesRef = useRef<OrphanImagesHandle | null>(null)
@@ -303,6 +378,41 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     router.refresh()
   }
 
+  const fetchRecentActivityUsage = useCallback(async () => {
+    setRecentActivityUsageLoading(true)
+    try {
+      const res = await fetch('/api/activity', { cache: 'no-store' })
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean
+        data?: ActivityFeedData
+        error?: string
+      }
+
+      if (!res.ok || !data.success || !data.data || !Array.isArray(data.data.recentActivities)) {
+        throw new Error(typeof data.error === 'string' ? data.error : '读取失败')
+      }
+
+      setRecentActivityUsage(
+        data.data.recentActivities
+          .filter(shouldShowRecentRecord)
+          .slice(0, RECENT_ACTIVITY_USAGE_LIMIT),
+      )
+      setRecentActivityUsageLoaded(true)
+    } catch (error) {
+      console.error('读取 /api/activity 使用记录失败:', error)
+      toast.error('读取 /api/activity 使用记录失败')
+    } finally {
+      setRecentActivityUsageLoaded(true)
+      setRecentActivityUsageLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab !== 'overview') return
+    if (recentActivityUsageLoaded || recentActivityUsageLoading) return
+    void fetchRecentActivityUsage()
+  }, [activeTab, fetchRecentActivityUsage, recentActivityUsageLoaded, recentActivityUsageLoading])
+
   const renderActivePanel = () => {
     if (activeTab === 'inspiration') {
       return <InspirationManager />
@@ -324,6 +434,103 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     }
     return <ScheduleManager ref={scheduleManagerRef} />
   }
+
+  const renderOverviewPanel = () => (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-card p-6 space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <Clock3 className="h-4 w-4" />
+            快速添加活动
+          </h3>
+          <Button type="button" variant="outline" size="sm" onClick={() => handleTabChange('devices')}>
+            <MonitorSmartphone className="h-4 w-4 mr-1" />
+            打开设备管理
+          </Button>
+        </div>
+        <AddActivityForm />
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-foreground flex items-center gap-2">
+              <Clock3 className="h-4 w-4" />
+              最近记录
+            </h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              按时间顺序看看最近在做什么。
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void fetchRecentActivityUsage()}
+            disabled={recentActivityUsageLoading}
+          >
+            {recentActivityUsageLoading ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-1 h-4 w-4" />
+            )}
+            刷新
+          </Button>
+        </div>
+
+        {recentActivityUsageLoading && !recentActivityUsageLoaded ? (
+          <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+            正在加载最近记录...
+          </div>
+        ) : recentActivityUsage.length === 0 ? (
+          <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+            还没有最近记录。
+          </div>
+        ) : (
+          <div className="space-y-0">
+            {recentActivityUsage.map((record, index) => {
+              const recordTime = record.lastReportAt || record.updatedAt || record.startedAt
+              const summary = buildRecentRecordSummary(record)
+              return (
+                <div key={record.id} className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
+                  <div className="pt-1 text-right">
+                    <p className="text-sm font-semibold tabular-nums text-foreground">
+                      {formatOverviewClock(recordTime)}
+                    </p>
+                    <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">
+                      {formatOverviewDate(recordTime)}
+                    </p>
+                  </div>
+
+                  <div className="relative pb-5">
+                    {index !== recentActivityUsage.length - 1 ? (
+                      <div className="absolute left-[7px] top-7 h-[calc(100%-1rem)] w-px bg-border" />
+                    ) : null}
+                    <div className="absolute left-0 top-1.5 h-4 w-4 rounded-full border border-primary/20 bg-primary/12">
+                      <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary" />
+                    </div>
+
+                    <div className="ml-7 rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <p className="text-sm font-medium leading-6 text-foreground">{summary}</p>
+                        <span className="text-xs text-muted-foreground">
+                          {formatOverviewRelativeTime(recordTime)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                        {record.device || '未知设备'}
+                        {record.processName ? ` · ${record.processName}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 
   const renderBottomGuide = () => {
     if (activeTab === 'tokens') {
@@ -508,19 +715,7 @@ curl -X POST ${origin}/api/inspiration/entries \\
           </div>
 
           {activeTab === 'overview' ? (
-            <div className="rounded-xl border bg-card p-6 space-y-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <h3 className="font-semibold text-foreground flex items-center gap-2">
-                  <Clock3 className="h-4 w-4" />
-                  快速添加活动
-                </h3>
-                <Button type="button" variant="outline" size="sm" onClick={() => handleTabChange('devices')}>
-                  <MonitorSmartphone className="h-4 w-4 mr-1" />
-                  打开设备管理
-                </Button>
-              </div>
-              <AddActivityForm />
-            </div>
+            renderOverviewPanel()
           ) : (
             renderActivePanel()
           )}

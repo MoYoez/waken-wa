@@ -225,6 +225,19 @@ export const activityAppHistory = sqliteTable(
   },
 )
 
+export const activityPlaySourceHistory = sqliteTable(
+  'activity_play_source_history',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    playSource: text('play_source').notNull().unique(),
+    firstSeenAt: ts('first_seen_at'),
+    lastSeenAt: ts('last_seen_at'),
+    seenCount: integer('seen_count').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+)
+
 export const systemSecrets = sqliteTable('system_secrets', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
@@ -303,6 +316,7 @@ export const sqliteSchema = {
   userActivities,
   siteConfig,
   activityAppHistory,
+  activityPlaySourceHistory,
   systemSecrets,
   skillsOauthTokens,
   skillsOauthAuthorizeCodes,

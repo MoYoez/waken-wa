@@ -5,6 +5,7 @@ import {
   ACTIVITY_FEED_DEFAULT_LIMIT,
 } from '@/lib/activity-api-constants'
 import { recordReportedAppHistory } from '@/lib/activity-app-history'
+import { recordReportedPlaySourceHistory } from '@/lib/activity-play-source-history'
 import { clearActivityFeedDataCache, getActivityFeedData } from '@/lib/activity-feed'
 import { DEVICE_LAST_SEEN_WRITE_THROTTLE_MS } from '@/lib/activity-report-constants'
 import {
@@ -295,11 +296,16 @@ export async function POST(request: NextRequest) {
     })
 
     try {
-      await recordReportedAppHistory({
-        processName: process_name,
-        processTitle: process_title,
-        deviceType: (finalMetadata as Record<string, unknown> | null)?.deviceType,
-      })
+      await Promise.allSettled([
+        recordReportedAppHistory({
+          processName: process_name,
+          processTitle: process_title,
+          deviceType: (finalMetadata as Record<string, unknown> | null)?.deviceType,
+        }),
+        recordReportedPlaySourceHistory({
+          playSource: (finalMetadata as Record<string, unknown> | null)?.play_source,
+        }),
+      ])
     } catch {
       // history capture should never block reporting
     }

@@ -716,6 +716,7 @@ export function WebSettings() {
   const [importRulesDialogOpen, setImportRulesDialogOpen] = useState(false)
   const [importRulesInput, setImportRulesInput] = useState('')
   const [historyApps, setHistoryApps] = useState<string[]>([])
+  const [historyPlaySources, setHistoryPlaySources] = useState<string[]>([])
   // 裁剪弹窗状态
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
@@ -1033,17 +1034,30 @@ export function WebSettings() {
   useEffect(() => {
     if (!form.captureReportedAppsEnabled) {
       setHistoryApps([])
+      setHistoryPlaySources([])
       return
     }
     void (async () => {
       try {
-        const res = await fetch('/api/admin/activity/history/apps?limit=200')
-        const data = await res.json()
-        if (data?.success && Array.isArray(data.data)) {
-          const apps = (data.data as Array<{ processName?: unknown }>)
+        const [appsRes, playSourcesRes] = await Promise.all([
+          fetch('/api/admin/activity/history/apps?limit=200'),
+          fetch('/api/admin/activity/history/play-sources?limit=200'),
+        ])
+        const [appsData, playSourcesData] = await Promise.all([
+          appsRes.json().catch(() => null),
+          playSourcesRes.json().catch(() => null),
+        ])
+        if (appsData?.success && Array.isArray(appsData.data)) {
+          const apps = (appsData.data as Array<{ processName?: unknown }>)
             .map((x) => String(x?.processName ?? '').trim())
             .filter((x) => x.length > 0)
           setHistoryApps(apps)
+        }
+        if (playSourcesData?.success && Array.isArray(playSourcesData.data)) {
+          const playSources = (playSourcesData.data as Array<{ playSource?: unknown }>)
+            .map((x) => String(x?.playSource ?? '').trim().toLowerCase())
+            .filter((x) => x.length > 0)
+          setHistoryPlaySources(playSources)
         }
       } catch {
         // ignore
@@ -3252,7 +3266,7 @@ export function WebSettings() {
               <p className="text-xs text-muted-foreground">输入来源值（建议小写）</p>
               <div className="flex flex-wrap items-center gap-2">
                 <Combobox
-                  items={form.captureReportedAppsEnabled ? historyApps : []}
+                  items={form.captureReportedAppsEnabled ? historyPlaySources : []}
                   inputValue={mediaSourceInput}
                   onInputValueChange={setMediaSourceInput}
                   onValueChange={(v) => setMediaSourceInput(String(v ?? ''))}
@@ -3265,7 +3279,7 @@ export function WebSettings() {
                   />
                   <ComboboxContent>
                     <ComboboxEmpty>
-                      {form.captureReportedAppsEnabled ? '无匹配历史应用' : '未启用历史应用记录'}
+                      {form.captureReportedAppsEnabled ? '无匹配历史来源' : '未启用历史应用记录'}
                     </ComboboxEmpty>
                     <ComboboxList>
                       {(item) => (

@@ -204,6 +204,24 @@ export const activityAppHistory = pgTable('activity_app_history', {
     .defaultNow(),
 })
 
+export const activityPlaySourceHistory = pgTable('activity_play_source_history', {
+  id: serial('id').primaryKey(),
+  playSource: varchar('play_source', { length: 120 }).notNull().unique(),
+  firstSeenAt: timestamp('first_seen_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  lastSeenAt: timestamp('last_seen_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  seenCount: integer('seen_count').notNull().default(0),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
 export const systemSecrets = pgTable('system_secrets', {
   key: varchar('key', { length: 64 }).primaryKey(),
   value: varchar('value', { length: 512 }).notNull(),
@@ -295,6 +313,7 @@ export const pgSchema = {
   userActivities,
   siteConfig,
   activityAppHistory,
+  activityPlaySourceHistory,
   systemSecrets,
   skillsOauthTokens,
   skillsOauthAuthorizeCodes,

@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { recordReportedAppHistory } from '@/lib/activity-app-history'
+import { recordReportedPlaySourceHistory } from '@/lib/activity-play-source-history'
 import {
   clearActivityFeedDataCache,
 } from '@/lib/activity-feed'
@@ -186,11 +187,16 @@ export async function POST(request: NextRequest) {
     })
 
     try {
-      await recordReportedAppHistory({
-        processName: process_name,
-        processTitle: process_title,
-        deviceType: (finalMetadata as Record<string, unknown> | null)?.deviceType,
-      })
+      await Promise.allSettled([
+        recordReportedAppHistory({
+          processName: process_name,
+          processTitle: process_title,
+          deviceType: (finalMetadata as Record<string, unknown> | null)?.deviceType,
+        }),
+        recordReportedPlaySourceHistory({
+          playSource: (finalMetadata as Record<string, unknown> | null)?.play_source,
+        }),
+      ])
     } catch {
       // history capture should never block admin activity
     }

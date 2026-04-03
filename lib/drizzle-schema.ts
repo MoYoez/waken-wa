@@ -12,6 +12,9 @@ export const devices = usePg ? pg.devices : sqlite.devices
 export const userActivities = usePg ? pg.userActivities : sqlite.userActivities
 export const siteConfig = usePg ? pg.siteConfig : sqlite.siteConfig
 export const activityAppHistory = usePg ? pg.activityAppHistory : sqlite.activityAppHistory
+export const activityPlaySourceHistory = usePg
+  ? pg.activityPlaySourceHistory
+  : sqlite.activityPlaySourceHistory
 export const systemSecrets = usePg ? pg.systemSecrets : sqlite.systemSecrets
 export const skillsOauthTokens = usePg ? pg.skillsOauthTokens : sqlite.skillsOauthTokens
 export const skillsOauthAuthorizeCodes = usePg
