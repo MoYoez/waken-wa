@@ -13,6 +13,7 @@ const RATE_LIMITED_PATHS = new Set([
 
 const ADMIN_API_PREFIX = '/api/admin/'
 const ADMIN_SETUP_PREFIX = '/api/admin/setup'
+const HCAPTCHA_CSP_SOURCES = ['https://hcaptcha.com', 'https://*.hcaptcha.com']
 
 function getClientIp(request: NextRequest): string {
   return (
@@ -23,16 +24,30 @@ function getClientIp(request: NextRequest): string {
 }
 
 function addSecurityHeaders(response: NextResponse): NextResponse {
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'",
+    process.env.NODE_ENV !== 'production' ? "'unsafe-eval'" : null,
+    ...HCAPTCHA_CSP_SOURCES,
+    // Cloudflare Web Analytics injects its beacon script from this origin.
+    process.env.NODE_ENV === 'production'
+      ? 'https://static.cloudflareinsights.com'
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   const cspDirectives = [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
+    `frame-src 'self' ${HCAPTCHA_CSP_SOURCES.join(' ')}`,
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== 'production' ? " 'unsafe-eval'" : ''}`,
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ${HCAPTCHA_CSP_SOURCES.join(' ')}`,
+    `script-src ${scriptSrc}`,
     "connect-src 'self' https: wss: ws:",
   ]
   response.headers.set('X-Content-Type-Options', 'nosniff')
