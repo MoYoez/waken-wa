@@ -3252,7 +3252,7 @@ export function WebSettings() {
               <p className="text-xs text-muted-foreground">输入来源值（建议小写）</p>
               <div className="flex flex-wrap items-center gap-2">
                 <Combobox
-                  items={form.mediaPlaySourceBlocklist}
+                  items={form.captureReportedAppsEnabled ? historyApps : []}
                   inputValue={mediaSourceInput}
                   onInputValueChange={setMediaSourceInput}
                   onValueChange={(v) => setMediaSourceInput(String(v ?? ''))}
@@ -3264,7 +3264,9 @@ export function WebSettings() {
                     showClear={false}
                   />
                   <ComboboxContent>
-                    <ComboboxEmpty>无历史条目</ComboboxEmpty>
+                    <ComboboxEmpty>
+                      {form.captureReportedAppsEnabled ? '无匹配历史应用' : '未启用历史应用记录'}
+                    </ComboboxEmpty>
                     <ComboboxList>
                       {(item) => (
                         <ComboboxItem key={item} value={item}>
