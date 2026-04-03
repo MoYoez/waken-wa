@@ -7,8 +7,6 @@ import { db } from '@/lib/db'
 import { adminUsers } from '@/lib/drizzle-schema'
 import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
 
-export const dynamic = 'force-dynamic'
-
 export default async function LoginPage() {
   const [cntRow] = await db.select({ c: count() }).from(adminUsers)
   const hasAdmin = Number(cntRow?.c ?? 0) > 0

@@ -7,9 +7,6 @@ import { verifySession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { adminUsers } from '@/lib/drizzle-schema'
 
-// 强制动态渲染，确保每次请求都获取最新数据
-export const dynamic = 'force-dynamic'
-
 function firstString(v: string | string[] | undefined): string {
   if (typeof v === 'string') return v
   if (Array.isArray(v) && v.length > 0) return v[0] ?? ''
