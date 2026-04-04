@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /** Max tilt in degrees (subtle parallax). */
 const MAX_ROTATE_DEG = 4.5
@@ -10,6 +10,12 @@ const PERSPECTIVE_PX = 1400
 const LERP = 0.12
 
 const ADMIN_PREFIX = '/admin'
+
+function isPublicPageLoadingActive(): boolean {
+  if (typeof document === 'undefined') return false
+  if (document.documentElement.dataset.publicPageLoading === 'true') return true
+  return document.querySelector('.public-page-loader.is-visible') !== null
+}
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v))
@@ -32,14 +38,41 @@ export function GlobalMouseTilt({
   const currentRef = useRef({ rx: 0, ry: 0 })
   const rafRef = useRef(0)
   const lastOrientationAtRef = useRef(0)
+  const [loadingActive, setLoadingActive] = useState(false)
 
   const skipAdmin = pathname?.startsWith(ADMIN_PREFIX) ?? false
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    const update = () => {
+      setLoadingActive(isPublicPageLoadingActive())
+    }
+
+    update()
+
+    const observer = new MutationObserver(update)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-public-page-loading'],
+    })
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+    })
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
 
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
 
-    if (skipAdmin || !enabled) {
+    if (skipAdmin || !enabled || loadingActive) {
       el.style.transform = ''
       el.style.willChange = 'auto'
       currentRef.current = { rx: 0, ry: 0 }
@@ -190,7 +223,7 @@ export function GlobalMouseTilt({
       targetRef.current = { rx: 0, ry: 0 }
       lastOrientationAtRef.current = 0
     }
-  }, [skipAdmin, enabled, gyroEnabled])
+  }, [skipAdmin, enabled, gyroEnabled, loadingActive])
 
   return (
     <div

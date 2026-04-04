@@ -265,6 +265,12 @@ function themeCustomSurfaceFromApi(raw: unknown): ThemeCustomSurfaceForm {
   }
 }
 
+function hasThemeImageSourceConfigured(surface: ThemeCustomSurfaceForm): boolean {
+  if (surface.backgroundImageUrl.trim()) return true
+  if (surface.backgroundRandomApiUrl.trim()) return true
+  return surface.backgroundImagePool.some((item) => item.trim().length > 0)
+}
+
 function base64ToUtf8(b64: string): string {
   const s = b64.replace(/\s/g, '')
   const bin = atob(s)
@@ -1152,6 +1158,25 @@ export function WebSettings() {
     }))
   }
 
+  const patchThemeSurfaceImageAware = (patches: Partial<ThemeCustomSurfaceForm>) => {
+    setForm((prev) => {
+      const nextThemeCustomSurface = {
+        ...prev.themeCustomSurface,
+        ...patches,
+      }
+      const hadImageSource = hasThemeImageSourceConfigured(prev.themeCustomSurface)
+      const hasImageSource = hasThemeImageSourceConfigured(nextThemeCustomSurface)
+      if (!hadImageSource && hasImageSource) {
+        nextThemeCustomSurface.hideFloatingOrbs = true
+        nextThemeCustomSurface.transparentAnimatedBg = true
+      }
+      return {
+        ...prev,
+        themeCustomSurface: nextThemeCustomSurface,
+      }
+    })
+  }
+
   const currentThemePreviewHint = useMemo(() => {
     if (form.themeCustomSurface.backgroundImageMode === 'manual') {
       return form.themeCustomSurface.backgroundImageUrl.trim()
@@ -1244,12 +1269,14 @@ export function WebSettings() {
         toast.error('该图片已在随机池中')
         return
       }
-      patchThemeSurface('backgroundImagePool', [...form.themeCustomSurface.backgroundImagePool, value])
+      patchThemeSurfaceImageAware({
+        backgroundImagePool: [...form.themeCustomSurface.backgroundImagePool, value],
+      })
       setBackgroundImageInput('')
       return
     }
 
-    patchThemeSurface('backgroundImageUrl', value)
+    patchThemeSurfaceImageAware({ backgroundImageUrl: value })
     setBackgroundImageInput(value)
   }
 
@@ -1263,9 +1290,11 @@ export function WebSettings() {
         return
       }
       if (form.themeCustomSurface.backgroundImageMode === 'randomPool') {
-        patchThemeSurface('backgroundImagePool', [...form.themeCustomSurface.backgroundImagePool, result])
+        patchThemeSurfaceImageAware({
+          backgroundImagePool: [...form.themeCustomSurface.backgroundImagePool, result],
+        })
       } else {
-        patchThemeSurface('backgroundImageUrl', result)
+        patchThemeSurfaceImageAware({ backgroundImageUrl: result })
       }
       setBackgroundImageInput('')
       setThemePreviewImageUrl(result)
@@ -2367,7 +2396,7 @@ export function WebSettings() {
                       value={backgroundImageInput}
                       onChange={(e) => {
                         setBackgroundImageInput(e.target.value)
-                        patchThemeSurface('backgroundImageUrl', e.target.value)
+                        patchThemeSurfaceImageAware({ backgroundImageUrl: e.target.value })
                       }}
                       placeholder='https://… / /images/bg.jpg / data:image/...'
                       className="min-w-0 basis-full flex-1 font-mono text-xs sm:min-w-[18rem] sm:basis-auto"
@@ -2463,7 +2492,9 @@ export function WebSettings() {
                       value={backgroundImageInput}
                       onChange={(e) => {
                         setBackgroundImageInput(e.target.value)
-                        patchThemeSurface('backgroundRandomApiUrl', e.target.value)
+                        patchThemeSurfaceImageAware({
+                          backgroundRandomApiUrl: e.target.value,
+                        })
                       }}
                       placeholder="https://api.example.com/random-image"
                       className="min-w-0 basis-full flex-1 font-mono text-xs sm:min-w-[18rem] sm:basis-auto"
