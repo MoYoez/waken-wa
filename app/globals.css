@@ -216,6 +216,22 @@ html[data-theme-switch='active']::view-transition-new(root) {
   --loader-ink-muted: rgba(20, 24, 33, 0.1);
   --loader-line: rgba(20, 24, 33, 0.18);
   --loader-label: rgb(36 41 52);
+  --loader-bg-solid: rgba(255, 255, 255, 0.985);
+  --loader-bg-radial-main: rgba(255, 255, 255, 0.9);
+  --loader-bg-radial-side: rgba(255, 255, 255, 0.62);
+  --loader-bg-top: color-mix(in srgb, white 84%, var(--background) 16%);
+  --loader-bg-bottom: color-mix(in srgb, white 78%, var(--card) 22%);
+  --loader-moon-core: rgba(28, 32, 42, 0.14);
+  --loader-moon-ring: rgba(20, 24, 33, 0.04);
+  --loader-moon-glow: rgba(20, 24, 33, 0.1);
+  --loader-spark: rgba(20, 24, 33, 0.72);
+  --loader-shadow: radial-gradient(circle, rgba(15, 23, 42, 0.32), transparent 70%);
+  --loader-dino-main: linear-gradient(180deg, rgba(17, 17, 19, 0.98), rgba(6, 6, 8, 1));
+  --loader-dino-highlight: rgba(255, 255, 255, 0.04);
+  --loader-dino-solid: rgba(8, 8, 10, 1);
+  --loader-eye: white;
+  --loader-eye-ring: rgba(255, 255, 255, 0.16);
+  --loader-mouth: rgba(255, 255, 255, 0.14);
   position: fixed;
   inset: 0;
   z-index: 120;
@@ -225,14 +241,14 @@ html[data-theme-switch='active']::view-transition-new(root) {
   justify-content: center;
   gap: 1rem;
   isolation: isolate;
-  background-color: rgba(255, 255, 255, 0.985);
+  background-color: var(--loader-bg-solid);
   background:
-    radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.9), transparent 32%),
-    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.62), transparent 26%),
+    radial-gradient(circle at 50% 32%, var(--loader-bg-radial-main), transparent 32%),
+    radial-gradient(circle at 18% 18%, var(--loader-bg-radial-side), transparent 26%),
     linear-gradient(
       180deg,
-      color-mix(in srgb, white 84%, var(--background) 16%),
-      color-mix(in srgb, white 78%, var(--card) 22%)
+      var(--loader-bg-top),
+      var(--loader-bg-bottom)
     );
   opacity: 1;
   transition:
@@ -246,7 +262,31 @@ html[data-theme-switch='active']::view-transition-new(root) {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: rgba(255, 255, 255, 0.985);
+  background: var(--loader-bg-solid);
+}
+
+.dark .public-page-loader {
+  --loader-ink: rgb(244 247 252);
+  --loader-ink-soft: rgba(244, 247, 252, 0.16);
+  --loader-ink-muted: rgba(244, 247, 252, 0.12);
+  --loader-line: rgba(244, 247, 252, 0.22);
+  --loader-label: rgb(233 238 245);
+  --loader-bg-solid: rgba(8, 11, 16, 0.985);
+  --loader-bg-radial-main: rgba(22, 28, 40, 0.92);
+  --loader-bg-radial-side: rgba(38, 48, 68, 0.42);
+  --loader-bg-top: color-mix(in srgb, black 76%, var(--background) 24%);
+  --loader-bg-bottom: color-mix(in srgb, black 70%, var(--card) 30%);
+  --loader-moon-core: rgba(236, 242, 250, 0.88);
+  --loader-moon-ring: rgba(236, 242, 250, 0.08);
+  --loader-moon-glow: rgba(236, 242, 250, 0.18);
+  --loader-spark: rgba(236, 242, 250, 0.86);
+  --loader-shadow: radial-gradient(circle, rgba(236, 242, 250, 0.28), transparent 70%);
+  --loader-dino-main: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(225, 232, 240, 1));
+  --loader-dino-highlight: rgba(0, 0, 0, 0.06);
+  --loader-dino-solid: rgba(232, 238, 245, 1);
+  --loader-eye: rgba(12, 16, 22, 1);
+  --loader-eye-ring: rgba(12, 16, 22, 0.12);
+  --loader-mouth: rgba(12, 16, 22, 0.16);
 }
 
 .public-page-loader.is-hidden {
@@ -306,10 +346,10 @@ html:not([data-public-page-loading='true']) {
   width: 1.2rem;
   height: 1.2rem;
   border-radius: 999px;
-  background: rgba(28, 32, 42, 0.14);
+  background: var(--loader-moon-core);
   box-shadow:
-    0 0 0 0.45rem rgba(20, 24, 33, 0.04),
-    0 0 18px rgba(20, 24, 33, 0.1);
+    0 0 0 0.45rem var(--loader-moon-ring),
+    0 0 18px var(--loader-moon-glow);
   opacity: 0.92;
 }
 
@@ -317,7 +357,7 @@ html:not([data-public-page-loading='true']) {
   width: 0.22rem;
   height: 0.22rem;
   border-radius: 999px;
-  background: rgba(20, 24, 33, 0.72);
+  background: var(--loader-spark);
   opacity: 0.78;
   animation: public-loader-twinkle 1800ms ease-in-out infinite;
 }
@@ -345,7 +385,7 @@ html:not([data-public-page-loading='true']) {
   width: 6.25rem;
   height: 1rem;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(15, 23, 42, 0.32), transparent 70%);
+  background: var(--loader-shadow);
   transform: translateX(-50%);
   filter: blur(6px);
   animation: public-loader-shadow 1200ms ease-in-out infinite;
@@ -367,10 +407,10 @@ html:not([data-public-page-loading='true']) {
   width: 3.65rem;
   height: 2.6rem;
   border-radius: 1.65rem 1.8rem 1.25rem 1.25rem;
-  background: linear-gradient(180deg, rgba(17, 17, 19, 0.98), rgba(6, 6, 8, 1));
+  background: var(--loader-dino-main);
   box-shadow:
     0 14px 28px rgba(15, 23, 42, 0.12),
-    inset -3px -4px 0 rgba(255, 255, 255, 0.04);
+    inset -3px -4px 0 var(--loader-dino-highlight);
 }
 
 .public-page-loader__dino-head {
@@ -379,7 +419,7 @@ html:not([data-public-page-loading='true']) {
   width: 2.3rem;
   height: 1.95rem;
   border-radius: 1.35rem 1.35rem 1rem 1rem;
-  background: linear-gradient(180deg, rgba(16, 16, 18, 0.99), rgba(6, 6, 8, 1));
+  background: var(--loader-dino-main);
   transform-origin: 15% 80%;
   animation: public-loader-dino-head 1200ms ease-in-out infinite;
 }
@@ -392,7 +432,7 @@ html:not([data-public-page-loading='true']) {
   width: 1.05rem;
   height: 0.88rem;
   border-radius: 0.65rem 0.7rem 0.75rem 0.4rem;
-  background: rgba(8, 8, 10, 1);
+  background: var(--loader-dino-solid);
 }
 
 .public-page-loader__dino-tail {
@@ -401,7 +441,7 @@ html:not([data-public-page-loading='true']) {
   width: 2.1rem;
   height: 0.95rem;
   border-radius: 999px 0.8rem 0.6rem 999px;
-  background: rgba(7, 7, 9, 1);
+  background: var(--loader-dino-solid);
   transform-origin: right center;
   clip-path: polygon(0 42%, 60% 0, 100% 46%, 60% 100%);
   animation: public-loader-dino-tail 1200ms ease-in-out infinite;
@@ -409,7 +449,7 @@ html:not([data-public-page-loading='true']) {
 
 .public-page-loader__dino-arm,
 .public-page-loader__dino-leg {
-  background: rgba(8, 8, 10, 1);
+  background: var(--loader-dino-solid);
   border-radius: 999px;
 }
 
@@ -454,8 +494,8 @@ html:not([data-public-page-loading='true']) {
   width: 0.38rem;
   height: 0.38rem;
   border-radius: 999px;
-  background: white;
-  box-shadow: 0 0 0 0.08rem rgba(255, 255, 255, 0.16);
+  background: var(--loader-eye);
+  box-shadow: 0 0 0 0.08rem var(--loader-eye-ring);
   animation: public-loader-dino-eye 2500ms ease-in-out infinite;
 }
 
@@ -465,7 +505,7 @@ html:not([data-public-page-loading='true']) {
   width: 0.8rem;
   height: 0.16rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--loader-mouth);
   transform-origin: left center;
 }
 
