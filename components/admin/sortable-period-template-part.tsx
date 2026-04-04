@@ -57,7 +57,7 @@ function SortablePeriodRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'grid gap-2 rounded-lg border border-border/50 bg-muted/15 p-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0',
+        'grid gap-1.5 rounded-lg border border-border/50 bg-muted/15 p-2 sm:gap-2 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0',
         // Mobile: row1 = grip | label | delete; row2 = start | end under label/delete columns
         'max-sm:grid-cols-[2.25rem_minmax(0,1fr)_auto]',
         'sm:grid-cols-[minmax(0,2.25rem)_minmax(0,9rem)_auto_auto_auto] sm:items-center',
@@ -68,20 +68,20 @@ function SortablePeriodRow({
         className={cn(
           'flex shrink-0 cursor-grab touch-none items-center justify-center rounded-md border border-transparent text-muted-foreground hover:bg-muted/80 active:cursor-grabbing',
           'row-start-1 col-start-1 sm:row-start-1 sm:col-start-1',
-          'h-10 w-10 sm:h-9 sm:w-9',
+          'h-8 w-8 sm:h-9 sm:w-9',
         )}
         aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
       </button>
       <Input
         value={row.label}
         onChange={(e) => patchItem(row.id, { label: e.target.value })}
         placeholder="如：1-2节"
         className={cn(
-          'h-9 min-w-0',
+          'h-8 min-w-0 px-2.5 text-sm sm:h-9 sm:px-3',
           'row-start-1 col-start-2 sm:row-start-1 sm:col-start-2',
         )}
       />
@@ -91,7 +91,7 @@ function SortablePeriodRow({
         value={row.startTime}
         onChange={(e) => patchItem(row.id, { startTime: e.target.value })}
         className={cn(
-          'h-9 min-w-0 font-mono',
+          'h-8 min-w-0 px-2.5 font-mono text-sm sm:h-9 sm:px-3',
           'row-start-2 col-start-2 w-full sm:row-start-1 sm:col-start-3 sm:w-[7.5rem]',
         )}
       />
@@ -101,7 +101,7 @@ function SortablePeriodRow({
         value={row.endTime}
         onChange={(e) => patchItem(row.id, { endTime: e.target.value })}
         className={cn(
-          'h-9 min-w-0 font-mono',
+          'h-8 min-w-0 px-2.5 font-mono text-sm sm:h-9 sm:px-3',
           'row-start-2 col-start-3 w-full sm:row-start-1 sm:col-start-4 sm:w-[7.5rem]',
         )}
       />
@@ -110,7 +110,7 @@ function SortablePeriodRow({
         variant="ghost"
         size="sm"
         className={cn(
-          'shrink-0 text-destructive',
+          'h-8 shrink-0 px-2 text-xs text-destructive sm:px-3 sm:text-sm',
           'row-start-1 col-start-3 justify-self-end sm:row-start-1 sm:col-start-5 sm:justify-self-start',
         )}
         onClick={() => removeItem(row.id)}

@@ -639,15 +639,15 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
         </div>
       </div>
 
-      <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3 overflow-x-hidden min-w-0">
+      <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5 sm:p-3 space-y-2.5 sm:space-y-3 overflow-x-hidden min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="text-sm font-medium text-foreground min-w-0">固定节次模板（全站共用）</h4>
+          <h4 className="min-w-0 text-xs font-medium text-foreground sm:text-sm">固定节次模板（全站共用）</h4>
         </div>
-        <p className="text-xs text-muted-foreground text-pretty leading-relaxed">
+        <p className="text-[11px] text-muted-foreground text-pretty leading-relaxed sm:text-xs">
           课程只选择节次，不再手填具体时间。修改模板后，已有课程会自动按新节次时间显示。同一时段内拖动左侧手柄调整节次顺序。
         </p>
         {compatWarnings.length > 0 ? (
-          <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
+          <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-700 sm:px-3 sm:text-xs">
             {compatWarnings[0]}
             {compatWarnings.length > 1 ? ` 等 ${compatWarnings.length} 条` : ''}
           </div>
@@ -659,20 +659,20 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
               .sort((a, b) => a.order - b.order)
             return (
               <div key={part} className="space-y-2 min-w-0">
-                <div className="flex flex-col gap-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
-                  <Label className="shrink-0 text-sm font-medium">{PERIOD_PART_LABELS[part]}</Label>
+                <div className="flex flex-col gap-1.5 sm:gap-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
+                  <Label className="shrink-0 text-xs font-medium sm:text-sm">{PERIOD_PART_LABELS[part]}</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="w-full shrink-0 min-[480px]:w-auto"
+                    className="h-8 w-full shrink-0 px-2.5 text-xs min-[480px]:w-auto sm:px-3 sm:text-sm"
                     onClick={() => addPeriodTemplateItem(part)}
                   >
                     新增节次
                   </Button>
                 </div>
                 {rows.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">暂无节次</p>
+                  <p className="text-[11px] text-muted-foreground sm:text-xs">暂无节次</p>
                 ) : (
                   <SortablePeriodTemplatePart
                     part={part}
