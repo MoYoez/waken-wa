@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, useReducedMotion } from 'motion/react'
+import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
 
 import {
@@ -23,6 +24,7 @@ function loadingLabel(scope: Props['scope']): string {
 
 export function PublicPageTransitionShell({ children, scope, enabled = true }: Props) {
   const [contentReady, setContentReady] = useState(false)
+  const [portalReady, setPortalReady] = useState(false)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const contentTransition = getSiteSectionTransition(prefersReducedMotion)
   const contentVariants = getSiteSectionVariants(prefersReducedMotion, {
@@ -30,6 +32,11 @@ export function PublicPageTransitionShell({ children, scope, enabled = true }: P
     exitY: 8,
     scale: 0.998,
   })
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    setPortalReady(true)
+  }, [])
 
   useEffect(() => {
     if (!enabled) return
@@ -88,34 +95,40 @@ export function PublicPageTransitionShell({ children, scope, enabled = true }: P
 
   return (
     <>
-      <div
-        aria-hidden={contentReady}
-        className={`public-page-loader ${contentReady ? 'is-hidden' : 'is-visible'}`}
-      >
-        <div className="public-page-loader__stack">
-          <div className="public-page-loader__scene">
-            <div className="public-page-loader__moon" />
-            <div className="public-page-loader__spark public-page-loader__spark--a" />
-            <div className="public-page-loader__spark public-page-loader__spark--b" />
-            <div className="public-page-loader__spark public-page-loader__spark--c" />
-            <div className="public-page-loader__shadow" />
-            <div className="public-page-loader__dino" aria-hidden="true">
-              <div className="public-page-loader__dino-body" />
-              <div className="public-page-loader__dino-tail" />
-              <div className="public-page-loader__dino-head">
-                <span className="public-page-loader__dino-eye" />
-                <span className="public-page-loader__dino-mouth" />
+      {portalReady
+        ? createPortal(
+            <div
+              aria-hidden={contentReady}
+              className={`public-page-loader ${contentReady ? 'is-hidden' : 'is-visible'}`}
+            >
+              <div className="public-page-loader__stack">
+                <div className="public-page-loader__scene">
+                  <div className="public-page-loader__moon" />
+                  <div className="public-page-loader__spark public-page-loader__spark--a" />
+                  <div className="public-page-loader__spark public-page-loader__spark--b" />
+                  <div className="public-page-loader__spark public-page-loader__spark--c" />
+                  <div className="public-page-loader__shadow" />
+                  <div className="public-page-loader__dino" aria-hidden="true">
+                    <div className="public-page-loader__dino-body" />
+                    <div className="public-page-loader__dino-tail" />
+                    <div className="public-page-loader__dino-head">
+                      <span className="public-page-loader__dino-eye" />
+                      <span className="public-page-loader__dino-mouth" />
+                    </div>
+                    <div className="public-page-loader__dino-arm public-page-loader__dino-arm--front" />
+                    <div className="public-page-loader__dino-arm public-page-loader__dino-arm--back" />
+                    <div className="public-page-loader__dino-leg public-page-loader__dino-leg--front" />
+                    <div className="public-page-loader__dino-leg public-page-loader__dino-leg--back" />
+                  </div>
+                  <div className="public-page-loader__ground" />
+                </div>
+                <p className="public-page-loader__label">{loadingLabel(scope)}</p>
               </div>
-              <div className="public-page-loader__dino-arm public-page-loader__dino-arm--front" />
-              <div className="public-page-loader__dino-arm public-page-loader__dino-arm--back" />
-              <div className="public-page-loader__dino-leg public-page-loader__dino-leg--front" />
-              <div className="public-page-loader__dino-leg public-page-loader__dino-leg--back" />
             </div>
-            <div className="public-page-loader__ground" />
-          </div>
-          <p className="public-page-loader__label">{loadingLabel(scope)}</p>
-        </div>
-      </div>
+          ,
+          document.body,
+        )
+        : null}
 
       <motion.div
         data-public-page-shell="content"
