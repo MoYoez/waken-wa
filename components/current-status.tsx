@@ -30,7 +30,6 @@ import {
   getSiteSectionVariants,
 } from '@/components/site-motion'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
-import { useIsClient } from '@/hooks/use-is-client'
 import { isDeviceBatteryCharging } from '@/lib/activity-battery-metadata'
 import { getMediaDisplay, type MediaDisplay } from '@/lib/activity-media'
 import { cn } from '@/lib/utils'
@@ -242,7 +241,6 @@ interface CurrentStatusProps {
 
 export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps) {
   const { feed, error } = useSharedActivityFeed()
-  const mounted = useIsClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
   const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
@@ -250,8 +248,6 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
     exitY: 8,
     scale: 0.996,
   })
-
-  if (!mounted) return null
 
   if (error) {
     return (
