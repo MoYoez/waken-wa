@@ -113,7 +113,7 @@ export function ScheduleHomeInClassBanner({
           <span className="text-xs font-medium uppercase tracking-wide text-primary/90 whitespace-nowrap sm:text-sm">
             正在上课
           </span>
-          <span className="min-w-0 truncate text-right text-sm tabular-nums text-muted-foreground sm:text-base">
+          <span className="min-w-0 truncate text-right text-xs tabular-nums text-muted-foreground sm:text-sm">
             {format(o.start, 'HH:mm')} – {format(o.end, 'HH:mm')}
             {o.sessionCount && o.sessionCount > 1 && o.sessionOrdinal ? (
               <span className="text-muted-foreground/80">
@@ -138,7 +138,7 @@ export function ScheduleHomeInClassBanner({
           <span className="text-xs font-medium uppercase tracking-wide text-primary/90 whitespace-nowrap sm:text-sm">
             下一节
           </span>
-          <span className="min-w-0 truncate text-right text-sm tabular-nums text-muted-foreground sm:text-base">
+          <span className="min-w-0 truncate text-right text-xs tabular-nums text-muted-foreground sm:text-sm">
             {format(n.start, 'HH:mm')} – {format(n.end, 'HH:mm')}
             {n.sessionCount && n.sessionCount > 1 && n.sessionOrdinal ? (
               <span className="text-muted-foreground/80">
