@@ -115,12 +115,6 @@ export function ScheduleHomeInClassBanner({
           </span>
           <span className="min-w-0 truncate text-right text-xs tabular-nums text-muted-foreground sm:text-sm">
             {format(o.start, 'HH:mm')} – {format(o.end, 'HH:mm')}
-            {o.sessionCount && o.sessionCount > 1 && o.sessionOrdinal ? (
-              <span className="text-muted-foreground/80">
-                {' '}
-                · {o.sessionOrdinal}/{o.sessionCount}段
-              </span>
-            ) : null}
           </span>
         </>
       )
@@ -140,12 +134,6 @@ export function ScheduleHomeInClassBanner({
           </span>
           <span className="min-w-0 truncate text-right text-xs tabular-nums text-muted-foreground sm:text-sm">
             {format(n.start, 'HH:mm')} – {format(n.end, 'HH:mm')}
-            {n.sessionCount && n.sessionCount > 1 && n.sessionOrdinal ? (
-              <span className="text-muted-foreground/80">
-                {' '}
-                · {n.sessionOrdinal}/{n.sessionCount}段
-              </span>
-            ) : null}
           </span>
         </>
       )
