@@ -47,6 +47,11 @@
   body[data-scroll-locked] {
     margin-right: 0 !important;
   }
+  scrollbar-width: none; /* Firefox */
+}
+/* Hide scrollbar */
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .dark {
