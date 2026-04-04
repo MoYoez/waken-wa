@@ -11,13 +11,18 @@ import { getBearerApiTokenRecord, getSession, isSiteLockSatisfied } from '@/lib/
 import { db } from '@/lib/db'
 import { devices, inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
 import { gateInspirationApiForDevice } from '@/lib/inspiration-device-allowlist'
-import { linkInspirationAssetsToEntry, validateInlineImageDataUrl } from '@/lib/inspiration-inline-images'
+import {
+  linkInspirationAssetsToEntry,
+  syncInspirationAssetsForEntry,
+  validateInlineImageDataUrl,
+} from '@/lib/inspiration-inline-images'
 import {
   lexicalHasVisibleText,
   lexicalTextContent,
   normalizeLexicalJsonString,
 } from '@/lib/inspiration-lexical'
 import { parsePaginationParams } from '@/lib/pagination'
+import { readJsonObject } from '@/lib/request-json'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { normalizeTimezone } from '@/lib/timezone'
 
@@ -320,5 +325,194 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('删除灵感条目失败:', error)
     return NextResponse.json({ success: false, error: '删除失败' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+  }
+
+  try {
+    const body = await readJsonObject(request)
+    const id = Number(body?.id)
+    if (!Number.isFinite(id) || id <= 0) {
+      return NextResponse.json({ success: false, error: '缺少有效的 id' }, { status: 400 })
+    }
+
+    const [existingEntry] = await db
+      .select({ id: inspirationEntries.id })
+      .from(inspirationEntries)
+      .where(eq(inspirationEntries.id, id))
+      .limit(1)
+    if (!existingEntry) {
+      return NextResponse.json({ success: false, error: '灵感不存在' }, { status: 404 })
+    }
+
+    const attachCurrentStatus = Boolean(body?.attachCurrentStatus)
+    const preComputedStatusSnapshotRaw =
+      body?.preComputedStatusSnapshot ?? body?.pre_computed_status_snapshot
+    const preComputedStatusSnapshot =
+      typeof preComputedStatusSnapshotRaw === 'string' ? preComputedStatusSnapshotRaw.trim() : ''
+    const statusSnapshotRaw = body?.statusSnapshot ?? body?.status_snapshot
+    const explicitStatusSnapshot =
+      typeof statusSnapshotRaw === 'string' ? statusSnapshotRaw.trim() : ''
+    const attachStatusDeviceHashRaw = body?.attachStatusDeviceHash ?? body?.attach_status_device_hash
+    const attachStatusDeviceHash =
+      typeof attachStatusDeviceHashRaw === 'string' ? attachStatusDeviceHashRaw.trim().toLowerCase() : ''
+    const attachStatusActivityKeyRaw = body?.attachStatusActivityKey ?? body?.attach_status_activity_key
+    const attachStatusActivityKey =
+      typeof attachStatusActivityKeyRaw === 'string' ? attachStatusActivityKeyRaw.trim() : ''
+    const attachStatusIncludeDeviceInfo =
+      body?.attachStatusIncludeDeviceInfo === true || body?.attach_status_include_device_info === true
+    const attachStatusDeviceHashes = Array.isArray(body?.attachStatusDeviceHashes)
+      ? body.attachStatusDeviceHashes
+          .map((item: unknown) => String(item ?? '').trim().toLowerCase())
+          .filter((item: string) => item.length > 0)
+      : []
+    const attachStatusDeviceHashResolved = attachStatusDeviceHash || attachStatusDeviceHashes[0] || ''
+
+    const titleRaw = body?.title ?? body?.heading
+    const title = typeof titleRaw === 'string' ? titleRaw.trim() : null
+    const titleFinal = title && title.length > 0 ? title : null
+
+    const contentRaw = body?.content ?? body?.text ?? body?.body
+    const contentLexicalRaw = body?.contentLexical ?? body?.content_lexical
+    const contentLexical = normalizeLexicalJsonString(contentLexicalRaw)
+    const contentMarkdown = typeof contentRaw === 'string' ? contentRaw.trim() : ''
+    const contentFromLexical = lexicalTextContent(contentLexical)
+    const content = contentMarkdown || contentFromLexical
+    const hasLexicalContent = lexicalHasVisibleText(contentLexical)
+    if (!content && !hasLexicalContent) {
+      return NextResponse.json({ success: false, error: '缺少 content' }, { status: 400 })
+    }
+
+    const imageDataUrlRaw = body?.imageDataUrl ?? body?.dataUrl ?? body?.image_data_url
+    const imageDataUrl =
+      typeof imageDataUrlRaw === 'string' && imageDataUrlRaw.trim().length > 0
+        ? imageDataUrlRaw.trim()
+        : null
+    if (imageDataUrl) {
+      const imgCheck = validateInlineImageDataUrl(imageDataUrl)
+      if (!imgCheck.ok) {
+        return NextResponse.json({ success: false, error: imgCheck.error }, { status: 400 })
+      }
+    }
+
+    let statusSnapshot: string | null = explicitStatusSnapshot || null
+    if (attachCurrentStatus) {
+      if (preComputedStatusSnapshot) {
+        statusSnapshot = preComputedStatusSnapshot
+      } else {
+        const [deviceRow] = attachStatusDeviceHashResolved
+          ? await db
+              .select({ displayName: devices.displayName })
+              .from(devices)
+              .where(eq(devices.generatedHashKey, attachStatusDeviceHashResolved))
+              .limit(1)
+          : [null]
+        const selectedDeviceName = String(deviceRow?.displayName ?? '').trim()
+
+        const feed = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT, {
+          includeGeneratedHashKey: Boolean(attachStatusDeviceHashResolved),
+        })
+        const active = feed.activeStatuses as Array<{
+          generatedHashKey?: string
+          statusText?: string
+          processName?: string
+          processTitle?: string | null
+          device?: string
+          metadata?: Record<string, unknown> | null
+          id?: number | string
+        }>
+        const recent = feed.recentActivities as Array<{
+          generatedHashKey?: string
+          statusText?: string
+          processName?: string
+          processTitle?: string | null
+          device?: string
+          metadata?: Record<string, unknown> | null
+          id?: number | string
+        }>
+
+        const matchesActiveDevice = (item: { generatedHashKey?: string }) =>
+          !attachStatusDeviceHashResolved ||
+          String(item.generatedHashKey ?? '').trim().toLowerCase() === attachStatusDeviceHashResolved
+        const matchesRecentDevice = (item: { device?: string }) =>
+          !selectedDeviceName || String(item.device ?? '').trim() === selectedDeviceName
+
+        const keyWanted = attachStatusActivityKey.trim()
+        const pickFromKey = () => {
+          const [group, rawId] = keyWanted.split(':', 2)
+          if (!group || !rawId) return null
+          const idStr = rawId.trim()
+          if (!idStr) return null
+          if (group === 'active') {
+            return (
+              active.find(
+                (x) =>
+                  matchesActiveDevice(x) &&
+                  String((x as { id?: number | string }).id ?? x.processName ?? '') === idStr,
+              ) ?? null
+            )
+          }
+          if (group === 'recent') {
+            return (
+              recent.find(
+                (x) =>
+                  matchesRecentDevice(x) &&
+                  String((x as { id?: number | string }).id ?? x.processName ?? '') === idStr,
+              ) ?? null
+            )
+          }
+          return null
+        }
+
+        const picked = keyWanted ? pickFromKey() : null
+        const fallback = attachStatusDeviceHashResolved
+          ? active.find(matchesActiveDevice) ?? null
+          : active[0] ?? null
+        const chosen = picked ?? fallback
+
+        if (chosen) {
+          statusSnapshot = formatStatusSnapshotFromStatuses([chosen])
+          if (attachStatusDeviceHashResolved && statusSnapshot) {
+            const deviceName = String(deviceRow?.displayName ?? chosen.device ?? '').trim()
+            const battRaw =
+              chosen.metadata && typeof chosen.metadata === 'object'
+                ? chosen.metadata.deviceBatteryPercent
+                : null
+            const batt = typeof battRaw === 'number' ? battRaw : null
+            statusSnapshot = `${statusSnapshot} ${formatDeviceSuffix({
+              deviceName,
+              includeBattery: attachStatusIncludeDeviceInfo,
+              batteryPercent: batt,
+            })}`.trim()
+          }
+        }
+      }
+    }
+
+    const now = sqlTimestamp()
+    const [entry] = await db
+      .update(inspirationEntries)
+      .set({
+        title: titleFinal,
+        content,
+        contentLexical,
+        imageDataUrl,
+        statusSnapshot,
+        updatedAt: now,
+      })
+      .where(eq(inspirationEntries.id, id))
+      .returning()
+
+    await syncInspirationAssetsForEntry(id, content, contentLexical)
+
+    return NextResponse.json({ success: true, data: entry })
+  } catch (error) {
+    console.error('更新灵感条目失败:', error)
+    return NextResponse.json({ success: false, error: '保存失败' }, { status: 500 })
   }
 }

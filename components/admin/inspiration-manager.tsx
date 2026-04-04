@@ -6,7 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
+import { ImagePlus, Loader2, PencilLine, Trash2, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -25,6 +25,7 @@ import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import {
   createInspirationEntry,
   deleteInspirationEntry,
+  patchInspirationEntry,
   uploadInspirationAsset,
 } from '@/components/admin/admin-query-mutations'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
@@ -86,6 +87,7 @@ export function InspirationManager() {
   const prefersReducedMotion = Boolean(useReducedMotion())
   const [page, setPage] = useState(0)
   const [q, setQ] = useState('')
+  const formCardRef = useRef<HTMLDivElement>(null)
 
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -96,6 +98,8 @@ export function InspirationManager() {
   const [attachStatusDeviceHash, setAttachStatusDeviceHash] = useState('')
   const [attachStatusActivityKey, setAttachStatusActivityKey] = useState('')
   const [attachStatusIncludeDeviceInfo, setAttachStatusIncludeDeviceInfo] = useState(false)
+  const [statusSnapshotDraft, setStatusSnapshotDraft] = useState('')
+  const [editingEntryId, setEditingEntryId] = useState<number | null>(null)
   const [previewEntry, setPreviewEntry] = useState<AdminInspirationEntry | null>(null)
   const [bodyImageBusy, setBodyImageBusy] = useState(false)
 
@@ -202,6 +206,7 @@ export function InspirationManager() {
       setAttachStatusDeviceHash(nextAttach ? nextDeviceHash : '')
       setAttachStatusActivityKey(nextAttach && typeof draft.attachStatusActivityKey === 'string' ? draft.attachStatusActivityKey : '')
       setAttachStatusIncludeDeviceInfo(nextAttach && draft.attachStatusIncludeDeviceInfo === true)
+      setStatusSnapshotDraft('')
       setContentLexical(nextContentLexical)
       setContent(nextContent)
 
@@ -361,9 +366,50 @@ export function InspirationManager() {
       setAttachStatusDeviceHash('')
       setAttachStatusActivityKey('')
       setAttachStatusIncludeDeviceInfo(false)
+      setStatusSnapshotDraft('')
+      setEditingEntryId(null)
       localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
       setPage(0)
       toast.success('灵感已提交')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inspiration', 'entries'] })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误，请重试')
+    },
+  })
+
+  const updateEntryMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingEntryId) {
+        throw new Error('缺少待编辑条目')
+      }
+      await patchInspirationEntry({
+        id: editingEntryId,
+        title: title.trim() || undefined,
+        content: content.trim(),
+        contentLexical,
+        imageDataUrl: imageDataUrl.trim() || undefined,
+        attachCurrentStatus,
+        statusSnapshot: !attachCurrentStatus ? statusSnapshotDraft.trim() || null : undefined,
+        preComputedStatusSnapshot: attachCurrentStatus ? computedSnapshotText || undefined : undefined,
+        attachStatusDeviceHash: attachStatusDeviceHash.trim() || undefined,
+        attachStatusActivityKey: attachStatusActivityKey.trim() || undefined,
+        attachStatusIncludeDeviceInfo: attachStatusIncludeDeviceInfo || undefined,
+      })
+    },
+    onSuccess: async () => {
+      setTitle('')
+      setContent('')
+      setContentLexical(createLexicalTextContent(''))
+      setImageDataUrl('')
+      setAttachCurrentStatus(false)
+      setAttachStatusDeviceHash('')
+      setAttachStatusActivityKey('')
+      setAttachStatusIncludeDeviceInfo(false)
+      setStatusSnapshotDraft('')
+      setEditingEntryId(null)
+      localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
+      toast.success('灵感已更新')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inspiration', 'entries'] })
     },
     onError: (error) => {
@@ -404,7 +450,11 @@ export function InspirationManager() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      await createEntryMutation.mutateAsync()
+      if (editingEntryId) {
+        await updateEntryMutation.mutateAsync()
+      } else {
+        await createEntryMutation.mutateAsync()
+      }
     } finally {
       setSubmitting(false)
     }
@@ -414,11 +464,51 @@ export function InspirationManager() {
     await deleteEntryMutation.mutateAsync(id)
   }
 
+  const resetEditor = useCallback(() => {
+    setTitle('')
+    setContent('')
+    setContentLexical(createLexicalTextContent(''))
+    setImageDataUrl('')
+    setAttachCurrentStatus(false)
+    setAttachStatusDeviceHash('')
+    setAttachStatusActivityKey('')
+    setAttachStatusIncludeDeviceInfo(false)
+    setStatusSnapshotDraft('')
+    setEditingEntryId(null)
+    localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
+  }, [])
+
+  const handleEdit = useCallback((entry: AdminInspirationEntry) => {
+    setEditingEntryId(entry.id)
+    setTitle(entry.title ?? '')
+    setContent(entry.content)
+    setContentLexical(
+      typeof entry.contentLexical === 'string' && entry.contentLexical.trim()
+        ? entry.contentLexical
+        : createLexicalTextContent(entry.content),
+    )
+    setImageDataUrl(entry.imageDataUrl ?? '')
+    setAttachCurrentStatus(false)
+    setAttachStatusDeviceHash('')
+    setAttachStatusActivityKey('')
+    setAttachStatusIncludeDeviceInfo(false)
+    setStatusSnapshotDraft(entry.statusSnapshot ?? '')
+
+    requestAnimationFrame(() => {
+      formCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [])
+
   return (
     <div className="space-y-4">
-      <Card>
+      <Card ref={formCardRef}>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {editingEntryId ? (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
+                正在编辑第 #{editingEntryId} 条灵感，保存后会直接覆盖原内容并发布。
+              </div>
+            ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="insp-title">标题（可选）</Label>
@@ -622,6 +712,37 @@ export function InspirationManager() {
               ) : null}
             </AnimatePresence>
 
+            <AnimatePresence initial={false}>
+              {!attachCurrentStatus && statusSnapshotDraft.trim() ? (
+                <motion.div
+                  className="rounded-md border border-border/60 bg-muted/10 p-3"
+                  variants={compactSectionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={sectionTransition}
+                  layout
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">当前保留的状态快照</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setStatusSnapshotDraft('')}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      移除快照
+                    </Button>
+                  </div>
+                  <p className="text-xs break-words whitespace-pre-wrap text-foreground/80">
+                    {statusSnapshotDraft}
+                  </p>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+
             <div className="space-y-2">
               <Label htmlFor="insp-content">正文（Lexical，必填）</Label>
               <Tabs defaultValue="edit" className="w-full">
@@ -718,29 +839,19 @@ export function InspirationManager() {
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    提交中...
+                    {editingEntryId ? '保存中...' : '提交中...'}
                   </>
                 ) : (
-                  '提交灵感'
+                  editingEntryId ? '保存发布' : '提交灵感'
                 )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 disabled={submitting}
-                onClick={() => {
-                  setTitle('')
-                  setContent('')
-                  setContentLexical(createLexicalTextContent(''))
-                  setImageDataUrl('')
-                  setAttachCurrentStatus(false)
-                  setAttachStatusDeviceHash('')
-                  setAttachStatusActivityKey('')
-                  setAttachStatusIncludeDeviceInfo(false)
-                  localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
-                }}
+                onClick={resetEditor}
               >
-                清空
+                {editingEntryId ? '取消编辑' : '清空'}
               </Button>
             </div>
           </form>
@@ -863,31 +974,42 @@ export function InspirationManager() {
                           查看更多
                         </Button>
                       </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>确认删除</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              确定要删除这条灵感吗？此操作无法撤销。
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>取消</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(entry.id)}>
-                              删除
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground"
+                          onClick={() => handleEdit(entry)}
+                        >
+                          <PencilLine className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>确认删除</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                确定要删除这条灵感吗？此操作无法撤销。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(entry.id)}>
+                                删除
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
 
                     {entry.imageDataUrl ? (

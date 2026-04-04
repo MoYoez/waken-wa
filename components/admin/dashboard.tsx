@@ -1,6 +1,6 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Clock3,
   Download,
@@ -8,6 +8,7 @@ import {
   Loader2,
   LogOut,
   MonitorSmartphone,
+  OctagonX,
   Plus,
   RefreshCw,
   Upload,
@@ -26,8 +27,19 @@ import {
 } from '@/components/admin/admin-motion'
 import { fetchActivityFeed } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
-import { logoutAdmin } from '@/components/admin/admin-query-mutations'
+import { endAdminActivity, logoutAdmin } from '@/components/admin/admin-query-mutations'
 import { AdminQueryProvider } from '@/components/admin/admin-query-provider'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   ADMIN_DASHBOARD_TAB_ITEMS,
@@ -125,7 +137,19 @@ function buildRecentRecordSummary(record: ActivityFeedItem): string {
   return '暂无状态描述'
 }
 
+function getRecordPushMode(record: ActivityFeedItem): 'realtime' | 'active' {
+  if (record.pushMode === 'active' || record.pushMode === 'realtime') return record.pushMode
+  const meta =
+    record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
+      ? (record.metadata as Record<string, unknown>)
+      : null
+  const mode = String(meta?.pushMode ?? '').trim().toLowerCase()
+  return mode === 'active' || mode === 'persistent' ? 'active' : 'realtime'
+}
+
 function shouldShowRecentRecord(record: ActivityFeedItem): boolean {
+  if (getRecordPushMode(record) === 'active') return true
+
   const startedAtMs = Date.parse(String(record.startedAt ?? ''))
   if (!Number.isFinite(startedAtMs)) return true
 
@@ -162,6 +186,7 @@ function BottomGuide({
 
 function AdminDashboardContent({ username, initialTab, initialDeviceHash }: DashboardProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<AdminTabValue>(() =>
     isAdminTabValue(initialTab) ? initialTab : 'overview',
   )
@@ -225,6 +250,20 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
         .slice(0, ADMIN_RECENT_ACTIVITY_USAGE_LIMIT),
   })
   const recentActivityUsage = recentActivityUsageQuery.data ?? []
+  const endActivityMutation = useMutation({
+    mutationFn: endAdminActivity,
+    onSuccess: async () => {
+      toast.success('活动已结束')
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.activity.recentUsage() }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.activity.feed() }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.activity.publicFeed() }),
+      ])
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '结束活动失败')
+    },
+  })
 
   const updateAdminLocation = useCallback(
     (nextTab: AdminTabValue) => {
@@ -397,6 +436,13 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
             {recentActivityUsage.map((record, index) => {
               const recordTime = record.lastReportAt || record.updatedAt || record.startedAt
               const summary = buildRecentRecordSummary(record)
+              const isPersistentRecord =
+                getRecordPushMode(record) === 'active' && typeof record.id === 'number'
+              const persistentRecordId = isPersistentRecord ? (record.id as number) : null
+              const endingThisRecord =
+                persistentRecordId !== null &&
+                endActivityMutation.isPending &&
+                endActivityMutation.variables === persistentRecordId
               return (
                 <div
                   key={record.id}
@@ -438,6 +484,48 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
                         {record.device || '未知设备'}
                         {record.processName ? ` · ${record.processName}` : ''}
                       </p>
+                      {isPersistentRecord ? (
+                        <div className="mt-3">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={endingThisRecord}
+                              >
+                                {endingThisRecord ? (
+                                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <OctagonX className="mr-1 h-4 w-4" />
+                                )}
+                                立刻结束活动
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>确认结束活动</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  确定要立刻结束「{summary}」吗？结束后这条非 Realtime 活动会立即从当前状态里移除。
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>取消</AlertDialogCancel>
+                                <AlertDialogAction
+                                  disabled={endingThisRecord}
+                                  onClick={() =>
+                                    persistentRecordId !== null
+                                      ? void endActivityMutation.mutateAsync(persistentRecordId)
+                                      : undefined
+                                  }
+                                >
+                                  {endingThisRecord ? '结束中...' : '确认结束'}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>

@@ -92,27 +92,29 @@ export function PublicPageTransitionShell({ children, scope, enabled = true }: P
         aria-hidden={contentReady}
         className={`public-page-loader ${contentReady ? 'is-hidden' : 'is-visible'}`}
       >
-        <div className="public-page-loader__scene">
-          <div className="public-page-loader__moon" />
-          <div className="public-page-loader__spark public-page-loader__spark--a" />
-          <div className="public-page-loader__spark public-page-loader__spark--b" />
-          <div className="public-page-loader__spark public-page-loader__spark--c" />
-          <div className="public-page-loader__shadow" />
-          <div className="public-page-loader__dino" aria-hidden="true">
-            <div className="public-page-loader__dino-body" />
-            <div className="public-page-loader__dino-tail" />
-            <div className="public-page-loader__dino-head">
-              <span className="public-page-loader__dino-eye" />
-              <span className="public-page-loader__dino-mouth" />
+        <div className="public-page-loader__stack">
+          <div className="public-page-loader__scene">
+            <div className="public-page-loader__moon" />
+            <div className="public-page-loader__spark public-page-loader__spark--a" />
+            <div className="public-page-loader__spark public-page-loader__spark--b" />
+            <div className="public-page-loader__spark public-page-loader__spark--c" />
+            <div className="public-page-loader__shadow" />
+            <div className="public-page-loader__dino" aria-hidden="true">
+              <div className="public-page-loader__dino-body" />
+              <div className="public-page-loader__dino-tail" />
+              <div className="public-page-loader__dino-head">
+                <span className="public-page-loader__dino-eye" />
+                <span className="public-page-loader__dino-mouth" />
+              </div>
+              <div className="public-page-loader__dino-arm public-page-loader__dino-arm--front" />
+              <div className="public-page-loader__dino-arm public-page-loader__dino-arm--back" />
+              <div className="public-page-loader__dino-leg public-page-loader__dino-leg--front" />
+              <div className="public-page-loader__dino-leg public-page-loader__dino-leg--back" />
             </div>
-            <div className="public-page-loader__dino-arm public-page-loader__dino-arm--front" />
-            <div className="public-page-loader__dino-arm public-page-loader__dino-arm--back" />
-            <div className="public-page-loader__dino-leg public-page-loader__dino-leg--front" />
-            <div className="public-page-loader__dino-leg public-page-loader__dino-leg--back" />
+            <div className="public-page-loader__ground" />
           </div>
-          <div className="public-page-loader__ground" />
+          <p className="public-page-loader__label">{loadingLabel(scope)}</p>
         </div>
-        <p className="public-page-loader__label">{loadingLabel(scope)}</p>
       </div>
 
       <motion.div

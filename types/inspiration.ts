@@ -25,6 +25,7 @@ export interface AdminInspirationEntry {
   imageDataUrl: string | null
   statusSnapshot: string | null
   createdAt: string
+  updatedAt: string
 }
 
 export type InspirationDraft = {

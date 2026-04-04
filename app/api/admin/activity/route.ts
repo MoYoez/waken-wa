@@ -27,6 +27,7 @@ import {
 } from '@/lib/device-constants'
 import { devices, userActivities } from '@/lib/drizzle-schema'
 import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
+import { readJsonObject } from '@/lib/request-json'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { parseProcessStaleSeconds } from '@/lib/site-config-constants'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
@@ -142,6 +143,7 @@ export async function POST(request: NextRequest) {
           processName: process_name,
           processTitle: process_title,
           metadata: toDbJsonValue(finalMetadata),
+          startedAt: now,
           expiresAt: expiresAtVal,
           updatedAt: now,
         })
@@ -223,5 +225,54 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('添加活动失败:', error)
     return NextResponse.json({ success: false, error: '添加失败' }, { status: 500 })
+  }
+}
+
+/** PATCH: end admin-managed persistent activity immediately. */
+export async function PATCH(request: NextRequest) {
+  const session = await requireAdminSession()
+  if (!session) {
+    return unauthorizedJson()
+  }
+
+  try {
+    const body = await readJsonObject(request)
+    const id = Number(body?.id)
+    if (!Number.isFinite(id) || id <= 0) {
+      return NextResponse.json(
+        { success: false, error: '仅支持按非 Realtime 持久活动 id 结束活动' },
+        { status: 400 },
+      )
+    }
+
+    const [activity] = await db
+      .select({
+        id: userActivities.id,
+        metadata: userActivities.metadata,
+      })
+      .from(userActivities)
+      .where(eq(userActivities.id, id))
+      .limit(1)
+
+    if (!activity) {
+      return NextResponse.json({ success: false, error: '活动不存在、已过期，或不支持立刻结束' }, { status: 404 })
+    }
+
+    const pushMode = String(
+      ((activity.metadata as Record<string, unknown> | null)?.pushMode ?? ''),
+    )
+      .trim()
+      .toLowerCase()
+    if (pushMode === 'realtime') {
+      return NextResponse.json({ success: false, error: 'Realtime 活动不支持立刻结束' }, { status: 409 })
+    }
+
+    await db.delete(userActivities).where(eq(userActivities.id, id))
+    await clearActivityFeedDataCache()
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('结束活动失败:', error)
+    return NextResponse.json({ success: false, error: '结束活动失败' }, { status: 500 })
   }
 }

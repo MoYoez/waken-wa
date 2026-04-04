@@ -251,6 +251,7 @@ export async function POST(request: NextRequest) {
           processName: process_name,
           processTitle: process_title,
           metadata: toDbJsonValue(finalMetadata),
+          startedAt: now,
           expiresAt: expiresAtVal,
           updatedAt: now,
         })

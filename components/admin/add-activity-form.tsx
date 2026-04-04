@@ -71,8 +71,13 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
       setIsCharging(false)
       setSelectedHash(WEB_RESERVED_HASH)
       onSuccess?.()
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'activity-history'] })
-      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.devices.list() })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'activity-history'] }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.devices.list() }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.activity.recentUsage() }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.activity.feed() }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.activity.publicFeed() }),
+      ])
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : '网络错误')

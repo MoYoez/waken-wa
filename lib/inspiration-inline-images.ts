@@ -1,7 +1,7 @@
 /**
  * Markdown references to stored inspiration inline images (see InspirationAsset).
  */
-import { and, inArray, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
 import { inspirationAssets } from '@/lib/drizzle-schema'
@@ -85,4 +85,18 @@ export async function linkInspirationAssetsToEntry(
     .update(inspirationAssets)
     .set({ inspirationEntryId: entryId })
     .where(and(inArray(inspirationAssets.publicKey, mergedKeys), isNull(inspirationAssets.inspirationEntryId)))
+}
+
+/** Re-sync asset ownership when editing an existing inspiration entry. */
+export async function syncInspirationAssetsForEntry(
+  entryId: number,
+  content: string,
+  contentLexical?: string | null,
+): Promise<void> {
+  await db
+    .update(inspirationAssets)
+    .set({ inspirationEntryId: null })
+    .where(eq(inspirationAssets.inspirationEntryId, entryId))
+
+  await linkInspirationAssetsToEntry(entryId, content, contentLexical)
 }

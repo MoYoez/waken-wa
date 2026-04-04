@@ -184,6 +184,18 @@ export async function createAdminActivity(payload: Record<string, unknown>): Pro
   }
 }
 
+export async function endAdminActivity(id: number): Promise<void> {
+  const res = await fetch('/api/admin/activity', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  })
+  const data = await readJson<SuccessResponse<unknown>>(res)
+  if (!res.ok || !data?.success) {
+    throw new Error(typeof data?.error === 'string' ? data.error : '结束活动失败')
+  }
+}
+
 export async function uploadInspirationAsset(dataUrl: string): Promise<string> {
   const res = await fetch('/api/inspiration/assets', {
     method: 'POST',
@@ -207,6 +219,18 @@ export async function createInspirationEntry(body: Record<string, unknown>): Pro
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
     throw new Error(typeof data?.error === 'string' ? data.error : '提交失败')
+  }
+}
+
+export async function patchInspirationEntry(body: Record<string, unknown>): Promise<void> {
+  const res = await fetch('/api/inspiration/entries', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await readJson<SuccessResponse<unknown>>(res)
+  if (!res.ok || !data?.success) {
+    throw new Error(typeof data?.error === 'string' ? data.error : '保存失败')
   }
 }
 

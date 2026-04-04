@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { Check, Copy, Plus, QrCode, Trash2 } from 'lucide-react'
+import { Check, Copy, QrCode, RefreshCw, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import {
@@ -345,8 +345,8 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
       </Dialog>
 
       <div className="flex items-center gap-3">
-        <Button type="button" variant="outline" onClick={() => void refreshTokens()}>
-          <Plus className="mr-1 h-4 w-4 opacity-0" />
+        <Button type="button" variant="outline" onClick={() => void refreshTokens()} disabled={refreshing}>
+          <RefreshCw className={`mr-1 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           {refreshing ? '刷新中...' : '刷新列表'}
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import { desc, eq, gt } from 'drizzle-orm'
+import { desc, eq, gt, or } from 'drizzle-orm'
 
 import {
   ACTIVITY_FEED_DEFAULT_LIMIT,
@@ -29,7 +29,7 @@ type ActivityDbRow = {
   generatedHashKey: string
   processName: string
   processTitle: string | null
-  metadata: Record<string, unknown> | null
+  metadata: Record<string, unknown> | string | null
   startedAt: Date | string
   updatedAt: Date | string
   expiresAt: Date | string
@@ -58,6 +58,19 @@ function asObject(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>
 }
 
+function normalizeMetadata(value: unknown): Record<string, unknown> | null {
+  if (!value) return null
+  if (typeof value === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(value)
+      return asObject(parsed)
+    } catch {
+      return null
+    }
+  }
+  return asObject(value)
+}
+
 /** Drop `metadata.media` on feed items for public responses when site hides media (store unchanged). */
 function stripMediaFromFeedItem(item: ActivityFeedItem): ActivityFeedItem {
   const meta = item.metadata
@@ -81,15 +94,15 @@ function stripMediaByPlaySource(
   blockedSources: Set<string>,
 ): ActivityFeedItem {
   if (blockedSources.size === 0) return item
-  const meta = item.metadata
-  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return item
-  const source = String((meta as Record<string, unknown>).play_source ?? '')
+  const meta = normalizeMetadata(item.metadata)
+  if (!meta) return item
+  const source = String(meta.play_source ?? '')
     .trim()
     .toLowerCase()
   if (!source) return item
   if (!blockedSources.has(source)) return item
   if (!Object.prototype.hasOwnProperty.call(meta, 'media')) return item
-  const { media: _omit, ...rest } = meta as Record<string, unknown>
+  const { media: _omit, ...rest } = meta
   return { ...item, metadata: rest }
 }
 
@@ -104,7 +117,7 @@ export type GetActivityFeedOptions = {
 }
 
 function getPushModeFromMetadata(metadata: unknown): 'realtime' | 'active' {
-  const meta = asObject(metadata)
+  const meta = normalizeMetadata(metadata)
   if (!meta) return 'realtime'
   const mode = String(meta.pushMode ?? '').trim().toLowerCase()
   if (mode === 'active' || mode === 'persistent') return 'active'
@@ -222,8 +235,8 @@ export async function getActivityFeedData(
       })
       .from(userActivities)
       .innerJoin(devices, eq(userActivities.deviceId, devices.id))
-      .where(gt(userActivities.startedAt, since))
-      .orderBy(desc(userActivities.startedAt))
+      .where(or(gt(userActivities.startedAt, since), gt(userActivities.updatedAt, since)))
+      .orderBy(desc(userActivities.updatedAt), desc(userActivities.startedAt))
       .limit(Math.min(limit, ACTIVITY_FEED_QUERY_MAX_LIMIT)),
     listRealtimeActivities(),
   ])
@@ -233,7 +246,11 @@ export async function getActivityFeedData(
   const realtimeRowsTyped = realtimeRows as unknown as ActivityDbRow[]
   const recentActivitiesRaw = [...recentRows, ...realtimeRowsTyped]
     .filter((a: ActivityDbRow) => passesAppFilter(a.processName))
-    .sort((a, b) => Date.parse(String(b.startedAt)) - Date.parse(String(a.startedAt)))
+    .sort((a, b) => {
+      const aTime = Date.parse(String(a.updatedAt || a.startedAt))
+      const bTime = Date.parse(String(b.updatedAt || b.startedAt))
+      return bTime - aTime
+    })
     .slice(0, Math.min(limit, ACTIVITY_FEED_QUERY_MAX_LIMIT))
 
   const toIso = (value: unknown): string => {
@@ -247,14 +264,18 @@ export async function getActivityFeedData(
   const recentActivities = recentActivitiesRaw
     .map((item: ActivityDbRow) => {
       const startedAtIso = toIso(item.startedAt)
+      const normalizedMeta = normalizeMetadata(item.metadata)
+      const pushMode = getPushModeFromMetadata(item.metadata)
       const shaped =
         nameOnlySet.has(normalizeProcessName(item.processName))
           ? { ...item, processTitle: null as string | null }
           : item
       const row = {
         ...shaped,
+        metadata: normalizedMeta,
         startedAt: startedAtIso,
         endedAt: null,
+        pushMode,
         updatedAt: toIso(item.updatedAt),
         lastReportAt: toIso(item.updatedAt || item.startedAt),
       } as Record<string, unknown>
@@ -274,11 +295,13 @@ export async function getActivityFeedData(
     if (!passesAppFilter(item.processName)) continue
     seen.add(key)
     const pushMode = getPushModeFromMetadata(item.metadata)
+    const normalizedMeta = normalizeMetadata(item.metadata)
     const maskedTitle = nameOnlySet.has(processKey) ? null : item.processTitle
     const ruleStatusText = applyMessageRule(item.processName, maskedTitle, appMessageRules)
     const processTitleForClient = ruleStatusText ? null : maskedTitle
     const row: Record<string, unknown> = {
       ...item,
+      metadata: normalizedMeta,
       processTitle: processTitleForClient,
       startedAt: toIso(item.startedAt),
       updatedAt: toIso(item.updatedAt),
