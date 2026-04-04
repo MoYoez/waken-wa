@@ -92,7 +92,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
               <div className="hidden items-center justify-end sm:flex">
                 <Link
                   href="/admin"
-                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-border/60 bg-background/70 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground sm:min-h-0 sm:py-1.5"
+                  className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-border/60 bg-background/80 px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent/60 hover:text-foreground sm:min-h-0 sm:rounded-full sm:py-1.5"
                 >
                   {adminText}
                 </Link>
@@ -118,7 +118,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
               <div className="flex items-center gap-3 sm:justify-end">
                 <Link
                   href="/admin"
-                  className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/78 px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground sm:hidden"
+                  className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-2xl border border-border/60 bg-background/80 px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent/60 hover:text-foreground sm:hidden"
                 >
                   {adminText}
                 </Link>
