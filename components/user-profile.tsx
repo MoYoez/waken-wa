@@ -1,7 +1,7 @@
 'use client'
 
-import Image from 'next/image'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import Image from 'next/image'
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
@@ -229,10 +229,10 @@ export function UserProfileNoteSection({
   noteHitokotoEncode = 'json',
   noteHitokotoFallbackToNote = false,
 }: UserProfileNoteSectionProps) {
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const showNoteBlock = Boolean(note.trim()) || noteHitokotoEnabled
   if (!showNoteBlock) return null
 
-  const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
   const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
     enterY: 10,

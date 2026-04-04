@@ -2,22 +2,15 @@
 
 import { useQuery } from '@tanstack/react-query'
 import {
-  CalendarDays,
   Clock3,
   Download,
   Home,
-  Key,
-  LayoutDashboard,
-  Lightbulb,
-  Link2Off,
   Loader2,
   LogOut,
   MonitorSmartphone,
   Plus,
   RefreshCw,
-  Settings,
   Upload,
-  UserCog,
   Users,
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
@@ -36,8 +29,15 @@ import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import { logoutAdmin } from '@/components/admin/admin-query-mutations'
 import { AdminQueryProvider } from '@/components/admin/admin-query-provider'
 import { Button } from '@/components/ui/button'
+import {
+  ADMIN_DASHBOARD_TAB_ITEMS,
+  ADMIN_DASHBOARD_VALID_TABS,
+  ADMIN_RECENT_ACTIVITY_USAGE_LIMIT,
+  ADMIN_SHORT_EVENT_FILTER_MS,
+} from '@/constants/admin-dashboard'
 import { useViewerCount } from '@/hooks/use-viewer-count'
 import type { ActivityFeedItem } from '@/types/activity'
+import type { AdminTabValue } from '@/types/admin-dashboard'
 
 import { AccountSettings } from './account-settings'
 import { AddActivityForm } from './add-activity-form'
@@ -48,65 +48,8 @@ import { ScheduleManager, type ScheduleManagerHandle } from './schedule-manager'
 import { TokenManager, type TokenManagerHandle } from './token-manager'
 import { WebSettings } from './web-settings'
 
-const TAB_ITEMS = [
-  {
-    value: 'overview',
-    label: '概览',
-    description: '快速处理临时操作与上报补录',
-    icon: LayoutDashboard,
-  },
-  {
-    value: 'inspiration',
-    label: '灵感随想录',
-    description: '管理公开内容与正文素材',
-    icon: Lightbulb,
-  },
-  {
-    value: 'schedule',
-    label: '课表',
-    description: '维护课程模板与首页展示逻辑',
-    icon: CalendarDays,
-  },
-  {
-    value: 'devices',
-    label: '设备管理',
-    description: '审核设备、切换状态与设备行为',
-    icon: MonitorSmartphone,
-  },
-  {
-    value: 'tokens',
-    label: 'API Token',
-    description: '管理上报凭据与接入配置',
-    icon: Key,
-  },
-  {
-    value: 'account',
-    label: '账户',
-    description: '修改管理员密码与账号信息',
-    icon: UserCog,
-  },
-  {
-    value: 'orphan-images',
-    label: '孤儿图片',
-    description: '清理未被正文引用的素材',
-    icon: Link2Off,
-  },
-  {
-    value: 'settings',
-    label: '网站设置',
-    description: '统一管理站点行为、主题与规则',
-    icon: Settings,
-  },
-] as const
-
-const VALID_TABS = new Set(TAB_ITEMS.map((item) => item.value))
-const RECENT_ACTIVITY_USAGE_LIMIT = 5
-const SHORT_EVENT_FILTER_MS = 30_000
-
-type AdminTabValue = (typeof TAB_ITEMS)[number]['value']
-
 function isAdminTabValue(value: string | undefined): value is AdminTabValue {
-  return !!value && VALID_TABS.has(value as AdminTabValue)
+  return !!value && ADMIN_DASHBOARD_VALID_TABS.has(value as AdminTabValue)
 }
 
 interface DashboardProps {
@@ -192,7 +135,7 @@ function shouldShowRecentRecord(record: ActivityFeedItem): boolean {
   const fallbackEndMs = Number.isFinite(reportedAtMs) ? reportedAtMs : startedAtMs
   const effectiveEndMs = record.endedAt ? fallbackEndMs : Math.max(fallbackEndMs, Date.now())
 
-  return effectiveEndMs - startedAtMs >= SHORT_EVENT_FILTER_MS
+  return effectiveEndMs - startedAtMs >= ADMIN_SHORT_EVENT_FILTER_MS
 }
 
 function BottomGuide({
@@ -266,7 +209,9 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
   )
 
   const activeTabMeta = useMemo(
-    () => TAB_ITEMS.find((item) => item.value === activeTab) ?? TAB_ITEMS[0],
+    () =>
+      ADMIN_DASHBOARD_TAB_ITEMS.find((item) => item.value === activeTab) ??
+      ADMIN_DASHBOARD_TAB_ITEMS[0],
     [activeTab],
   )
   const activeDeviceHash = initialDeviceHash
@@ -277,7 +222,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     select: (data) =>
       (Array.isArray(data.recentActivities) ? data.recentActivities : [])
         .filter(shouldShowRecentRecord)
-        .slice(0, RECENT_ACTIVITY_USAGE_LIMIT),
+        .slice(0, ADMIN_RECENT_ACTIVITY_USAGE_LIMIT),
   })
   const recentActivityUsage = recentActivityUsageQuery.data ?? []
 
@@ -658,7 +603,7 @@ curl -X POST ${origin}/api/inspiration/entries \\
         <section className="admin-rail-shell">
           <div className="admin-tabs-shell">
             <div ref={tabsRailRef} className="admin-tabs-rail">
-              {TAB_ITEMS.map((item, index) => {
+              {ADMIN_DASHBOARD_TAB_ITEMS.map((item, index) => {
                 const Icon = item.icon
                 const selected = activeTab === item.value
                 return (

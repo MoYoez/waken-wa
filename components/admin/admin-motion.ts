@@ -1,6 +1,6 @@
 import type { Transition, Variants } from 'motion/react'
 
-const ADMIN_MOTION_EASE = [0.22, 1, 0.36, 1] as const
+import { STANDARD_MOTION_EASE } from '@/constants/motion'
 
 export function getAdminIndicatorTransition(reducedMotion: boolean): Transition {
   if (reducedMotion) {
@@ -21,7 +21,7 @@ export function getAdminIndicatorTransition(reducedMotion: boolean): Transition 
 export function getAdminPanelTransition(reducedMotion: boolean): Transition {
   return {
     duration: reducedMotion ? 0.14 : 0.28,
-    ease: reducedMotion ? 'linear' : ADMIN_MOTION_EASE,
+    ease: reducedMotion ? 'linear' : STANDARD_MOTION_EASE,
   }
 }
 

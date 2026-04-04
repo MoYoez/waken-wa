@@ -1,7 +1,7 @@
 'use client'
 
+import { type HTMLMotionProps, motion, useReducedMotion } from 'motion/react'
 import * as React from 'react'
-import { motion, type HTMLMotionProps, useReducedMotion } from 'motion/react'
 
 import {
   getSiteSectionTransition,

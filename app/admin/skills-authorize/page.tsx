@@ -4,6 +4,7 @@ import { SkillsOauthAuthorizeCard } from '@/components/admin/skills-oauth-author
 import { getSession } from '@/lib/auth'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { getSkillsOauthAuthorizeRequest } from '@/lib/skills-auth'
+import type { PageSearchParams } from '@/types/next'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -11,7 +12,7 @@ export const revalidate = 0
 export default async function SkillsAuthorizePage({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
+  searchParams?: PageSearchParams
 }) {
   const params = (await searchParams) ?? {}
   const codeParam = Array.isArray(params.code) ? params.code[0] : params.code

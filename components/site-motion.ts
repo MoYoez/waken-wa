@@ -1,11 +1,11 @@
 import type { Transition, Variants } from 'motion/react'
 
-const SITE_MOTION_EASE = [0.22, 1, 0.36, 1] as const
+import { STANDARD_MOTION_EASE } from '@/constants/motion'
 
 export function getSiteSectionTransition(reducedMotion: boolean): Transition {
   return {
     duration: reducedMotion ? 0.14 : 0.3,
-    ease: reducedMotion ? 'linear' : SITE_MOTION_EASE,
+    ease: reducedMotion ? 'linear' : STANDARD_MOTION_EASE,
   }
 }
 
