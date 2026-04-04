@@ -1,14 +1,23 @@
 import '../styles/globals.css'
 
 import type { Metadata } from 'next'
-import { Noto_Sans_SC } from 'next/font/google'
+import { Noto_Sans_SC, Ubuntu } from 'next/font/google'
 
 import { GlobalMouseTilt } from '@/components/global-mouse-tilt'
 import { ThemeProvider } from '@/components/theme-provider'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 
-const notoSansSC = Noto_Sans_SC({ subsets: ["latin"], weight: ["300", "400", "500"] });
+const notoSansSC = Noto_Sans_SC({
+  subsets: ['latin'],
+  variable: '--font-noto-sans-sc',
+  weight: ['300', '400', '500'],
+})
+const ubuntu = Ubuntu({
+  subsets: ['latin'],
+  variable: '--font-ubuntu',
+  weight: ['300', '400', '500', '700'],
+})
 
 export async function generateMetadata(): Promise<Metadata> {
   let title = DEFAULT_PAGE_TITLE
@@ -60,7 +69,7 @@ export default async function RootLayout({
 
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <body className={`${notoSansSC.className} antialiased`}>
+      <body className={`${notoSansSC.variable} ${ubuntu.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <GlobalMouseTilt enabled={globalMouseTiltEnabled} gyroEnabled={globalMouseTiltGyroEnabled}>
             {children}

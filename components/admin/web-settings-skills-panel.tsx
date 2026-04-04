@@ -529,34 +529,34 @@ export function WebSettingsSkillsPanel({
 
           <div className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3">
             <Label className="text-xs">MCP API Key 校验地址</Label>
-            <div className="flex gap-2">
-              <Input value={legacyMcpApiKeyUrl} readOnly className="font-mono text-xs" />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => void onCopyPlainText(legacyMcpApiKeyUrl, '已复制 MCP API Key 校验地址')}
-              >
-                一键复制
-              </Button>
-            </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input value={legacyMcpApiKeyUrl} readOnly className="font-mono text-xs" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full shrink-0 sm:w-auto"
+                  onClick={() => void onCopyPlainText(legacyMcpApiKeyUrl, '已复制 MCP API Key 校验地址')}
+                >
+                  一键复制
+                </Button>
+              </div>
           </div>
 
           <div className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3">
             <Label className="text-xs">MCP Endpoint</Label>
-            <div className="flex gap-2">
-              <Input value={legacyMcpEndpointUrl} readOnly className="font-mono text-xs" />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => void onCopyPlainText(legacyMcpEndpointUrl, '已复制 MCP endpoint')}
-              >
-                一键复制
-              </Button>
-            </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input value={legacyMcpEndpointUrl} readOnly className="font-mono text-xs" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full shrink-0 sm:w-auto"
+                  onClick={() => void onCopyPlainText(legacyMcpEndpointUrl, '已复制 MCP endpoint')}
+                >
+                  一键复制
+                </Button>
+              </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
               默认使用 <code className="rounded bg-muted px-1">Authorization: Bearer YOUR_LEGACY_MCP_APIKEY</code>{' '}
               认证。切换开关后，记得点击页面底部保存网页配置。

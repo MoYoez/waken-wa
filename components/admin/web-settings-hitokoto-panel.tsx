@@ -34,9 +34,9 @@ export function WebSettingsHitokotoPanel() {
   })
 
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
+    <div className="space-y-4 rounded-lg border border-border/60 bg-muted/10 p-3 sm:p-4">
       <div className="grid gap-4 xl:grid-cols-2">
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-3 py-3 sm:px-4">
           <div className="min-w-0 space-y-0.5">
             <Label htmlFor="page-loading-toggle" className="font-normal cursor-pointer">
               页面 Loading 动画
@@ -52,7 +52,7 @@ export function WebSettingsHitokotoPanel() {
           />
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-3 py-3 sm:px-4">
           <div className="min-w-0 space-y-0.5">
             <Label htmlFor="search-engine-indexing-toggle" className="font-normal cursor-pointer">
               允许搜索引擎收录
@@ -69,7 +69,7 @@ export function WebSettingsHitokotoPanel() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-3 py-3 sm:px-4">
         <div className="min-w-0 space-y-0.5">
           <Label htmlFor="note-typewriter-toggle" className="font-normal cursor-pointer">
             个人备注打字机效果
@@ -126,7 +126,7 @@ export function WebSettingsHitokotoPanel() {
             </Select>
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-3 py-3 sm:px-4">
             <div className="space-y-1">
               <p className="text-sm font-medium text-foreground">一言不可用时使用备注回退</p>
               <p className="text-xs text-muted-foreground leading-relaxed">

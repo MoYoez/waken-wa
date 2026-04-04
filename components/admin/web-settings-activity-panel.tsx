@@ -51,7 +51,7 @@ function ToggleCard(props: {
 }) {
   const { id, title, description, checked, onCheckedChange } = props
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-3 py-3 sm:px-4">
       <div className="space-y-0.5 min-w-0">
         <Label htmlFor={id} className="font-normal cursor-pointer">
           {title}
@@ -215,7 +215,7 @@ export function WebSettingsActivityPanel() {
           <AnimatePresence initial={false}>
             {redisCacheServerlessForced ? (
               <motion.div
-                className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2"
+                className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-2 sm:px-3"
                 variants={sectionVariants}
                 initial="initial"
                 animate="animate"
@@ -257,7 +257,7 @@ export function WebSettingsActivityPanel() {
         </p>
       </div>
 
-      <div className="space-y-4 rounded-lg border border-border p-4">
+      <div className="space-y-4 rounded-lg border border-border p-3 sm:p-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <Label htmlFor="steam-enabled" className="text-base font-medium">

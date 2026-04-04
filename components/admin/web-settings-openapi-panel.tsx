@@ -10,7 +10,7 @@ export function WebSettingsOpenApiPanel() {
   const [form, setForm] = useAtom(webSettingsFormAtom)
 
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
+    <div className="space-y-4 rounded-lg border border-border/60 bg-muted/10 p-3 sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 space-y-0.5">
           <Label htmlFor="openapi-docs-toggle" className="font-normal cursor-pointer">

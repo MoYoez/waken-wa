@@ -26,7 +26,7 @@ export function WebSettingsSecurityPanel() {
   })
 
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
+    <div className="space-y-4 rounded-lg border border-border/60 bg-muted/10 p-3 sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <Label htmlFor="hcaptcha-toggle" className="font-normal cursor-pointer">
           启用 hCaptcha 登录验证

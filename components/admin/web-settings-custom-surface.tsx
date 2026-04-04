@@ -193,7 +193,7 @@ export function WebSettingsCustomSurface() {
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-border/60 bg-muted/15 p-4">
+    <div className="space-y-4 rounded-lg border border-border/60 bg-muted/15 p-3 sm:p-4">
       <p className="text-xs text-muted-foreground leading-relaxed">
         留空则使用内置暖色默认。支持 oklch()、#hex、linear-gradient、以及安全的{' '}
         <code className="rounded bg-muted px-1">url()</code>
@@ -211,7 +211,7 @@ export function WebSettingsCustomSurface() {
         「整页 background」写在 <code className="rounded bg-muted px-1">body</code> 上，与「页面底色」分开。
         主题预设必须选 Custom surface，保存后才会注入首页。
       </p>
-      <div className="space-y-4 rounded-lg border border-border/60 bg-background/55 p-4">
+      <div className="space-y-4 rounded-lg border border-border/60 bg-background/55 p-3 sm:p-4">
         <div className="space-y-2">
           <Label>背景来源</Label>
           <Select
@@ -252,7 +252,7 @@ export function WebSettingsCustomSurface() {
             >
             <div className="space-y-2">
               <Label>固定背景图片 URL / DataURL</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <Input
                   value={backgroundImageInput}
                   onChange={(e) => {
@@ -276,7 +276,7 @@ export function WebSettingsCustomSurface() {
                   onThemeBackgroundFileSelected(e.target.files?.[0])
                   e.target.value = ''
                 }}
-                className="w-full cursor-pointer text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted"
+                className="w-full cursor-pointer text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-2.5 sm:file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted"
               />
             </div>
             </motion.div>
@@ -316,18 +316,18 @@ export function WebSettingsCustomSurface() {
                 onThemeBackgroundFileSelected(e.target.files?.[0])
                 e.target.value = ''
               }}
-              className="w-full cursor-pointer text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted"
+              className="w-full cursor-pointer text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-2.5 sm:file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted"
             />
             {value.backgroundImagePool.length > 0 ? (
               <motion.div
-                className="max-h-44 space-y-2 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-3"
+                className="max-h-44 space-y-2 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-2.5 sm:p-3"
                 layout
               >
                 <AnimatePresence initial={false}>
                   {value.backgroundImagePool.map((item, index) => (
                     <motion.div
                       key={`${item.slice(0, 32)}-${index}`}
-                      className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background/70 px-3 py-2"
+                      className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background/70 px-2.5 py-2 sm:px-3"
                       variants={sectionVariants}
                       initial="initial"
                       animate="animate"
@@ -393,7 +393,12 @@ export function WebSettingsCustomSurface() {
                   placeholder="https://api.example.com/random-image"
                   className="min-w-0 basis-full flex-1 font-mono text-xs sm:min-w-[18rem] sm:basis-auto"
                 />
-                <Button type="button" variant="outline" onClick={() => void resolveThemePreviewImage()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => void resolveThemePreviewImage()}
+                >
                   拉取一张预览图
                 </Button>
               </div>
@@ -407,8 +412,8 @@ export function WebSettingsCustomSurface() {
           ) : null}
         </AnimatePresence>
 
-        <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-3">
+        <div className="space-y-5">
+          <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
@@ -426,7 +431,7 @@ export function WebSettingsCustomSurface() {
                 {themePaletteApplying ? '取色中…' : '根据当前背景取色'}
               </Button>
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+            <div className="flex flex-col gap-3 py-1 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-foreground">启用实时取色</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
@@ -482,12 +487,12 @@ export function WebSettingsCustomSurface() {
                 </Select>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className="break-all text-xs text-muted-foreground leading-relaxed">
               最近一次按钮取色的图片：{value.paletteSeedImageUrl || '暂无'}
             </p>
           </div>
 
-          <div className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-3">
+          <div className="space-y-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-foreground">当前背景预览</p>
               <p className="break-all text-xs text-muted-foreground">
@@ -515,7 +520,7 @@ export function WebSettingsCustomSurface() {
                 ) : (
                   <motion.div
                     key="theme-preview-empty"
-                    className="flex h-48 items-center justify-center px-4 text-center text-xs text-muted-foreground"
+                    className="flex h-48 items-center justify-center px-3 sm:px-4 text-center text-xs text-muted-foreground"
                     variants={sectionVariants}
                     initial="initial"
                     animate="animate"
@@ -667,7 +672,7 @@ export function WebSettingsCustomSurface() {
           value={value.bodyBackground}
           onChange={(e) => patchThemeSurface('bodyBackground', e.target.value)}
           placeholder='e.g. url("https://…") center/cover no-repeat, linear-gradient(168deg, oklch(0.98 0.01 82), oklch(0.94 0.02 78))'
-          className="w-full rounded-md border bg-background px-3 py-2 text-xs font-mono leading-relaxed"
+          className="w-full rounded-md border bg-background px-2.5 py-2 text-xs font-mono leading-relaxed sm:px-3"
         />
       </div>
       <div className="space-y-2">
@@ -689,7 +694,7 @@ export function WebSettingsCustomSurface() {
           onChange={(e) => patchThemeSurface('animatedBg', e.target.value)}
           placeholder={THEME_CUSTOM_SURFACE_DEFAULTS.animatedBg}
           disabled={value.transparentAnimatedBg}
-          className="w-full rounded-md border bg-background px-3 py-2 text-xs font-mono leading-relaxed disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-md border bg-background px-2.5 py-2 text-xs font-mono leading-relaxed disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
         />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

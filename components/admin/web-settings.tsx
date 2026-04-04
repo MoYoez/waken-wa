@@ -81,7 +81,7 @@ function WebSettingsContent() {
 
   return (
     <>
-      <div className="rounded-xl border bg-card p-6 space-y-5">
+      <div className="space-y-4 rounded-xl border bg-card p-4 sm:space-y-5 sm:p-6">
         <section className="hidden rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4 lg:flex lg:items-center lg:justify-between">
           <div className="max-w-2xl space-y-1">
             <h3 className="text-sm font-semibold tracking-wide text-foreground">后台外观</h3>
@@ -94,18 +94,18 @@ function WebSettingsContent() {
           </div>
         </section>
 
-        <Tabs defaultValue="basic" className="space-y-5">
+        <Tabs defaultValue="basic" className="space-y-4 sm:space-y-5">
           <TabsList>
             <TabsTrigger value="basic">基础设置</TabsTrigger>
             <TabsTrigger value="advanced">进阶设置</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="basic" className="space-y-5">
+          <TabsContent value="basic" className="space-y-4 sm:space-y-5">
             <WebSettingsBasicPanel />
           </TabsContent>
 
-          <TabsContent value="advanced" className="space-y-5">
-            <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-5">
+          <TabsContent value="advanced" className="space-y-4 sm:space-y-5">
+            <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-4 sm:p-5">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold tracking-wide text-foreground">平台与访问</h3>
                 <p className="text-xs text-muted-foreground">
@@ -125,7 +125,7 @@ function WebSettingsContent() {
               </div>
             </section>
 
-            <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-5">
+            <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-4 sm:p-5">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold tracking-wide text-foreground">前台展示</h3>
                 <p className="text-xs text-muted-foreground">
@@ -158,7 +158,7 @@ function WebSettingsContent() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, customCss: event.target.value }))
                   }
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
+                  className="w-full rounded-md border bg-background px-2.5 py-2 text-sm font-mono sm:px-3"
                   placeholder="示例：:root { --primary: oklch(0.5 0.2 30); }"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -167,7 +167,7 @@ function WebSettingsContent() {
               </div>
             </section>
 
-            <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-5">
+            <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-4 sm:p-5">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold tracking-wide text-foreground">运行与采集</h3>
                 <p className="text-xs text-muted-foreground">
@@ -179,7 +179,7 @@ function WebSettingsContent() {
               <WebSettingsRuleTools />
             </section>
 
-            <section className="space-y-4 rounded-xl border border-dashed border-border/60 bg-background/40 p-5">
+            <section className="space-y-4 rounded-xl border border-dashed border-border/60 bg-background/40 p-4 sm:p-5">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold tracking-wide text-foreground">导入导出</h3>
                 <p className="text-xs text-muted-foreground">
