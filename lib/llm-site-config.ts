@@ -41,6 +41,7 @@ import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
 
 export const LLM_DENIED_SITE_CONFIG_KEYS = [
+  'openApiDocsEnabled',
   'useNoSqlAsCacheRedis',
   'redisCacheTtlSeconds',
   'activityUpdateMode',
@@ -151,6 +152,9 @@ export async function updateSiteConfigFromPayload(
     (has('mcpThemeToolsEnabled')
       ? Boolean(body.mcpThemeToolsEnabled)
       : Boolean(existing?.mcpThemeToolsEnabled))
+  const openApiDocsEnabled = has('openApiDocsEnabled')
+    ? Boolean(body.openApiDocsEnabled)
+    : existing?.openApiDocsEnabled !== false
   const currentlyText = strField('currentlyText', '当前状态')
   const earlierText = strField('earlierText', '最近的随想录')
   const adminText = strField('adminText', 'admin')
@@ -497,6 +501,7 @@ export async function updateSiteConfigFromPayload(
     themeCustomSurface,
     customCss,
     mcpThemeToolsEnabled,
+    openApiDocsEnabled,
     aiToolMode,
     historyWindowMinutes,
     appMessageRules,

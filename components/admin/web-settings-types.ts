@@ -61,6 +61,7 @@ export interface SiteConfig {
   themeCustomSurface: ThemeCustomSurfaceForm
   customCss: string
   mcpThemeToolsEnabled: boolean
+  openApiDocsEnabled: boolean
   aiToolMode: 'skills' | 'mcp'
   historyWindowMinutes: number
   processStaleSeconds: number

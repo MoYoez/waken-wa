@@ -1,0 +1,39 @@
+'use client'
+
+import type { PatchSiteConfig, SiteConfig } from '@/components/admin/web-settings-types'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+
+type WebSettingsOpenApiPanelProps = {
+  form: SiteConfig
+  patch: PatchSiteConfig
+}
+
+export function WebSettingsOpenApiPanel({
+  form,
+  patch,
+}: WebSettingsOpenApiPanelProps) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 space-y-0.5">
+          <Label htmlFor="openapi-docs-toggle" className="font-normal cursor-pointer">
+            OpenAPI 文档 / 接口
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            控制开发者文档页与 OpenAPI JSON 是否可访问。
+          </p>
+        </div>
+        <Switch
+          id="openapi-docs-toggle"
+          checked={form.openApiDocsEnabled}
+          onCheckedChange={(value) => patch('openApiDocsEnabled', value)}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        关闭后将同时禁用 <code className="rounded bg-muted px-1">/api/openapi.json</code> 与{' '}
+        <code className="rounded bg-muted px-1">/api-reference</code>。
+      </p>
+    </div>
+  )
+}

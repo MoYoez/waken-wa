@@ -1,5 +1,7 @@
 import { ApiReference } from '@scalar/nextjs-api-reference'
 
+import { isOpenApiDocsEnabled } from '@/lib/openapi-access'
+
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -16,8 +18,16 @@ const customCss = `
   }
 `
 
-export const GET = ApiReference({
+const scalarReferenceHandler = ApiReference({
   pageTitle: 'Waken API Reference',
   url: '/api/openapi.json',
   customCss,
 })
+
+export async function GET() {
+  if (!(await isOpenApiDocsEnabled())) {
+    return new Response('Not Found', { status: 404 })
+  }
+
+  return scalarReferenceHandler()
+}

@@ -111,6 +111,8 @@ export const siteConfig = pgTable('site_config', {
   mcpThemeToolsEnabled: boolean('mcp_theme_tools_enabled').default(false), // @DEPRECATED
   // Nullable on purpose: safe db:push on existing rows; app treats null as disabled.
   skillsDebugEnabled: boolean('skills_debug_enabled').default(false),
+  // Nullable on purpose: safe db:push on existing rows; null = enabled by default.
+  openApiDocsEnabled: boolean('openapi_docs_enabled').default(true),
   // Nullable on purpose: safe db:push on existing rows; null = not configured.
   skillsAuthMode: varchar('skills_auth_mode', { length: 20 }),
   // Nullable on purpose: safe db:push on existing rows; null = no active OAuth token.

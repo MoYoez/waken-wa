@@ -9,6 +9,7 @@ import { WebSettingsActivityPanel } from '@/components/admin/web-settings-activi
 import { WebSettingsBasicPanel } from '@/components/admin/web-settings-basic-panel'
 import { WebSettingsCustomSurface } from '@/components/admin/web-settings-custom-surface'
 import { WebSettingsHitokotoPanel } from '@/components/admin/web-settings-hitokoto-panel'
+import { WebSettingsOpenApiPanel } from '@/components/admin/web-settings-openapi-panel'
 import { WebSettingsRuleTools } from '@/components/admin/web-settings-rule-tools'
 import { WebSettingsSecurityPanel } from '@/components/admin/web-settings-security-panel'
 import { WebSettingsSkillsPanel } from '@/components/admin/web-settings-skills-panel'
@@ -128,6 +129,7 @@ export function WebSettings() {
     themeCustomSurface: emptyThemeCustomSurfaceForm(),
     customCss: '',
     mcpThemeToolsEnabled: false,
+    openApiDocsEnabled: true,
     aiToolMode: 'skills',
     historyWindowMinutes: SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
     processStaleSeconds: SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
@@ -258,6 +260,7 @@ export function WebSettings() {
             themeCustomSurface: themeCustomSurfaceFromApi(data.data.themeCustomSurface),
             customCss: data.data.customCss ?? '',
             mcpThemeToolsEnabled: data.data.mcpThemeToolsEnabled === true,
+            openApiDocsEnabled: data.data.openApiDocsEnabled !== false,
             aiToolMode: String(data.data.aiToolMode ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills',
             historyWindowMinutes: Number(
               data.data.historyWindowMinutes ?? SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
@@ -773,6 +776,9 @@ export function WebSettings() {
             }
           />
 
+          <WebSettingsOpenApiPanel form={form} patch={patch} />
+          <WebSettingsSecurityPanel form={form} patch={patch} />
+
           {form.themePreset === 'customSurface' ? (
             <WebSettingsCustomSurface
               value={form.themeCustomSurface}
@@ -809,8 +815,6 @@ export function WebSettings() {
             historyApps={historyApps}
             historyPlaySources={historyPlaySources}
           />
-
-          <WebSettingsSecurityPanel form={form} patch={patch} />
 
           <div className="flex flex-wrap gap-3">
             <Button type="button" variant="outline" onClick={() => void copyExportConfig()}>

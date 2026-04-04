@@ -109,6 +109,8 @@ export const siteConfig = sqliteTable('site_config', {
   mcpThemeToolsEnabled: integer('mcp_theme_tools_enabled', { mode: 'boolean' }).default(false),
   // Nullable on purpose: safe db:push on existing rows; app treats null as disabled.
   skillsDebugEnabled: integer('skills_debug_enabled', { mode: 'boolean' }).default(false),
+  // Nullable on purpose: safe db:push on existing rows; null = enabled by default.
+  openApiDocsEnabled: integer('openapi_docs_enabled', { mode: 'boolean' }).default(true),
   // Nullable on purpose: safe db:push on existing rows; null = not configured.
   skillsAuthMode: text('skills_auth_mode'),
   // Nullable on purpose: safe db:push on existing rows; null = no active OAuth token.
