@@ -32,22 +32,13 @@ export async function resolveRandomApiImage(apiUrl: string): Promise<string> {
   if (!clean) return ''
 
   try {
-    const response = await fetch(clean, {
+    const response = await fetch(`/api/theme/random?url=${encodeURIComponent(clean)}`, {
       cache: 'no-store',
-      headers: {
-        Accept: 'application/json,image/*;q=0.9,*/*;q=0.8',
-      },
     })
     if (!response.ok) return clean
-    const contentType = response.headers.get('content-type')?.toLowerCase() ?? ''
-    if (contentType.startsWith('image/')) {
-      return response.url || clean
-    }
-    if (contentType.includes('application/json')) {
-      const json = await response.json().catch(() => null)
-      return readImageUrlFromJson(json) || clean
-    }
-    return response.url || clean
+    const json = await response.json().catch(() => null)
+    const imageUrl = String(json?.data?.imageUrl ?? '').trim()
+    return imageUrl || clean
   } catch {
     return clean
   }
