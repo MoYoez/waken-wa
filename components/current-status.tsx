@@ -239,6 +239,208 @@ interface CurrentStatusProps {
   hideActivityMedia?: boolean
 }
 
+function LastReportTime({
+  value,
+  timestampFormat,
+}: {
+  value: string
+  timestampFormat: string
+}) {
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.span
+        key={value}
+        className="inline-block"
+        initial={{ opacity: 0.45 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0.45 }}
+        transition={{ duration: 0.16, ease: 'easeOut' }}
+      >
+        {format(new Date(value), timestampFormat, { locale: zhCN })}
+      </motion.span>
+    </AnimatePresence>
+  )
+}
+
+function CurrentStatusCard({
+  activity,
+  hideActivityMedia,
+  sectionTransition,
+  sectionVariants,
+}: {
+  activity: (ReturnType<typeof useSharedActivityFeed>['feed'] extends { activeStatuses: infer T }
+    ? T extends Array<infer U>
+      ? U
+      : never
+    : never)
+  hideActivityMedia: boolean
+  sectionTransition: ReturnType<typeof getSiteSectionTransition>
+  sectionVariants: ReturnType<typeof getSiteSectionVariants>
+}) {
+  const [flashKey, setFlashKey] = useState<string | null>(null)
+  const previousSignatureRef = useRef('')
+
+  const timestampFormat = 'MM/dd HH:mm:ss'
+  const batteryLabel = getBatteryLabel(activity.metadata)
+  const charging = isDeviceBatteryCharging(activity.metadata)
+  const deviceName =
+    activity.device ||
+    (activity.deviceId != null ? `device #${activity.deviceId}` : `activity #${activity.id}`)
+  const deviceType = getDeviceType(deviceName, activity.metadata)
+  const lastReportAt = activity.lastReportAt || activity.updatedAt || activity.startedAt
+  const statusLine = typeof activity.statusText === 'string' ? activity.statusText.trim() : ''
+  const media = hideActivityMedia ? null : getMediaDisplay(activity.metadata)
+  const sp = activity.steamNowPlaying
+  const steam: SteamNowPlayingInfo | null =
+    sp && typeof sp.name === 'string' && sp.name.trim()
+      ? {
+          appId: sp.appId,
+          name: sp.name,
+          imageUrl: sp.imageUrl,
+        }
+      : null
+
+  const updateSignature = JSON.stringify({
+    batteryLabel,
+    deviceName,
+    lastReportAt,
+    mediaLine: media ? mediaPrimaryLine(media) : '',
+    processName: activity.processName,
+    processTitle: activity.processTitle,
+    statusLine,
+    steamName: steam?.name ?? '',
+  })
+
+  useEffect(() => {
+    const previousSignature = previousSignatureRef.current
+    previousSignatureRef.current = updateSignature
+
+    if (!previousSignature || previousSignature === updateSignature) {
+      return
+    }
+
+    const showTimeoutId = window.setTimeout(() => {
+      setFlashKey(updateSignature)
+    }, 0)
+    const hideTimeoutId = window.setTimeout(() => {
+      setFlashKey((current) => (current === updateSignature ? null : current))
+    }, 850)
+
+    return () => {
+      window.clearTimeout(showTimeoutId)
+      window.clearTimeout(hideTimeoutId)
+    }
+  }, [updateSignature])
+
+  return (
+    <motion.div
+      className={cn(
+        'relative rounded-lg border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:p-6',
+      )}
+      variants={sectionVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={sectionTransition}
+      layout
+    >
+      <AnimatePresence initial={false}>
+        {flashKey === updateSignature ? (
+          <motion.div
+            key={updateSignature}
+            className="pointer-events-none absolute inset-0 rounded-[inherit] border border-primary/45"
+            initial={{ opacity: 0, boxShadow: '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)' }}
+            animate={{
+              opacity: [0, 1, 0],
+              boxShadow: [
+                '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)',
+                '0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent), 0 10px 30px color-mix(in srgb, var(--primary) 10%, transparent)',
+                '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)',
+              ],
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.85, ease: 'easeOut' }}
+          />
+        ) : null}
+      </AnimatePresence>
+      <div className="space-y-4">
+        <div className="rounded-md border border-border/50 bg-muted/55 px-3 py-2.5 space-y-2 shadow-[inset_0_1px_0_0_var(--home-card-inset-highlight)]">
+          <div className="text-xs font-medium text-foreground/65 tracking-tight mb-0.5">
+            设备
+          </div>
+          <div className="text-sm text-foreground flex items-center gap-2">
+            {deviceType === 'mobile' ? (
+              <Smartphone className="h-4 w-4 shrink-0 text-primary/80" />
+            ) : deviceType === 'tablet' ? (
+              <Tablet className="h-4 w-4 shrink-0 text-primary/80" />
+            ) : (
+              <Laptop className="h-4 w-4 shrink-0 text-primary/80" />
+            )}
+            <span className="font-medium">{deviceName}</span>
+          </div>
+          {batteryLabel ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {charging ? (
+                <BatteryCharging
+                  className="h-3.5 w-3.5 shrink-0"
+                  aria-hidden
+                />
+              ) : (
+                <Battery className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              )}
+              <span>电量 {batteryLabel}</span>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex items-start gap-2">
+          <AppWindow className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-foreground/90 min-w-0">
+            {statusLine ? (
+              <span className="font-medium">{statusLine}</span>
+            ) : (
+              <>
+                {activity.processTitle ? (
+                  <>
+                    <span className="font-medium">{activity.processTitle}</span>
+                    <span className="text-muted-foreground/50 select-none hidden sm:inline">|</span>
+                  </>
+                ) : null}
+                <span className="text-muted-foreground">{activity.processName}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {media || steam ? <MediaAndSteamRow media={media} steam={steam} /> : null}
+
+        <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 shrink-0 text-foreground/55" aria-hidden />
+              <span className="text-xs font-medium text-foreground/65 tracking-tight">
+                开始时间
+              </span>
+            </div>
+            <div className="text-xs tabular-nums text-foreground pl-5">
+              {format(new Date(activity.startedAt), timestampFormat, { locale: zhCN })}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 shrink-0 text-foreground/55" aria-hidden />
+              <span className="text-xs font-medium text-foreground/65 tracking-tight">最后上报</span>
+            </div>
+            <div className="text-xs tabular-nums text-foreground pl-5 sm:pl-0 w-full sm:text-right">
+              <LastReportTime value={lastReportAt} timestampFormat={timestampFormat} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps) {
   const { feed, error } = useSharedActivityFeed()
   const prefersReducedMotion = Boolean(useReducedMotion())
@@ -280,113 +482,19 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
     <motion.div className="space-y-3" layout>
       <AnimatePresence initial={false}>
         {statuses.map((activity) => {
-        const timestampFormat = 'MM/dd HH:mm:ss'
-        const batteryLabel = getBatteryLabel(activity.metadata)
-        const charging = isDeviceBatteryCharging(activity.metadata)
-        const deviceName =
-          activity.device ||
-          (activity.deviceId != null ? `device #${activity.deviceId}` : `activity #${activity.id}`)
-        const deviceType = getDeviceType(deviceName, activity.metadata)
-        const lastReportAt = activity.lastReportAt || activity.updatedAt || activity.startedAt
-        const statusLine = typeof activity.statusText === 'string' ? activity.statusText.trim() : ''
-        const media = hideActivityMedia ? null : getMediaDisplay(activity.metadata)
-        const sp = activity.steamNowPlaying
-        const steam: SteamNowPlayingInfo | null =
-          sp && typeof sp.name === 'string' && sp.name.trim()
-            ? {
-                appId: sp.appId,
-                name: sp.name,
-                imageUrl: sp.imageUrl,
+          return (
+            <CurrentStatusCard
+              activity={activity}
+              hideActivityMedia={hideActivityMedia}
+              sectionTransition={sectionTransition}
+              sectionVariants={sectionVariants}
+              key={
+                activity.deviceId != null
+                  ? `device-${activity.deviceId}`
+                  : `device-${activity.device || activity.processName || activity.id}`
               }
-            : null
-
-        return (
-          <motion.div
-            key={`${activity.deviceId ?? 'na'}-${activity.id}`}
-            className="border border-border rounded-lg shadow-sm p-5 sm:p-6 bg-card transition-all hover:shadow-md hover:border-primary/25"
-            variants={sectionVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={sectionTransition}
-            layout
-          >
-            <div className="space-y-4">
-              <div className="rounded-md border border-border/50 bg-muted/55 px-3 py-2.5 space-y-2 shadow-[inset_0_1px_0_0_var(--home-card-inset-highlight)]">
-                <div className="text-xs font-medium text-foreground/65 tracking-tight mb-0.5">
-                  设备
-                </div>
-                <div className="text-sm text-foreground flex items-center gap-2">
-                  {deviceType === 'mobile' ? (
-                    <Smartphone className="h-4 w-4 shrink-0 text-primary/80" />
-                  ) : deviceType === 'tablet' ? (
-                    <Tablet className="h-4 w-4 shrink-0 text-primary/80" />
-                  ) : (
-                    <Laptop className="h-4 w-4 shrink-0 text-primary/80" />
-                  )}
-                  <span className="font-medium">{deviceName}</span>
-                </div>
-                {batteryLabel ? (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    {charging ? (
-                      <BatteryCharging
-                        className="h-3.5 w-3.5 shrink-0"
-                        aria-hidden
-                      />
-                    ) : (
-                      <Battery className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    )}
-                    <span>电量 {batteryLabel}</span>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="flex items-start gap-2">
-                <AppWindow className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-foreground/90 min-w-0">
-                  {statusLine ? (
-                    <span className="font-medium">{statusLine}</span>
-                  ) : (
-                    <>
-                      {activity.processTitle ? (
-                        <>
-                          <span className="font-medium">{activity.processTitle}</span>
-                          <span className="text-muted-foreground/50 select-none hidden sm:inline">|</span>
-                        </>
-                      ) : null}
-                      <span className="text-muted-foreground">{activity.processName}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {media || steam ? <MediaAndSteamRow media={media} steam={steam} /> : null}
-
-              <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 shrink-0 text-foreground/55" aria-hidden />
-                    <span className="text-xs font-medium text-foreground/65 tracking-tight">
-                      开始时间
-                    </span>
-                  </div>
-                  <div className="text-xs tabular-nums text-foreground pl-5">
-                    {format(new Date(activity.startedAt), timestampFormat, { locale: zhCN })}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 shrink-0 text-foreground/55" aria-hidden />
-                    <span className="text-xs font-medium text-foreground/65 tracking-tight">最后上报</span>
-                  </div>
-                  <div className="text-xs tabular-nums text-foreground pl-5 sm:pl-0 w-full sm:text-right">
-                    {format(new Date(lastReportAt), timestampFormat, { locale: zhCN })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )
+            />
+          )
         })}
       </AnimatePresence>
     </motion.div>
