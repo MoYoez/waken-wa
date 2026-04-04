@@ -141,6 +141,11 @@ https://vercel.com/new/clone?repository-url=https://github.com/MoYoez/waken-wa
 
 > 如果你想用自己的供应商，请在 env 的 DATABASE_URL 中 写入地址即可，请注意 Vercel 这类 Serverless 平台的URL兼容性，以防止部署失败。
 
+## 开发
+
+
+请参考 [**DEVELOPMENT.md**](DEVELOPMENT.md)
+
 ---
 
 ## License
