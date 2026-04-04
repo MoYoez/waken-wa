@@ -47,3 +47,10 @@ pnpm dev
 pnpm build
 pnpm start
 ```
+
+## API 文档
+
+- 交互式 API 参考：`/api-reference`
+- OpenAPI JSON：`/api/openapi.json`
+- 设备接入说明：[`docs/activity-reporting.md`](./docs/activity-reporting.md)
+- 灵感接入说明：[`docs/inspiration-integration.md`](./docs/inspiration-integration.md)

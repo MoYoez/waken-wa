@@ -4,6 +4,11 @@
 
 本文档说明如何向系统上报活动事件。
 
+统一 API 参考入口：
+
+- Scalar API Reference：`/api-reference`
+- OpenAPI JSON：`/api/openapi.json`
+
 ## 1. 获取 API Token
 
 1. 访问后台：`/admin`

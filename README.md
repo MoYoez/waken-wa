@@ -146,6 +146,13 @@ https://vercel.com/new/clone?repository-url=https://github.com/MoYoez/waken-wa
 
 请参考 [**DEVELOPMENT.md**](DEVELOPMENT.md)
 
+## API Reference
+
+- Interactive Scalar docs: [`/api-reference`](./app/api-reference/route.ts)
+- OpenAPI JSON: [`/api/openapi.json`](./app/api/openapi.json/route.ts)
+- Device quickstart: [`docs/activity-reporting.md`](./docs/activity-reporting.md)
+- Inspiration quickstart: [`docs/inspiration-integration.md`](./docs/inspiration-integration.md)
+
 ---
 
 ## License

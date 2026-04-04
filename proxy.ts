@@ -14,6 +14,7 @@ const RATE_LIMITED_PATHS = new Set([
 const ADMIN_API_PREFIX = '/api/admin/'
 const ADMIN_SETUP_PREFIX = '/api/admin/setup'
 const HCAPTCHA_CSP_SOURCES = ['https://hcaptcha.com', 'https://*.hcaptcha.com']
+const SCALAR_SCRIPT_CSP_SOURCES = ['https://cdn.jsdelivr.net']
 
 function getClientIp(request: NextRequest): string {
   return (
@@ -23,12 +24,14 @@ function getClientIp(request: NextRequest): string {
   )
 }
 
-function addSecurityHeaders(response: NextResponse): NextResponse {
+function addSecurityHeaders(response: NextResponse, pathname?: string): NextResponse {
+  const scalarScriptSources = pathname === '/api-reference' ? SCALAR_SCRIPT_CSP_SOURCES : []
   const scriptSrc = [
     "'self'",
     "'unsafe-inline'",
     process.env.NODE_ENV !== 'production' ? "'unsafe-eval'" : null,
     ...HCAPTCHA_CSP_SOURCES,
+    ...scalarScriptSources,
     // Cloudflare Web Analytics injects its beacon script from this origin.
     process.env.NODE_ENV === 'production'
       ? 'https://static.cloudflareinsights.com'
@@ -81,6 +84,7 @@ export async function proxy(request: NextRequest) {
           { success: false, error: '请求过于频繁，请稍后再试' },
           { status: 429 },
         ),
+        pathname,
       )
     }
   }
@@ -98,11 +102,12 @@ export async function proxy(request: NextRequest) {
           { success: false, error: '未授权' },
           { status: 401 },
         ),
+        pathname,
       )
     }
   }
 
-  return addSecurityHeaders(NextResponse.next())
+  return addSecurityHeaders(NextResponse.next(), pathname)
 }
 
 export const config = {
