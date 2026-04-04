@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { Noto_Sans_SC } from 'next/font/google'
 
 import { GlobalMouseTilt } from '@/components/global-mouse-tilt'
+import { ThemeProvider } from '@/components/theme-provider'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 
@@ -41,9 +42,11 @@ export default async function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body className={`${notoSansSC.className} antialiased`}>
-        <GlobalMouseTilt enabled={globalMouseTiltEnabled} gyroEnabled={globalMouseTiltGyroEnabled}>
-          {children}
-        </GlobalMouseTilt>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <GlobalMouseTilt enabled={globalMouseTiltEnabled} gyroEnabled={globalMouseTiltGyroEnabled}>
+            {children}
+          </GlobalMouseTilt>
+        </ThemeProvider>
         <div id="site-footer-portal" />
       </body>
     </html>

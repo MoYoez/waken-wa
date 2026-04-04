@@ -86,7 +86,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   lines.push('  Read this document first, then follow the decision rules exactly.')
   lines.push('metadata:')
   lines.push('  author: waken-wa')
-  lines.push('  version: 3.1.0')
+  lines.push('  version: 3.2.0')
   lines.push('  category: development')
   lines.push('  tags: [agent-protocol, llm-api, configuration]')
   lines.push('---')
@@ -350,11 +350,22 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   pushSection(lines, '### Theme and Appearance')
   pushBullets(lines, [
     '`themePreset`: Theme preset identifier. Use `customSurface` when editing custom theme surface fields',
-    '`themeCustomSurface`: Custom theme token object. Main fields are `background`, `bodyBackground`, `animatedBg`, `primary`, `secondary`, `accent`, `online`, `foreground`, `card`, `border`, `muted`, `mutedForeground`, `homeCardOverlay`, `homeCardOverlayDark`, `homeCardInsetHighlight`, `animatedBgTint1`, `animatedBgTint2`, `animatedBgTint3`, `floatingOrbColor1`, `floatingOrbColor2`, `floatingOrbColor3`, `radius`, `hideFloatingOrbs`, `transparentAnimatedBg`',
+    '`themeCustomSurface`: Custom theme token object. Main fields are `background`, `bodyBackground`, `animatedBg`, `primary`, `secondary`, `accent`, `online`, `foreground`, `card`, `border`, `muted`, `mutedForeground`, `homeCardOverlay`, `homeCardOverlayDark`, `homeCardInsetHighlight`, `animatedBgTint1`, `animatedBgTint2`, `animatedBgTint3`, `floatingOrbColor1`, `floatingOrbColor2`, `floatingOrbColor3`, `radius`, `hideFloatingOrbs`, `transparentAnimatedBg`, `backgroundImageMode`, `backgroundImageUrl`, `backgroundImagePool`, `backgroundRandomApiUrl`, `paletteMode`, `paletteLiveEnabled`, `paletteLiveScope`, `paletteSeedImageUrl`',
     '`customCss`: Extra sanitized custom CSS. Use only for targeted overrides, advanced selectors, or remaining display details that are not exposed as dedicated theme fields',
     '`globalMouseTiltEnabled`: Enables desktop tilt motion effect',
     '`globalMouseTiltGyroEnabled`: Enables gyro tilt on supported mobile devices',
     '`hideActivityMedia`: Hides media payload from public activity cards without deleting stored records',
+  ])
+  pushBullets(lines, [
+    '`backgroundImageMode`: `manual`, `randomPool`, or `randomApi`. Controls whether customSurface uses a fixed background image, a random image pool, or a random image API source',
+    '`backgroundImageUrl`: Single fixed background image URL or data URL used when `backgroundImageMode=manual`',
+    '`backgroundImagePool`: Array of candidate image URLs used when `backgroundImageMode=randomPool`',
+    '`backgroundRandomApiUrl`: Random image API URL used when `backgroundImageMode=randomApi`',
+    '`paletteMode`: `manual`, `applyFromCurrent`, or `liveFromImage`',
+    '`paletteLiveEnabled`: Enables runtime palette extraction from the active image',
+    '`paletteLiveScope`: Currently `randomOnly`, meaning runtime palette sync is intended for random image sources only',
+    '`paletteSeedImageUrl`: Last image URL used for manual palette extraction / regeneration',
+    'When `themePreset=customSurface` and `paletteMode=liveFromImage`, the active background image may be resolved first and then used to derive runtime theme variables before the public page is shown',
   ])
   pushBullets(lines, [
     `Existing theme presets: ${BUILT_IN_THEME_PRESETS.map((preset) => `\`${preset}\``).join(', ')}`,

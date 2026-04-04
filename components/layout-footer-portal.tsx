@@ -17,5 +17,10 @@ export function LayoutFooterPortal({ adminText }: { adminText: string }) {
   }, [])
 
   if (!el) return null
-  return createPortal(<LayoutFooter adminText={adminText} />, el)
+  return createPortal(
+    <div className="public-page-footer-shell">
+      <LayoutFooter adminText={adminText} />
+    </div>,
+    el,
+  )
 }

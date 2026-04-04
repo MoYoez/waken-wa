@@ -11,6 +11,12 @@ export type ThemePreset =
   | 'nord'
   | 'customSurface'
 
+export type ThemeBackgroundImageMode = 'manual' | 'randomPool' | 'randomApi'
+
+export type ThemePaletteMode = 'manual' | 'applyFromCurrent' | 'liveFromImage'
+
+export type ThemePaletteLiveScope = 'randomOnly'
+
 export type ThemeCustomSurfaceFields = {
   background?: string
   bodyBackground?: string
@@ -36,4 +42,12 @@ export type ThemeCustomSurfaceFields = {
   radius?: string
   hideFloatingOrbs?: boolean
   transparentAnimatedBg?: boolean
+  backgroundImageMode?: ThemeBackgroundImageMode
+  backgroundImageUrl?: string
+  backgroundImagePool?: string[]
+  backgroundRandomApiUrl?: string
+  paletteMode?: ThemePaletteMode
+  paletteLiveEnabled?: boolean
+  paletteLiveScope?: ThemePaletteLiveScope
+  paletteSeedImageUrl?: string
 }

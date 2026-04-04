@@ -1,4 +1,9 @@
-import type { ThemeCustomSurfaceFields } from '@/types/theme'
+import type {
+  ThemeBackgroundImageMode,
+  ThemeCustomSurfaceFields,
+  ThemePaletteLiveScope,
+  ThemePaletteMode,
+} from '@/types/theme'
 
 export type { ThemeCustomSurfaceFields } from '@/types/theme'
 
@@ -7,6 +12,54 @@ const MAX_SHORT = 2400
 const MAX_ANIMATED = 12000
 const MAX_RADIUS = 48
 const MAX_URL_INNER = 2048
+const MAX_IMAGE_POOL = 24
+
+function normalizeThemeBackgroundImageMode(raw: unknown): ThemeBackgroundImageMode | undefined {
+  const mode = String(raw ?? '').trim()
+  if (mode === 'randomPool' || mode === 'randomApi') return mode
+  if (mode === 'manual') return mode
+  return undefined
+}
+
+function normalizeThemePaletteMode(raw: unknown): ThemePaletteMode | undefined {
+  const mode = String(raw ?? '').trim()
+  if (mode === 'applyFromCurrent' || mode === 'liveFromImage') return mode
+  if (mode === 'manual') return mode
+  return undefined
+}
+
+function normalizeThemePaletteLiveScope(raw: unknown): ThemePaletteLiveScope | undefined {
+  return String(raw ?? '').trim() === 'randomOnly' ? 'randomOnly' : undefined
+}
+
+function sanitizeThemeImageSource(input: unknown): string {
+  const s = String(input ?? '').trim()
+  if (!s) return ''
+  return isSafeCssUrl(s) ? s : ''
+}
+
+function sanitizeThemeImagePool(input: unknown): string[] | undefined {
+  if (!Array.isArray(input)) return undefined
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const item of input) {
+    const value = sanitizeThemeImageSource(item)
+    if (!value || seen.has(value)) continue
+    seen.add(value)
+    out.push(value)
+    if (out.length >= MAX_IMAGE_POOL) break
+  }
+  return out
+}
+
+export function resolveThemeImageRuntimeUrl(input: unknown): string {
+  const clean = sanitizeThemeImageSource(input)
+  if (!clean) return ''
+  if (/^https?:\/\//i.test(clean)) {
+    return `/api/theme/image?url=${encodeURIComponent(clean)}`
+  }
+  return clean
+}
 
 /**
  * True if inner part of css url(...) is allowed (https/http, same-origin paths, image data URLs).
@@ -94,8 +147,14 @@ export function sanitizeCssUrls(css: string): string {
 
 /** Defaults inspired by soft personal / “paper + warm gradient” landing pages. */
 export const THEME_CUSTOM_SURFACE_DEFAULTS: Required<
-  Omit<ThemeCustomSurfaceFields, 'hideFloatingOrbs' | 'transparentAnimatedBg'>
-> & { hideFloatingOrbs: boolean } = {
+  Omit<
+    ThemeCustomSurfaceFields,
+    | 'hideFloatingOrbs'
+    | 'transparentAnimatedBg'
+    | 'paletteLiveEnabled'
+    | 'backgroundImagePool'
+  >
+> & { hideFloatingOrbs: boolean; paletteLiveEnabled: boolean; backgroundImagePool: string[] } = {
   background: 'oklch(0.97 0.018 85)',
   bodyBackground: '',
   animatedBg: '',
@@ -119,6 +178,14 @@ export const THEME_CUSTOM_SURFACE_DEFAULTS: Required<
   floatingOrbColor3: 'rgba(170, 200, 220, 0.1)',
   radius: '0.875rem',
   hideFloatingOrbs: true,
+  backgroundImageMode: 'manual',
+  backgroundImageUrl: '',
+  backgroundImagePool: [],
+  backgroundRandomApiUrl: '',
+  paletteMode: 'manual',
+  paletteLiveEnabled: false,
+  paletteLiveScope: 'randomOnly',
+  paletteSeedImageUrl: '',
 }
 
 export function sanitizeThemeCssValue(input: unknown, maxLen: number): string {
@@ -192,15 +259,43 @@ export function parseThemeCustomSurface(raw: unknown): ThemeCustomSurfaceFields 
       typeof o.transparentAnimatedBg === 'boolean'
         ? o.transparentAnimatedBg
         : undefined,
+    backgroundImageMode: normalizeThemeBackgroundImageMode(o.backgroundImageMode),
+    backgroundImageUrl: sanitizeThemeImageSource(o.backgroundImageUrl),
+    backgroundImagePool: sanitizeThemeImagePool(o.backgroundImagePool),
+    backgroundRandomApiUrl: sanitizeThemeImageSource(o.backgroundRandomApiUrl),
+    paletteMode: normalizeThemePaletteMode(o.paletteMode),
+    paletteLiveEnabled:
+      typeof o.paletteLiveEnabled === 'boolean' ? o.paletteLiveEnabled : undefined,
+    paletteLiveScope: normalizeThemePaletteLiveScope(o.paletteLiveScope),
+    paletteSeedImageUrl: sanitizeThemeImageSource(o.paletteSeedImageUrl),
   }
 }
 
 function pick(
   parsed: ThemeCustomSurfaceFields,
-  key: keyof Omit<
-    typeof THEME_CUSTOM_SURFACE_DEFAULTS,
-    'hideFloatingOrbs'
-  >,
+  key:
+    | 'background'
+    | 'bodyBackground'
+    | 'animatedBg'
+    | 'primary'
+    | 'secondary'
+    | 'accent'
+    | 'online'
+    | 'foreground'
+    | 'card'
+    | 'border'
+    | 'muted'
+    | 'mutedForeground'
+    | 'homeCardOverlay'
+    | 'homeCardOverlayDark'
+    | 'homeCardInsetHighlight'
+    | 'animatedBgTint1'
+    | 'animatedBgTint2'
+    | 'animatedBgTint3'
+    | 'floatingOrbColor1'
+    | 'floatingOrbColor2'
+    | 'floatingOrbColor3'
+    | 'radius',
 ): string {
   const v = parsed[key]
   const s = typeof v === 'string' ? v.trim() : ''
@@ -218,11 +313,58 @@ function resolveTransparentAnimatedBg(parsed: ThemeCustomSurfaceFields): boolean
   return parsed.transparentAnimatedBg === true
 }
 
+export function resolveThemeBackgroundImageMode(parsed: ThemeCustomSurfaceFields): ThemeBackgroundImageMode {
+  return parsed.backgroundImageMode ?? THEME_CUSTOM_SURFACE_DEFAULTS.backgroundImageMode
+}
+
+export function resolveThemePaletteMode(parsed: ThemeCustomSurfaceFields): ThemePaletteMode {
+  return parsed.paletteMode ?? THEME_CUSTOM_SURFACE_DEFAULTS.paletteMode
+}
+
+export function resolveThemePaletteLiveScope(parsed: ThemeCustomSurfaceFields): ThemePaletteLiveScope {
+  return parsed.paletteLiveScope ?? THEME_CUSTOM_SURFACE_DEFAULTS.paletteLiveScope
+}
+
+export function isThemePaletteLiveEnabled(parsed: ThemeCustomSurfaceFields): boolean {
+  return parsed.paletteLiveEnabled === true
+}
+
+export function resolveThemeImagePool(parsed: ThemeCustomSurfaceFields): string[] {
+  return Array.isArray(parsed.backgroundImagePool) ? parsed.backgroundImagePool : []
+}
+
+export function buildThemeImageBackgroundCss(url: string): string {
+  const runtimeUrl = resolveThemeImageRuntimeUrl(url)
+  if (!runtimeUrl) return ''
+  return `url(${JSON.stringify(runtimeUrl)}) center / cover no-repeat`
+}
+
+function mixColorCss(base: string, target: 'black' | 'white', percent: number): string {
+  const safePercent = Math.max(0, Math.min(100, Math.round(percent)))
+  const rest = 100 - safePercent
+  return `color-mix(in srgb, ${base} ${safePercent}%, ${target} ${rest}%)`
+}
+
+function alphaColorCss(base: string, alpha: number): string {
+  const safe = Math.max(0, Math.min(1, alpha))
+  return `color-mix(in srgb, ${base} ${Math.round(safe * 100)}%, transparent)`
+}
+
+export function resolveThemeManualBodyBackground(parsed: ThemeCustomSurfaceFields): string {
+  const explicit = pick(parsed, 'bodyBackground').trim()
+  if (explicit) return explicit
+
+  if (resolveThemeBackgroundImageMode(parsed) === 'manual') {
+    return buildThemeImageBackgroundCss(parsed.backgroundImageUrl ?? '')
+  }
+  return ''
+}
+
 /** Emits CSS for preset `customSurface`. */
 export function buildCustomSurfaceCss(themeCustomSurface: unknown): string {
   const parsed = parseThemeCustomSurface(themeCustomSurface)
   const background = pick(parsed, 'background')
-  const bodyBackground = pick(parsed, 'bodyBackground')
+  const bodyBackground = resolveThemeManualBodyBackground(parsed)
   const animatedBgCustom = pick(parsed, 'animatedBg')
   const animatedBgTint1 = pick(parsed, 'animatedBgTint1')
   const animatedBgTint2 = pick(parsed, 'animatedBgTint2')
@@ -288,10 +430,39 @@ export function buildCustomSurfaceCss(themeCustomSurface: unknown): string {
   --home-card-overlay-dark: ${homeCardOverlayDark};
   --home-card-inset-highlight: ${homeCardInsetHighlight};
 }
+.dark {
+  --radius: ${radius};
+  --background: ${mixColorCss(background, 'black', 10)};
+  --color-background: ${mixColorCss(background, 'black', 10)};
+  --foreground: oklch(0.96 0.01 260);
+  --color-foreground: oklch(0.96 0.01 260);
+  --card: ${mixColorCss(background, 'black', 18)};
+  --card-foreground: oklch(0.96 0.01 260);
+  --popover: ${mixColorCss(background, 'black', 20)};
+  --popover-foreground: oklch(0.96 0.01 260);
+  --primary: ${mixColorCss(primary, 'white', 58)};
+  --primary-foreground: oklch(0.18 0.01 260);
+  --secondary: ${mixColorCss(background, 'white', 18)};
+  --secondary-foreground: oklch(0.96 0.01 260);
+  --muted: ${mixColorCss(background, 'white', 14)};
+  --muted-foreground: oklch(0.82 0.01 260);
+  --accent: ${mixColorCss(accent, 'white', 34)};
+  --accent-foreground: oklch(0.96 0.01 260);
+  --border: ${alphaColorCss('oklch(0.96 0.01 260)', 0.16)};
+  --input: ${alphaColorCss('oklch(0.96 0.01 260)', 0.16)};
+  --ring: ${mixColorCss(primary, 'white', 62)};
+  --online: ${mixColorCss(online, 'white', 56)};
+  --home-card-overlay: rgba(255, 255, 255, 0.06);
+  --home-card-overlay-dark: rgba(255, 255, 255, 0.1);
+  --home-card-inset-highlight: rgba(255, 255, 255, 0.12);
+}
 ${bodyBackgroundCss}
 .animated-bg {
   background: ${animatedBgPaint};
   animation: none;
+}
+.dark .animated-bg {
+  filter: brightness(0.42) saturate(0.72);
 }
 .floating-orb-1 {
   background: ${floatingOrbColor1};

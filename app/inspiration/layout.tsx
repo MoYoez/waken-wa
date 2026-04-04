@@ -1,7 +1,9 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
+import { PublicPageTransitionShell } from '@/components/public-page-transition-shell'
 import { SiteLockForm } from '@/components/site-lock-form'
+import { SiteThemeRuntime } from '@/components/site-theme-runtime'
 import { verifySiteLockSession } from '@/lib/auth'
 import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
@@ -32,12 +34,16 @@ export default async function InspirationLayout({ children }: { children: React.
       {themeCss ? (
         <style id="site-theme-override" dangerouslySetInnerHTML={{ __html: themeCss }} />
       ) : null}
+      <SiteThemeRuntime
+        themePreset={config.themePreset}
+        themeCustomSurface={config.themeCustomSurface}
+      />
       <div className="animated-bg">
         <div className="floating-orb floating-orb-1" />
         <div className="floating-orb floating-orb-2" />
         <div className="floating-orb floating-orb-3" />
       </div>
-      {children}
+      <PublicPageTransitionShell scope="inspiration">{children}</PublicPageTransitionShell>
     </>
   )
 }

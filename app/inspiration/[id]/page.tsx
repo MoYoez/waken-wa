@@ -52,8 +52,8 @@ export default async function InspirationDetailPage({
   const displayTimezone = normalizeTimezone(config[0]?.displayTimezone)
 
   return (
-    <main className="min-h-screen relative">
-      <article className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-24">
+    <main className="relative min-h-screen overflow-x-hidden">
+      <article className="mx-auto max-w-2xl overflow-x-hidden px-4 pt-16 pb-24 sm:px-6">
         <ContentReadingPanel className="p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground mb-8">
             <Link href="/" className="hover:text-foreground transition-colors">

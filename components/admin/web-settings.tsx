@@ -81,7 +81,14 @@ import {
   parseThemeCustomSurface,
   THEME_CUSTOM_SURFACE_DEFAULTS,
 } from '@/lib/theme-custom-surface'
+import { extractThemeSurfaceFromImage } from '@/lib/theme-image-palette'
+import { resolveThemeSurfaceActiveImage } from '@/lib/theme-image-source'
 import { DEFAULT_TIMEZONE, normalizeTimezone, TIMEZONE_OPTIONS } from '@/lib/timezone'
+import type {
+  ThemeBackgroundImageMode,
+  ThemePaletteLiveScope,
+  ThemePaletteMode,
+} from '@/types/theme'
 
 /** Paginate tall “规则” cards */
 const SETTINGS_RULES_PAGE_SIZE = 5
@@ -168,6 +175,14 @@ type ThemeCustomSurfaceForm = {
   radius: string
   hideFloatingOrbs: boolean
   transparentAnimatedBg: boolean
+  backgroundImageMode: ThemeBackgroundImageMode
+  backgroundImageUrl: string
+  backgroundImagePool: string[]
+  backgroundRandomApiUrl: string
+  paletteMode: ThemePaletteMode
+  paletteLiveEnabled: boolean
+  paletteLiveScope: ThemePaletteLiveScope
+  paletteSeedImageUrl: string
 }
 
 function emptyThemeCustomSurfaceForm(): ThemeCustomSurfaceForm {
@@ -196,6 +211,14 @@ function emptyThemeCustomSurfaceForm(): ThemeCustomSurfaceForm {
     radius: '',
     hideFloatingOrbs: THEME_CUSTOM_SURFACE_DEFAULTS.hideFloatingOrbs,
     transparentAnimatedBg: false,
+    backgroundImageMode: THEME_CUSTOM_SURFACE_DEFAULTS.backgroundImageMode,
+    backgroundImageUrl: '',
+    backgroundImagePool: [],
+    backgroundRandomApiUrl: '',
+    paletteMode: THEME_CUSTOM_SURFACE_DEFAULTS.paletteMode,
+    paletteLiveEnabled: THEME_CUSTOM_SURFACE_DEFAULTS.paletteLiveEnabled,
+    paletteLiveScope: THEME_CUSTOM_SURFACE_DEFAULTS.paletteLiveScope,
+    paletteSeedImageUrl: '',
   }
 }
 
@@ -229,6 +252,16 @@ function themeCustomSurfaceFromApi(raw: unknown): ThemeCustomSurfaceForm {
         ? p.hideFloatingOrbs
         : THEME_CUSTOM_SURFACE_DEFAULTS.hideFloatingOrbs,
     transparentAnimatedBg: p.transparentAnimatedBg === true,
+    backgroundImageMode:
+      p.backgroundImageMode || THEME_CUSTOM_SURFACE_DEFAULTS.backgroundImageMode,
+    backgroundImageUrl: p.backgroundImageUrl || '',
+    backgroundImagePool: Array.isArray(p.backgroundImagePool) ? p.backgroundImagePool : [],
+    backgroundRandomApiUrl: p.backgroundRandomApiUrl || '',
+    paletteMode: p.paletteMode || THEME_CUSTOM_SURFACE_DEFAULTS.paletteMode,
+    paletteLiveEnabled:
+      p.paletteLiveEnabled !== undefined ? p.paletteLiveEnabled : THEME_CUSTOM_SURFACE_DEFAULTS.paletteLiveEnabled,
+    paletteLiveScope: p.paletteLiveScope || THEME_CUSTOM_SURFACE_DEFAULTS.paletteLiveScope,
+    paletteSeedImageUrl: p.paletteSeedImageUrl || '',
   }
 }
 
@@ -715,6 +748,10 @@ export function WebSettings() {
   const [importConfigInput, setImportConfigInput] = useState('')
   const [importRulesDialogOpen, setImportRulesDialogOpen] = useState(false)
   const [importRulesInput, setImportRulesInput] = useState('')
+  const [backgroundImageInput, setBackgroundImageInput] = useState('')
+  const [themePreviewImageUrl, setThemePreviewImageUrl] = useState('')
+  const [themePreviewLoading, setThemePreviewLoading] = useState(false)
+  const [themePaletteApplying, setThemePaletteApplying] = useState(false)
   const [historyApps, setHistoryApps] = useState<string[]>([])
   const [historyPlaySources, setHistoryPlaySources] = useState<string[]>([])
   // 裁剪弹窗状态
@@ -1113,6 +1150,130 @@ export function WebSettings() {
       ...prev,
       themeCustomSurface: { ...prev.themeCustomSurface, [key]: value },
     }))
+  }
+
+  const currentThemePreviewHint = useMemo(() => {
+    if (form.themeCustomSurface.backgroundImageMode === 'manual') {
+      return form.themeCustomSurface.backgroundImageUrl.trim()
+    }
+    if (form.themeCustomSurface.backgroundImageMode === 'randomPool') {
+      return form.themeCustomSurface.backgroundImagePool[0] ?? ''
+    }
+    return form.themeCustomSurface.backgroundRandomApiUrl.trim()
+  }, [
+    form.themeCustomSurface.backgroundImageMode,
+    form.themeCustomSurface.backgroundImagePool,
+    form.themeCustomSurface.backgroundImageUrl,
+    form.themeCustomSurface.backgroundRandomApiUrl,
+  ])
+
+  useEffect(() => {
+    setThemePreviewImageUrl('')
+    setThemePreviewLoading(false)
+  }, [
+    form.themeCustomSurface.backgroundImageMode,
+    form.themeCustomSurface.backgroundImageUrl,
+    form.themeCustomSurface.backgroundImagePool,
+    form.themeCustomSurface.backgroundRandomApiUrl,
+  ])
+
+  useEffect(() => {
+    if (form.themeCustomSurface.backgroundImageMode === 'manual') {
+      setBackgroundImageInput(form.themeCustomSurface.backgroundImageUrl)
+      return
+    }
+    if (form.themeCustomSurface.backgroundImageMode === 'randomApi') {
+      setBackgroundImageInput(form.themeCustomSurface.backgroundRandomApiUrl)
+      return
+    }
+    setBackgroundImageInput('')
+  }, [
+    form.themeCustomSurface.backgroundImageMode,
+    form.themeCustomSurface.backgroundImageUrl,
+    form.themeCustomSurface.backgroundRandomApiUrl,
+  ])
+
+  const resolveThemePreviewImage = async () => {
+    setThemePreviewLoading(true)
+    try {
+      const url = await resolveThemeSurfaceActiveImage(form.themeCustomSurface)
+      setThemePreviewImageUrl(url)
+      if (!url) {
+        toast.error('当前背景源还没有可用图片')
+      }
+      return url
+    } catch {
+      toast.error('预览背景解析失败')
+      return ''
+    } finally {
+      setThemePreviewLoading(false)
+    }
+  }
+
+  const applyPaletteFromCurrentThemeImage = async () => {
+    setThemePaletteApplying(true)
+    try {
+      const imageUrl = themePreviewImageUrl || (await resolveThemePreviewImage())
+      if (!imageUrl) return
+      const nextTheme = await extractThemeSurfaceFromImage(imageUrl)
+      setForm((prev) => ({
+        ...prev,
+        themeCustomSurface: {
+          ...prev.themeCustomSurface,
+          ...nextTheme,
+          paletteLiveScope: prev.themeCustomSurface.paletteLiveScope,
+          paletteLiveEnabled: prev.themeCustomSurface.paletteLiveEnabled,
+        },
+      }))
+      setThemePreviewImageUrl(imageUrl)
+      toast.success('已按当前背景生成整套主题色，请记得保存')
+    } catch {
+      toast.error('取色失败：图片可能不支持跨域像素读取')
+    } finally {
+      setThemePaletteApplying(false)
+    }
+  }
+
+  const addThemeBackgroundImage = () => {
+    const value = backgroundImageInput.trim()
+    if (!value) return
+
+    if (form.themeCustomSurface.backgroundImageMode === 'randomPool') {
+      const exists = form.themeCustomSurface.backgroundImagePool.some((item) => item === value)
+      if (exists) {
+        toast.error('该图片已在随机池中')
+        return
+      }
+      patchThemeSurface('backgroundImagePool', [...form.themeCustomSurface.backgroundImagePool, value])
+      setBackgroundImageInput('')
+      return
+    }
+
+    patchThemeSurface('backgroundImageUrl', value)
+    setBackgroundImageInput(value)
+  }
+
+  const onThemeBackgroundFileSelected = (file?: File) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      if (!result) {
+        toast.error('读取图片失败')
+        return
+      }
+      if (form.themeCustomSurface.backgroundImageMode === 'randomPool') {
+        patchThemeSurface('backgroundImagePool', [...form.themeCustomSurface.backgroundImagePool, result])
+      } else {
+        patchThemeSurface('backgroundImageUrl', result)
+      }
+      setBackgroundImageInput('')
+      setThemePreviewImageUrl(result)
+    }
+    reader.onerror = () => {
+      toast.error('读取图片失败')
+    }
+    reader.readAsDataURL(file)
   }
 
   const onFileSelected = (file?: File) => {
@@ -2170,6 +2331,271 @@ export function WebSettings() {
             「整页 background」写在 <code className="rounded bg-muted px-1">body</code> 上，与「页面底色」分开。
             主题预设必须选 Custom surface，保存后才会注入首页。
           </p>
+          <div className="space-y-4 rounded-lg border border-border/60 bg-background/55 p-4">
+            <div className="space-y-2">
+              <Label>背景来源</Label>
+              <Select
+                value={form.themeCustomSurface.backgroundImageMode}
+                onValueChange={(value) =>
+                  patchThemeSurface(
+                    'backgroundImageMode',
+                    value === 'randomPool' || value === 'randomApi' ? value : 'manual',
+                  )
+                }
+              >
+                <SelectTrigger className="w-full sm:max-w-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">固定图片</SelectItem>
+                  <SelectItem value="randomPool">随机图片池</SelectItem>
+                  <SelectItem value="randomApi">随机图片 API</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                固定图片会直接作为 <code className="rounded bg-muted px-1">body background</code>；
+                随机图片池与随机 API 支持前台实时换图，也能联动实时取色。
+              </p>
+            </div>
+
+            {form.themeCustomSurface.backgroundImageMode === 'manual' ? (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>固定背景图片 URL / DataURL</Label>
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      value={backgroundImageInput}
+                      onChange={(e) => {
+                        setBackgroundImageInput(e.target.value)
+                        patchThemeSurface('backgroundImageUrl', e.target.value)
+                      }}
+                      placeholder='https://… / /images/bg.jpg / data:image/...'
+                      className="min-w-[18rem] flex-1 font-mono text-xs"
+                    />
+                    <Button type="button" variant="outline" onClick={() => setThemePreviewImageUrl(backgroundImageInput.trim())}>
+                      使用此图预览
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>从本地导入背景图</Label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      onThemeBackgroundFileSelected(e.target.files?.[0])
+                      e.target.value = ''
+                    }}
+                    className="w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted file:cursor-pointer"
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {form.themeCustomSurface.backgroundImageMode === 'randomPool' ? (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>随机图片池</Label>
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      value={backgroundImageInput}
+                      onChange={(e) => setBackgroundImageInput(e.target.value)}
+                      placeholder='添加 URL / DataURL 到随机图片池'
+                      className="min-w-[18rem] flex-1 font-mono text-xs"
+                    />
+                    <Button type="button" onClick={addThemeBackgroundImage}>
+                      添加到图片池
+                    </Button>
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    onThemeBackgroundFileSelected(e.target.files?.[0])
+                    e.target.value = ''
+                  }}
+                  className="w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted file:cursor-pointer"
+                />
+                {form.themeCustomSurface.backgroundImagePool.length > 0 ? (
+                  <div className="max-h-44 space-y-2 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-3">
+                    {form.themeCustomSurface.backgroundImagePool.map((item, index) => (
+                      <div
+                        key={`${item.slice(0, 32)}-${index}`}
+                        className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background/70 px-3 py-2"
+                      >
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 truncate text-left text-xs text-foreground"
+                          onClick={() => setThemePreviewImageUrl(item)}
+                        >
+                          {item}
+                        </button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() =>
+                            patchThemeSurface(
+                              'backgroundImagePool',
+                              form.themeCustomSurface.backgroundImagePool.filter((_, i) => i !== index),
+                            )
+                          }
+                        >
+                          删除
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">随机图片池为空时，前台不会有可切换图片。</p>
+                )}
+              </div>
+            ) : null}
+
+            {form.themeCustomSurface.backgroundImageMode === 'randomApi' ? (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>随机图片 API</Label>
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      value={backgroundImageInput}
+                      onChange={(e) => {
+                        setBackgroundImageInput(e.target.value)
+                        patchThemeSurface('backgroundRandomApiUrl', e.target.value)
+                      }}
+                      placeholder="https://api.example.com/random-image"
+                      className="min-w-[18rem] flex-1 font-mono text-xs"
+                    />
+                    <Button type="button" variant="outline" onClick={() => void resolveThemePreviewImage()}>
+                      拉取一张预览图
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    优先支持直接返回图片，或返回包含 <code className="rounded bg-muted px-1">url</code> / <code className="rounded bg-muted px-1">image</code> / <code className="rounded bg-muted px-1">urls.regular</code> 的 JSON。
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => void resolveThemePreviewImage()}
+                    disabled={themePreviewLoading}
+                  >
+                    {themePreviewLoading ? '生成预览中…' : '生成当前背景预览'}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void applyPaletteFromCurrentThemeImage()}
+                    disabled={themePaletteApplying || themePreviewLoading}
+                  >
+                    {themePaletteApplying ? '取色中…' : '根据当前背景取色'}
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">启用实时取色</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      仅对随机图片池 / 随机图片 API 生效。首屏先用已保存主题，图片加载完成后再覆盖成当前图片的配色。
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.themeCustomSurface.paletteLiveEnabled}
+                    onCheckedChange={(checked) => patchThemeSurface('paletteLiveEnabled', checked)}
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>取色模式</Label>
+                    <Select
+                      value={form.themeCustomSurface.paletteMode}
+                      onValueChange={(value) =>
+                        patchThemeSurface(
+                          'paletteMode',
+                          value === 'applyFromCurrent' || value === 'liveFromImage'
+                            ? value
+                            : 'manual',
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manual">手动维护</SelectItem>
+                        <SelectItem value="applyFromCurrent">按钮覆盖当前主题</SelectItem>
+                        <SelectItem value="liveFromImage">随机图实时取色</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>实时取色范围</Label>
+                    <Select
+                      value={form.themeCustomSurface.paletteLiveScope}
+                      onValueChange={(value) =>
+                        patchThemeSurface('paletteLiveScope', value === 'randomOnly' ? value : 'randomOnly')
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="randomOnly">仅随机图片源</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  最近一次按钮取色的图片：{form.themeCustomSurface.paletteSeedImageUrl || '暂无'}
+                </p>
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">当前背景预览</p>
+                  <p className="text-xs text-muted-foreground break-all">
+                    {themePreviewImageUrl || currentThemePreviewHint || '还没有可预览的图片'}
+                  </p>
+                </div>
+                <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/20">
+                  {themePreviewImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- admin preview supports arbitrary URLs/data URLs
+                    <img
+                      src={themePreviewImageUrl}
+                      alt="背景预览"
+                      className="h-48 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-48 items-center justify-center px-4 text-center text-xs text-muted-foreground">
+                      点击“生成当前背景预览”后，这里会显示本次用于取色的背景图。
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    ['background', form.themeCustomSurface.background],
+                    ['primary', form.themeCustomSurface.primary],
+                    ['accent', form.themeCustomSurface.accent],
+                    ['card', form.themeCustomSurface.card],
+                  ].map(([label, color]) => (
+                    <div key={label} className="space-y-1">
+                      <div
+                        className="h-10 rounded-md border border-border/60"
+                        style={{ background: String(color || 'transparent') }}
+                      />
+                      <p className="truncate text-[11px] text-muted-foreground">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label>页面底色（仅 background-color / 令牌）</Label>

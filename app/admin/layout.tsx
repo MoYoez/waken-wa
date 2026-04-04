@@ -1,4 +1,5 @@
 import { AdminToaster } from '@/components/admin/admin-toaster'
+import { ThemeModeToggle } from '@/components/theme-mode-toggle'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +10,11 @@ export default function AdminLayout({
 }) {
   return (
     <>
+      <div className="pointer-events-none fixed right-4 top-4 z-50 sm:right-6 sm:top-6">
+        <div className="pointer-events-auto">
+          <ThemeModeToggle />
+        </div>
+      </div>
       {children}
       <AdminToaster />
     </>

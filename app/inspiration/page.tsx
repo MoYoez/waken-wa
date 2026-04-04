@@ -13,8 +13,8 @@ export default async function InspirationArchivePage() {
   const displayTimezone = normalizeTimezone(config?.displayTimezone)
 
   return (
-    <main className="min-h-screen relative">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-24">
+    <main className="relative min-h-screen overflow-x-hidden">
+      <div className="mx-auto max-w-2xl overflow-x-hidden px-4 pt-16 pb-24 sm:px-6">
         <ContentReadingPanel className="space-y-6 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-sm font-semibold text-foreground tracking-tight">随想录</h1>

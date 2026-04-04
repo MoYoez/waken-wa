@@ -8,8 +8,10 @@ import { CurrentStatus } from '@/components/current-status'
 import { HomeScrollbarHider } from '@/components/home-scrollbar-hider'
 import { InspirationHomeSection } from '@/components/inspiration-home-section'
 import { LayoutFooterPortal } from '@/components/layout-footer-portal'
+import { PublicPageTransitionShell } from '@/components/public-page-transition-shell'
 import { ScheduleHomeInClassBanner } from '@/components/schedule-home-in-class-banner'
 import { SiteLockForm } from '@/components/site-lock-form'
+import { SiteThemeRuntime } from '@/components/site-theme-runtime'
 import { UserProfile, UserProfileNoteSection } from '@/components/user-profile'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 import { verifySiteLockSession } from '@/lib/auth'
@@ -127,90 +129,95 @@ export default async function Home() {
           dangerouslySetInnerHTML={{ __html: themeCss }}
         />
       )}
+      <SiteThemeRuntime
+        themePreset={config.themePreset}
+        themeCustomSurface={config.themeCustomSurface}
+      />
       {/* Animated Background */}
       <div className="animated-bg">
         <div className="floating-orb floating-orb-1" />
         <div className="floating-orb floating-orb-2" />
         <div className="floating-orb floating-orb-3" />
       </div>
-
-      <main className="min-h-screen relative">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-40">
-          <ContentReadingPanel className="p-5 sm:p-6">
-            {/* Profile + current: one activity feed subscription (polling/SSE) for both */}
-            <ActivityFeedProvider mode={activityUpdateMode}>
-              <div className="flex flex-col gap-4">
-                <div
-                  className={
-                    showScheduleHomeColumn
-                      ? 'flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-start sm:gap-4'
-                      : 'flex flex-col gap-4'
-                  }
-                >
+      <PublicPageTransitionShell scope="home">
+        <main className="min-h-screen relative">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-40">
+            <ContentReadingPanel className="p-5 sm:p-6">
+              {/* Profile + current: one activity feed subscription (polling/SSE) for both */}
+              <ActivityFeedProvider mode={activityUpdateMode}>
+                <div className="flex flex-col gap-4">
                   <div
                     className={
                       showScheduleHomeColumn
-                        ? 'min-w-0 w-full sm:flex-1 sm:basis-0 sm:overflow-hidden'
-                        : 'min-w-0 w-full'
+                        ? 'flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-start sm:gap-4'
+                        : 'flex flex-col gap-4'
                     }
                   >
-                    <UserProfile
-                      name={userName}
-                      bio={userBio}
-                      avatarUrl={avatarUrl}
-                      profileOnlineAccentColor={config.profileOnlineAccentColor ?? null}
-                      profileOnlinePulseEnabled={config.profileOnlinePulseEnabled ?? null}
-                    />
+                    <div
+                      className={
+                        showScheduleHomeColumn
+                          ? 'min-w-0 w-full sm:flex-1 sm:basis-0 sm:overflow-hidden'
+                          : 'min-w-0 w-full'
+                      }
+                    >
+                      <UserProfile
+                        name={userName}
+                        bio={userBio}
+                        avatarUrl={avatarUrl}
+                        profileOnlineAccentColor={config.profileOnlineAccentColor ?? null}
+                        profileOnlinePulseEnabled={config.profileOnlinePulseEnabled ?? null}
+                      />
+                    </div>
+                    {showScheduleHomeColumn ? (
+                      <ScheduleHomeInClassBanner
+                        courses={scheduleCoursesForHome}
+                        showLocation={scheduleHomeShowLocation}
+                        showTeacher={scheduleHomeShowTeacher}
+                        periodTemplate={schedulePeriodTemplate}
+                        showNextUpcoming={scheduleHomeShowNextUpcoming}
+                        afterClassesLabel={scheduleHomeAfterClassesLabel}
+                        className="w-full sm:w-1/3 sm:min-w-0 sm:shrink-0 sm:basis-1/3"
+                      />
+                    ) : null}
                   </div>
-                  {showScheduleHomeColumn ? (
-                    <ScheduleHomeInClassBanner
-                      courses={scheduleCoursesForHome}
-                      showLocation={scheduleHomeShowLocation}
-                      showTeacher={scheduleHomeShowTeacher}
-                      periodTemplate={schedulePeriodTemplate}
-                      showNextUpcoming={scheduleHomeShowNextUpcoming}
-                      afterClassesLabel={scheduleHomeAfterClassesLabel}
-                      className="w-full sm:w-1/3 sm:min-w-0 sm:shrink-0 sm:basis-1/3"
-                    />
-                  ) : null}
+
+                  <UserProfileNoteSection
+                    note={userNote}
+                    noteHitokotoEnabled={noteHitokotoEnabled}
+                    noteHitokotoCategories={noteHitokotoCategories}
+                    noteHitokotoEncode={noteHitokotoEncode}
+                    noteHitokotoFallbackToNote={noteHitokotoFallbackToNote}
+                  />
+
+                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                  <section>
+                    <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
+                      {currentlyText}
+                    </h2>
+                    <div className="space-y-3">
+                      <CurrentStatus hideActivityMedia={hideActivityMedia} />
+                    </div>
+                  </section>
                 </div>
+              </ActivityFeedProvider>
 
-                <UserProfileNoteSection
-                  note={userNote}
-                  noteHitokotoEnabled={noteHitokotoEnabled}
-                  noteHitokotoCategories={noteHitokotoCategories}
-                  noteHitokotoEncode={noteHitokotoEncode}
-                  noteHitokotoFallbackToNote={noteHitokotoFallbackToNote}
+              {/* Timeline */}
+              <section className="mt-8">
+                <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
+                  {earlierText}
+                </h2>
+                <InspirationHomeSection
+                  entries={inspirationHomeEntries}
+                  showArchiveLink={inspirationTotal > 3}
                 />
+              </section>
+            </ContentReadingPanel>
+          </div>
+        </main>
 
-                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-                <section>
-                  <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
-                    {currentlyText}
-                  </h2>
-                  <div className="space-y-3">
-                    <CurrentStatus hideActivityMedia={hideActivityMedia} />
-                  </div>
-                </section>
-              </div>
-            </ActivityFeedProvider>
-
-            {/* Timeline */}
-            <section className="mt-8">
-              <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
-                {earlierText}
-              </h2>
-              <InspirationHomeSection
-                entries={inspirationHomeEntries}
-                showArchiveLink={inspirationTotal > 3}
-              />
-            </section>
-          </ContentReadingPanel>
-        </div>
-      </main>
-
-      <LayoutFooterPortal adminText={adminText} />
+        <LayoutFooterPortal adminText={adminText} />
+      </PublicPageTransitionShell>
     </>
   )
 }
