@@ -1,13 +1,14 @@
 'use client'
 
 import { motion, useReducedMotion } from 'motion/react'
-import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import {
   getSiteSectionTransition,
   getSiteSectionVariants,
 } from '@/components/site-motion'
+import { useIsClient } from '@/hooks/use-is-client'
 
 type Props = {
   children: React.ReactNode
@@ -24,7 +25,7 @@ function loadingLabel(scope: Props['scope']): string {
 
 export function PublicPageTransitionShell({ children, scope, enabled = true }: Props) {
   const [contentReady, setContentReady] = useState(false)
-  const [portalReady, setPortalReady] = useState(false)
+  const portalReady = useIsClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
   const contentTransition = getSiteSectionTransition(prefersReducedMotion)
   const contentVariants = getSiteSectionVariants(prefersReducedMotion, {
@@ -32,11 +33,6 @@ export function PublicPageTransitionShell({ children, scope, enabled = true }: P
     exitY: 8,
     scale: 0.998,
   })
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return
-    setPortalReady(true)
-  }, [])
 
   useEffect(() => {
     if (!enabled) return
