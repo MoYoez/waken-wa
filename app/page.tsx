@@ -116,6 +116,7 @@ export default async function Home() {
   const hideActivityMedia = Boolean(cfg.hideActivityMedia)
   const pageLoadingEnabled = cfg.pageLoadingEnabled !== false
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
+  const noteTypewriterEnabled = Boolean(cfg.userNoteTypewriterEnabled)
   const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
   const noteHitokotoFallbackToNote = Boolean(cfg.userNoteHitokotoFallbackToNote)
@@ -185,6 +186,7 @@ export default async function Home() {
                   <UserProfileNoteSection
                     note={userNote}
                     noteHitokotoEnabled={noteHitokotoEnabled}
+                    noteTypewriterEnabled={noteTypewriterEnabled}
                     noteHitokotoCategories={noteHitokotoCategories}
                     noteHitokotoEncode={noteHitokotoEncode}
                     noteHitokotoFallbackToNote={noteHitokotoFallbackToNote}

@@ -1183,6 +1183,18 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
   animation: footer-sheen 7.4s linear infinite;
 }
 
+@keyframes typewriter-caret-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (max-width: 639px) {
   .admin-tabs-shell {
     padding: 0.7rem;

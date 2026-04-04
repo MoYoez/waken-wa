@@ -41,6 +41,7 @@ import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
 
 export const LLM_DENIED_SITE_CONFIG_KEYS = [
+  'userNoteTypewriterEnabled',
   'pageLoadingEnabled',
   'searchEngineIndexingEnabled',
   'openApiDocsEnabled',
@@ -342,6 +343,10 @@ export async function updateSiteConfigFromPayload(
   if (body.userNoteHitokotoEnabled !== undefined && body.userNoteHitokotoEnabled !== null) {
     userNoteHitokotoEnabled = Boolean(body.userNoteHitokotoEnabled)
   }
+  let userNoteTypewriterEnabled = Boolean(existing?.userNoteTypewriterEnabled)
+  if (body.userNoteTypewriterEnabled !== undefined && body.userNoteTypewriterEnabled !== null) {
+    userNoteTypewriterEnabled = Boolean(body.userNoteTypewriterEnabled)
+  }
   let pageLoadingEnabled = existing?.pageLoadingEnabled !== false
   if (body.pageLoadingEnabled !== undefined && body.pageLoadingEnabled !== null) {
     pageLoadingEnabled = Boolean(body.pageLoadingEnabled)
@@ -507,6 +512,7 @@ export async function updateSiteConfigFromPayload(
     profileOnlinePulseEnabled,
     userNote,
     userNoteHitokotoEnabled,
+    userNoteTypewriterEnabled,
     pageLoadingEnabled,
     searchEngineIndexingEnabled,
     userNoteHitokotoCategories,

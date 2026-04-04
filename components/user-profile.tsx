@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { type CSSProperties, useEffect, useMemo, useState } from 'react'
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
 import { buildHitokotoRequestUrl } from '@/lib/hitokoto'
@@ -17,16 +17,79 @@ import type { HitokotoJsonBody, UserNoteHitokotoEncode } from '@/types/hitokoto'
 const NOTE_BOX_CLASS =
   'block w-full min-w-0 max-w-full break-words text-sm font-semibold text-foreground leading-snug border-l-2 border-primary pl-4 pr-0'
 
+function TypewriterNoteText({
+  text,
+  enabled,
+  children,
+}: {
+  text: string
+  enabled: boolean
+  children: (displayText: string, animating: boolean) => ReactNode
+}) {
+  const [displayText, setDisplayText] = useState(enabled ? '' : text)
+  const [animating, setAnimating] = useState(false)
+  const [reduceMotion, setReduceMotion] = useState(false)
+  const shouldAnimate = enabled && !reduceMotion && text.length > 1
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const sync = () => setReduceMotion(media.matches)
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
+
+  useEffect(() => {
+    if (!shouldAnimate) return
+
+    let index = 0
+    let typingTimer = 0
+    const startTimer = window.setTimeout(() => {
+      setDisplayText('')
+      setAnimating(true)
+      typingTimer = window.setInterval(() => {
+        index += 1
+        setDisplayText(text.slice(0, index))
+        if (index >= text.length) {
+          window.clearInterval(typingTimer)
+          setAnimating(false)
+        }
+      }, 48)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(startTimer)
+      if (typingTimer) window.clearInterval(typingTimer)
+    }
+  }, [shouldAnimate, text])
+
+  return <>{children(shouldAnimate ? displayText : text, shouldAnimate || animating)}</>
+}
+
+function TypewriterCaret({ animating }: { animating: boolean }) {
+  if (!animating) return null
+  return (
+    <span
+      aria-hidden="true"
+      className="ml-0.5 inline-block h-[1em] w-px translate-y-0.5 bg-current align-middle"
+      style={{ animation: 'typewriter-caret-blink 1s linear infinite', willChange: 'opacity' }}
+    />
+  )
+}
+
 function ProfileHitokotoNote({
   categories,
   encode,
   fallbackNote,
   fallbackToNote,
+  typewriterEnabled,
 }: {
   categories: string[]
   encode: UserNoteHitokotoEncode
   fallbackNote: string
   fallbackToNote: boolean
+  typewriterEnabled: boolean
 }) {
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [text, setText] = useState('')
@@ -81,34 +144,57 @@ function ProfileHitokotoNote({
 
   if (phase === 'error') {
     if (fallbackToNote && fallbackNote.trim()) {
-      return <p className={NOTE_BOX_CLASS}>{fallbackNote}</p>
+      return (
+        <TypewriterNoteText text={fallbackNote} enabled={typewriterEnabled}>
+          {(displayText, animating) => (
+            <p className={NOTE_BOX_CLASS}>
+              {displayText}
+              <TypewriterCaret animating={animating} />
+            </p>
+          )}
+        </TypewriterNoteText>
+      )
     }
     return <p className={NOTE_BOX_CLASS}>一言暂不可用</p>
   }
 
   if (uuid) {
     return (
-      <p className={NOTE_BOX_CLASS}>
-        <a
-          href={`https://hitokoto.cn/?uuid=${encodeURIComponent(uuid)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(
-            'inline-block max-w-full rounded-sm pb-0.5',
-            'bg-gradient-to-r from-primary to-primary bg-left-bottom bg-no-repeat',
-            '[background-size:0%_2px] transition-[background-size] duration-300 ease-out',
-            'hover:[background-size:100%_2px]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-            'focus-visible:[background-size:100%_2px]',
-          )}
-        >
-          {text}
-        </a>
-      </p>
+      <TypewriterNoteText text={text} enabled={typewriterEnabled}>
+        {(displayText, animating) => (
+          <p className={NOTE_BOX_CLASS}>
+            <a
+              href={`https://hitokoto.cn/?uuid=${encodeURIComponent(uuid)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                'inline-block max-w-full rounded-sm pb-0.5',
+                'bg-gradient-to-r from-primary to-primary bg-left-bottom bg-no-repeat',
+                '[background-size:0%_2px] transition-[background-size] duration-300 ease-out',
+                'hover:[background-size:100%_2px]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                'focus-visible:[background-size:100%_2px]',
+              )}
+            >
+              {displayText}
+              <TypewriterCaret animating={animating} />
+            </a>
+          </p>
+        )}
+      </TypewriterNoteText>
     )
   }
 
-  return <p className={NOTE_BOX_CLASS}>{text}</p>
+  return (
+    <TypewriterNoteText text={text} enabled={typewriterEnabled}>
+      {(displayText, animating) => (
+        <p className={NOTE_BOX_CLASS}>
+          {displayText}
+          <TypewriterCaret animating={animating} />
+        </p>
+      )}
+    </TypewriterNoteText>
+  )
 }
 
 export type { UserProfileNoteSectionProps } from '@/types/components'
@@ -117,6 +203,7 @@ export type { UserProfileNoteSectionProps } from '@/types/components'
 export function UserProfileNoteSection({
   note = '',
   noteHitokotoEnabled = false,
+  noteTypewriterEnabled = false,
   noteHitokotoCategories = [],
   noteHitokotoEncode = 'json',
   noteHitokotoFallbackToNote = false,
@@ -132,9 +219,17 @@ export function UserProfileNoteSection({
           encode={noteHitokotoEncode}
           fallbackNote={note}
           fallbackToNote={noteHitokotoFallbackToNote}
+          typewriterEnabled={noteTypewriterEnabled}
         />
       ) : (
-        <p className={NOTE_BOX_CLASS}>{note}</p>
+        <TypewriterNoteText text={note} enabled={noteTypewriterEnabled}>
+          {(displayText, animating) => (
+            <p className={NOTE_BOX_CLASS}>
+              {displayText}
+              <TypewriterCaret animating={animating} />
+            </p>
+          )}
+        </TypewriterNoteText>
       )}
     </div>
   )

@@ -122,6 +122,7 @@ export function WebSettings() {
     profileOnlinePulseEnabled: true,
     userNote: '',
     userNoteHitokotoEnabled: false,
+    userNoteTypewriterEnabled: false,
     pageLoadingEnabled: true,
     searchEngineIndexingEnabled: true,
     userNoteHitokotoCategories: [],
@@ -251,6 +252,7 @@ export function WebSettings() {
             profileOnlinePulseEnabled: data.data.profileOnlinePulseEnabled !== false,
             userNote: data.data.userNote ?? '',
             userNoteHitokotoEnabled: Boolean(data.data.userNoteHitokotoEnabled),
+            userNoteTypewriterEnabled: Boolean(data.data.userNoteTypewriterEnabled),
             pageLoadingEnabled: data.data.pageLoadingEnabled !== false,
             searchEngineIndexingEnabled: data.data.searchEngineIndexingEnabled !== false,
             userNoteHitokotoCategories: normalizeHitokotoCategories(

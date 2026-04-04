@@ -17,6 +17,7 @@ export interface SetupInitialConfig {
 export interface UserProfileNoteSectionProps {
   note?: string
   noteHitokotoEnabled?: boolean
+  noteTypewriterEnabled?: boolean
   noteHitokotoCategories?: string[]
   noteHitokotoEncode?: UserNoteHitokotoEncode
   noteHitokotoFallbackToNote?: boolean

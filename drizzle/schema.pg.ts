@@ -99,6 +99,7 @@ export const siteConfig = pgTable('site_config', {
   profileOnlinePulseEnabled: boolean('profile_online_pulse_enabled'),
   userNote: text('user_note').notNull(),
   userNoteHitokotoEnabled: boolean('user_note_hitokoto_enabled').notNull().default(false),
+  userNoteTypewriterEnabled: boolean('user_note_typewriter_enabled').default(false),
   pageLoadingEnabled: boolean('page_loading_enabled').default(true),
   searchEngineIndexingEnabled: boolean('search_engine_indexing_enabled').default(true),
   userNoteHitokotoCategories: jsonb('user_note_hitokoto_categories'),

@@ -60,6 +60,22 @@ export function WebSettingsHitokotoPanel({
         </div>
       </div>
 
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+        <div className="min-w-0 space-y-0.5">
+          <Label htmlFor="note-typewriter-toggle" className="font-normal cursor-pointer">
+            个人备注打字机效果
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            为首页备注增加逐字显示效果，对静态备注和一言回退都生效。
+          </p>
+        </div>
+        <Switch
+          id="note-typewriter-toggle"
+          checked={form.userNoteTypewriterEnabled}
+          onCheckedChange={(value) => patch('userNoteTypewriterEnabled', value)}
+        />
+      </div>
+
       <div className="flex items-center justify-between gap-3">
         <Label htmlFor="hitokoto-home-note" className="font-normal cursor-pointer">
           首页备注使用一言（hitokoto.cn）
