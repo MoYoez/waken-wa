@@ -33,7 +33,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { isDeviceBatteryCharging } from '@/lib/activity-battery-metadata'
 import { getMediaDisplay, type MediaDisplay } from '@/lib/activity-media'
 import { cn } from '@/lib/utils'
-import type { SteamNowPlayingInfo } from '@/types'
+import type { ActivityFeedItem, SteamNowPlayingInfo } from '@/types'
 
 function getBatteryLabel(metadata: Record<string, unknown> | null | undefined): string | null {
   const value = metadata?.deviceBatteryPercent
@@ -268,11 +268,7 @@ function CurrentStatusCard({
   sectionTransition,
   sectionVariants,
 }: {
-  activity: (ReturnType<typeof useSharedActivityFeed>['feed'] extends { activeStatuses: infer T }
-    ? T extends Array<infer U>
-      ? U
-      : never
-    : never)
+  activity: ActivityFeedItem
   hideActivityMedia: boolean
   sectionTransition: ReturnType<typeof getSiteSectionTransition>
   sectionVariants: ReturnType<typeof getSiteSectionVariants>
