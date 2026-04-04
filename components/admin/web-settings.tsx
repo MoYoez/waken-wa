@@ -2370,7 +2370,7 @@ export function WebSettings() {
                         patchThemeSurface('backgroundImageUrl', e.target.value)
                       }}
                       placeholder='https://… / /images/bg.jpg / data:image/...'
-                      className="min-w-[18rem] flex-1 font-mono text-xs"
+                      className="min-w-0 basis-full flex-1 font-mono text-xs sm:min-w-[18rem] sm:basis-auto"
                     />
                     <Button type="button" variant="outline" onClick={() => setThemePreviewImageUrl(backgroundImageInput.trim())}>
                       使用此图预览
@@ -2401,7 +2401,7 @@ export function WebSettings() {
                       value={backgroundImageInput}
                       onChange={(e) => setBackgroundImageInput(e.target.value)}
                       placeholder='添加 URL / DataURL 到随机图片池'
-                      className="min-w-[18rem] flex-1 font-mono text-xs"
+                      className="min-w-0 basis-full flex-1 font-mono text-xs sm:min-w-[18rem] sm:basis-auto"
                     />
                     <Button type="button" onClick={addThemeBackgroundImage}>
                       添加到图片池
@@ -2466,7 +2466,7 @@ export function WebSettings() {
                         patchThemeSurface('backgroundRandomApiUrl', e.target.value)
                       }}
                       placeholder="https://api.example.com/random-image"
-                      className="min-w-[18rem] flex-1 font-mono text-xs"
+                      className="min-w-0 basis-full flex-1 font-mono text-xs sm:min-w-[18rem] sm:basis-auto"
                     />
                     <Button type="button" variant="outline" onClick={() => void resolveThemePreviewImage()}>
                       拉取一张预览图
