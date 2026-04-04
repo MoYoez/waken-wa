@@ -2,8 +2,13 @@
 
 import { Provider } from 'jotai'
 import { createStore } from 'jotai/vanilla'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useMemo } from 'react'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
 import { useWebSettingsController } from '@/components/admin/use-web-settings-controller'
@@ -39,6 +44,7 @@ export function WebSettings() {
 }
 
 function WebSettingsContent() {
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const {
     applyImportConfig,
     confirmImportConfig,
@@ -62,6 +68,12 @@ function WebSettingsContent() {
     setImportConfigInput,
     webSettingsDirty,
   } = useWebSettingsController()
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 12,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   if (loading) {
     return <div className="text-sm text-muted-foreground">加载配置中...</div>
@@ -123,7 +135,20 @@ function WebSettingsContent() {
 
               <WebSettingsHitokotoPanel />
 
-              {form.themePreset === 'customSurface' ? <WebSettingsCustomSurface /> : null}
+              <AnimatePresence initial={false}>
+                {form.themePreset === 'customSurface' ? (
+                  <motion.div
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                    layout
+                  >
+                    <WebSettingsCustomSurface />
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
 
               <div className="space-y-2">
                 <Label>自定义 CSS 覆写（主界面）</Label>

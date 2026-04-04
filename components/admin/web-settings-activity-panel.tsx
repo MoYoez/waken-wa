@@ -1,7 +1,12 @@
 'use client'
 
 import { useAtom } from 'jotai'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import {
   webSettingsFormAtom,
   webSettingsInspirationDevicesAtom,
@@ -62,9 +67,16 @@ export function WebSettingsActivityPanel() {
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [redisCacheServerlessForced] = useAtom(webSettingsRedisCacheServerlessForcedAtom)
   const [inspirationDevices] = useAtom(webSettingsInspirationDevicesAtom)
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   return (
     <div className="space-y-5">
@@ -76,15 +88,26 @@ export function WebSettingsActivityPanel() {
         onCheckedChange={(value) => patch('globalMouseTiltEnabled', value)}
       />
 
-      {form.globalMouseTiltEnabled ? (
-        <ToggleCard
-          id="global-mouse-tilt-gyro"
-          title="支持检测陀螺仪晃动"
-          description="开启后在支持的移动设备上使用陀螺仪/设备方向驱动页面倾斜（可能需要系统权限）；不支持或未授权时会自动回退。"
-          checked={form.globalMouseTiltGyroEnabled}
-          onCheckedChange={(value) => patch('globalMouseTiltGyroEnabled', value)}
-        />
-      ) : null}
+      <AnimatePresence initial={false}>
+        {form.globalMouseTiltEnabled ? (
+          <motion.div
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
+            layout
+          >
+            <ToggleCard
+              id="global-mouse-tilt-gyro"
+              title="支持检测陀螺仪晃动"
+              description="开启后在支持的移动设备上使用陀螺仪/设备方向驱动页面倾斜（可能需要系统权限）；不支持或未授权时会自动回退。"
+              checked={form.globalMouseTiltGyroEnabled}
+              onCheckedChange={(value) => patch('globalMouseTiltGyroEnabled', value)}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <div className="space-y-2">
         <Label htmlFor="profile-online-accent">头像在线态强调色</Label>
@@ -189,13 +212,23 @@ export function WebSettingsActivityPanel() {
           <p className="text-xs text-muted-foreground leading-relaxed">
             开启后，活动流、站点配置、JWT 密钥缓存、限流、设备与 API Token 校验等优先走 Redis；关闭后上述用途均不走 Redis。未配置或不可用时自动回退，不会中断服务。
           </p>
-          {redisCacheServerlessForced ? (
-            <div className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2">
-              <p className="text-xs text-amber-700 leading-relaxed dark:text-amber-400">
-                检测到 Serverless 环境（Vercel）：此项默认强制为开且无法在此关闭；若未配置 REDIS_URL，相关逻辑会跳过 Redis 并回退到数据库/内存。
-              </p>
-            </div>
-          ) : null}
+          <AnimatePresence initial={false}>
+            {redisCacheServerlessForced ? (
+              <motion.div
+                className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2"
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+                layout
+              >
+                <p className="text-xs text-amber-700 leading-relaxed dark:text-amber-400">
+                  检测到 Serverless 环境（Vercel）：此项默认强制为开且无法在此关闭；若未配置 REDIS_URL，相关逻辑会跳过 Redis 并回退到数据库/内存。
+                </p>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
         <Switch
           id="use-nosql-as-cache-redis"
@@ -237,53 +270,63 @@ export function WebSettingsActivityPanel() {
           <Switch id="steam-enabled" checked={form.steamEnabled} onCheckedChange={(value) => patch('steamEnabled', value)} />
         </div>
 
-        {form.steamEnabled ? (
-          <div className="space-y-3 border-t border-border pt-2">
-            <div className="space-y-2">
-              <Label htmlFor="steam-id">Steam ID (64-bit)</Label>
-              <Input
-                id="steam-id"
-                value={form.steamId}
-                onChange={(event) => patch('steamId', event.target.value)}
-                placeholder="例如: 76561198000000000"
-              />
-              <p className="text-xs text-muted-foreground">
-                全站共用的 Steam 64-bit ID（非按设备填写），可在
-                <a
-                  href="https://steamid.io/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mx-1 text-primary hover:underline"
-                >
-                  steamid.io
-                </a>
-                查询。
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="steam-api-key">Steam Web API Key（留空则不修改已保存的值）</Label>
-              <Input
-                id="steam-api-key"
-                autoComplete="off"
-                value={form.steamApiKey}
-                onChange={(event) => patch('steamApiKey', event.target.value)}
-                placeholder="在 Steam 开发者申请；也可使用环境变量 STEAM_API_KEY 作为后备"
-              />
-              <p className="text-xs text-muted-foreground">
-                在{' '}
-                <a
-                  href="https://steamcommunity.com/dev/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  steamcommunity.com/dev/apikey
-                </a>{' '}
-                申请。保存后仅服务端使用，不会下发到前台。
-              </p>
-            </div>
-          </div>
-        ) : null}
+        <AnimatePresence initial={false}>
+          {form.steamEnabled ? (
+            <motion.div
+              className="space-y-3 border-t border-border pt-2"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              <div className="space-y-2">
+                <Label htmlFor="steam-id">Steam ID (64-bit)</Label>
+                <Input
+                  id="steam-id"
+                  value={form.steamId}
+                  onChange={(event) => patch('steamId', event.target.value)}
+                  placeholder="例如: 76561198000000000"
+                />
+                <p className="text-xs text-muted-foreground">
+                  全站共用的 Steam 64-bit ID（非按设备填写），可在
+                  <a
+                    href="https://steamid.io/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mx-1 text-primary hover:underline"
+                  >
+                    steamid.io
+                  </a>
+                  查询。
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="steam-api-key">Steam Web API Key（留空则不修改已保存的值）</Label>
+                <Input
+                  id="steam-api-key"
+                  autoComplete="off"
+                  value={form.steamApiKey}
+                  onChange={(event) => patch('steamApiKey', event.target.value)}
+                  placeholder="在 Steam 开发者申请；也可使用环境变量 STEAM_API_KEY 作为后备"
+                />
+                <p className="text-xs text-muted-foreground">
+                  在{' '}
+                  <a
+                    href="https://steamcommunity.com/dev/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    steamcommunity.com/dev/apikey
+                  </a>{' '}
+                  申请。保存后仅服务端使用，不会下发到前台。
+                </p>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       <div className="space-y-2">
@@ -347,36 +390,46 @@ export function WebSettingsActivityPanel() {
           <code className="rounded bg-muted px-1 py-0.5 text-[11px]">generatedHashKey</code>
           。管理员在后台网页里提交不受此限制。
         </p>
-        {form.inspirationDeviceRestrictionEnabled ? (
-          <div className="max-h-52 space-y-2 overflow-y-auto rounded-md border bg-background/50 p-3">
-            {inspirationDevices.length === 0 ? (
-              <p className="text-xs text-muted-foreground">暂无设备，请先在「设备管理」中添加。</p>
-            ) : (
-              inspirationDevices.map((device) => (
-                <label key={device.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.inspirationAllowedDeviceHashes.includes(device.generatedHashKey)}
-                    onChange={(event) => {
-                      const key = device.generatedHashKey
-                      const next = event.target.checked
-                        ? Array.from(new Set([...form.inspirationAllowedDeviceHashes, key]))
-                        : form.inspirationAllowedDeviceHashes.filter((item) => item !== key)
-                      patch('inspirationAllowedDeviceHashes', next)
-                    }}
-                  />
-                  <span className="min-w-0 flex-1 truncate font-medium">{device.displayName}</span>
-                  <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-                    {device.generatedHashKey.slice(0, 10)}…
-                  </span>
-                  {device.status !== 'active' ? (
-                    <span className="shrink-0 text-xs text-amber-600">({device.status})</span>
-                  ) : null}
-                </label>
-              ))
-            )}
-          </div>
-        ) : null}
+        <AnimatePresence initial={false}>
+          {form.inspirationDeviceRestrictionEnabled ? (
+            <motion.div
+              className="max-h-52 space-y-2 overflow-y-auto rounded-md border bg-background/50 p-3"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              {inspirationDevices.length === 0 ? (
+                <p className="text-xs text-muted-foreground">暂无设备，请先在「设备管理」中添加。</p>
+              ) : (
+                inspirationDevices.map((device) => (
+                  <label key={device.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={form.inspirationAllowedDeviceHashes.includes(device.generatedHashKey)}
+                      onChange={(event) => {
+                        const key = device.generatedHashKey
+                        const next = event.target.checked
+                          ? Array.from(new Set([...form.inspirationAllowedDeviceHashes, key]))
+                          : form.inspirationAllowedDeviceHashes.filter((item) => item !== key)
+                        patch('inspirationAllowedDeviceHashes', next)
+                      }}
+                    />
+                    <span className="min-w-0 flex-1 truncate font-medium">{device.displayName}</span>
+                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                      {device.generatedHashKey.slice(0, 10)}…
+                    </span>
+                    {device.status !== 'active' ? (
+                      <span className="shrink-0 text-xs text-amber-600">({device.status})</span>
+                    ) : null}
+                  </label>
+                ))
+              )}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
     </div>
   )

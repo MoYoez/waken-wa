@@ -1,10 +1,15 @@
 'use client'
 
 import { useAtom } from 'jotai'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { exportAdminActivityApps } from '@/components/admin/admin-query-fetchers'
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import {
   listMaxPage,
   ListPaginationBar,
@@ -62,10 +67,17 @@ function AppNameListEditor({
   onPageChange: (page: number) => void
   inputClassName?: string
 }) {
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const total = value.length
   const maxPage = listMaxPage(total, SETTINGS_APP_LIST_PAGE_SIZE)
   const safePage = Math.min(page, maxPage)
   const start = safePage * SETTINGS_APP_LIST_PAGE_SIZE
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   return (
     <div className="space-y-3">
@@ -91,28 +103,36 @@ function AppNameListEditor({
       ) : (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">已有条目（分页）</p>
-          <ul className="space-y-3">
-            {value.slice(start, start + SETTINGS_APP_LIST_PAGE_SIZE).map((item, localIdx) => {
-              const idx = start + localIdx
-              return (
-                <li
-                  key={`${item}-${idx}`}
-                  className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
-                >
-                  <span className="text-sm text-foreground break-all">{item}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => onRemove(idx)}
+          <motion.ul className="space-y-3" layout>
+            <AnimatePresence initial={false}>
+              {value.slice(start, start + SETTINGS_APP_LIST_PAGE_SIZE).map((item, localIdx) => {
+                const idx = start + localIdx
+                return (
+                  <motion.li
+                    key={`${item}-${idx}`}
+                    className="flex items-center justify-between gap-3 rounded-md border bg-background/50 px-3 py-2.5"
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                    layout
                   >
-                    删除
-                  </Button>
-                </li>
-              )
-            })}
-          </ul>
+                    <span className="text-sm text-foreground break-all">{item}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => onRemove(idx)}
+                    >
+                      删除
+                    </Button>
+                  </motion.li>
+                )
+              })}
+            </AnimatePresence>
+          </motion.ul>
           <ListPaginationBar
             page={page}
             pageSize={SETTINGS_APP_LIST_PAGE_SIZE}
@@ -129,6 +149,7 @@ export function WebSettingsRuleTools() {
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [historyApps] = useAtom(webSettingsHistoryAppsAtom)
   const [historyPlaySources] = useAtom(webSettingsHistoryPlaySourcesAtom)
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
@@ -166,6 +187,12 @@ export function WebSettingsRuleTools() {
     () => (form.captureReportedAppsEnabled ? historyPlaySources : []),
     [form.captureReportedAppsEnabled, historyPlaySources],
   )
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   const resetEditorState = () => {
     setBlacklistInput('')
@@ -267,20 +294,30 @@ export function WebSettingsRuleTools() {
             className="shrink-0"
           />
         </div>
-        {rulesTotal > 0 ? (
-          <div className="space-y-2 rounded-md border border-border/50 bg-background/35 px-3 py-3">
-            <p className="text-xs text-muted-foreground">规则预览（前 3 条）</p>
-            <ul className="space-y-2">
-              {form.appMessageRules.slice(0, 3).map((rule, idx) => (
-                <li key={`${rule.match}-${idx}`} className="rounded-md border border-border/40 bg-background/55 px-3 py-2">
-                  <p className="text-xs font-medium text-foreground/80 break-all font-mono">{rule.match || '未填写 match'}</p>
-                  <p className="mt-1 text-sm text-muted-foreground break-words">{rule.text || '未填写 text'}</p>
-                </li>
-              ))}
-            </ul>
-            {rulesTotal > 3 ? <p className="text-xs text-muted-foreground">其余 {rulesTotal - 3} 条可在弹窗中继续查看和编辑。</p> : null}
-          </div>
-        ) : null}
+        <AnimatePresence initial={false}>
+          {rulesTotal > 0 ? (
+            <motion.div
+              className="space-y-2 rounded-md border border-border/50 bg-background/35 px-3 py-3"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              <p className="text-xs text-muted-foreground">规则预览（前 3 条）</p>
+              <ul className="space-y-2">
+                {form.appMessageRules.slice(0, 3).map((rule, idx) => (
+                  <li key={`${rule.match}-${idx}`} className="rounded-md border border-border/40 bg-background/55 px-3 py-2">
+                    <p className="text-xs font-medium text-foreground/80 break-all font-mono">{rule.match || '未填写 match'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground break-words">{rule.text || '未填写 text'}</p>
+                  </li>
+                ))}
+              </ul>
+              {rulesTotal > 3 ? <p className="text-xs text-muted-foreground">其余 {rulesTotal - 3} 条可在弹窗中继续查看和编辑。</p> : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       <Dialog open={dialogAppRulesOpen} onOpenChange={setDialogAppRulesOpen}>
@@ -441,73 +478,93 @@ export function WebSettingsRuleTools() {
                 </div>
               </RadioGroup>
 
-              {form.appFilterMode === 'blacklist' ? (
-                <div className="space-y-3 border-t border-border/50 pt-2">
-                  <Label htmlFor="blacklist-input">黑名单应用名</Label>
-                  <AppNameListEditor
-                    title="黑名单应用名"
-                    description="不区分大小写，每行添加一个应用名。"
-                    emptyText="暂无黑名单条目"
-                    inputId="blacklist-input"
-                    placeholder="例如：WeChat.exe"
-                    items={appAutocompleteItems}
-                    value={form.appBlacklist}
-                    inputValue={blacklistInput}
-                    onInputValueChange={setBlacklistInput}
-                    onAdd={() => {
-                      const value = blacklistInput.trim()
-                      if (!value) return
-                      const exists = form.appBlacklist.some((x) => x.toLowerCase() === value.toLowerCase())
-                      if (exists) return
-                      const next = [...form.appBlacklist, value]
-                      patch('appBlacklist', next)
-                      setBlacklistInput('')
-                      setBlacklistListPage(listMaxPage(next.length, SETTINGS_APP_LIST_PAGE_SIZE))
-                    }}
-                    onRemove={(index) =>
-                      patch(
-                        'appBlacklist',
-                        form.appBlacklist.filter((_, i) => i !== index),
-                      )
-                    }
-                    page={blacklistListPage}
-                    onPageChange={setBlacklistListPage}
-                  />
-                </div>
-              ) : (
-                <div className="space-y-3 border-t border-border/50 pt-2">
-                  <Label htmlFor="whitelist-input">白名单应用名</Label>
-                  <AppNameListEditor
-                    title="白名单应用名"
-                    description="不区分大小写；仅这些应用会出现在前台。"
-                    emptyText="白名单为空：前台不显示任何活动"
-                    inputId="whitelist-input"
-                    placeholder="例如：Code.exe"
-                    items={appAutocompleteItems}
-                    value={form.appWhitelist}
-                    inputValue={whitelistInput}
-                    onInputValueChange={setWhitelistInput}
-                    onAdd={() => {
-                      const value = whitelistInput.trim()
-                      if (!value) return
-                      const exists = form.appWhitelist.some((x) => x.toLowerCase() === value.toLowerCase())
-                      if (exists) return
-                      const next = [...form.appWhitelist, value]
-                      patch('appWhitelist', next)
-                      setWhitelistInput('')
-                      setWhitelistListPage(listMaxPage(next.length, SETTINGS_APP_LIST_PAGE_SIZE))
-                    }}
-                    onRemove={(index) =>
-                      patch(
-                        'appWhitelist',
-                        form.appWhitelist.filter((_, i) => i !== index),
-                      )
-                    }
-                    page={whitelistListPage}
-                    onPageChange={setWhitelistListPage}
-                  />
-                </div>
-              )}
+              <AnimatePresence mode="wait" initial={false}>
+                {form.appFilterMode === 'blacklist' ? (
+                  <motion.div
+                    key="rule-blacklist-editor"
+                    className="space-y-3 border-t border-border/50 pt-2"
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                    layout
+                  >
+                    <Label htmlFor="blacklist-input">黑名单应用名</Label>
+                    <AppNameListEditor
+                      title="黑名单应用名"
+                      description="不区分大小写，每行添加一个应用名。"
+                      emptyText="暂无黑名单条目"
+                      inputId="blacklist-input"
+                      placeholder="例如：WeChat.exe"
+                      items={appAutocompleteItems}
+                      value={form.appBlacklist}
+                      inputValue={blacklistInput}
+                      onInputValueChange={setBlacklistInput}
+                      onAdd={() => {
+                        const value = blacklistInput.trim()
+                        if (!value) return
+                        const exists = form.appBlacklist.some((x) => x.toLowerCase() === value.toLowerCase())
+                        if (exists) return
+                        const next = [...form.appBlacklist, value]
+                        patch('appBlacklist', next)
+                        setBlacklistInput('')
+                        setBlacklistListPage(listMaxPage(next.length, SETTINGS_APP_LIST_PAGE_SIZE))
+                      }}
+                      onRemove={(index) =>
+                        patch(
+                          'appBlacklist',
+                          form.appBlacklist.filter((_, i) => i !== index),
+                        )
+                      }
+                      page={blacklistListPage}
+                      onPageChange={setBlacklistListPage}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="rule-whitelist-editor"
+                    className="space-y-3 border-t border-border/50 pt-2"
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                    layout
+                  >
+                    <Label htmlFor="whitelist-input">白名单应用名</Label>
+                    <AppNameListEditor
+                      title="白名单应用名"
+                      description="不区分大小写；仅这些应用会出现在前台。"
+                      emptyText="白名单为空：前台不显示任何活动"
+                      inputId="whitelist-input"
+                      placeholder="例如：Code.exe"
+                      items={appAutocompleteItems}
+                      value={form.appWhitelist}
+                      inputValue={whitelistInput}
+                      onInputValueChange={setWhitelistInput}
+                      onAdd={() => {
+                        const value = whitelistInput.trim()
+                        if (!value) return
+                        const exists = form.appWhitelist.some((x) => x.toLowerCase() === value.toLowerCase())
+                        if (exists) return
+                        const next = [...form.appWhitelist, value]
+                        patch('appWhitelist', next)
+                        setWhitelistInput('')
+                        setWhitelistListPage(listMaxPage(next.length, SETTINGS_APP_LIST_PAGE_SIZE))
+                      }}
+                      onRemove={(index) =>
+                        patch(
+                          'appWhitelist',
+                          form.appWhitelist.filter((_, i) => i !== index),
+                        )
+                      }
+                      page={whitelistListPage}
+                      onPageChange={setWhitelistListPage}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </DialogContent>

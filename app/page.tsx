@@ -10,6 +10,7 @@ import { InspirationHomeSection } from '@/components/inspiration-home-section'
 import { LayoutFooterPortal } from '@/components/layout-footer-portal'
 import { PublicPageTransitionShell } from '@/components/public-page-transition-shell'
 import { ScheduleHomeInClassBanner } from '@/components/schedule-home-in-class-banner'
+import { SiteReveal } from '@/components/site-reveal'
 import { SiteLockForm } from '@/components/site-lock-form'
 import { SiteThemeRuntime } from '@/components/site-theme-runtime'
 import { UserProfile, UserProfileNoteSection } from '@/components/user-profile'
@@ -148,73 +149,83 @@ export default async function Home() {
               {/* Profile + current: one activity feed subscription (polling/SSE) for both */}
               <ActivityFeedProvider mode={activityUpdateMode}>
                 <div className="flex flex-col gap-4">
-                  <div
-                    className={
-                      showScheduleHomeColumn
-                        ? 'flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-start sm:gap-4'
-                        : 'flex flex-col gap-4'
-                    }
-                  >
+                  <SiteReveal delay={0.04}>
                     <div
                       className={
                         showScheduleHomeColumn
-                          ? 'min-w-0 w-full sm:flex-1 sm:basis-0 sm:overflow-hidden'
-                          : 'min-w-0 w-full'
+                          ? 'flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-start sm:gap-4'
+                          : 'flex flex-col gap-4'
                       }
                     >
-                      <UserProfile
-                        name={userName}
-                        bio={userBio}
-                        avatarUrl={avatarUrl}
-                        profileOnlineAccentColor={config.profileOnlineAccentColor ?? null}
-                        profileOnlinePulseEnabled={config.profileOnlinePulseEnabled ?? null}
-                      />
+                      <div
+                        className={
+                          showScheduleHomeColumn
+                            ? 'min-w-0 w-full sm:flex-1 sm:basis-0 sm:overflow-hidden'
+                            : 'min-w-0 w-full'
+                        }
+                      >
+                        <UserProfile
+                          name={userName}
+                          bio={userBio}
+                          avatarUrl={avatarUrl}
+                          profileOnlineAccentColor={config.profileOnlineAccentColor ?? null}
+                          profileOnlinePulseEnabled={config.profileOnlinePulseEnabled ?? null}
+                        />
+                      </div>
+                      {showScheduleHomeColumn ? (
+                        <ScheduleHomeInClassBanner
+                          courses={scheduleCoursesForHome}
+                          showLocation={scheduleHomeShowLocation}
+                          showTeacher={scheduleHomeShowTeacher}
+                          periodTemplate={schedulePeriodTemplate}
+                          showNextUpcoming={scheduleHomeShowNextUpcoming}
+                          afterClassesLabel={scheduleHomeAfterClassesLabel}
+                          className="w-full sm:w-1/3 sm:min-w-0 sm:shrink-0 sm:basis-1/3"
+                        />
+                      ) : null}
                     </div>
-                    {showScheduleHomeColumn ? (
-                      <ScheduleHomeInClassBanner
-                        courses={scheduleCoursesForHome}
-                        showLocation={scheduleHomeShowLocation}
-                        showTeacher={scheduleHomeShowTeacher}
-                        periodTemplate={schedulePeriodTemplate}
-                        showNextUpcoming={scheduleHomeShowNextUpcoming}
-                        afterClassesLabel={scheduleHomeAfterClassesLabel}
-                        className="w-full sm:w-1/3 sm:min-w-0 sm:shrink-0 sm:basis-1/3"
-                      />
-                    ) : null}
-                  </div>
+                  </SiteReveal>
 
-                  <UserProfileNoteSection
-                    note={userNote}
-                    noteHitokotoEnabled={noteHitokotoEnabled}
-                    noteTypewriterEnabled={noteTypewriterEnabled}
-                    noteHitokotoCategories={noteHitokotoCategories}
-                    noteHitokotoEncode={noteHitokotoEncode}
-                    noteHitokotoFallbackToNote={noteHitokotoFallbackToNote}
-                  />
+                  <SiteReveal delay={0.08}>
+                    <UserProfileNoteSection
+                      note={userNote}
+                      noteHitokotoEnabled={noteHitokotoEnabled}
+                      noteTypewriterEnabled={noteTypewriterEnabled}
+                      noteHitokotoCategories={noteHitokotoCategories}
+                      noteHitokotoEncode={noteHitokotoEncode}
+                      noteHitokotoFallbackToNote={noteHitokotoFallbackToNote}
+                    />
+                  </SiteReveal>
 
-                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                  <SiteReveal delay={0.12}>
+                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                  </SiteReveal>
 
-                  <section>
-                    <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
-                      {currentlyText}
-                    </h2>
-                    <div className="space-y-3">
-                      <CurrentStatus hideActivityMedia={hideActivityMedia} />
-                    </div>
-                  </section>
+                  <SiteReveal delay={0.16}>
+                    <section>
+                      <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
+                        {currentlyText}
+                      </h2>
+                      <div className="space-y-3">
+                        <CurrentStatus hideActivityMedia={hideActivityMedia} />
+                      </div>
+                    </section>
+                  </SiteReveal>
                 </div>
               </ActivityFeedProvider>
 
               {/* Timeline */}
-              <section className="mt-8">
-                <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
-                  {earlierText}
-                </h2>
-                <InspirationHomeSection
-                  entries={inspirationHomeEntries}
-                  showArchiveLink={inspirationTotal > 3}
-                />
-              </section>
+              <SiteReveal delay={0.2}>
+                <section className="mt-8">
+                  <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
+                    {earlierText}
+                  </h2>
+                  <InspirationHomeSection
+                    entries={inspirationHomeEntries}
+                    showArchiveLink={inspirationTotal > 3}
+                  />
+                </section>
+              </SiteReveal>
             </ContentReadingPanel>
           </div>
         </main>

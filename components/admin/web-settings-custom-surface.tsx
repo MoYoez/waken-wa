@@ -1,9 +1,14 @@
 'use client'
 
 import { useAtom } from 'jotai'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
 import type { ThemeCustomSurfaceForm } from '@/components/admin/web-settings-types'
 import { hasThemeImageSourceConfigured } from '@/components/admin/web-settings-utils'
@@ -29,6 +34,13 @@ export function WebSettingsCustomSurface() {
   const [themePreviewImageUrl, setThemePreviewImageUrl] = useState('')
   const [themePreviewLoading, setThemePreviewLoading] = useState(false)
   const [themePaletteApplying, setThemePaletteApplying] = useState(false)
+  const prefersReducedMotion = Boolean(useReducedMotion())
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   const setThemeCustomSurface = (next: ThemeCustomSurfaceForm) => {
     setForm((prev) => ({ ...prev, themeCustomSurface: next }))
@@ -226,8 +238,18 @@ export function WebSettingsCustomSurface() {
           </p>
         </div>
 
-        {value.backgroundImageMode === 'manual' ? (
-          <div className="space-y-3">
+        <AnimatePresence initial={false} mode="wait">
+          {value.backgroundImageMode === 'manual' ? (
+            <motion.div
+              key="theme-surface-manual"
+              className="space-y-3"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
             <div className="space-y-2">
               <Label>固定背景图片 URL / DataURL</Label>
               <div className="flex flex-wrap gap-2">
@@ -257,11 +279,22 @@ export function WebSettingsCustomSurface() {
                 className="w-full cursor-pointer text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted"
               />
             </div>
-          </div>
-        ) : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
-        {value.backgroundImageMode === 'randomPool' ? (
-          <div className="space-y-3">
+        <AnimatePresence initial={false} mode="wait">
+          {value.backgroundImageMode === 'randomPool' ? (
+            <motion.div
+              key="theme-surface-random-pool"
+              className="space-y-3"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
             <div className="space-y-2">
               <Label>随机图片池</Label>
               <div className="flex flex-wrap gap-2">
@@ -286,44 +319,66 @@ export function WebSettingsCustomSurface() {
               className="w-full cursor-pointer text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted"
             />
             {value.backgroundImagePool.length > 0 ? (
-              <div className="max-h-44 space-y-2 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-3">
-                {value.backgroundImagePool.map((item, index) => (
-                  <div
-                    key={`${item.slice(0, 32)}-${index}`}
-                    className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background/70 px-3 py-2"
-                  >
-                    <button
-                      type="button"
-                      className="min-w-0 flex-1 truncate text-left text-xs text-foreground"
-                      onClick={() => setThemePreviewImageUrl(item)}
+              <motion.div
+                className="max-h-44 space-y-2 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-3"
+                layout
+              >
+                <AnimatePresence initial={false}>
+                  {value.backgroundImagePool.map((item, index) => (
+                    <motion.div
+                      key={`${item.slice(0, 32)}-${index}`}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background/70 px-3 py-2"
+                      variants={sectionVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={sectionTransition}
+                      layout
                     >
-                      {item}
-                    </button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0"
-                      onClick={() =>
-                        patchThemeSurface(
-                          'backgroundImagePool',
-                          value.backgroundImagePool.filter((_, i) => i !== index),
-                        )
-                      }
-                    >
-                      删除
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 truncate text-left text-xs text-foreground"
+                        onClick={() => setThemePreviewImageUrl(item)}
+                      >
+                        {item}
+                      </button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() =>
+                          patchThemeSurface(
+                            'backgroundImagePool',
+                            value.backgroundImagePool.filter((_, i) => i !== index),
+                          )
+                        }
+                      >
+                        删除
+                      </Button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
             ) : (
               <p className="text-xs text-muted-foreground">随机图片池为空时，前台不会有可切换图片。</p>
             )}
-          </div>
-        ) : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
-        {value.backgroundImageMode === 'randomApi' ? (
-          <div className="space-y-3">
+        <AnimatePresence initial={false} mode="wait">
+          {value.backgroundImageMode === 'randomApi' ? (
+            <motion.div
+              key="theme-surface-random-api"
+              className="space-y-3"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
             <div className="space-y-2">
               <Label>随机图片 API</Label>
               <div className="flex flex-wrap gap-2">
@@ -348,8 +403,9 @@ export function WebSettingsCustomSurface() {
                 <code className="rounded bg-muted px-1">urls.regular</code> 的 JSON。
               </p>
             </div>
-          </div>
-        ) : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
         <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-3">
@@ -439,18 +495,37 @@ export function WebSettingsCustomSurface() {
               </p>
             </div>
             <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/20">
-              {themePreviewImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- admin preview supports arbitrary URLs/data URLs
-                <img
-                  src={themePreviewImageUrl}
-                  alt="背景预览"
-                  className="h-48 w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-48 items-center justify-center px-4 text-center text-xs text-muted-foreground">
-                  点击“生成当前背景预览”后，这里会显示本次用于取色的背景图。
-                </div>
-              )}
+              <AnimatePresence initial={false} mode="wait">
+                {themePreviewImageUrl ? (
+                  <motion.div
+                    key="theme-preview-image"
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- admin preview supports arbitrary URLs/data URLs */}
+                    <img
+                      src={themePreviewImageUrl}
+                      alt="背景预览"
+                      className="h-48 w-full object-cover"
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="theme-preview-empty"
+                    className="flex h-48 items-center justify-center px-4 text-center text-xs text-muted-foreground"
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                  >
+                    点击“生成当前背景预览”后，这里会显示本次用于取色的背景图。
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <div className="grid grid-cols-4 gap-2">
               {[

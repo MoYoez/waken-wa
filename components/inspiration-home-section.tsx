@@ -1,12 +1,17 @@
 'use client'
 
 import { ChevronRight } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import Link from 'next/link'
 
 import { MarkdownContent } from '@/components/admin/markdown-content'
 import { FormattedTime } from '@/components/formatted-time'
 import { LexicalContent } from '@/components/lexical-content'
+import {
+  getSiteSectionTransition,
+  getSiteSectionVariants,
+} from '@/components/site-motion'
 import { Card } from '@/components/ui/card'
 import {
   inspirationLooksLikeMarkdown,
@@ -104,6 +109,14 @@ export function InspirationHomeSection({
   /** True when there are more entries than shown on the home page */
   showArchiveLink?: boolean
 }) {
+  const prefersReducedMotion = Boolean(useReducedMotion())
+  const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
+  const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
+    enterY: 12,
+    exitY: 8,
+    scale: 0.996,
+  })
+
   if (entries.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8 text-sm">暂无随想记录</div>
@@ -112,8 +125,9 @@ export function InspirationHomeSection({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3">
-        {entries.map((entry) => {
+      <motion.div className="space-y-3" layout>
+        <AnimatePresence initial={false}>
+          {entries.map((entry) => {
           const detailHref = `/inspiration/${entry.id}`
           const needFull = inspirationNeedsFullPageAny(entry.content, entry.contentLexical, PREVIEW_CHARS)
           const { text: previewText } = inspirationPlainPreviewAny(
@@ -124,7 +138,15 @@ export function InspirationHomeSection({
 
           if (entry.imageDataUrl) {
             return (
-              <article key={entry.id}>
+              <motion.article
+                key={entry.id}
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+                layout
+              >
                 <Card className={cn(inspirationCardClassName, 'p-2.5 sm:p-3')}>
                   <div className="flex flex-row gap-2 sm:gap-3 items-stretch">
                     <Link
@@ -154,12 +176,20 @@ export function InspirationHomeSection({
                     />
                   </div>
                 </Card>
-              </article>
+              </motion.article>
             )
           }
 
           return (
-            <article key={entry.id}>
+            <motion.article
+              key={entry.id}
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
               <Card className={cn(inspirationCardClassName, 'p-2.5 sm:p-3')}>
                 <EntryBody
                   entry={entry}
@@ -168,22 +198,32 @@ export function InspirationHomeSection({
                   previewText={previewText}
                 />
               </Card>
-            </article>
+            </motion.article>
           )
-        })}
-      </div>
+          })}
+        </AnimatePresence>
+      </motion.div>
 
-      {showArchiveLink ? (
-        <div className="flex justify-center pt-1">
-          <Link
-            href="/inspiration"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-0.5"
+      <AnimatePresence initial={false}>
+        {showArchiveLink ? (
+          <motion.div
+            className="flex justify-center pt-1"
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
           >
-            查看更多随想录
-            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-          </Link>
-        </div>
-      ) : null}
+            <Link
+              href="/inspiration"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-0.5"
+            >
+              查看更多随想录
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }

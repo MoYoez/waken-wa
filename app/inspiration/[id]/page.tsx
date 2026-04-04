@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { MarkdownContent } from '@/components/admin/markdown-content'
 import { ContentReadingPanel } from '@/components/content-reading-panel'
 import { LexicalContent } from '@/components/lexical-content'
+import { SiteReveal } from '@/components/site-reveal'
 import { db } from '@/lib/db'
 import { inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
 import { inspirationLooksLikeMarkdown } from '@/lib/inspiration-preview'
@@ -55,59 +56,69 @@ export default async function InspirationDetailPage({
     <main className="relative min-h-screen overflow-x-hidden">
       <article className="mx-auto max-w-2xl overflow-x-hidden px-4 pt-16 pb-24 sm:px-6">
         <ContentReadingPanel className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground mb-8">
-            <Link href="/" className="hover:text-foreground transition-colors">
-              ← 首页
-            </Link>
-            <Link href="/inspiration" className="hover:text-foreground transition-colors">
-              全部随想录
-            </Link>
-          </div>
+          <SiteReveal delay={0.04}>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground mb-8">
+              <Link href="/" className="hover:text-foreground transition-colors">
+                ← 首页
+              </Link>
+              <Link href="/inspiration" className="hover:text-foreground transition-colors">
+                全部随想录
+              </Link>
+            </div>
+          </SiteReveal>
 
           {entry.imageDataUrl ? (
-            <div className="mb-6 rounded-md overflow-hidden border border-border bg-muted/30">
-              <Image
-                src={entry.imageDataUrl}
-                alt=""
-                width={1200}
-                height={900}
-                className="w-full max-h-[min(70vh,28rem)] object-cover object-center"
-              />
-            </div>
+            <SiteReveal delay={0.08}>
+              <div className="mb-6 rounded-md overflow-hidden border border-border bg-muted/30">
+                <Image
+                  src={entry.imageDataUrl}
+                  alt=""
+                  width={1200}
+                  height={900}
+                  className="w-full max-h-[min(70vh,28rem)] object-cover object-center"
+                />
+              </div>
+            </SiteReveal>
           ) : null}
 
-          <header className="space-y-2 mb-6">
-            <h1 className="text-lg font-semibold text-foreground">
-              {entry.title?.trim() ? entry.title : '（无标题）'}
-            </h1>
-            <time className="text-xs text-muted-foreground tabular-nums block">
-              {formatDateTimeShort(createdAt, displayTimezone)}
-            </time>
-          </header>
+          <SiteReveal delay={0.12}>
+            <header className="space-y-2 mb-6">
+              <h1 className="text-lg font-semibold text-foreground">
+                {entry.title?.trim() ? entry.title : '（无标题）'}
+              </h1>
+              <time className="text-xs text-muted-foreground tabular-nums block">
+                {formatDateTimeShort(createdAt, displayTimezone)}
+              </time>
+            </header>
+          </SiteReveal>
 
           {entry.statusSnapshot ? (
-            <div className="mb-6 rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap">
-              {entry.statusSnapshot}
-            </div>
+            <SiteReveal delay={0.16}>
+              <div className="mb-6 rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap">
+                {entry.statusSnapshot}
+              </div>
+            </SiteReveal>
           ) : null}
 
-          {entry.contentLexical ? (
-            inspirationLooksLikeMarkdown(entry.content) ? (
+          <SiteReveal delay={0.2}>
+            {entry.contentLexical ? (
+              inspirationLooksLikeMarkdown(entry.content) ? (
+                <MarkdownContent
+                  markdown={entry.content}
+                  className="text-sm text-muted-foreground"
+                  imageClassName="max-h-[min(70vh,24rem)] w-auto rounded-md border border-border/60 my-4"
+                />
+              ) : (
+                <LexicalContent content={entry.contentLexical} className="text-sm text-muted-foreground" />
+              )
+            ) : (
               <MarkdownContent
                 markdown={entry.content}
                 className="text-sm text-muted-foreground"
                 imageClassName="max-h-[min(70vh,24rem)] w-auto rounded-md border border-border/60 my-4"
               />
-            ) : (
-              <LexicalContent content={entry.contentLexical} className="text-sm text-muted-foreground" />
-            )
-          ) : (
-            <MarkdownContent
-              markdown={entry.content}
-              className="text-sm text-muted-foreground"
-              imageClassName="max-h-[min(70vh,24rem)] w-auto rounded-md border border-border/60 my-4"
-            />
-          )}
+            )}
+          </SiteReveal>
         </ContentReadingPanel>
       </article>
     </main>

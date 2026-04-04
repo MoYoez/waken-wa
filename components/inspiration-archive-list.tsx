@@ -1,11 +1,16 @@
 'use client'
 
 import { Loader2 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { InspirationHomeItem } from '@/components/inspiration-home-section'
+import {
+  getSiteSectionTransition,
+  getSiteSectionVariants,
+} from '@/components/site-motion'
 import { inspirationPlainPreviewAny } from '@/lib/inspiration-preview'
 import { formatDateTimeShort, normalizeTimezone } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
@@ -16,6 +21,7 @@ const cardShell =
   'border border-border rounded-lg shadow-sm bg-card/80 backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20'
 
 export function InspirationArchiveList({ displayTimezone }: { displayTimezone: string }) {
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const [items, setItems] = useState<InspirationHomeItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -27,6 +33,12 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
   const totalRef = useRef(0)
   const loadingLock = useRef(false)
   const doneRef = useRef(false)
+  const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
+  const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
+    enterY: 12,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   itemsRef.current = items
   totalRef.current = total
@@ -123,65 +135,97 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
 
   return (
     <div className="space-y-3">
-      {items.map((entry) => {
-        const href = `/inspiration/${entry.id}`
-        const { text: teaser } = inspirationPlainPreviewAny(entry.content, entry.contentLexical, 160)
-        return (
-          <article key={entry.id} className={`${cardShell} p-2.5 sm:p-3`}>
-            <div className="flex flex-row gap-2 sm:gap-3 items-stretch">
-              {entry.imageDataUrl ? (
-                <Link
-                  href={href}
-                  className={cn(
-                    'group relative block shrink-0 self-start overflow-hidden rounded-lg',
-                    'w-14 h-14 sm:w-16 sm:h-16',
-                    'border border-border/70 bg-card shadow-sm ring-1 ring-[color:var(--home-card-overlay)] dark:ring-[color:var(--home-card-overlay-dark)]',
-                    'transition-[box-shadow,border-color,ring-color] duration-200',
-                    'hover:border-primary/25 hover:shadow-md hover:ring-primary/15',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                  )}
-                >
-                  <Image
-                    src={entry.imageDataUrl}
-                    alt=""
-                    fill
-                    className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
-                    sizes="(max-width: 640px) 56px, 64px"
-                  />
-                </Link>
-              ) : null}
-              <div className="min-w-0 flex-1 flex flex-col gap-1.5">
-                <div className="flex flex-wrap items-baseline justify-between gap-1.5">
-                  <Link href={href} className="text-xs font-semibold hover:text-primary transition-colors">
-                    {entry.title?.trim() ? entry.title : '（无标题）'}
-                  </Link>
-                  <time className="text-[0.65rem] text-muted-foreground tabular-nums shrink-0 leading-none">
-                    {formatDateTimeShort(entry.createdAt, entry.displayTimezone ?? activeTimezone)}
-                  </time>
+      <motion.div layout className="space-y-3">
+        <AnimatePresence initial={false}>
+          {items.map((entry) => {
+            const href = `/inspiration/${entry.id}`
+            const { text: teaser } = inspirationPlainPreviewAny(entry.content, entry.contentLexical, 160)
+            return (
+              <motion.article
+                key={entry.id}
+                className={`${cardShell} p-2.5 sm:p-3`}
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+                layout
+              >
+                <div className="flex flex-row gap-2 sm:gap-3 items-stretch">
+                  {entry.imageDataUrl ? (
+                    <Link
+                      href={href}
+                      className={cn(
+                        'group relative block shrink-0 self-start overflow-hidden rounded-lg',
+                        'w-14 h-14 sm:w-16 sm:h-16',
+                        'border border-border/70 bg-card shadow-sm ring-1 ring-[color:var(--home-card-overlay)] dark:ring-[color:var(--home-card-overlay-dark)]',
+                        'transition-[box-shadow,border-color,ring-color] duration-200',
+                        'hover:border-primary/25 hover:shadow-md hover:ring-primary/15',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      )}
+                    >
+                      <Image
+                        src={entry.imageDataUrl}
+                        alt=""
+                        fill
+                        className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
+                        sizes="(max-width: 640px) 56px, 64px"
+                      />
+                    </Link>
+                  ) : null}
+                  <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-1.5">
+                      <Link href={href} className="text-xs font-semibold hover:text-primary transition-colors">
+                        {entry.title?.trim() ? entry.title : '（无标题）'}
+                      </Link>
+                      <time className="text-[0.65rem] text-muted-foreground tabular-nums shrink-0 leading-none">
+                        {formatDateTimeShort(entry.createdAt, entry.displayTimezone ?? activeTimezone)}
+                      </time>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">{teaser}</p>
+                    <Link href={href} className="text-xs font-medium text-primary hover:underline w-fit">
+                      打开全文
+                    </Link>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">{teaser}</p>
-                <Link href={href} className="text-xs font-medium text-primary hover:underline w-fit">
-                  打开全文
-                </Link>
-              </div>
-            </div>
-          </article>
-        )
-      })}
+              </motion.article>
+            )
+          })}
+        </AnimatePresence>
+      </motion.div>
 
       <div ref={sentinelRef} className="h-4 w-full shrink-0" aria-hidden />
 
-      {loading ? (
-        <div className="flex justify-center py-4 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin" aria-label="Loading more" />
-        </div>
-      ) : null}
+      <AnimatePresence initial={false}>
+        {loading ? (
+          <motion.div
+            className="flex justify-center py-4 text-muted-foreground"
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
+          >
+            <Loader2 className="h-6 w-6 animate-spin" aria-label="Loading more" />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
-      {reachedEnd ? (
-        <p className="text-center text-xs text-muted-foreground pt-2 pb-1" role="status">
-          到底了！
-        </p>
-      ) : null}
+      <AnimatePresence initial={false}>
+        {reachedEnd ? (
+          <motion.p
+            className="text-center text-xs text-muted-foreground pt-2 pb-1"
+            role="status"
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
+          >
+            到底了！
+          </motion.p>
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }

@@ -20,11 +20,17 @@ import {
   UserCog,
   Users,
 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { MdAutoFixHigh } from 'react-icons/md'
 import { toast } from 'sonner'
 
+import {
+  getAdminIndicatorTransition,
+  getAdminPanelTransition,
+  getAdminPanelVariants,
+} from '@/components/admin/admin-motion'
 import { fetchActivityFeed } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import { logoutAdmin } from '@/components/admin/admin-query-mutations'
@@ -108,8 +114,6 @@ interface DashboardProps {
   initialTab?: string
   initialDeviceHash?: string
 }
-
-type IndicatorStyle = { width: number; height: number; x: number; y: number; ready: boolean }
 
 function subscribeToWindowLocationOrigin() {
   return () => {}
@@ -223,14 +227,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     getWindowLocationOrigin,
     getServerLocationOriginSnapshot,
   )
-
-  const [indicatorStyle, setIndicatorStyle] = useState<IndicatorStyle>({
-    width: 0,
-    height: 0,
-    x: 0,
-    y: 0,
-    ready: false,
-  })
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const {
     count: viewerCount,
     loading: viewerCountLoading,
@@ -255,6 +252,18 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     'orphan-images': null,
     settings: null,
   })
+  const tabIndicatorTransition = useMemo(
+    () => getAdminIndicatorTransition(prefersReducedMotion),
+    [prefersReducedMotion],
+  )
+  const panelTransition = useMemo(
+    () => getAdminPanelTransition(prefersReducedMotion),
+    [prefersReducedMotion],
+  )
+  const panelVariants = useMemo(
+    () => getAdminPanelVariants(prefersReducedMotion),
+    [prefersReducedMotion],
+  )
 
   const activeTabMeta = useMemo(
     () => TAB_ITEMS.find((item) => item.value === activeTab) ?? TAB_ITEMS[0],
@@ -302,25 +311,10 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     [updateAdminLocation],
   )
 
-  const syncIndicatorToActiveTab = useCallback(() => {
-    const trigger = triggerRefs.current[activeTab]
-    if (!trigger) return
-
-    setIndicatorStyle({
-      width: trigger.offsetWidth,
-      height: trigger.offsetHeight,
-      x: trigger.offsetLeft,
-      y: trigger.offsetTop,
-      ready: true,
-    })
-  }, [activeTab])
-
   useEffect(() => {
     const rail = tabsRailRef.current
     const trigger = triggerRefs.current[activeTab]
     if (!rail || !trigger) return
-
-    syncIndicatorToActiveTab()
 
     if (rail.scrollWidth > rail.clientWidth) {
       trigger.scrollIntoView({
@@ -329,70 +323,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
         inline: 'center',
       })
     }
-  }, [activeTab, syncIndicatorToActiveTab])
-
-  useEffect(() => {
-    const rail = tabsRailRef.current
-    const trigger = triggerRefs.current[activeTab]
-    if (!rail || !trigger) return
-
-    syncIndicatorToActiveTab()
-
-    const observer = new ResizeObserver(() => {
-      syncIndicatorToActiveTab()
-    })
-    observer.observe(rail)
-    observer.observe(trigger)
-
-    window.addEventListener('resize', syncIndicatorToActiveTab)
-    return () => {
-      observer.disconnect()
-      window.removeEventListener('resize', syncIndicatorToActiveTab)
-    }
-  }, [activeTab, syncIndicatorToActiveTab])
-
-  useEffect(() => {
-    const trigger = triggerRefs.current[activeTab]
-    if (!trigger) return
-
-    // First entry can measure before animation/font metrics settle.
-    let canceled = false
-    let rafId1 = 0
-    let rafId2 = 0
-    const timeoutId = window.setTimeout(() => {
-      syncIndicatorToActiveTab()
-    }, 420)
-
-    const handleAnimationEnd = () => {
-      syncIndicatorToActiveTab()
-    }
-
-    trigger.addEventListener('animationend', handleAnimationEnd)
-
-    rafId1 = window.requestAnimationFrame(() => {
-      syncIndicatorToActiveTab()
-      rafId2 = window.requestAnimationFrame(() => {
-        syncIndicatorToActiveTab()
-      })
-    })
-
-    const fontSet = (document as Document & { fonts?: FontFaceSet }).fonts
-    if (fontSet) {
-      void fontSet.ready.then(() => {
-        if (!canceled) {
-          syncIndicatorToActiveTab()
-        }
-      })
-    }
-
-    return () => {
-      canceled = true
-      trigger.removeEventListener('animationend', handleAnimationEnd)
-      window.clearTimeout(timeoutId)
-      if (rafId1) window.cancelAnimationFrame(rafId1)
-      if (rafId2) window.cancelAnimationFrame(rafId2)
-    }
-  }, [activeTab, syncIndicatorToActiveTab])
+  }, [activeTab])
 
   const handleLogout = async () => {
     try {
@@ -640,6 +571,54 @@ curl -X POST ${origin}/api/inspiration/entries \\
     return null
   }
 
+  const renderPanelAction = () => {
+    if (activeTab === 'tokens') {
+      return (
+        <Button size="sm" className="shrink-0" onClick={() => tokenManagerRef.current?.openCreate()}>
+          <Plus className="h-4 w-4" />
+          创建 Token
+        </Button>
+      )
+    }
+    if (activeTab === 'orphan-images') {
+      return (
+        <Button
+          size="sm"
+          variant="outline"
+          className="shrink-0"
+          onClick={() => orphanImagesRef.current?.refresh()}
+        >
+          <RefreshCw className="h-4 w-4" />
+          刷新
+        </Button>
+      )
+    }
+    if (activeTab === 'schedule') {
+      return (
+        <div className="flex shrink-0 gap-2">
+          <Button size="sm" variant="outline" onClick={() => scheduleManagerRef.current?.openImport()}>
+            <Upload className="h-4 w-4" />
+            导入 ICS
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => scheduleManagerRef.current?.downloadIcs()}>
+            <Download className="h-4 w-4" />
+            导出 ICS
+          </Button>
+        </div>
+      )
+    }
+
+    return null
+  }
+
+  const renderPanelBody = () => {
+    if (activeTab === 'overview') {
+      return renderOverviewPanel()
+    }
+
+    return renderActivePanel()
+  }
+
   return (
     <div className="admin-shell min-h-screen bg-background text-foreground">
       <div className="admin-shell-backdrop" />
@@ -679,21 +658,13 @@ curl -X POST ${origin}/api/inspiration/entries \\
         <section className="admin-rail-shell">
           <div className="admin-tabs-shell">
             <div ref={tabsRailRef} className="admin-tabs-rail">
-              <div
-                className="admin-tab-indicator"
-                style={{
-                  width: indicatorStyle.width,
-                  height: indicatorStyle.height,
-                  transform: `translate3d(${indicatorStyle.x}px, ${indicatorStyle.y}px, 0)`,
-                  opacity: indicatorStyle.ready ? 1 : 0,
-                }}
-              />
               {TAB_ITEMS.map((item, index) => {
                 const Icon = item.icon
                 const selected = activeTab === item.value
                 return (
-                  <button
+                  <motion.button
                     key={item.value}
+                    layout
                     ref={(node) => {
                       triggerRefs.current[item.value] = node
                     }}
@@ -703,63 +674,51 @@ curl -X POST ${origin}/api/inspiration/entries \\
                     style={{ animationDelay: `${index * 35}ms` }}
                     aria-pressed={selected}
                   >
-                    <span className="admin-tab-icon">
+                    {selected ? (
+                      <motion.span
+                        layoutId="admin-tab-indicator"
+                        className="admin-tab-indicator"
+                        transition={tabIndicatorTransition}
+                      />
+                    ) : null}
+                    <span className="relative z-10 admin-tab-icon">
                       <Icon className="h-4 w-4" />
                     </span>
-                    <span className="block min-w-0 truncate text-left text-sm font-medium">{item.label}</span>
-                  </button>
+                    <span className="relative z-10 block min-w-0 truncate text-left text-sm font-medium">
+                      {item.label}
+                    </span>
+                  </motion.button>
                 )
               })}
             </div>
           </div>
         </section>
 
-        <section className="admin-panel-shell admin-panel-enter" key={activeTab}>
-          <div className="mb-5 flex items-start justify-between gap-4 border-b border-border/60 pb-4">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                {activeTabMeta.label}
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                {activeTabMeta.description}
-              </p>
-            </div>
-            {activeTab === 'tokens' && (
-              <Button size="sm" className="shrink-0" onClick={() => tokenManagerRef.current?.openCreate()}>
-                <Plus className="h-4 w-4" />
-                创建 Token
-              </Button>
-            )}
-            {activeTab === 'orphan-images' && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="shrink-0"
-                onClick={() => orphanImagesRef.current?.refresh()}
-              >
-                <RefreshCw className="h-4 w-4" />
-                刷新
-              </Button>
-            )}
-            {activeTab === 'schedule' && (
-              <div className="flex shrink-0 gap-2">
-                <Button size="sm" variant="outline" onClick={() => scheduleManagerRef.current?.openImport()}>
-                  <Upload className="h-4 w-4" />
-                  导入 ICS
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => scheduleManagerRef.current?.downloadIcs()}>
-                  <Download className="h-4 w-4" />
-                  导出 ICS
-                </Button>
+        <section className="admin-panel-shell">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={activeTab}
+              variants={panelVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={panelTransition}
+            >
+              <div className="mb-5 flex items-start justify-between gap-4 border-b border-border/60 pb-4">
+                <div>
+                  <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                    {activeTabMeta.label}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {activeTabMeta.description}
+                  </p>
+                </div>
+                {renderPanelAction()}
               </div>
-            )}
-          </div>
 
-          {activeTab === 'overview' ? (
-            renderOverviewPanel()
-          ) : (
-            renderActivePanel()
-          )}
+              {renderPanelBody()}
+            </motion.div>
+          </AnimatePresence>
         </section>
 
         {renderBottomGuide()}

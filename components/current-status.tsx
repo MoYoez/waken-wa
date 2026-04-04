@@ -13,6 +13,7 @@ import {
   Smartphone,
   Tablet,
 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import {
   type CSSProperties,
@@ -24,6 +25,10 @@ import {
 } from 'react'
 
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
+import {
+  getSiteSectionTransition,
+  getSiteSectionVariants,
+} from '@/components/site-motion'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { useIsClient } from '@/hooks/use-is-client'
 import { isDeviceBatteryCharging } from '@/lib/activity-battery-metadata'
@@ -238,6 +243,13 @@ interface CurrentStatusProps {
 export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps) {
   const { feed, error } = useSharedActivityFeed()
   const mounted = useIsClient()
+  const prefersReducedMotion = Boolean(useReducedMotion())
+  const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
+  const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
+    enterY: 12,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   if (!mounted) return null
 
@@ -253,17 +265,25 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
 
   if (statuses.length === 0) {
     return (
-      <div className="border border-border rounded-lg shadow-sm p-6 sm:p-8 bg-card">
+      <motion.div
+        className="border border-border rounded-lg shadow-sm p-6 sm:p-8 bg-card"
+        variants={sectionVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={sectionTransition}
+      >
         <div className="text-center text-muted-foreground">
           <div className="text-sm">暂无设备在线状态</div>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   return (
-    <div className="space-y-3">
-      {statuses.map((activity) => {
+    <motion.div className="space-y-3" layout>
+      <AnimatePresence initial={false}>
+        {statuses.map((activity) => {
         const timestampFormat = 'MM/dd HH:mm:ss'
         const batteryLabel = getBatteryLabel(activity.metadata)
         const charging = isDeviceBatteryCharging(activity.metadata)
@@ -285,9 +305,15 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
             : null
 
         return (
-          <div
+          <motion.div
             key={`${activity.deviceId ?? 'na'}-${activity.id}`}
             className="border border-border rounded-lg shadow-sm p-5 sm:p-6 bg-card transition-all hover:shadow-md hover:border-primary/25"
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
+            layout
           >
             <div className="space-y-4">
               <div className="rounded-md border border-border/50 bg-muted/55 px-3 py-2.5 space-y-2 shadow-[inset_0_1px_0_0_var(--home-card-inset-highlight)]">
@@ -363,9 +389,10 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         )
-      })}
-    </div>
+        })}
+      </AnimatePresence>
+    </motion.div>
   )
 }

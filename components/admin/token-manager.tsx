@@ -9,6 +9,7 @@ import {
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Check, Copy, Plus, QrCode, Trash2 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import {
   forwardRef,
@@ -20,6 +21,10 @@ import {
 } from 'react'
 import { toast } from 'sonner'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import {
   fetchAdminTokenPage,
 } from '@/components/admin/admin-query-fetchers'
@@ -64,6 +69,7 @@ export interface TokenManagerHandle {
 
 export const TokenManager = forwardRef<TokenManagerHandle, object>(function TokenManager(_, ref) {
   const queryClient = useQueryClient()
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const [page, setPage] = useState(0)
   const [newTokenName, setNewTokenName] = useState('')
   const [newToken, setNewToken] = useState<string | null>(null)
@@ -89,6 +95,12 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
   const refreshing = tokensQuery.isFetching && !tokensQuery.isLoading
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / TOKEN_LIST_PAGE_SIZE)), [total])
   const safePage = useMemo(() => Math.min(page, Math.max(0, totalPages - 1)), [page, totalPages])
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   useEffect(() => {
     if (page <= safePage) return
@@ -218,8 +230,17 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
             </DialogDescription>
           </DialogHeader>
 
-          {newToken ? (
-            <div className="space-y-4">
+          <AnimatePresence mode="wait" initial={false}>
+            {newToken ? (
+              <motion.div
+                key="token-created"
+                className="space-y-4"
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+              >
               <div className="rounded-lg bg-muted p-4">
                 <p className="mb-2 text-sm text-muted-foreground">请保存以下 Token，它只会显示一次：</p>
                 <div className="flex items-center gap-2">
@@ -286,9 +307,17 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
               <DialogFooter>
                 <Button onClick={closeDialog}>完成</Button>
               </DialogFooter>
-            </div>
-          ) : (
-            <>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="token-create-form"
+                className="space-y-4"
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+              >
               <div className="space-y-2">
                 <Label htmlFor="tokenName">Token 名称</Label>
                 <Input
@@ -309,8 +338,9 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                   {createTokenMutation.isPending ? '创建中...' : '创建'}
                 </Button>
               </DialogFooter>
-            </>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </DialogContent>
       </Dialog>
 
@@ -322,27 +352,67 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
       </div>
 
       <div className="space-y-3">
-        {loading ? (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">加载中...</CardContent>
-          </Card>
-        ) : tokens.length === 0 && total > 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">正在同步页码…</CardContent>
-          </Card>
-        ) : tokens.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              暂无 Token，点击「创建 Token」开始
-            </CardContent>
-          </Card>
-        ) : (
-          <div
-            className="grid gap-4 overflow-y-auto overscroll-contain pr-1"
-            style={{ maxHeight: TOKEN_LIST_MAX_HEIGHT }}
-          >
-            {tokens.map((token) => (
-              <Card key={token.id}>
+        <AnimatePresence mode="wait" initial={false}>
+          {loading ? (
+            <motion.div
+              key="tokens-loading"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+            >
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">加载中...</CardContent>
+              </Card>
+            </motion.div>
+          ) : tokens.length === 0 && total > 0 ? (
+            <motion.div
+              key="tokens-syncing"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+            >
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">正在同步页码…</CardContent>
+              </Card>
+            </motion.div>
+          ) : tokens.length === 0 ? (
+            <motion.div
+              key="tokens-empty"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+            >
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  暂无 Token，点击「创建 Token」开始
+                </CardContent>
+              </Card>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="tokens-list"
+              className="grid gap-4 overflow-y-auto overscroll-contain pr-1"
+              style={{ maxHeight: TOKEN_LIST_MAX_HEIGHT }}
+              layout
+            >
+              <AnimatePresence initial={false}>
+                {tokens.map((token) => (
+                  <motion.div
+                    key={token.id}
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                    layout
+                  >
+              <Card>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{token.name}</CardTitle>
@@ -426,9 +496,12 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {total > 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">

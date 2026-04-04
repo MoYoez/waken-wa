@@ -7,9 +7,14 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { Copy, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import {
   fetchAdminDevicesPage,
   fetchAdminTokenOptions,
@@ -135,6 +140,7 @@ export function DeviceManager({
   highlightHashKey?: string
 } = {}) {
   const queryClient = useQueryClient()
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const [page, setPage] = useState(0)
   const [q, setQ] = useState(() => initialHashKey?.trim() ?? '')
   const [status, setStatus] = useState('')
@@ -170,6 +176,12 @@ export function DeviceManager({
     [total],
   )
   const safePage = useMemo(() => Math.min(page, Math.max(0, totalPages - 1)), [page, totalPages])
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   useEffect(() => {
     if (page <= safePage) return
@@ -426,28 +438,68 @@ export function DeviceManager({
           </div>
         </div>
 
-        {loading ? (
-          <p className="text-sm text-muted-foreground">加载中...</p>
-        ) : items.length === 0 && total > 0 ? (
-          <p className="text-sm text-muted-foreground">正在同步页码…</p>
-        ) : items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">暂无设备</p>
-        ) : (
-          <div
-            className="space-y-3 overflow-y-auto overscroll-contain pr-1"
-            style={{ maxHeight: DEVICE_LIST_MAX_HEIGHT }}
-          >
-            {items.map((item) => (
-              <div
-                key={item.id}
-                id={`device-row-${item.id}`}
-                className={cn(
-                  'relative rounded-md border p-2.5 sm:p-3',
-                  highlightHashKey?.trim() && item.generatedHashKey === highlightHashKey.trim()
-                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                    : null,
-                )}
-              >
+        <AnimatePresence mode="wait" initial={false}>
+          {loading ? (
+            <motion.p
+              key="devices-loading"
+              className="text-sm text-muted-foreground"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+            >
+              加载中...
+            </motion.p>
+          ) : items.length === 0 && total > 0 ? (
+            <motion.p
+              key="devices-syncing"
+              className="text-sm text-muted-foreground"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+            >
+              正在同步页码…
+            </motion.p>
+          ) : items.length === 0 ? (
+            <motion.p
+              key="devices-empty"
+              className="text-sm text-muted-foreground"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+            >
+              暂无设备
+            </motion.p>
+          ) : (
+            <motion.div
+              key="devices-list"
+              className="space-y-3 overflow-y-auto overscroll-contain pr-1"
+              style={{ maxHeight: DEVICE_LIST_MAX_HEIGHT }}
+              layout
+            >
+              <AnimatePresence initial={false}>
+                {items.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    id={`device-row-${item.id}`}
+                    className={cn(
+                      'relative rounded-md border p-2.5 sm:p-3',
+                      highlightHashKey?.trim() && item.generatedHashKey === highlightHashKey.trim()
+                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                        : null,
+                    )}
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                    layout
+                  >
                 <div className="pointer-events-none absolute right-1 top-1 z-10 sm:right-2 sm:top-2">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -542,10 +594,12 @@ export function DeviceManager({
                     />
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {total > 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">

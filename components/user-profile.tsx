@@ -1,9 +1,14 @@
 'use client'
 
 import Image from 'next/image'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
+import {
+  getSiteSectionTransition,
+  getSiteSectionVariants,
+} from '@/components/site-motion'
 import { buildHitokotoRequestUrl } from '@/lib/hitokoto'
 import {
   normalizeProfileOnlineAccentColor,
@@ -91,9 +96,16 @@ function ProfileHitokotoNote({
   fallbackToNote: boolean
   typewriterEnabled: boolean
 }) {
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [text, setText] = useState('')
   const [uuid, setUuid] = useState<string | null>(null)
+  const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
+  const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
+    enterY: 8,
+    exitY: 6,
+    scale: 0.998,
+  })
 
   const categoriesKey = useMemo(() => JSON.stringify([...categories].sort()), [categories])
 
@@ -138,7 +150,16 @@ function ProfileHitokotoNote({
 
   if (phase === 'loading') {
     return (
-      <p className={`${NOTE_BOX_CLASS} animate-pulse`}>加载一言…</p>
+      <motion.p
+        className={`${NOTE_BOX_CLASS} animate-pulse`}
+        variants={sectionVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={sectionTransition}
+      >
+        加载一言…
+      </motion.p>
     )
   }
 
@@ -211,27 +232,45 @@ export function UserProfileNoteSection({
   const showNoteBlock = Boolean(note.trim()) || noteHitokotoEnabled
   if (!showNoteBlock) return null
 
+  const prefersReducedMotion = Boolean(useReducedMotion())
+  const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
+  const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.998,
+  })
+
   return (
-    <div className="w-full min-w-0 max-w-full">
-      {noteHitokotoEnabled ? (
-        <ProfileHitokotoNote
-          categories={noteHitokotoCategories}
-          encode={noteHitokotoEncode}
-          fallbackNote={note}
-          fallbackToNote={noteHitokotoFallbackToNote}
-          typewriterEnabled={noteTypewriterEnabled}
-        />
-      ) : (
-        <TypewriterNoteText text={note} enabled={noteTypewriterEnabled}>
-          {(displayText, animating) => (
-            <p className={NOTE_BOX_CLASS}>
-              {displayText}
-              <TypewriterCaret animating={animating} />
-            </p>
-          )}
-        </TypewriterNoteText>
-      )}
-    </div>
+    <AnimatePresence initial={false} mode="wait">
+      <motion.div
+        key={noteHitokotoEnabled ? 'profile-hitokoto-note' : 'profile-static-note'}
+        className="w-full min-w-0 max-w-full"
+        variants={sectionVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={sectionTransition}
+      >
+        {noteHitokotoEnabled ? (
+          <ProfileHitokotoNote
+            categories={noteHitokotoCategories}
+            encode={noteHitokotoEncode}
+            fallbackNote={note}
+            fallbackToNote={noteHitokotoFallbackToNote}
+            typewriterEnabled={noteTypewriterEnabled}
+          />
+        ) : (
+          <TypewriterNoteText text={note} enabled={noteTypewriterEnabled}>
+            {(displayText, animating) => (
+              <p className={NOTE_BOX_CLASS}>
+                {displayText}
+                <TypewriterCaret animating={animating} />
+              </p>
+            )}
+          </TypewriterNoteText>
+        )}
+      </motion.div>
+    </AnimatePresence>
   )
 }
 

@@ -2,9 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Shield, Trash2, User } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import { fetchAdminUsers } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import {
@@ -30,6 +35,7 @@ import type { AdminUserRow } from '@/types/admin'
 
 export function AccountSettings() {
   const queryClient = useQueryClient()
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const [newAdminUsername, setNewAdminUsername] = useState('')
   const [newAdminPassword, setNewAdminPassword] = useState('')
 
@@ -41,6 +47,12 @@ export function AccountSettings() {
     queryFn: fetchAdminUsers,
   })
   const admins = adminsQuery.data ?? []
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   const createAdminMutation = useMutation({
     mutationFn: async (): Promise<AdminUserRow> =>
@@ -189,11 +201,31 @@ export function AccountSettings() {
           管理员账号
         </h3>
         <div className="rounded-md border divide-y">
-          {admins.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-3">暂无管理员</p>
-          ) : (
-            admins.map((u) => (
-              <div key={u.id} className="flex items-center justify-between p-3">
+          <AnimatePresence initial={false}>
+            {admins.length === 0 ? (
+              <motion.p
+                key="admins-empty"
+                className="text-sm text-muted-foreground p-3"
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+              >
+                暂无管理员
+              </motion.p>
+            ) : (
+              admins.map((u) => (
+                <motion.div
+                  key={u.id}
+                  className="flex items-center justify-between p-3"
+                  variants={sectionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={sectionTransition}
+                  layout
+                >
                 <div>
                   <p className="text-sm font-medium text-foreground">{u.username}</p>
                   <p className="text-xs text-muted-foreground">
@@ -226,9 +258,10 @@ export function AccountSettings() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              </div>
-            ))
-          )}
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

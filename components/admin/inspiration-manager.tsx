@@ -7,10 +7,15 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import {
   fetchAdminDeviceSummaries,
   fetchAdminInspirationEntries,
@@ -78,6 +83,7 @@ const INSPIRATION_DRAFT_STORAGE_KEY = 'waken:admin:inspiration-draft:v2'
 
 export function InspirationManager() {
   const queryClient = useQueryClient()
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const [page, setPage] = useState(0)
   const [q, setQ] = useState('')
 
@@ -135,6 +141,23 @@ export function InspirationManager() {
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(total / INSPIRATION_LIST_PAGE_SIZE)),
     [total],
+  )
+  const sectionTransition = useMemo(
+    () => getAdminPanelTransition(prefersReducedMotion),
+    [prefersReducedMotion],
+  )
+  const sectionVariants = useMemo(
+    () => getAdminSectionVariants(prefersReducedMotion),
+    [prefersReducedMotion],
+  )
+  const compactSectionVariants = useMemo(
+    () =>
+      getAdminSectionVariants(prefersReducedMotion, {
+        enterY: 10,
+        exitY: 8,
+        scale: 0.996,
+      }),
+    [prefersReducedMotion],
   )
 
   useEffect(() => {
@@ -440,127 +463,164 @@ export function InspirationManager() {
                 <span>附上提交时首页「当前」状态快照</span>
               </label>
             </div>
-            {attachCurrentStatus ? (
-              <div className="space-y-2 rounded-md border border-border/60 bg-muted/10 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">可选快照设备（默认自动选择最近上报设备）</p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => setAttachStatusDeviceHash('')}
-                    >
-                      清空
-                    </Button>
-                  </div>
-                </div>
-                <div className="max-h-36 space-y-1 overflow-y-auto pr-1">
-                  {inspirationDevices.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">暂无设备，快照将按最近上报设备生成。</p>
-                  ) : (
-                    inspirationDevices.map((d) => (
-                      <label
-                        key={d.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-muted/30"
+            <AnimatePresence initial={false}>
+              {attachCurrentStatus ? (
+                <motion.div
+                  className="space-y-2 rounded-md border border-border/60 bg-muted/10 p-3"
+                  variants={sectionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={sectionTransition}
+                  layout
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">可选快照设备（默认自动选择最近上报设备）</p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setAttachStatusDeviceHash('')}
                       >
-                        <Checkbox
-                          checked={attachStatusDeviceHash === d.generatedHashKey}
-                          onCheckedChange={(v) => {
-                            const checked = v === true
-                            setAttachStatusDeviceHash((prev) =>
-                              checked ? d.generatedHashKey : prev === d.generatedHashKey ? '' : prev,
-                            )
-                            setAttachStatusActivityKey('')
-                          }}
-                        />
-                        <span className="min-w-0 flex-1 truncate">{d.displayName}</span>
-                        {d.status !== 'active' ? (
-                          <span className="text-amber-600">({d.status})</span>
-                        ) : null}
-                      </label>
-                    ))
-                  )}
-                </div>
-
-                {attachStatusDeviceHash ? (
-                  <div className="mt-2 space-y-2 border-t border-border/50 pt-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-xs text-muted-foreground">选择用于快照显示的活动（当前 + 近期）</p>
-                      <label className="flex items-center gap-2 text-xs font-normal cursor-pointer">
-                        <Checkbox
-                          checked={attachStatusIncludeDeviceInfo}
-                          onCheckedChange={(v) => setAttachStatusIncludeDeviceInfo(v === true)}
-                        />
-                        <span>带上设备信息（电量）</span>
-                      </label>
+                        清空
+                      </Button>
                     </div>
-
-                    {publicActivityLoading ? (
-                      <p className="text-xs text-muted-foreground">活动数据加载中…</p>
-                    ) : publicActivityError ? (
-                      <p className="text-xs text-destructive">{publicActivityError}</p>
-                    ) : snapshotCandidates.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">该设备暂无可用活动候选。</p>
+                  </div>
+                  <div className="max-h-36 space-y-1 overflow-y-auto pr-1">
+                    {inspirationDevices.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">暂无设备，快照将按最近上报设备生成。</p>
                     ) : (
-                      <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
-                        {snapshotCandidates.map((c) => {
-                          const label = (() => {
-                            const st = String(c.item.statusText ?? '').trim()
-                            if (st) return st
-                            const pn = String(c.item.processName ?? '').trim()
-                            const pt = c.item.processTitle != null ? String(c.item.processTitle).trim() : ''
-                            if (pt && pn) return `${pt} | ${pn}`
-                            return pn || pt || '（无标题）'
-                          })()
-                          return (
-                            <label
-                              key={c.key}
-                              className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-muted/30"
-                            >
-                              <Checkbox
-                                checked={attachStatusActivityKey === c.key}
-                                onCheckedChange={(v) => {
-                                  const checked = v === true
-                                  setAttachStatusActivityKey((prev) => (checked ? c.key : prev === c.key ? '' : prev))
-                                }}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <div className="min-w-0 truncate text-foreground/90">
-                                  {c.group === 'active' ? '当前：' : '近期：'}
-                                  {label}
-                                </div>
-                              </div>
-                            </label>
-                          )
-                        })}
-                      </div>
+                      inspirationDevices.map((d) => (
+                        <label
+                          key={d.id}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-muted/30"
+                        >
+                          <Checkbox
+                            checked={attachStatusDeviceHash === d.generatedHashKey}
+                            onCheckedChange={(v) => {
+                              const checked = v === true
+                              setAttachStatusDeviceHash((prev) =>
+                                checked ? d.generatedHashKey : prev === d.generatedHashKey ? '' : prev,
+                              )
+                              setAttachStatusActivityKey('')
+                            }}
+                          />
+                          <span className="min-w-0 flex-1 truncate">{d.displayName}</span>
+                          {d.status !== 'active' ? (
+                            <span className="text-amber-600">({d.status})</span>
+                          ) : null}
+                        </label>
+                      ))
                     )}
+                  </div>
 
-                    <div className="text-[11px] text-muted-foreground">
-                      快照将使用你选中的那条活动；若不选，默认使用该设备「当前」活动。
-                    </div>
-                  </div>
-                ) : null}
+                  <AnimatePresence initial={false}>
+                    {attachStatusDeviceHash ? (
+                      <motion.div
+                        className="mt-2 space-y-2 border-t border-border/50 pt-2"
+                        variants={compactSectionVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        transition={sectionTransition}
+                        layout
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs text-muted-foreground">选择用于快照显示的活动（当前 + 近期）</p>
+                          <label className="flex items-center gap-2 text-xs font-normal cursor-pointer">
+                            <Checkbox
+                              checked={attachStatusIncludeDeviceInfo}
+                              onCheckedChange={(v) => setAttachStatusIncludeDeviceInfo(v === true)}
+                            />
+                            <span>带上设备信息（电量）</span>
+                          </label>
+                        </div>
 
-                {/* Snapshot preview — shows exactly what will be saved */}
-                {computedSnapshotText ? (
-                  <div className="mt-2 rounded-md border border-border/40 bg-muted/20 px-3 py-2">
-                    <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                      快照预览
-                    </p>
-                    <p className="text-xs text-foreground/80 break-words">{computedSnapshotText}</p>
-                  </div>
-                ) : attachCurrentStatus && attachStatusDeviceHash && !publicActivityLoading && snapshotCandidates.length === 0 ? (
-                  <div className="mt-2 rounded-md border border-border/40 bg-muted/10 px-3 py-2">
-                    <p className="text-[11px] text-muted-foreground">
-                      该设备暂无活动数据，提交后快照将为空。
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+                        {publicActivityLoading ? (
+                          <p className="text-xs text-muted-foreground">活动数据加载中…</p>
+                        ) : publicActivityError ? (
+                          <p className="text-xs text-destructive">{publicActivityError}</p>
+                        ) : snapshotCandidates.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">该设备暂无可用活动候选。</p>
+                        ) : (
+                          <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
+                            {snapshotCandidates.map((c) => {
+                              const label = (() => {
+                                const st = String(c.item.statusText ?? '').trim()
+                                if (st) return st
+                                const pn = String(c.item.processName ?? '').trim()
+                                const pt = c.item.processTitle != null ? String(c.item.processTitle).trim() : ''
+                                if (pt && pn) return `${pt} | ${pn}`
+                                return pn || pt || '（无标题）'
+                              })()
+                              return (
+                                <label
+                                  key={c.key}
+                                  className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-muted/30"
+                                >
+                                  <Checkbox
+                                    checked={attachStatusActivityKey === c.key}
+                                    onCheckedChange={(v) => {
+                                      const checked = v === true
+                                      setAttachStatusActivityKey((prev) => (checked ? c.key : prev === c.key ? '' : prev))
+                                    }}
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="min-w-0 truncate text-foreground/90">
+                                      {c.group === 'active' ? '当前：' : '近期：'}
+                                      {label}
+                                    </div>
+                                  </div>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        <div className="text-[11px] text-muted-foreground">
+                          快照将使用你选中的那条活动；若不选，默认使用该设备「当前」活动。
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+
+                  <AnimatePresence initial={false}>
+                    {computedSnapshotText ? (
+                      <motion.div
+                        className="mt-2 rounded-md border border-border/40 bg-muted/20 px-3 py-2"
+                        variants={compactSectionVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        transition={sectionTransition}
+                        layout
+                      >
+                        <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                          快照预览
+                        </p>
+                        <p className="text-xs text-foreground/80 break-words">{computedSnapshotText}</p>
+                      </motion.div>
+                    ) : attachCurrentStatus && attachStatusDeviceHash && !publicActivityLoading && snapshotCandidates.length === 0 ? (
+                      <motion.div
+                        className="mt-2 rounded-md border border-border/40 bg-muted/10 px-3 py-2"
+                        variants={compactSectionVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        transition={sectionTransition}
+                        layout
+                      >
+                        <p className="text-[11px] text-muted-foreground">
+                          该设备暂无活动数据，提交后快照将为空。
+                        </p>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
 
             <div className="space-y-2">
               <Label htmlFor="insp-content">正文（Lexical，必填）</Label>
@@ -621,27 +681,37 @@ export function InspirationManager() {
               </Tabs>
             </div>
 
-            {imageDataUrl.trim() ? (
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground mb-2">图片预览</p>
-                <Image
-                  src={imageDataUrl.trim()}
-                  alt="inspiration preview"
-                  width={800}
-                  height={600}
-                  className="max-h-56 w-auto rounded-md border bg-background"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => setImageDataUrl('')}
+            <AnimatePresence initial={false}>
+              {imageDataUrl.trim() ? (
+                <motion.div
+                  className="rounded-lg border bg-muted/30 p-3"
+                  variants={sectionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={sectionTransition}
+                  layout
                 >
-                  移除图片
-                </Button>
-              </div>
-            ) : null}
+                  <p className="text-xs text-muted-foreground mb-2">图片预览</p>
+                  <Image
+                    src={imageDataUrl.trim()}
+                    alt="inspiration preview"
+                    width={800}
+                    height={600}
+                    className="max-h-56 w-auto rounded-md border bg-background"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => setImageDataUrl('')}
+                  >
+                    移除图片
+                  </Button>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
 
             <div className="flex items-center gap-3 flex-wrap">
               <Button type="submit" disabled={submitting || !content.trim()}>
@@ -747,82 +817,94 @@ export function InspirationManager() {
           ) : entries.length === 0 ? (
             <div className="py-10 text-center text-muted-foreground">暂无灵感记录</div>
           ) : (
-            <div
+            <motion.div
               className="divide-y overflow-y-auto overscroll-contain"
               style={{ maxHeight: INSPIRATION_LIST_MAX_HEIGHT }}
+              layout
             >
-              {entries.map((entry) => (
-                <div key={entry.id} className="p-4 sm:p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-semibold text-foreground truncate max-w-[420px]">
-                          {entry.title ? entry.title : '（无标题）'}
-                        </h4>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDateTimeShort(entry.createdAt, displayTimezone)}
-                        </span>
-                      </div>
-                      <div className="mt-2 text-xs text-muted-foreground line-clamp-3 leading-relaxed">
-                        {
-                          inspirationPlainPreviewAny(
-                            entry.content,
-                            entry.contentLexical,
-                            140,
-                          ).text
-                        }
-                      </div>
-                      <Button
-                        type="button"
-                        variant="link"
-                        size="sm"
-                        className="mt-1 h-auto px-0 text-xs"
-                        onClick={() => setPreviewEntry(entry)}
-                      >
-                        查看更多
-                      </Button>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
+              <AnimatePresence initial={false}>
+                {entries.map((entry) => (
+                  <motion.div
+                    key={entry.id}
+                    className="p-4 sm:p-5 space-y-3"
+                    variants={compactSectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                    layout
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-semibold text-foreground truncate max-w-[420px]">
+                            {entry.title ? entry.title : '（无标题）'}
+                          </h4>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDateTimeShort(entry.createdAt, displayTimezone)}
+                          </span>
+                        </div>
+                        <div className="mt-2 text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                          {
+                            inspirationPlainPreviewAny(
+                              entry.content,
+                              entry.contentLexical,
+                              140,
+                            ).text
+                          }
+                        </div>
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="mt-1 h-auto px-0 text-xs"
+                          onClick={() => setPreviewEntry(entry)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          查看更多
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>确认删除</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            确定要删除这条灵感吗？此操作无法撤销。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>取消</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(entry.id)}>
-                            删除
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-
-                  {entry.imageDataUrl ? (
-                    <div className="rounded-lg border bg-muted/30 p-3">
-                      <Image
-                        src={entry.imageDataUrl}
-                        alt="inspiration"
-                        width={800}
-                        height={600}
-                        className="max-h-64 w-auto rounded-md border bg-background"
-                      />
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>确认删除</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              确定要删除这条灵感吗？此操作无法撤销。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(entry.id)}>
+                              删除
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
+
+                    {entry.imageDataUrl ? (
+                      <div className="rounded-lg border bg-muted/30 p-3">
+                        <Image
+                          src={entry.imageDataUrl}
+                          alt="inspiration"
+                          width={800}
+                          height={600}
+                          className="max-h-64 w-auto rounded-md border bg-background"
+                        />
+                      </div>
+                    ) : null}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
           )}
         </CardContent>
       </Card>

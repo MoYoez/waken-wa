@@ -1,7 +1,12 @@
 'use client'
 
 import { useAtom } from 'jotai'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
@@ -17,9 +22,16 @@ import { HITOKOTO_CATEGORY_OPTIONS } from '@/lib/hitokoto'
 
 export function WebSettingsHitokotoPanel() {
   const [form, setForm] = useAtom(webSettingsFormAtom)
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   return (
     <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
@@ -87,8 +99,17 @@ export function WebSettingsHitokotoPanel() {
         开启后由访客浏览器请求 <code className="rounded bg-muted px-1">v1.hitokoto.cn</code>；
         句子类型可多选；不选表示不限制类型（与官方默认一致）。
       </p>
-      {form.userNoteHitokotoEnabled ? (
-        <div className="space-y-4 pt-1">
+      <AnimatePresence initial={false}>
+        {form.userNoteHitokotoEnabled ? (
+          <motion.div
+            className="space-y-4 pt-1"
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
+            layout
+          >
           <div className="space-y-2">
             <Label htmlFor="hitokoto-encode">返回编码 encode</Label>
             <Select
@@ -144,8 +165,9 @@ export function WebSettingsHitokotoPanel() {
               ))}
             </div>
           </div>
-        </div>
-      ) : null}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }

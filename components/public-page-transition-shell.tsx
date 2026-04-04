@@ -1,6 +1,12 @@
 'use client'
 
+import { motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
+
+import {
+  getSiteSectionTransition,
+  getSiteSectionVariants,
+} from '@/components/site-motion'
 
 type Props = {
   children: React.ReactNode
@@ -17,6 +23,13 @@ function loadingLabel(scope: Props['scope']): string {
 
 export function PublicPageTransitionShell({ children, scope, enabled = true }: Props) {
   const [contentReady, setContentReady] = useState(false)
+  const prefersReducedMotion = Boolean(useReducedMotion())
+  const contentTransition = getSiteSectionTransition(prefersReducedMotion)
+  const contentVariants = getSiteSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.998,
+  })
 
   useEffect(() => {
     if (!enabled) return
@@ -102,7 +115,19 @@ export function PublicPageTransitionShell({ children, scope, enabled = true }: P
         <p className="public-page-loader__label">{loadingLabel(scope)}</p>
       </div>
 
-      <div className={`public-page-content ${contentReady ? 'is-ready' : 'is-pending'}`}>{children}</div>
+      <motion.div
+        data-public-page-shell="content"
+        variants={contentVariants}
+        initial="initial"
+        animate={contentReady ? 'animate' : 'initial'}
+        transition={contentTransition}
+        style={{
+          filter: contentReady ? 'blur(0px)' : prefersReducedMotion ? 'none' : 'blur(10px)',
+          pointerEvents: contentReady ? 'auto' : 'none',
+        }}
+      >
+        {children}
+      </motion.div>
     </>
   )
 }

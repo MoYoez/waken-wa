@@ -10,9 +10,14 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import { fetchAdminSettings } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import { patchAdminSettings } from '@/components/admin/admin-query-mutations'
@@ -222,6 +227,7 @@ const ScheduleManagerEditor = forwardRef<
   { initialData: ScheduleManagerInitialData }
 >(function ScheduleManagerEditor({ initialData }, ref) {
   const queryClient = useQueryClient()
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const [message, setMessage] = useState('')
   const [serverData, setServerData] = useState<Record<string, unknown>>(initialData.serverData)
   const [courses, setCourses] = useState<ScheduleCourse[]>(initialData.courses)
@@ -599,15 +605,42 @@ const ScheduleManagerEditor = forwardRef<
     homeAfterClassesLabel,
     scheduleBaseline,
   ])
+  const sectionTransition = useMemo(
+    () => getAdminPanelTransition(prefersReducedMotion),
+    [prefersReducedMotion],
+  )
+  const sectionVariants = useMemo(
+    () => getAdminSectionVariants(prefersReducedMotion),
+    [prefersReducedMotion],
+  )
+  const compactSectionVariants = useMemo(
+    () =>
+      getAdminSectionVariants(prefersReducedMotion, {
+        enterY: 10,
+        exitY: 8,
+        scale: 0.996,
+      }),
+    [prefersReducedMotion],
+  )
 
   return (
     <>
     <div className="rounded-xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm space-y-4 sm:space-y-5">
-      {message ? (
-        <div className="text-sm text-muted-foreground border border-border/60 rounded-md px-3 py-2 bg-muted/20">
-          {message}
-        </div>
-      ) : null}
+      <AnimatePresence initial={false}>
+        {message ? (
+          <motion.div
+            className="text-sm text-muted-foreground border border-border/60 rounded-md px-3 py-2 bg-muted/20"
+            variants={compactSectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
+            layout
+          >
+            {message}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3">
         <h4 className="text-sm font-medium text-foreground">主页展示</h4>
@@ -681,12 +714,22 @@ const ScheduleManagerEditor = forwardRef<
         <p className="text-[11px] text-muted-foreground text-pretty leading-relaxed sm:text-xs">
           课程只选择节次，不再手填具体时间。修改模板后，已有课程会自动按新节次时间显示。同一时段内拖动左侧手柄调整节次顺序。
         </p>
-        {compatWarnings.length > 0 ? (
-          <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-700 sm:px-3 sm:text-xs">
-            {compatWarnings[0]}
-            {compatWarnings.length > 1 ? ` 等 ${compatWarnings.length} 条` : ''}
-          </div>
-        ) : null}
+        <AnimatePresence initial={false}>
+          {compatWarnings.length > 0 ? (
+            <motion.div
+              className="rounded-md border border-amber-400/40 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-700 sm:px-3 sm:text-xs"
+              variants={compactSectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              {compatWarnings[0]}
+              {compatWarnings.length > 1 ? ` 等 ${compatWarnings.length} 条` : ''}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
         <div className="space-y-3">
           {(['morning', 'afternoon', 'evening'] as const).map((part) => {
             const rows = [...periodTemplate]
@@ -776,40 +819,48 @@ const ScheduleManagerEditor = forwardRef<
         {courses.length === 0 ? (
           <p className="text-sm text-muted-foreground">暂无课程，请添加或导入 ICS。</p>
         ) : (
-          <ul className="space-y-1.5">
-            {courses.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 bg-card/50 px-3 py-2 text-sm transition-colors hover:bg-muted/35"
-              >
-                <div>
-                  <span className="font-medium">{c.title}</span>
-                  <span className="text-muted-foreground ml-2">
-                    {WEEKDAY_OPTIONS.find((w) => w.value === c.weekday)?.label}{' '}
-                    {formatCourseTimeRanges(c, periodTemplate)}
-                  </span>
-                  <span className="text-muted-foreground ml-2 text-xs">
-                    开课 {c.anchorDate}
-                    {c.untilDate ? ` 至 ${c.untilDate}` : '（无结课）'}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => openEdit(c)}>
-                    编辑
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={() => removeCourse(c.id)}
-                  >
-                    删除
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <motion.ul className="space-y-1.5" layout>
+            <AnimatePresence initial={false}>
+              {courses.map((c) => (
+                <motion.li
+                  key={c.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 bg-card/50 px-3 py-2 text-sm transition-colors hover:bg-muted/35"
+                  variants={compactSectionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={sectionTransition}
+                  layout
+                >
+                  <div>
+                    <span className="font-medium">{c.title}</span>
+                    <span className="text-muted-foreground ml-2">
+                      {WEEKDAY_OPTIONS.find((w) => w.value === c.weekday)?.label}{' '}
+                      {formatCourseTimeRanges(c, periodTemplate)}
+                    </span>
+                    <span className="text-muted-foreground ml-2 text-xs">
+                      开课 {c.anchorDate}
+                      {c.untilDate ? ` 至 ${c.untilDate}` : '（无结课）'}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => openEdit(c)}>
+                      编辑
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={() => removeCourse(c.id)}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </motion.ul>
         )}
       </div>
 
@@ -934,182 +985,200 @@ const ScheduleManagerEditor = forwardRef<
                   </div>
                 </RadioGroup>
               </div>
-              {(editing.timeMode ?? 'periods') === 'custom' ? (
-                <div className="space-y-2">
-                  <Label>时段</Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    手动填写开始与结束时间；同一课程可多段。
-                  </p>
-                  {(editing.timeSessions?.length
-                    ? editing.timeSessions
-                    : [{ startTime: editing.startTime, endTime: editing.endTime }]
-                  ).map((row, idx, arr) => (
-                    <div key={idx} className="flex flex-wrap items-center gap-2">
-                      <Input
-                        type="time"
-                        step={60}
-                        value={row.startTime}
-                        onChange={(e) => {
-                          const v = e.target.value
-                          setEditing((cur) => {
-                            if (!cur) return cur
-                            const base =
-                              cur.timeSessions && cur.timeSessions.length > 0
-                                ? [...cur.timeSessions]
-                                : [{ startTime: cur.startTime, endTime: cur.endTime }]
-                            base[idx] = { ...base[idx], startTime: v }
-                            const first = base[0]
-                            return {
-                              ...cur,
-                              timeSessions: base.length > 1 ? base : undefined,
-                              startTime: first.startTime,
-                              endTime: first.endTime,
-                            }
-                          })
-                        }}
-                        className="h-9 w-[7.5rem] font-mono"
-                      />
-                      <span className="text-muted-foreground">–</span>
-                      <Input
-                        type="time"
-                        step={60}
-                        value={row.endTime}
-                        onChange={(e) => {
-                          const v = e.target.value
-                          setEditing((cur) => {
-                            if (!cur) return cur
-                            const base =
-                              cur.timeSessions && cur.timeSessions.length > 0
-                                ? [...cur.timeSessions]
-                                : [{ startTime: cur.startTime, endTime: cur.endTime }]
-                            base[idx] = { ...base[idx], endTime: v }
-                            const first = base[0]
-                            return {
-                              ...cur,
-                              timeSessions: base.length > 1 ? base : undefined,
-                              startTime: first.startTime,
-                              endTime: first.endTime,
-                            }
-                          })
-                        }}
-                        className="h-9 w-[7.5rem] font-mono"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 shrink-0 text-destructive"
-                        disabled={arr.length <= 1}
-                        onClick={() => {
-                          setEditing((cur) => {
-                            if (!cur) return cur
-                            const base =
-                              cur.timeSessions && cur.timeSessions.length > 0
-                                ? [...cur.timeSessions]
-                                : [{ startTime: cur.startTime, endTime: cur.endTime }]
-                            base.splice(idx, 1)
-                            const first = base[0]
-                            return {
-                              ...cur,
-                              timeSessions: base.length > 1 ? base : undefined,
-                              startTime: first.startTime,
-                              endTime: first.endTime,
-                            }
-                          })
-                        }}
-                        aria-label="删除时段"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-fit"
-                    onClick={() => {
-                      setEditing((cur) => {
-                        if (!cur) return cur
-                        const base =
-                          cur.timeSessions && cur.timeSessions.length > 0
-                            ? [...cur.timeSessions]
-                            : [{ startTime: cur.startTime, endTime: cur.endTime }]
-                        if (base.length >= MAX_TIME_SESSIONS_PER_COURSE) return cur
-                        const last = base[base.length - 1]
-                        const [h, m] = last.endTime.split(':').map(Number)
-                        let endMin = h * 60 + m + 45
-                        endMin = ((endMin % (24 * 60)) + 24 * 60) % (24 * 60)
-                        const nh = Math.floor(endMin / 60)
-                        const nm = endMin % 60
-                        const endStr = `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`
-                        base.push({ startTime: last.endTime, endTime: endStr })
-                        return { ...cur, timeSessions: base }
-                      })
-                    }}
-                    disabled={
-                      (editing.timeSessions?.length ?? 1) >= MAX_TIME_SESSIONS_PER_COURSE
-                    }
+              <AnimatePresence mode="wait" initial={false}>
+                {(editing.timeMode ?? 'periods') === 'custom' ? (
+                  <motion.div
+                    key="schedule-custom-time"
+                    className="space-y-2"
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
                   >
-                    <Plus className="h-4 w-4 mr-1" />
-                    添加时段
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>选择节次（可多选）</Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    课程时间由固定节次模板决定。若模板修改，课程会自动按新时间变化。
-                  </p>
-                  <div className="space-y-2">
-                    {(['morning', 'afternoon', 'evening'] as const).map((part) => {
-                      const rows = [...periodTemplate]
-                        .filter((p) => p.part === part)
-                        .sort((a, b) => a.order - b.order)
-                      if (rows.length === 0) return null
-                      return (
-                        <div key={part} className="space-y-1">
-                          <div className="text-xs text-muted-foreground">{PERIOD_PART_LABELS[part]}</div>
-                          {rows.map((p) => {
-                            const checked = Boolean(editing.periodIds?.includes(p.id))
-                            return (
-                              <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={(v) => {
-                                    const pid = new Set(editing.periodIds ?? [])
-                                    if (v) pid.add(p.id)
-                                    else pid.delete(p.id)
-                                    const periodIds = Array.from(pid)
-                                    const withIds: ScheduleCourse = {
-                                      ...editing,
-                                      periodIds,
-                                      timeMode: 'periods',
-                                    }
-                                    const sessions = getCourseTimeSessions(withIds, periodTemplate)
-                                    setEditing({
-                                      ...editing,
-                                      periodIds,
-                                      timeMode: 'periods',
-                                      startTime: sessions[0]?.startTime ?? editing.startTime,
-                                      endTime: sessions[0]?.endTime ?? editing.endTime,
-                                      timeSessions: sessions.length > 1 ? sessions : undefined,
-                                    })
-                                  }}
-                                />
-                                <span>{p.label}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {p.startTime}–{p.endTime}
-                                </span>
-                              </label>
-                            )
-                          })}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+                    <Label>时段</Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      手动填写开始与结束时间；同一课程可多段。
+                    </p>
+                    {(editing.timeSessions?.length
+                      ? editing.timeSessions
+                      : [{ startTime: editing.startTime, endTime: editing.endTime }]
+                    ).map((row, idx, arr) => (
+                      <div key={idx} className="flex flex-wrap items-center gap-2">
+                        <Input
+                          type="time"
+                          step={60}
+                          value={row.startTime}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setEditing((cur) => {
+                              if (!cur) return cur
+                              const base =
+                                cur.timeSessions && cur.timeSessions.length > 0
+                                  ? [...cur.timeSessions]
+                                  : [{ startTime: cur.startTime, endTime: cur.endTime }]
+                              base[idx] = { ...base[idx], startTime: v }
+                              const first = base[0]
+                              return {
+                                ...cur,
+                                timeSessions: base.length > 1 ? base : undefined,
+                                startTime: first.startTime,
+                                endTime: first.endTime,
+                              }
+                            })
+                          }}
+                          className="h-9 w-[7.5rem] font-mono"
+                        />
+                        <span className="text-muted-foreground">–</span>
+                        <Input
+                          type="time"
+                          step={60}
+                          value={row.endTime}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setEditing((cur) => {
+                              if (!cur) return cur
+                              const base =
+                                cur.timeSessions && cur.timeSessions.length > 0
+                                  ? [...cur.timeSessions]
+                                  : [{ startTime: cur.startTime, endTime: cur.endTime }]
+                              base[idx] = { ...base[idx], endTime: v }
+                              const first = base[0]
+                              return {
+                                ...cur,
+                                timeSessions: base.length > 1 ? base : undefined,
+                                startTime: first.startTime,
+                                endTime: first.endTime,
+                              }
+                            })
+                          }}
+                          className="h-9 w-[7.5rem] font-mono"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 shrink-0 text-destructive"
+                          disabled={arr.length <= 1}
+                          onClick={() => {
+                            setEditing((cur) => {
+                              if (!cur) return cur
+                              const base =
+                                cur.timeSessions && cur.timeSessions.length > 0
+                                  ? [...cur.timeSessions]
+                                  : [{ startTime: cur.startTime, endTime: cur.endTime }]
+                              base.splice(idx, 1)
+                              const first = base[0]
+                              return {
+                                ...cur,
+                                timeSessions: base.length > 1 ? base : undefined,
+                                startTime: first.startTime,
+                                endTime: first.endTime,
+                              }
+                            })
+                          }}
+                          aria-label="删除时段"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-fit"
+                      onClick={() => {
+                        setEditing((cur) => {
+                          if (!cur) return cur
+                          const base =
+                            cur.timeSessions && cur.timeSessions.length > 0
+                              ? [...cur.timeSessions]
+                              : [{ startTime: cur.startTime, endTime: cur.endTime }]
+                          if (base.length >= MAX_TIME_SESSIONS_PER_COURSE) return cur
+                          const last = base[base.length - 1]
+                          const [h, m] = last.endTime.split(':').map(Number)
+                          let endMin = h * 60 + m + 45
+                          endMin = ((endMin % (24 * 60)) + 24 * 60) % (24 * 60)
+                          const nh = Math.floor(endMin / 60)
+                          const nm = endMin % 60
+                          const endStr = `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`
+                          base.push({ startTime: last.endTime, endTime: endStr })
+                          return { ...cur, timeSessions: base }
+                        })
+                      }}
+                      disabled={
+                        (editing.timeSessions?.length ?? 1) >= MAX_TIME_SESSIONS_PER_COURSE
+                      }
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      添加时段
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="schedule-period-time"
+                    className="space-y-2"
+                    variants={sectionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={sectionTransition}
+                  >
+                    <Label>选择节次（可多选）</Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      课程时间由固定节次模板决定。若模板修改，课程会自动按新时间变化。
+                    </p>
+                    <div className="space-y-2">
+                      {(['morning', 'afternoon', 'evening'] as const).map((part) => {
+                        const rows = [...periodTemplate]
+                          .filter((p) => p.part === part)
+                          .sort((a, b) => a.order - b.order)
+                        if (rows.length === 0) return null
+                        return (
+                          <div key={part} className="space-y-1">
+                            <div className="text-xs text-muted-foreground">{PERIOD_PART_LABELS[part]}</div>
+                            {rows.map((p) => {
+                              const checked = Boolean(editing.periodIds?.includes(p.id))
+                              return (
+                                <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(v) => {
+                                      const pid = new Set(editing.periodIds ?? [])
+                                      if (v) pid.add(p.id)
+                                      else pid.delete(p.id)
+                                      const periodIds = Array.from(pid)
+                                      const withIds: ScheduleCourse = {
+                                        ...editing,
+                                        periodIds,
+                                        timeMode: 'periods',
+                                      }
+                                      const sessions = getCourseTimeSessions(withIds, periodTemplate)
+                                      setEditing({
+                                        ...editing,
+                                        periodIds,
+                                        timeMode: 'periods',
+                                        startTime: sessions[0]?.startTime ?? editing.startTime,
+                                        endTime: sessions[0]?.endTime ?? editing.endTime,
+                                        timeSessions: sessions.length > 1 ? sessions : undefined,
+                                      })
+                                    }}
+                                  />
+                                  <span>{p.label}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {p.startTime}–{p.endTime}
+                                  </span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div className="space-y-2">
                 <Label>开课日期（首次上课）</Label>
                 <Input

@@ -1,8 +1,13 @@
 'use client'
 
 import { useAtom } from 'jotai'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import {
   webSettingsCropDialogOpenAtom,
   webSettingsCropSourceUrlAtom,
@@ -24,9 +29,16 @@ export function WebSettingsBasicPanel() {
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [cropSourceUrl, setCropSourceUrl] = useAtom(webSettingsCropSourceUrlAtom)
   const [, setCropDialogOpen] = useAtom(webSettingsCropDialogOpenAtom)
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   const onFileSelected = (file?: File) => {
     if (!file) return
@@ -117,27 +129,48 @@ export function WebSettingsBasicPanel() {
           }}
           className="w-full text-xs text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border file:border-border file:bg-muted/50 file:text-foreground hover:file:bg-muted file:cursor-pointer"
         />
-        {cropSourceUrl ? (
-          <button
-            type="button"
-            onClick={() => setCropDialogOpen(true)}
-            className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
-          >
-            重新打开裁剪
-          </button>
-        ) : null}
-        {form.avatarUrl ? (
-          <div className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3">
-            <Image
-              src={form.avatarUrl}
-              alt="头像预览"
-              width={40}
-              height={40}
-              className="w-10 h-10 rounded-full border border-border object-cover"
-            />
-            <span className="text-xs text-muted-foreground">头像预览</span>
-          </div>
-        ) : null}
+        <AnimatePresence initial={false}>
+          {cropSourceUrl ? (
+            <motion.div
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              <button
+                type="button"
+                onClick={() => setCropDialogOpen(true)}
+                className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
+              >
+                重新打开裁剪
+              </button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+        <AnimatePresence initial={false}>
+          {form.avatarUrl ? (
+            <motion.div
+              className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              <Image
+                src={form.avatarUrl}
+                alt="头像预览"
+                width={40}
+                height={40}
+                className="w-10 h-10 rounded-full border border-border object-cover"
+              />
+              <span className="text-xs text-muted-foreground">头像预览</span>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

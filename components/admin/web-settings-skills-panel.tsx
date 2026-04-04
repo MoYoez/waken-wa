@@ -1,8 +1,13 @@
 'use client'
 
 import { useAtom } from 'jotai'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useState } from 'react'
 
+import {
+  getAdminPanelTransition,
+  getAdminSectionVariants,
+} from '@/components/admin/admin-motion'
 import {
   webSettingsFormAtom,
   webSettingsLegacyMcpConfiguredAtom,
@@ -72,8 +77,15 @@ export function WebSettingsSkillsPanel({
   const [publicOrigin] = useAtom(webSettingsPublicOriginAtom)
   const [skillsAiAuthDialogOpen, setSkillsAiAuthDialogOpen] = useState(false)
   const [revokeDialogAiClientId, setRevokeDialogAiClientId] = useState('')
+  const prefersReducedMotion = Boolean(useReducedMotion())
   const aiToolMode = form.aiToolMode
   const mcpThemeToolsEnabled = form.mcpThemeToolsEnabled
+  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
+  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
+    enterY: 10,
+    exitY: 8,
+    scale: 0.996,
+  })
 
   const mdUrl = publicOrigin ? `${publicOrigin}/api/llm/md` : '/api/llm/md'
   const directUrl = skillsAuthMode
@@ -137,8 +149,17 @@ export function WebSettingsSkillsPanel({
         </div>
       </div>
 
-      {skillsEnabled && aiToolMode === 'skills' ? (
-        <div className="space-y-4 rounded-md border border-border/60 bg-muted/20 px-3 py-3">
+      <AnimatePresence initial={false}>
+        {skillsEnabled && aiToolMode === 'skills' ? (
+          <motion.div
+            className="space-y-4 rounded-md border border-border/60 bg-muted/20 px-3 py-3"
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
+            layout
+          >
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>认证模式</Label>
@@ -177,8 +198,17 @@ export function WebSettingsSkillsPanel({
             </div>
           </div>
 
-          {skillsAuthMode === 'apikey' ? (
-            <div className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3">
+          <AnimatePresence initial={false} mode="wait">
+            {skillsAuthMode === 'apikey' ? (
+              <motion.div
+                className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3"
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+                layout
+              >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
                   <Label className="text-sm font-normal">APIKEY</Label>
@@ -203,11 +233,21 @@ export function WebSettingsSkillsPanel({
                   <Input value={skillsGeneratedApiKey} readOnly className="font-mono text-xs" />
                 </div>
               ) : null}
-            </div>
-          ) : null}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
 
-          {skillsAuthMode === 'oauth' ? (
-            <div className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3">
+          <AnimatePresence initial={false} mode="wait">
+            {skillsAuthMode === 'oauth' ? (
+              <motion.div
+                className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3"
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+                layout
+              >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
                   <Label className="text-sm font-normal">OAuth Key 有效期</Label>
@@ -235,11 +275,21 @@ export function WebSettingsSkillsPanel({
                   当前设置：{skillsOauthTokenTtlMinutes} 分钟
                 </p>
               </div>
-            </div>
-          ) : null}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
 
-          {skillsAuthMode ? (
-            <div className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3">
+          <AnimatePresence initial={false}>
+            {skillsAuthMode ? (
+              <motion.div
+                className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3"
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+                layout
+              >
               <Label className="text-xs">固定技能说明（完整链接）</Label>
               <div className="flex gap-2">
                 <Input value={mdUrl} readOnly className="font-mono text-xs" />
@@ -276,11 +326,21 @@ export function WebSettingsSkillsPanel({
                   一键复制
                 </Button>
               </div>
-            </div>
-          ) : null}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
 
-          {skillsAuthMode === 'oauth' ? (
-            <div className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3">
+          <AnimatePresence initial={false}>
+            {skillsAuthMode === 'oauth' ? (
+              <motion.div
+                className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3"
+                variants={sectionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={sectionTransition}
+                layout
+              >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
                   <Label className="text-xs">AI 授权情况</Label>
@@ -384,13 +444,24 @@ export function WebSettingsSkillsPanel({
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
-      {skillsEnabled && aiToolMode === 'mcp' ? (
-        <div className="space-y-4 rounded-md border border-border/60 bg-muted/20 px-3 py-3">
+      <AnimatePresence initial={false}>
+        {skillsEnabled && aiToolMode === 'mcp' ? (
+          <motion.div
+            className="space-y-4 rounded-md border border-border/60 bg-muted/20 px-3 py-3"
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
+            layout
+          >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <Label className="font-normal">启用 MCP</Label>
@@ -491,14 +562,25 @@ export function WebSettingsSkillsPanel({
               认证。切换开关后，记得点击页面底部保存网页配置。
             </p>
           </div>
-        </div>
-      ) : null}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
-      {!skillsEnabled ? (
-        <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
-          当前未开启“允许 AI 调试”，因此不会展示当前模式的详细配置。
-        </div>
-      ) : null}
+      <AnimatePresence initial={false}>
+        {!skillsEnabled ? (
+          <motion.div
+            className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2"
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={sectionTransition}
+            layout
+          >
+            当前未开启“允许 AI 调试”，因此不会展示当前模式的详细配置。
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }
