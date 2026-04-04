@@ -15,6 +15,7 @@ import { SiteReveal } from '@/components/site-reveal'
 import { SiteThemeRuntime } from '@/components/site-theme-runtime'
 import { UserProfile, UserProfileNoteSection } from '@/components/user-profile'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
+import { getActivityFeedData } from '@/lib/activity-feed'
 import { verifySiteLockSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { inspirationEntries } from '@/lib/drizzle-schema'
@@ -69,7 +70,8 @@ export default async function Home() {
   // Config object for later use
   const cfg = config as Record<string, unknown>
 
-  const [inspirationRows, [countRow]] = await Promise.all([
+  const [activityInitialFeed, inspirationRows, [countRow]] = await Promise.all([
+    getActivityFeedData(undefined, { forPublicFeed: true }),
     db
       .select({
         id: inspirationEntries.id,
@@ -147,7 +149,7 @@ export default async function Home() {
           <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-40">
             <ContentReadingPanel className="p-5 sm:p-6">
               {/* Profile + current: one activity feed subscription (polling/SSE) for both */}
-              <ActivityFeedProvider mode={activityUpdateMode}>
+              <ActivityFeedProvider initialFeed={activityInitialFeed} mode={activityUpdateMode}>
                 <div className="flex flex-col gap-4">
                   <SiteReveal delay={0.04}>
                     <div

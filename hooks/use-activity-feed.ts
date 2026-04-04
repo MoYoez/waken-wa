@@ -10,14 +10,16 @@ const POLLING_INTERVAL_MS = 30000
 const MAX_SSE_FAILURES = 3
 
 interface UseActivityFeedOptions {
+  /** Server-rendered snapshot for immediate first paint. */
+  initialFeed?: ActivityFeedData | null
   /** Update mode from server-side settings */
   mode?: ActivityUpdateMode
 }
 
 export function useActivityFeed(options: UseActivityFeedOptions = {}) {
-  const { mode = 'sse' } = options
+  const { initialFeed = null, mode = 'sse' } = options
 
-  const [feed, setFeed] = useState<ActivityFeedData | null>(null)
+  const [feed, setFeed] = useState<ActivityFeedData | null>(initialFeed)
   const [error, setError] = useState<string | null>(null)
   const [connectionMode, setConnectionMode] = useState<'sse' | 'polling'>(mode)
 
@@ -29,6 +31,10 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
   const allowSseReconnectRef = useRef(true)
 
   const [tabVisible, setTabVisible] = useState(true)
+
+  useEffect(() => {
+    setFeed(initialFeed)
+  }, [initialFeed])
 
   useEffect(() => {
     const sync = () => setTabVisible(document.visibilityState === 'visible')
@@ -54,11 +60,13 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
   const startPolling = useCallback(() => {
     if (pollTimerRef.current) return
     setConnectionMode('polling')
-    void fetchData()
+    if (!initialFeed) {
+      void fetchData()
+    }
     pollTimerRef.current = setInterval(() => {
       void fetchData()
     }, POLLING_INTERVAL_MS)
-  }, [fetchData])
+  }, [fetchData, initialFeed])
 
   const stopPolling = useCallback(() => {
     if (pollTimerRef.current) {
