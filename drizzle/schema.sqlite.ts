@@ -93,6 +93,8 @@ export const siteConfig = sqliteTable('site_config', {
   })
     .notNull()
     .default(false),
+  pageLoadingEnabled: integer('page_loading_enabled', { mode: 'boolean' }).default(true),
+  searchEngineIndexingEnabled: integer('search_engine_indexing_enabled', { mode: 'boolean' }).default(true),
   userNoteHitokotoCategories: text('user_note_hitokoto_categories', {
     mode: 'json',
   }),

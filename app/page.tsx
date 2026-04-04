@@ -114,6 +114,7 @@ export default async function Home() {
   const showScheduleHomeColumn = scheduleInClassOnHome && scheduleCoursesForHome.length > 0
 
   const hideActivityMedia = Boolean(cfg.hideActivityMedia)
+  const pageLoadingEnabled = cfg.pageLoadingEnabled !== false
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
@@ -139,7 +140,7 @@ export default async function Home() {
         <div className="floating-orb floating-orb-2" />
         <div className="floating-orb floating-orb-3" />
       </div>
-      <PublicPageTransitionShell scope="home">
+      <PublicPageTransitionShell scope="home" enabled={pageLoadingEnabled}>
         <main className="min-h-screen relative">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-40">
             <ContentReadingPanel className="p-5 sm:p-6">

@@ -12,16 +12,35 @@ const notoSansSC = Noto_Sans_SC({ subsets: ["latin"], weight: ["300", "400", "50
 
 export async function generateMetadata(): Promise<Metadata> {
   let title = DEFAULT_PAGE_TITLE
+  let searchEngineIndexingEnabled = true
   try {
     const config = await getSiteConfigMemoryFirst()
     const raw = String(config?.pageTitle ?? '').trim()
     if (raw) {
       title = raw.slice(0, PAGE_TITLE_MAX_LEN)
     }
+    searchEngineIndexingEnabled = config?.searchEngineIndexingEnabled !== false
   } catch {
     // e.g. DB not ready during build or first boot
   }
-  return { title }
+  return {
+    title,
+    robots: searchEngineIndexingEnabled
+      ? {
+          index: true,
+          follow: true,
+        }
+      : {
+          index: false,
+          follow: false,
+          nocache: true,
+          googleBot: {
+            index: false,
+            follow: false,
+            noimageindex: true,
+          },
+        },
+  }
 }
 
 export default async function RootLayout({

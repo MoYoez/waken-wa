@@ -28,6 +28,7 @@ export default async function InspirationLayout({ children }: { children: React.
   const themePresetCss = getThemePresetCss(config.themePreset, config.themeCustomSurface)
   const customCss = String(config.customCss ?? '')
   const themeCss = `${themePresetCss}\n${customCss}`.trim()
+  const pageLoadingEnabled = config.pageLoadingEnabled !== false
 
   return (
     <>
@@ -43,7 +44,9 @@ export default async function InspirationLayout({ children }: { children: React.
         <div className="floating-orb floating-orb-2" />
         <div className="floating-orb floating-orb-3" />
       </div>
-      <PublicPageTransitionShell scope="inspiration">{children}</PublicPageTransitionShell>
+      <PublicPageTransitionShell scope="inspiration" enabled={pageLoadingEnabled}>
+        {children}
+      </PublicPageTransitionShell>
     </>
   )
 }

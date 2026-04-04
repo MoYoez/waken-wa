@@ -41,6 +41,8 @@ import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
 
 export const LLM_DENIED_SITE_CONFIG_KEYS = [
+  'pageLoadingEnabled',
+  'searchEngineIndexingEnabled',
   'openApiDocsEnabled',
   'useNoSqlAsCacheRedis',
   'redisCacheTtlSeconds',
@@ -340,6 +342,17 @@ export async function updateSiteConfigFromPayload(
   if (body.userNoteHitokotoEnabled !== undefined && body.userNoteHitokotoEnabled !== null) {
     userNoteHitokotoEnabled = Boolean(body.userNoteHitokotoEnabled)
   }
+  let pageLoadingEnabled = existing?.pageLoadingEnabled !== false
+  if (body.pageLoadingEnabled !== undefined && body.pageLoadingEnabled !== null) {
+    pageLoadingEnabled = Boolean(body.pageLoadingEnabled)
+  }
+  let searchEngineIndexingEnabled = existing?.searchEngineIndexingEnabled !== false
+  if (
+    body.searchEngineIndexingEnabled !== undefined &&
+    body.searchEngineIndexingEnabled !== null
+  ) {
+    searchEngineIndexingEnabled = Boolean(body.searchEngineIndexingEnabled)
+  }
 
   let userNoteHitokotoCategories = normalizeHitokotoCategories(
     existing?.userNoteHitokotoCategories ?? [],
@@ -494,6 +507,8 @@ export async function updateSiteConfigFromPayload(
     profileOnlinePulseEnabled,
     userNote,
     userNoteHitokotoEnabled,
+    pageLoadingEnabled,
+    searchEngineIndexingEnabled,
     userNoteHitokotoCategories,
     userNoteHitokotoEncode,
     userNoteHitokotoFallbackToNote,

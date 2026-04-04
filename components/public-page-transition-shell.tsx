@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 type Props = {
   children: React.ReactNode
   scope: 'home' | 'inspiration'
+  enabled?: boolean
 }
 
 const MIN_LOADING_MS = 720
@@ -14,10 +15,11 @@ function loadingLabel(scope: Props['scope']): string {
   return scope === 'home' ? '正在准备今日状态' : '正在准备灵感碎片'
 }
 
-export function PublicPageTransitionShell({ children, scope }: Props) {
+export function PublicPageTransitionShell({ children, scope, enabled = true }: Props) {
   const [contentReady, setContentReady] = useState(false)
 
   useEffect(() => {
+    if (!enabled) return
     if (typeof document === 'undefined') return
 
     const root = document.documentElement
@@ -65,7 +67,11 @@ export function PublicPageTransitionShell({ children, scope }: Props) {
       delete root.dataset.publicPageScope
       delete root.dataset.publicPageLoading
     }
-  }, [scope])
+  }, [enabled, scope])
+
+  if (!enabled) {
+    return <>{children}</>
+  }
 
   return (
     <>

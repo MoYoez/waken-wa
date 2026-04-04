@@ -26,6 +26,40 @@ export function WebSettingsHitokotoPanel({
 }: WebSettingsHitokotoPanelProps) {
   return (
     <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+          <div className="min-w-0 space-y-0.5">
+            <Label htmlFor="page-loading-toggle" className="font-normal cursor-pointer">
+              页面 Loading 动画
+            </Label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              控制首页与灵感页初次进入时的加载过渡动画。
+            </p>
+          </div>
+          <Switch
+            id="page-loading-toggle"
+            checked={form.pageLoadingEnabled}
+            onCheckedChange={(value) => patch('pageLoadingEnabled', value)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+          <div className="min-w-0 space-y-0.5">
+            <Label htmlFor="search-engine-indexing-toggle" className="font-normal cursor-pointer">
+              允许搜索引擎收录
+            </Label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              关闭后会向搜索引擎声明 noindex / nofollow。
+            </p>
+          </div>
+          <Switch
+            id="search-engine-indexing-toggle"
+            checked={form.searchEngineIndexingEnabled}
+            onCheckedChange={(value) => patch('searchEngineIndexingEnabled', value)}
+          />
+        </div>
+      </div>
+
       <div className="flex items-center justify-between gap-3">
         <Label htmlFor="hitokoto-home-note" className="font-normal cursor-pointer">
           首页备注使用一言（hitokoto.cn）

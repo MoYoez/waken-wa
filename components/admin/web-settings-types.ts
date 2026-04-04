@@ -54,6 +54,8 @@ export interface SiteConfig {
   profileOnlinePulseEnabled: boolean
   userNote: string
   userNoteHitokotoEnabled: boolean
+  pageLoadingEnabled: boolean
+  searchEngineIndexingEnabled: boolean
   userNoteHitokotoCategories: string[]
   userNoteHitokotoEncode: UserNoteHitokotoEncode
   userNoteHitokotoFallbackToNote: boolean

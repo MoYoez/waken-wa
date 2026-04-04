@@ -122,6 +122,8 @@ export function WebSettings() {
     profileOnlinePulseEnabled: true,
     userNote: '',
     userNoteHitokotoEnabled: false,
+    pageLoadingEnabled: true,
+    searchEngineIndexingEnabled: true,
     userNoteHitokotoCategories: [],
     userNoteHitokotoEncode: 'json',
     userNoteHitokotoFallbackToNote: false,
@@ -249,6 +251,8 @@ export function WebSettings() {
             profileOnlinePulseEnabled: data.data.profileOnlinePulseEnabled !== false,
             userNote: data.data.userNote ?? '',
             userNoteHitokotoEnabled: Boolean(data.data.userNoteHitokotoEnabled),
+            pageLoadingEnabled: data.data.pageLoadingEnabled !== false,
+            searchEngineIndexingEnabled: data.data.searchEngineIndexingEnabled !== false,
             userNoteHitokotoCategories: normalizeHitokotoCategories(
               data.data.userNoteHitokotoCategories,
             ),
@@ -737,97 +741,135 @@ export function WebSettings() {
         </TabsContent>
 
         <TabsContent value="advanced" className="space-y-5">
-          <WebSettingsSkillsPanel
-            skillsSaving={skillsSaving}
-            skillsEnabled={skillsEnabled}
-            skillsAuthMode={skillsAuthMode}
-            skillsApiKeyConfigured={skillsApiKeyConfigured}
-            skillsOauthConfigured={skillsOauthConfigured}
-            skillsOauthTokenTtlMinutes={skillsOauthTokenTtlMinutes}
-            skillsAiAuthorizations={skillsAiAuthorizations}
-            skillsRevokingAiClientId={skillsRevokingAiClientId}
-            skillsGeneratedApiKey={skillsGeneratedApiKey}
-            legacyMcpConfigured={legacyMcpConfigured}
-            legacyMcpGeneratedApiKey={legacyMcpGeneratedApiKey}
-            publicOrigin={publicOrigin}
-            aiToolMode={form.aiToolMode}
-            mcpThemeToolsEnabled={form.mcpThemeToolsEnabled}
-            onSkillsEnabledChange={setSkillsEnabled}
-            onSkillsAuthModeChange={setSkillsAuthMode}
-            onSkillsOauthTokenTtlMinutesChange={setSkillsOauthTokenTtlMinutes}
-            onAiToolModeChange={(mode) =>
-              setForm((prev) => ({
-                ...prev,
-                aiToolMode: mode,
-                mcpThemeToolsEnabled: mode === 'mcp' ? prev.mcpThemeToolsEnabled : false,
-              }))
-            }
-            onMcpThemeToolsEnabledChange={(enabled) => patch('mcpThemeToolsEnabled', enabled)}
-            onSaveSkillsConfig={(options) => saveSkillsConfig(options)}
-            onRevokeSkillsOauthByAiClientId={revokeSkillsOauthByAiClientId}
-            onCopyPlainText={copyPlainText}
-          />
+          <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-5">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold tracking-wide text-foreground">平台与访问</h3>
+              <p className="text-xs text-muted-foreground">
+                控制调试能力、开发者文档与后台访问验证。
+              </p>
+            </div>
 
-          <WebSettingsHitokotoPanel
-            form={form}
-            patch={patch}
-            onCategoriesChange={(next) =>
-              setForm((prev) => ({ ...prev, userNoteHitokotoCategories: next }))
-            }
-          />
+            <WebSettingsSkillsPanel
+              skillsSaving={skillsSaving}
+              skillsEnabled={skillsEnabled}
+              skillsAuthMode={skillsAuthMode}
+              skillsApiKeyConfigured={skillsApiKeyConfigured}
+              skillsOauthConfigured={skillsOauthConfigured}
+              skillsOauthTokenTtlMinutes={skillsOauthTokenTtlMinutes}
+              skillsAiAuthorizations={skillsAiAuthorizations}
+              skillsRevokingAiClientId={skillsRevokingAiClientId}
+              skillsGeneratedApiKey={skillsGeneratedApiKey}
+              legacyMcpConfigured={legacyMcpConfigured}
+              legacyMcpGeneratedApiKey={legacyMcpGeneratedApiKey}
+              publicOrigin={publicOrigin}
+              aiToolMode={form.aiToolMode}
+              mcpThemeToolsEnabled={form.mcpThemeToolsEnabled}
+              onSkillsEnabledChange={setSkillsEnabled}
+              onSkillsAuthModeChange={setSkillsAuthMode}
+              onSkillsOauthTokenTtlMinutesChange={setSkillsOauthTokenTtlMinutes}
+              onAiToolModeChange={(mode) =>
+                setForm((prev) => ({
+                  ...prev,
+                  aiToolMode: mode,
+                  mcpThemeToolsEnabled: mode === 'mcp' ? prev.mcpThemeToolsEnabled : false,
+                }))
+              }
+              onMcpThemeToolsEnabledChange={(enabled) => patch('mcpThemeToolsEnabled', enabled)}
+              onSaveSkillsConfig={(options) => saveSkillsConfig(options)}
+              onRevokeSkillsOauthByAiClientId={revokeSkillsOauthByAiClientId}
+              onCopyPlainText={copyPlainText}
+            />
 
-          <WebSettingsOpenApiPanel form={form} patch={patch} />
-          <WebSettingsSecurityPanel form={form} patch={patch} />
+            <div className="grid gap-4 xl:grid-cols-2">
+              <WebSettingsOpenApiPanel form={form} patch={patch} />
+              <WebSettingsSecurityPanel form={form} patch={patch} />
+            </div>
+          </section>
 
-          {form.themePreset === 'customSurface' ? (
-            <WebSettingsCustomSurface
-              value={form.themeCustomSurface}
-              onChange={(nextThemeCustomSurface) =>
-                setForm((prev) => ({ ...prev, themeCustomSurface: nextThemeCustomSurface }))
+          <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-5">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold tracking-wide text-foreground">前台展示</h3>
+              <p className="text-xs text-muted-foreground">
+                调整首页观感、文案来源、主题细节与自定义样式。
+              </p>
+            </div>
+
+            <WebSettingsHitokotoPanel
+              form={form}
+              patch={patch}
+              onCategoriesChange={(next) =>
+                setForm((prev) => ({ ...prev, userNoteHitokotoCategories: next }))
               }
             />
-          ) : null}
 
-          <div className="space-y-2">
-            <Label>自定义 CSS 覆写（主界面）</Label>
-            <textarea
-              rows={8}
-              value={form.customCss}
-              onChange={(e) => patch('customCss', e.target.value)}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
-              placeholder="示例：:root { --primary: oklch(0.5 0.2 30); }"
+            {form.themePreset === 'customSurface' ? (
+              <WebSettingsCustomSurface
+                value={form.themeCustomSurface}
+                onChange={(nextThemeCustomSurface) =>
+                  setForm((prev) => ({ ...prev, themeCustomSurface: nextThemeCustomSurface }))
+                }
+              />
+            ) : null}
+
+            <div className="space-y-2">
+              <Label>自定义 CSS 覆写（主界面）</Label>
+              <textarea
+                rows={8}
+                value={form.customCss}
+                onChange={(e) => patch('customCss', e.target.value)}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
+                placeholder="示例：:root { --primary: oklch(0.5 0.2 30); }"
+              />
+              <p className="text-xs text-muted-foreground">
+                保存后会注入页面并覆盖默认样式，可用于快速主题定制。
+              </p>
+            </div>
+          </section>
+
+          <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-5">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold tracking-wide text-foreground">运行与采集</h3>
+              <p className="text-xs text-muted-foreground">
+                控制活动流、缓存、设备接入和前台状态展示行为。
+              </p>
+            </div>
+
+            <WebSettingsActivityPanel
+              form={form}
+              patch={patch}
+              redisCacheServerlessForced={redisCacheServerlessForced}
+              inspirationDevices={inspirationDevices}
             />
+
+            <WebSettingsRuleTools
+              form={form}
+              patch={patch}
+              historyApps={historyApps}
+              historyPlaySources={historyPlaySources}
+            />
+          </section>
+
+          <section className="space-y-4 rounded-xl border border-dashed border-border/60 bg-background/40 p-5">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold tracking-wide text-foreground">导入导出</h3>
+              <p className="text-xs text-muted-foreground">
+                用于迁移或快速接入当前网页配置，不影响底部的统一保存流程。
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button type="button" variant="outline" onClick={() => void copyExportConfig()}>
+                一键复制接入配置（Base64）
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void applyImportConfig()}>
+                一键写入配置
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
-              保存后会注入页面并覆盖默认样式，可用于快速主题定制。
+              「一键写入配置」会尝试从剪贴板读取 Base64，并在弹窗中确认。仅合并导出包中的网页字段到本页表单，不包含 Token；
+              写入后请用底部悬浮条保存。
             </p>
-          </div>
-
-          <WebSettingsActivityPanel
-            form={form}
-            patch={patch}
-            redisCacheServerlessForced={redisCacheServerlessForced}
-            inspirationDevices={inspirationDevices}
-          />
-
-          <WebSettingsRuleTools
-            form={form}
-            patch={patch}
-            historyApps={historyApps}
-            historyPlaySources={historyPlaySources}
-          />
-
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" variant="outline" onClick={() => void copyExportConfig()}>
-              一键复制接入配置（Base64）
-            </Button>
-            <Button type="button" variant="outline" onClick={() => void applyImportConfig()}>
-              一键写入配置
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            「一键写入配置」会尝试从剪贴板读取 Base64，并在弹窗中确认。仅合并导出包中的网页字段到本页表单，不包含 Token；
-            写入后请用底部悬浮条保存。
-          </p>
+          </section>
         </TabsContent>
       </Tabs>
 
