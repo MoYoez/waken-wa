@@ -4,6 +4,7 @@ import { useAtom } from 'jotai'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import { exportAdminActivityApps } from '@/components/admin/admin-query-fetchers'
 import {
   listMaxPage,
   ListPaginationBar,
@@ -198,13 +199,7 @@ export function WebSettingsRuleTools() {
 
   const exportUsedAppsJson = async () => {
     try {
-      const res = await fetch('/api/admin/activity/apps-export')
-      const data = await res.json()
-      if (!res.ok || !data?.success || !data?.data) {
-        toast.error(typeof data?.error === 'string' ? data.error : '导出失败')
-        return
-      }
-      const payload = JSON.stringify(data.data, null, 2)
+      const payload = JSON.stringify(await exportAdminActivityApps(), null, 2)
       const blob = new Blob([payload], { type: 'application/json;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const ts = new Date().toISOString().replace(/[:.]/g, '-')

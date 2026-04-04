@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
+import { loginAdminWithCaptcha } from '@/components/admin/admin-query-mutations'
 import { useHCaptcha } from '@/hooks/use-hcaptcha'
 
 function safeNextPath(raw: string | null): string {
@@ -46,28 +47,16 @@ export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: L
     setLoading(true)
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username,
-          password,
-          hcaptchaToken: captcha.token || undefined,
-        }),
+      await loginAdminWithCaptcha({
+        username,
+        password,
+        hcaptchaToken: captcha.token || undefined,
       })
-
-      const data = await res.json()
-
-      if (data.success) {
-        const next = safeNextPath(searchParams.get('next'))
-        router.push(next)
-        router.refresh()
-      } else {
-        setError(data.error || 'Login failed')
-        captcha.reset()
-      }
-    } catch {
-      setError('Network error, please try again')
+      const next = safeNextPath(searchParams.get('next'))
+      router.push(next)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error, please try again')
       captcha.reset()
     } finally {
       setLoading(false)

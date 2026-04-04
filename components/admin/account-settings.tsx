@@ -1,9 +1,17 @@
 'use client'
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Shield, Trash2, User } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { fetchAdminUsers } from '@/components/admin/admin-query-fetchers'
+import { adminQueryKeys } from '@/components/admin/admin-query-keys'
+import {
+  changeAdminPassword,
+  createAdminUser,
+  deleteAdminUser,
+} from '@/components/admin/admin-query-mutations'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,60 +29,79 @@ import { Label } from '@/components/ui/label'
 import type { AdminUserRow } from '@/types/admin'
 
 export function AccountSettings() {
-  const [loading, setLoading] = useState(true)
-  const [admins, setAdmins] = useState<AdminUserRow[]>([])
+  const queryClient = useQueryClient()
   const [newAdminUsername, setNewAdminUsername] = useState('')
   const [newAdminPassword, setNewAdminPassword] = useState('')
-  const [creatingAdmin, setCreatingAdmin] = useState(false)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [changingPassword, setChangingPassword] = useState(false)
+  const adminsQuery = useQuery({
+    queryKey: adminQueryKeys.users.list(),
+    queryFn: fetchAdminUsers,
+  })
+  const admins = adminsQuery.data ?? []
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch('/api/admin/users')
-        const data = await res.json()
-        if (data?.success) setAdmins(data.data || [])
-      } finally {
-        setLoading(false)
-      }
-    }
-    void load()
-  }, [])
+  const createAdminMutation = useMutation({
+    mutationFn: async (): Promise<AdminUserRow> =>
+      createAdminUser({
+        username: newAdminUsername,
+        password: newAdminPassword,
+      }),
+    onSuccess: async (created) => {
+      setNewAdminUsername('')
+      setNewAdminPassword('')
+      queryClient.setQueryData<AdminUserRow[]>(adminQueryKeys.users.list(), (prev) =>
+        Array.isArray(prev) ? [created, ...prev] : [created],
+      )
+      toast.success('管理员创建成功')
+      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.users.list() })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络异常，请重试')
+    },
+  })
+
+  const deleteAdminMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await deleteAdminUser(id)
+      return id
+    },
+    onSuccess: async (deletedId) => {
+      queryClient.setQueryData<AdminUserRow[]>(adminQueryKeys.users.list(), (prev) =>
+        Array.isArray(prev) ? prev.filter((user) => user.id !== deletedId) : prev,
+      )
+      toast.success('管理员已删除')
+      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.users.list() })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络异常，请重试')
+    },
+  })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async () =>
+      changeAdminPassword({
+        currentPassword,
+        newPassword,
+      }),
+    onSuccess: () => {
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      toast.success('密码修改成功')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络异常，请重试')
+    },
+  })
 
   const createAdmin = async () => {
     if (!newAdminUsername.trim() || !newAdminPassword.trim()) {
       toast.error('用户名和密码不能为空')
       return
     }
-    setCreatingAdmin(true)
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: newAdminUsername,
-          password: newAdminPassword,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '创建管理员失败')
-        return
-      }
-      setNewAdminUsername('')
-      setNewAdminPassword('')
-      setAdmins((prev) => [data.data, ...prev])
-      toast.success('管理员创建成功')
-    } catch {
-      toast.error('网络异常，请重试')
-    } finally {
-      setCreatingAdmin(false)
-    }
+    await createAdminMutation.mutateAsync()
   }
 
   const deleteAdmin = async (id: number) => {
@@ -82,21 +109,7 @@ export function AccountSettings() {
       toast.error('至少需要保留一个管理员账户')
       return
     }
-    setDeletingId(id)
-    try {
-      const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '删除失败')
-        return
-      }
-      setAdmins((prev) => prev.filter((u) => u.id !== id))
-      toast.success('管理员已删除')
-    } catch {
-      toast.error('网络异常，请重试')
-    } finally {
-      setDeletingId(null)
-    }
+    await deleteAdminMutation.mutateAsync(id)
   }
 
   const changePassword = async () => {
@@ -112,33 +125,10 @@ export function AccountSettings() {
       toast.error('新密码长度至少 6 位')
       return
     }
-    setChangingPassword(true)
-    try {
-      const res = await fetch('/api/admin/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '密码修改失败')
-        return
-      }
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-      toast.success('密码修改成功')
-    } catch {
-      toast.error('网络异常，请重试')
-    } finally {
-      setChangingPassword(false)
-    }
+    await changePasswordMutation.mutateAsync()
   }
 
-  if (loading) {
+  if (adminsQuery.isLoading) {
     return <div className="text-sm text-muted-foreground">加载中...</div>
   }
 
@@ -181,9 +171,14 @@ export function AccountSettings() {
         </div>
         <Button
           onClick={changePassword}
-          disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+          disabled={
+            changePasswordMutation.isPending ||
+            !currentPassword ||
+            !newPassword ||
+            !confirmPassword
+          }
         >
-          {changingPassword ? '修改中...' : '修改密码'}
+          {changePasswordMutation.isPending ? '修改中...' : '修改密码'}
         </Button>
       </div>
 
@@ -210,7 +205,7 @@ export function AccountSettings() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      disabled={deletingId === u.id || admins.length <= 1}
+                      disabled={deleteAdminMutation.isPending || admins.length <= 1}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -261,10 +256,12 @@ export function AccountSettings() {
           <div className="flex items-end">
             <Button
               onClick={createAdmin}
-              disabled={creatingAdmin || !newAdminUsername || !newAdminPassword}
+              disabled={
+                createAdminMutation.isPending || !newAdminUsername || !newAdminPassword
+              }
               className="w-full sm:w-auto"
             >
-              {creatingAdmin ? '创建中...' : '新增管理员'}
+              {createAdminMutation.isPending ? '创建中...' : '新增管理员'}
             </Button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { addWeeks, format, startOfWeek } from 'date-fns'
 import {
   ChevronLeft,
@@ -9,9 +10,12 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import { fetchAdminSettings } from '@/components/admin/admin-query-fetchers'
+import { adminQueryKeys } from '@/components/admin/admin-query-keys'
+import { patchAdminSettings } from '@/components/admin/admin-query-mutations'
 import { SortablePeriodTemplatePart } from '@/components/admin/sortable-period-template-part'
 import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
 import { WeekTimetableGrid } from '@/components/admin/week-timetable-grid'
@@ -87,6 +91,66 @@ type ScheduleFormBaseline = {
   homeAfterClassesLabel: string
 }
 
+type ScheduleManagerInitialData = {
+  serverData: Record<string, unknown>
+  periodTemplate: SchedulePeriodTemplateItem[]
+  courses: ScheduleCourse[]
+  compatWarnings: string[]
+  icsRaw: string
+  inClassOnHome: boolean
+  homeShowLocation: boolean
+  homeShowTeacher: boolean
+  homeShowNextUpcoming: boolean
+  homeAfterClassesLabel: string
+  scheduleBaseline: ScheduleFormBaseline
+}
+
+function buildScheduleManagerInitialData(
+  data: Record<string, unknown>,
+): ScheduleManagerInitialData {
+  const periodTemplate = resolveSchedulePeriodTemplate(data.schedulePeriodTemplate)
+  const parsedCourses = Array.isArray(data.scheduleCourses)
+    ? (data.scheduleCourses as ScheduleCourse[])
+    : []
+  const backfilled = backfillCoursePeriodIdsFromTemplate(parsedCourses, periodTemplate)
+  const icsRaw = typeof data.scheduleIcs === 'string' ? data.scheduleIcs : ''
+  const inClassOnHome = Boolean(data.scheduleInClassOnHome)
+  const homeShowLocation = Boolean(data.scheduleHomeShowLocation)
+  const homeShowTeacher = Boolean(data.scheduleHomeShowTeacher)
+  const homeShowNextUpcoming = Boolean(data.scheduleHomeShowNextUpcoming)
+  const homeAfterClassesLabel =
+    typeof data.scheduleHomeAfterClassesLabel === 'string' &&
+    data.scheduleHomeAfterClassesLabel.trim().length > 0
+      ? data.scheduleHomeAfterClassesLabel.trim().slice(
+          0,
+          SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+        )
+      : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT
+
+  return {
+    serverData: data,
+    periodTemplate,
+    courses: backfilled.courses,
+    compatWarnings: backfilled.warnings,
+    icsRaw,
+    inClassOnHome,
+    homeShowLocation,
+    homeShowTeacher,
+    homeShowNextUpcoming,
+    homeAfterClassesLabel,
+    scheduleBaseline: structuredClone({
+      periodTemplate,
+      courses: backfilled.courses,
+      icsRaw,
+      inClassOnHome,
+      homeShowLocation,
+      homeShowTeacher,
+      homeShowNextUpcoming,
+      homeAfterClassesLabel,
+    }),
+  }
+}
+
 function emptyCourse(): ScheduleCourse {
   const today = format(new Date(), 'yyyy-MM-dd')
   return {
@@ -122,16 +186,50 @@ export interface ScheduleManagerHandle {
 }
 
 export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(function ScheduleManager(_, ref) {
-  const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [serverData, setServerData] = useState<Record<string, unknown> | null>(null)
-  const [courses, setCourses] = useState<ScheduleCourse[]>([])
-  const [periodTemplate, setPeriodTemplate] = useState<SchedulePeriodTemplateItem[]>(() =>
-    defaultSchedulePeriodTemplate(),
+  const settingsQuery = useQuery({
+    queryKey: adminQueryKeys.settings.detail(),
+    queryFn: fetchAdminSettings,
+  })
+
+  const initialData = useMemo(
+    () => (settingsQuery.data ? buildScheduleManagerInitialData(settingsQuery.data) : null),
+    [settingsQuery.data],
   )
-  const [compatWarnings, setCompatWarnings] = useState<string[]>([])
-  const [icsRaw, setIcsRaw] = useState('')
+
+  if (settingsQuery.isLoading) {
+    return <div className="text-sm text-muted-foreground">加载课表配置中…</div>
+  }
+
+  if (!initialData) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        {settingsQuery.error instanceof Error ? settingsQuery.error.message : '加载失败'}
+      </div>
+    )
+  }
+
+  return (
+    <ScheduleManagerEditor
+      key={String(settingsQuery.dataUpdatedAt)}
+      ref={ref}
+      initialData={initialData}
+    />
+  )
+})
+
+const ScheduleManagerEditor = forwardRef<
+  ScheduleManagerHandle,
+  { initialData: ScheduleManagerInitialData }
+>(function ScheduleManagerEditor({ initialData }, ref) {
+  const queryClient = useQueryClient()
+  const [message, setMessage] = useState('')
+  const [serverData, setServerData] = useState<Record<string, unknown>>(initialData.serverData)
+  const [courses, setCourses] = useState<ScheduleCourse[]>(initialData.courses)
+  const [periodTemplate, setPeriodTemplate] = useState<SchedulePeriodTemplateItem[]>(
+    initialData.periodTemplate.length > 0 ? initialData.periodTemplate : defaultSchedulePeriodTemplate(),
+  )
+  const [compatWarnings, setCompatWarnings] = useState<string[]>(initialData.compatWarnings)
+  const [icsRaw, setIcsRaw] = useState(initialData.icsRaw)
   const [weekRef, setWeekRef] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -141,72 +239,23 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
   const [icsPaste, setIcsPaste] = useState('')
   const [icsMergeMode, setIcsMergeMode] = useState<'replace' | 'append'>('replace')
 
-  const [inClassOnHome, setInClassOnHome] = useState(false)
-  const [homeShowLocation, setHomeShowLocation] = useState(false)
-  const [homeShowTeacher, setHomeShowTeacher] = useState(false)
-  const [homeShowNextUpcoming, setHomeShowNextUpcoming] = useState(false)
+  const [inClassOnHome, setInClassOnHome] = useState(initialData.inClassOnHome)
+  const [homeShowLocation, setHomeShowLocation] = useState(initialData.homeShowLocation)
+  const [homeShowTeacher, setHomeShowTeacher] = useState(initialData.homeShowTeacher)
+  const [homeShowNextUpcoming, setHomeShowNextUpcoming] = useState(initialData.homeShowNextUpcoming)
   const [homeAfterClassesLabel, setHomeAfterClassesLabel] = useState(
-    SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
+    initialData.homeAfterClassesLabel,
   )
-  const [scheduleBaseline, setScheduleBaseline] = useState<ScheduleFormBaseline | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setMessage('')
-    try {
-      const res = await fetch('/api/admin/settings')
-      const data = await res.json()
-      if (!res.ok || !data?.success || !data?.data) {
-        setMessage(data?.error || '加载失败')
-        setScheduleBaseline(null)
-        return
-      }
-      const d = data.data as Record<string, unknown>
-      setServerData(d)
-      const tpl = resolveSchedulePeriodTemplate(d.schedulePeriodTemplate)
-      setPeriodTemplate(tpl)
-      const parsedCourses = Array.isArray(d.scheduleCourses) ? (d.scheduleCourses as ScheduleCourse[]) : []
-      const backfilled = backfillCoursePeriodIdsFromTemplate(parsedCourses, tpl)
-      setCourses(backfilled.courses)
-      setCompatWarnings(backfilled.warnings)
-      setIcsRaw(typeof d.scheduleIcs === 'string' ? d.scheduleIcs : '')
-      setInClassOnHome(Boolean(d.scheduleInClassOnHome))
-      setHomeShowLocation(Boolean(d.scheduleHomeShowLocation))
-      setHomeShowTeacher(Boolean(d.scheduleHomeShowTeacher))
-      setHomeShowNextUpcoming(Boolean(d.scheduleHomeShowNextUpcoming))
-      const homeLabelResolved =
-        typeof d.scheduleHomeAfterClassesLabel === 'string' &&
-        d.scheduleHomeAfterClassesLabel.trim().length > 0
-          ? d.scheduleHomeAfterClassesLabel.trim().slice(
-              0,
-              SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
-            )
-          : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT
-      setHomeAfterClassesLabel(homeLabelResolved)
-      const icsLoaded = typeof d.scheduleIcs === 'string' ? d.scheduleIcs : ''
-      setScheduleBaseline(
-        structuredClone({
-          periodTemplate: tpl,
-          courses: backfilled.courses,
-          icsRaw: icsLoaded,
-          inClassOnHome: Boolean(d.scheduleInClassOnHome),
-          homeShowLocation: Boolean(d.scheduleHomeShowLocation),
-          homeShowTeacher: Boolean(d.scheduleHomeShowTeacher),
-          homeShowNextUpcoming: Boolean(d.scheduleHomeShowNextUpcoming),
-          homeAfterClassesLabel: homeLabelResolved,
-        }),
-      )
-    } catch {
-      setMessage('网络异常')
-      setScheduleBaseline(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const [scheduleBaseline, setScheduleBaseline] = useState<ScheduleFormBaseline | null>(
+    initialData.scheduleBaseline,
+  )
+  const saveSettingsMutation = useMutation({
+    mutationFn: patchAdminSettings,
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(adminQueryKeys.settings.detail(), saved)
+      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.settings.detail() })
+    },
+  })
 
   const occurrences = useMemo(
     () => expandOccurrencesInWeek(courses, weekRef, periodTemplate),
@@ -226,7 +275,12 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
     const samePart = periodTemplate.filter((p) => p.part === part)
     const maxOrder = Math.max(0, ...samePart.map((p) => p.order))
     const nextOrder = maxOrder + 10
-    const id = `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    let nextIndex = samePart.length + 1
+    let id = `p_${part}_${nextOrder}_${nextIndex}`
+    while (periodTemplate.some((item) => item.id === id)) {
+      nextIndex += 1
+      id = `p_${part}_${nextOrder}_${nextIndex}`
+    }
     setPeriodTemplate((prev) => [
       ...prev,
       {
@@ -270,12 +324,10 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
       toast.error('尚未加载配置')
       return
     }
-    setSaving(true)
     try {
       const parsedTemplate = parseSchedulePeriodTemplateJson(periodTemplate)
       if (!parsedTemplate.ok) {
         toast.error(parsedTemplate.error)
-        setSaving(false)
         return
       }
       const periodValidation = validateCoursePeriodIdsAgainstTemplate(
@@ -284,7 +336,6 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
       )
       if (!periodValidation.ok) {
         toast.error(periodValidation.error)
-        setSaving(false)
         return
       }
 
@@ -299,18 +350,8 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
         scheduleHomeAfterClassesLabel:
           homeAfterClassesLabel.trim() || SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
       })
-      const res = await fetch('/api/admin/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      const data = await res.json()
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '保存失败')
-        return
-      }
+      const saved = await saveSettingsMutation.mutateAsync(body)
       toast.success('课表与主页展示已保存')
-      const saved = data.data as Record<string, unknown>
       setServerData(saved)
       const tpl = resolveSchedulePeriodTemplate(saved.schedulePeriodTemplate)
       setPeriodTemplate(tpl)
@@ -332,10 +373,8 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
           homeAfterClassesLabel,
         }),
       )
-    } catch {
-      toast.error('网络异常')
-    } finally {
-      setSaving(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '网络异常')
     }
   }
 
@@ -560,10 +599,6 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
     homeAfterClassesLabel,
     scheduleBaseline,
   ])
-
-  if (loading) {
-    return <div className="text-sm text-muted-foreground">加载课表配置中…</div>
-  }
 
   return (
     <>
@@ -1170,7 +1205,7 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
     </div>
     <UnsavedChangesBar
       open={scheduleDirty}
-      saving={saving}
+      saving={saveSettingsMutation.isPending}
       onSave={save}
       onRevert={revertUnsavedSchedule}
       saveLabel="保存到站点配置"

@@ -1,9 +1,26 @@
 'use client'
 
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAtom } from 'jotai'
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 
+import {
+  exportAdminSettings,
+  fetchActivityHistoryApps,
+  fetchActivityHistoryPlaySources,
+  fetchAdminDeviceSummaries,
+  fetchAdminSettings,
+  fetchAdminSkills,
+} from '@/components/admin/admin-query-fetchers'
+import { adminQueryKeys } from '@/components/admin/admin-query-keys'
+import {
+  patchAdminSettings,
+  patchAdminSkills,
+} from '@/components/admin/admin-query-mutations'
+import {
+  readJson,
+} from '@/components/admin/admin-query-shared'
 import {
   webSettingsBaselineFormAtom,
   webSettingsBaselineSkillsConfigAtom,
@@ -59,6 +76,7 @@ import {
 import { normalizeTimezone } from '@/lib/timezone'
 
 export function useWebSettingsController() {
+  const queryClient = useQueryClient()
   const [loading, setLoading] = useAtom(webSettingsLoadingAtom)
   const [saving, setSaving] = useAtom(webSettingsSavingAtom)
   const [, setSkillsSaving] = useAtom(webSettingsSkillsSavingAtom)
@@ -91,194 +109,67 @@ export function useWebSettingsController() {
   const [, setRedisCacheServerlessForced] = useAtom(webSettingsRedisCacheServerlessForcedAtom)
   const [form, setForm] = useAtom(webSettingsFormAtom)
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setPublicOrigin(window.location.origin)
+  const historyAppsQuery = useQuery({
+    queryKey: adminQueryKeys.activity.historyApps({ limit: 200 }),
+    queryFn: () => fetchActivityHistoryApps({ limit: 200 }),
+    enabled: form.captureReportedAppsEnabled,
+  })
+
+  const historyPlaySourcesQuery = useQuery({
+    queryKey: adminQueryKeys.activity.historyPlaySources({ limit: 200 }),
+    queryFn: () => fetchActivityHistoryPlaySources({ limit: 200 }),
+    enabled: form.captureReportedAppsEnabled,
+  })
+
+  const inspirationDevicesQuery = useQuery({
+    queryKey: adminQueryKeys.devices.list({ limit: 200 }),
+    queryFn: () => fetchAdminDeviceSummaries({ limit: 200 }),
+  })
+
+  const skillsQuery = useQuery({
+    queryKey: adminQueryKeys.skills.settings(),
+    queryFn: fetchAdminSkills,
+  })
+
+  const applySkillsConfigData = useCallback((
+    skillsData: Awaited<ReturnType<typeof fetchAdminSkills>>,
+    options?: {
+      updateBaseline?: boolean
+      preserveGeneratedKeys?: boolean
+    },
+  ) => {
+    const loadedSkills = normalizeSkillsEditableConfig({
+      enabled: skillsData.enabled === true,
+      authMode:
+        skillsData.authMode === 'oauth' || skillsData.authMode === 'apikey'
+          ? skillsData.authMode
+          : '',
+      oauthTokenTtlMinutes: Number(skillsData.oauthTokenTtlMinutes),
+    })
+    setSkillsEnabled(loadedSkills.enabled)
+    setSkillsAuthMode(loadedSkills.authMode)
+    setSkillsApiKeyConfigured(skillsData.apiKeyConfigured === true)
+    setSkillsOauthConfigured(skillsData.oauthConfigured === true)
+    setSkillsOauthTokenTtlMinutes(loadedSkills.oauthTokenTtlMinutes)
+    setSkillsAiAuthorizations(normalizeSkillsAiAuthorizations(skillsData.aiAuthorizations))
+    setLegacyMcpConfigured(skillsData.legacyMcpConfigured === true)
+    if (!options?.preserveGeneratedKeys) {
+      setSkillsGeneratedApiKey(
+        typeof skillsData.generatedApiKey === 'string' ? skillsData.generatedApiKey : '',
+      )
+      setLegacyMcpGeneratedApiKey(
+        typeof skillsData.generatedLegacyMcpApiKey === 'string'
+          ? skillsData.generatedLegacyMcpApiKey
+          : '',
+      )
     }
-  }, [setPublicOrigin])
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [settingsRes, skillsRes] = await Promise.all([
-          fetch('/api/admin/settings'),
-          fetch('/api/admin/skills'),
-        ])
-        const [data, skillsData] = await Promise.all([
-          settingsRes.json().catch(() => null),
-          skillsRes.json().catch(() => null),
-        ])
-
-        if (skillsData?.success && skillsData?.data) {
-          const loadedSkills = normalizeSkillsEditableConfig({
-            enabled: skillsData.data.enabled === true,
-            authMode:
-              skillsData.data.authMode === 'oauth' || skillsData.data.authMode === 'apikey'
-                ? skillsData.data.authMode
-                : '',
-            oauthTokenTtlMinutes: skillsData.data.oauthTokenTtlMinutes,
-          })
-          setSkillsEnabled(loadedSkills.enabled)
-          setSkillsAuthMode(loadedSkills.authMode)
-          setSkillsApiKeyConfigured(skillsData.data.apiKeyConfigured === true)
-          setSkillsOauthConfigured(skillsData.data.oauthConfigured === true)
-          setSkillsOauthTokenTtlMinutes(loadedSkills.oauthTokenTtlMinutes)
-          setBaselineSkillsConfig(structuredClone(loadedSkills))
-          setSkillsAiAuthorizations(
-            normalizeSkillsAiAuthorizations(skillsData.data.aiAuthorizations),
-          )
-          setSkillsGeneratedApiKey('')
-          setLegacyMcpConfigured(skillsData.data.legacyMcpConfigured === true)
-          setLegacyMcpGeneratedApiKey('')
-        } else if (skillsData !== null) {
-          toast.error('加载 Skills 配置失败')
-        }
-
-        if (data?.success && data?.data) {
-          const rules = Array.isArray(data.data.appMessageRules) ? data.data.appMessageRules : []
-          const blacklist = Array.isArray(data.data.appBlacklist)
-            ? data.data.appBlacklist
-                .map((item: unknown) => String(item ?? '').trim())
-                .filter((item: string) => item.length > 0)
-            : []
-          const whitelist = Array.isArray(data.data.appWhitelist)
-            ? data.data.appWhitelist
-                .map((item: unknown) => String(item ?? '').trim())
-                .filter((item: string) => item.length > 0)
-            : []
-          const filterModeRaw = String(data.data.appFilterMode ?? 'blacklist').toLowerCase()
-          const appFilterMode = filterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
-          const nameOnlyList = Array.isArray(data.data.appNameOnlyList)
-            ? data.data.appNameOnlyList
-                .map((item: unknown) => String(item ?? '').trim())
-                .filter((item: string) => item.length > 0)
-            : []
-          const loaded: SiteConfig = {
-            pageTitle: data.data.pageTitle ?? DEFAULT_PAGE_TITLE,
-            userName: data.data.userName ?? '',
-            userBio: data.data.userBio ?? '',
-            avatarUrl: data.data.avatarUrl ?? '',
-            profileOnlineAccentColor:
-              normalizeProfileOnlineAccentColor(
-                typeof data.data.profileOnlineAccentColor === 'string'
-                  ? data.data.profileOnlineAccentColor
-                  : '',
-              ) ?? '',
-            profileOnlinePulseEnabled: data.data.profileOnlinePulseEnabled !== false,
-            userNote: data.data.userNote ?? '',
-            userNoteHitokotoEnabled: Boolean(data.data.userNoteHitokotoEnabled),
-            userNoteTypewriterEnabled: Boolean(data.data.userNoteTypewriterEnabled),
-            pageLoadingEnabled: data.data.pageLoadingEnabled !== false,
-            searchEngineIndexingEnabled: data.data.searchEngineIndexingEnabled !== false,
-            userNoteHitokotoCategories: normalizeHitokotoCategories(
-              data.data.userNoteHitokotoCategories,
-            ),
-            userNoteHitokotoEncode: normalizeHitokotoEncode(data.data.userNoteHitokotoEncode),
-            userNoteHitokotoFallbackToNote: Boolean(data.data.userNoteHitokotoFallbackToNote),
-            themePreset: data.data.themePreset ?? 'basic',
-            themeCustomSurface: themeCustomSurfaceFromApi(data.data.themeCustomSurface),
-            customCss: data.data.customCss ?? '',
-            mcpThemeToolsEnabled: data.data.mcpThemeToolsEnabled === true,
-            openApiDocsEnabled: data.data.openApiDocsEnabled !== false,
-            aiToolMode:
-              String(data.data.aiToolMode ?? '').trim().toLowerCase() === 'mcp'
-                ? 'mcp'
-                : 'skills',
-            historyWindowMinutes: Number(
-              data.data.historyWindowMinutes ?? SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
-            ),
-            processStaleSeconds: Number(
-              data.data.processStaleSeconds ?? SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
-            ),
-            appMessageRules: rules,
-            appMessageRulesShowProcessName: data.data.appMessageRulesShowProcessName !== false,
-            appFilterMode,
-            appBlacklist: blacklist,
-            appWhitelist: whitelist,
-            appNameOnlyList: nameOnlyList,
-            captureReportedAppsEnabled: data.data.captureReportedAppsEnabled !== false,
-            mediaPlaySourceBlocklist: Array.isArray(data.data.mediaPlaySourceBlocklist)
-              ? (data.data.mediaPlaySourceBlocklist as unknown[])
-                  .map((item) => String(item ?? '').trim().toLowerCase())
-                  .filter((item) => item.length > 0)
-              : [],
-            pageLockEnabled: Boolean(data.data.pageLockEnabled),
-            pageLockPassword: '',
-            hcaptchaEnabled: Boolean(data.data.hcaptchaEnabled),
-            hcaptchaSiteKey: data.data.hcaptchaSiteKey ?? '',
-            hcaptchaSecretKey: '',
-            currentlyText: data.data.currentlyText ?? '当前状态',
-            earlierText: data.data.earlierText ?? '最近的随想录',
-            adminText: data.data.adminText ?? 'admin',
-            autoAcceptNewDevices: Boolean(data.data.autoAcceptNewDevices),
-            inspirationDeviceRestrictionEnabled: Array.isArray(
-              data.data.inspirationAllowedDeviceHashes,
-            ),
-            inspirationAllowedDeviceHashes: Array.isArray(data.data.inspirationAllowedDeviceHashes)
-              ? (data.data.inspirationAllowedDeviceHashes as unknown[])
-                  .map((item) => String(item ?? '').trim())
-                  .filter((item) => item.length > 0)
-              : [],
-            scheduleSlotMinutes: isAllowedSlotMinutes(Number(data.data.scheduleSlotMinutes))
-              ? Number(data.data.scheduleSlotMinutes)
-              : SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
-            schedulePeriodTemplate: resolveSchedulePeriodTemplate(data.data.schedulePeriodTemplate),
-            scheduleGridByWeekday: resolveScheduleGridByWeekday(
-              data.data.scheduleGridByWeekday,
-              isAllowedSlotMinutes(Number(data.data.scheduleSlotMinutes))
-                ? Number(data.data.scheduleSlotMinutes)
-                : SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
-            ),
-            scheduleCourses: Array.isArray(data.data.scheduleCourses)
-              ? (data.data.scheduleCourses as ScheduleCourse[])
-              : [],
-            scheduleIcs: typeof data.data.scheduleIcs === 'string' ? data.data.scheduleIcs : '',
-            scheduleInClassOnHome: Boolean(data.data.scheduleInClassOnHome),
-            scheduleHomeShowLocation: Boolean(data.data.scheduleHomeShowLocation),
-            scheduleHomeShowTeacher: Boolean(data.data.scheduleHomeShowTeacher),
-            scheduleHomeShowNextUpcoming: Boolean(data.data.scheduleHomeShowNextUpcoming),
-            scheduleHomeAfterClassesLabel:
-              typeof data.data.scheduleHomeAfterClassesLabel === 'string' &&
-              data.data.scheduleHomeAfterClassesLabel.trim().length > 0
-                ? data.data.scheduleHomeAfterClassesLabel.trim().slice(
-                    0,
-                    SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
-                  )
-                : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
-            globalMouseTiltEnabled: data.data.globalMouseTiltEnabled === true,
-            globalMouseTiltGyroEnabled: data.data.globalMouseTiltGyroEnabled === true,
-            hideActivityMedia: data.data.hideActivityMedia === true,
-            activityRejectLockappSleep: data.data.activityRejectLockappSleep === true,
-            displayTimezone: normalizeTimezone(data.data.displayTimezone),
-            activityUpdateMode: normalizeActivityUpdateMode(data.data.activityUpdateMode),
-            useNoSqlAsCacheRedis:
-              data.data.useNoSqlAsCacheRedis === undefined
-                ? true
-                : data.data.useNoSqlAsCacheRedis === true,
-            redisCacheTtlSeconds: Number(
-              data.data.redisCacheTtlSeconds ?? REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
-            ),
-            steamEnabled: Boolean(data.data.steamEnabled),
-            steamId: String(data.data.steamId ?? ''),
-            steamApiKey: '',
-          }
-          setRedisCacheServerlessForced(data.data.redisCacheServerlessForced === true)
-          setForm(loaded)
-          setBaselineForm(structuredClone(loaded))
-        }
-      } finally {
-        setLoading(false)
-      }
+    if (options?.updateBaseline) {
+      setBaselineSkillsConfig(structuredClone(loadedSkills))
     }
-    void load()
   }, [
-    setBaselineForm,
     setBaselineSkillsConfig,
-    setForm,
     setLegacyMcpConfigured,
     setLegacyMcpGeneratedApiKey,
-    setLoading,
-    setRedisCacheServerlessForced,
     setSkillsAiAuthorizations,
     setSkillsApiKeyConfigured,
     setSkillsAuthMode,
@@ -289,52 +180,203 @@ export function useWebSettingsController() {
   ])
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPublicOrigin(window.location.origin)
+    }
+  }, [setPublicOrigin])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await fetchAdminSettings()
+
+        if (data) {
+          const rules = Array.isArray(data.appMessageRules) ? data.appMessageRules : []
+          const blacklist = Array.isArray(data.appBlacklist)
+            ? data.appBlacklist
+                .map((item: unknown) => String(item ?? '').trim())
+                .filter((item: string) => item.length > 0)
+            : []
+          const whitelist = Array.isArray(data.appWhitelist)
+            ? data.appWhitelist
+                .map((item: unknown) => String(item ?? '').trim())
+                .filter((item: string) => item.length > 0)
+            : []
+          const filterModeRaw = String(data.appFilterMode ?? 'blacklist').toLowerCase()
+          const appFilterMode = filterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
+          const nameOnlyList = Array.isArray(data.appNameOnlyList)
+            ? data.appNameOnlyList
+                .map((item: unknown) => String(item ?? '').trim())
+                .filter((item: string) => item.length > 0)
+            : []
+          const loaded: SiteConfig = {
+            pageTitle: data.pageTitle ?? DEFAULT_PAGE_TITLE,
+            userName: data.userName ?? '',
+            userBio: data.userBio ?? '',
+            avatarUrl: data.avatarUrl ?? '',
+            profileOnlineAccentColor:
+              normalizeProfileOnlineAccentColor(
+                typeof data.profileOnlineAccentColor === 'string'
+                  ? data.profileOnlineAccentColor
+                  : '',
+              ) ?? '',
+            profileOnlinePulseEnabled: data.profileOnlinePulseEnabled !== false,
+            userNote: data.userNote ?? '',
+            userNoteHitokotoEnabled: Boolean(data.userNoteHitokotoEnabled),
+            userNoteTypewriterEnabled: Boolean(data.userNoteTypewriterEnabled),
+            pageLoadingEnabled: data.pageLoadingEnabled !== false,
+            searchEngineIndexingEnabled: data.searchEngineIndexingEnabled !== false,
+            userNoteHitokotoCategories: normalizeHitokotoCategories(
+              data.userNoteHitokotoCategories,
+            ),
+            userNoteHitokotoEncode: normalizeHitokotoEncode(data.userNoteHitokotoEncode),
+            userNoteHitokotoFallbackToNote: Boolean(data.userNoteHitokotoFallbackToNote),
+            themePreset: data.themePreset ?? 'basic',
+            themeCustomSurface: themeCustomSurfaceFromApi(data.themeCustomSurface),
+            customCss: data.customCss ?? '',
+            mcpThemeToolsEnabled: data.mcpThemeToolsEnabled === true,
+            openApiDocsEnabled: data.openApiDocsEnabled !== false,
+            aiToolMode:
+              String(data.aiToolMode ?? '').trim().toLowerCase() === 'mcp'
+                ? 'mcp'
+                : 'skills',
+            historyWindowMinutes: Number(
+              data.historyWindowMinutes ?? SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
+            ),
+            processStaleSeconds: Number(
+              data.processStaleSeconds ?? SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
+            ),
+            appMessageRules: rules,
+            appMessageRulesShowProcessName: data.appMessageRulesShowProcessName !== false,
+            appFilterMode,
+            appBlacklist: blacklist,
+            appWhitelist: whitelist,
+            appNameOnlyList: nameOnlyList,
+            captureReportedAppsEnabled: data.captureReportedAppsEnabled !== false,
+            mediaPlaySourceBlocklist: Array.isArray(data.mediaPlaySourceBlocklist)
+              ? (data.mediaPlaySourceBlocklist as unknown[])
+                  .map((item) => String(item ?? '').trim().toLowerCase())
+                  .filter((item) => item.length > 0)
+              : [],
+            pageLockEnabled: Boolean(data.pageLockEnabled),
+            pageLockPassword: '',
+            hcaptchaEnabled: Boolean(data.hcaptchaEnabled),
+            hcaptchaSiteKey: data.hcaptchaSiteKey ?? '',
+            hcaptchaSecretKey: '',
+            currentlyText: data.currentlyText ?? '当前状态',
+            earlierText: data.earlierText ?? '最近的随想录',
+            adminText: data.adminText ?? 'admin',
+            autoAcceptNewDevices: Boolean(data.autoAcceptNewDevices),
+            inspirationDeviceRestrictionEnabled: Array.isArray(
+              data.inspirationAllowedDeviceHashes,
+            ),
+            inspirationAllowedDeviceHashes: Array.isArray(data.inspirationAllowedDeviceHashes)
+              ? (data.inspirationAllowedDeviceHashes as unknown[])
+                  .map((item) => String(item ?? '').trim())
+                  .filter((item) => item.length > 0)
+              : [],
+            scheduleSlotMinutes: isAllowedSlotMinutes(Number(data.scheduleSlotMinutes))
+              ? Number(data.scheduleSlotMinutes)
+              : SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
+            schedulePeriodTemplate: resolveSchedulePeriodTemplate(data.schedulePeriodTemplate),
+            scheduleGridByWeekday: resolveScheduleGridByWeekday(
+              data.scheduleGridByWeekday,
+              isAllowedSlotMinutes(Number(data.scheduleSlotMinutes))
+                ? Number(data.scheduleSlotMinutes)
+                : SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
+            ),
+            scheduleCourses: Array.isArray(data.scheduleCourses)
+              ? (data.scheduleCourses as ScheduleCourse[])
+              : [],
+            scheduleIcs: typeof data.scheduleIcs === 'string' ? data.scheduleIcs : '',
+            scheduleInClassOnHome: Boolean(data.scheduleInClassOnHome),
+            scheduleHomeShowLocation: Boolean(data.scheduleHomeShowLocation),
+            scheduleHomeShowTeacher: Boolean(data.scheduleHomeShowTeacher),
+            scheduleHomeShowNextUpcoming: Boolean(data.scheduleHomeShowNextUpcoming),
+            scheduleHomeAfterClassesLabel:
+              typeof data.scheduleHomeAfterClassesLabel === 'string' &&
+              data.scheduleHomeAfterClassesLabel.trim().length > 0
+                ? data.scheduleHomeAfterClassesLabel.trim().slice(
+                    0,
+                    SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
+                  )
+                : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
+            globalMouseTiltEnabled: data.globalMouseTiltEnabled === true,
+            globalMouseTiltGyroEnabled: data.globalMouseTiltGyroEnabled === true,
+            hideActivityMedia: data.hideActivityMedia === true,
+            activityRejectLockappSleep: data.activityRejectLockappSleep === true,
+            displayTimezone: normalizeTimezone(data.displayTimezone),
+            activityUpdateMode: normalizeActivityUpdateMode(data.activityUpdateMode),
+            useNoSqlAsCacheRedis:
+              data.useNoSqlAsCacheRedis === undefined
+                ? true
+                : data.useNoSqlAsCacheRedis === true,
+            redisCacheTtlSeconds: Number(
+              data.redisCacheTtlSeconds ?? REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
+            ),
+            steamEnabled: Boolean(data.steamEnabled),
+            steamId: String(data.steamId ?? ''),
+            steamApiKey: '',
+          }
+          setRedisCacheServerlessForced(data.redisCacheServerlessForced === true)
+          setForm(loaded)
+          setBaselineForm(structuredClone(loaded))
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    void load()
+  }, [
+    setBaselineForm,
+    setForm,
+    setLoading,
+    setRedisCacheServerlessForced,
+  ])
+
+  useEffect(() => {
+    if (!skillsQuery.data) return
+    applySkillsConfigData(skillsQuery.data, {
+      updateBaseline: true,
+      preserveGeneratedKeys: true,
+    })
+  }, [applySkillsConfigData, skillsQuery.data])
+
+  useEffect(() => {
+    if (!skillsQuery.error) return
+    toast.error(
+      skillsQuery.error instanceof Error ? skillsQuery.error.message : '加载 Skills 配置失败',
+    )
+  }, [skillsQuery.error])
+
+  useEffect(() => {
     if (!form.captureReportedAppsEnabled) {
       setHistoryApps([])
       setHistoryPlaySources([])
       return
     }
-    void (async () => {
-      try {
-        const [appsRes, playSourcesRes] = await Promise.all([
-          fetch('/api/admin/activity/history/apps?limit=200'),
-          fetch('/api/admin/activity/history/play-sources?limit=200'),
-        ])
-        const [appsData, playSourcesData] = await Promise.all([
-          appsRes.json().catch(() => null),
-          playSourcesRes.json().catch(() => null),
-        ])
-        if (appsData?.success && Array.isArray(appsData.data)) {
-          const apps = (appsData.data as Array<{ processName?: unknown }>)
-            .map((x) => String(x?.processName ?? '').trim())
-            .filter((x) => x.length > 0)
-          setHistoryApps(apps)
-        }
-        if (playSourcesData?.success && Array.isArray(playSourcesData.data)) {
-          const playSources = (playSourcesData.data as Array<{ playSource?: unknown }>)
-            .map((x) => String(x?.playSource ?? '').trim().toLowerCase())
-            .filter((x) => x.length > 0)
-          setHistoryPlaySources(playSources)
-        }
-      } catch {
-        // ignore
-      }
-    })()
-  }, [form.captureReportedAppsEnabled, setHistoryApps, setHistoryPlaySources])
+    setHistoryApps(historyAppsQuery.data ?? [])
+  }, [
+    form.captureReportedAppsEnabled,
+    historyAppsQuery.data,
+    setHistoryApps,
+    setHistoryPlaySources,
+  ])
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch('/api/admin/devices?limit=200')
-        const data = await res.json()
-        if (data?.success && Array.isArray(data.data)) {
-          setInspirationDevices(data.data)
-        }
-      } catch {
-        // ignore
-      }
-    })()
-  }, [setInspirationDevices])
+    if (!form.captureReportedAppsEnabled) {
+      return
+    }
+    setHistoryPlaySources(historyPlaySourcesQuery.data ?? [])
+  }, [
+    form.captureReportedAppsEnabled,
+    historyPlaySourcesQuery.data,
+    setHistoryPlaySources,
+  ])
+
+  useEffect(() => {
+    setInspirationDevices(inspirationDevicesQuery.data ?? [])
+  }, [inspirationDevicesQuery.data, setInspirationDevices])
 
   const saveSkillsConfig = async (
     patch: {
@@ -349,39 +391,31 @@ export function useWebSettingsController() {
   ) => {
     setSkillsSaving(true)
     try {
-      const res = await fetch('/api/admin/skills', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch),
-      })
-      const json = await res.json().catch(() => null)
-      if (!json?.success) {
-        toast.error(json?.error || `保存失败（HTTP ${res.status}）`)
-        return
-      }
-      setSkillsEnabled(json.data?.enabled === true)
+      const json = await patchAdminSkills(patch)
+      setSkillsEnabled(json.enabled === true)
       setSkillsAuthMode(
-        json.data?.authMode === 'oauth' || json.data?.authMode === 'apikey'
-          ? json.data.authMode
+        json.authMode === 'oauth' || json.authMode === 'apikey'
+          ? json.authMode
           : '',
       )
-      setSkillsApiKeyConfigured(json.data?.apiKeyConfigured === true)
-      setSkillsOauthConfigured(json.data?.oauthConfigured === true)
+      setSkillsApiKeyConfigured(json.apiKeyConfigured === true)
+      setSkillsOauthConfigured(json.oauthConfigured === true)
       setSkillsOauthTokenTtlMinutes(
-        Number.isFinite(Number(json.data?.oauthTokenTtlMinutes))
-          ? Number(json.data.oauthTokenTtlMinutes)
+        Number.isFinite(Number(json.oauthTokenTtlMinutes))
+          ? Number(json.oauthTokenTtlMinutes)
           : 60,
       )
-      setSkillsAiAuthorizations(normalizeSkillsAiAuthorizations(json.data?.aiAuthorizations))
+      setSkillsAiAuthorizations(normalizeSkillsAiAuthorizations(json.aiAuthorizations))
       setSkillsGeneratedApiKey(
-        typeof json.data?.generatedApiKey === 'string' ? json.data.generatedApiKey : '',
+        typeof json.generatedApiKey === 'string' ? json.generatedApiKey : '',
       )
-      setLegacyMcpConfigured(json.data?.legacyMcpConfigured === true)
+      setLegacyMcpConfigured(json.legacyMcpConfigured === true)
       setLegacyMcpGeneratedApiKey(
-        typeof json.data?.generatedLegacyMcpApiKey === 'string'
-          ? json.data.generatedLegacyMcpApiKey
+        typeof json.generatedLegacyMcpApiKey === 'string'
+          ? json.generatedLegacyMcpApiKey
           : '',
       )
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.skills.settings() })
       if (options?.successMessage !== null) {
         toast.success(options?.successMessage || '已保存 Skills 设置')
       }
@@ -473,10 +507,7 @@ export function useWebSettingsController() {
         steamPatch.steamApiKey = steamApiKeyForm.trim()
       }
 
-      const res = await fetch('/api/admin/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await patchAdminSettings({
           ...formRest,
           mcpThemeToolsEnabled: form.mcpThemeToolsEnabled,
           redisCacheTtlSeconds: normalizedRedisTtl,
@@ -492,56 +523,42 @@ export function useWebSettingsController() {
             : null,
           ...hcaptchaPatch,
           ...steamPatch,
-        }),
       })
-      const data = await res.json()
-      if (!res.ok || !data?.success) {
-        toast.error(data?.error || '保存失败')
-        return
-      }
 
       const skillsPatch = normalizeSkillsEditableConfig({
         enabled: skillsEnabled,
         authMode: skillsAuthMode,
         oauthTokenTtlMinutes: skillsOauthTokenTtlMinutes,
       })
-      const skillsRes = await fetch('/api/admin/skills', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          enabled: skillsPatch.enabled,
-          authMode: skillsPatch.authMode || undefined,
-          oauthTokenTtlMinutes: skillsPatch.oauthTokenTtlMinutes,
-        }),
+      const skillsJson = await patchAdminSkills({
+        enabled: skillsPatch.enabled,
+        authMode: skillsPatch.authMode || undefined,
+        oauthTokenTtlMinutes: skillsPatch.oauthTokenTtlMinutes,
       })
-      const skillsJson = await skillsRes.json().catch(() => null)
-      if (!skillsRes.ok || !skillsJson?.success) {
-        toast.error(skillsJson?.error || 'Skills 设置保存失败，请重试')
-        return
-      }
 
       const serverSkills = normalizeSkillsEditableConfig({
-        enabled: skillsJson.data?.enabled === true,
+        enabled: skillsJson.enabled === true,
         authMode:
-          skillsJson.data?.authMode === 'oauth' || skillsJson.data?.authMode === 'apikey'
-            ? skillsJson.data.authMode
+          skillsJson.authMode === 'oauth' || skillsJson.authMode === 'apikey'
+            ? skillsJson.authMode
             : '',
-        oauthTokenTtlMinutes: skillsJson.data?.oauthTokenTtlMinutes,
+        oauthTokenTtlMinutes: Number(skillsJson.oauthTokenTtlMinutes),
       })
       setSkillsEnabled(serverSkills.enabled)
       setSkillsAuthMode(serverSkills.authMode)
       setSkillsOauthTokenTtlMinutes(serverSkills.oauthTokenTtlMinutes)
-      setSkillsApiKeyConfigured(skillsJson.data?.apiKeyConfigured === true)
-      setSkillsOauthConfigured(skillsJson.data?.oauthConfigured === true)
-      setLegacyMcpConfigured(skillsJson.data?.legacyMcpConfigured === true)
-      setSkillsAiAuthorizations(normalizeSkillsAiAuthorizations(skillsJson.data?.aiAuthorizations))
+      setSkillsApiKeyConfigured(skillsJson.apiKeyConfigured === true)
+      setSkillsOauthConfigured(skillsJson.oauthConfigured === true)
+      setLegacyMcpConfigured(skillsJson.legacyMcpConfigured === true)
+      setSkillsAiAuthorizations(normalizeSkillsAiAuthorizations(skillsJson.aiAuthorizations))
       setBaselineSkillsConfig(structuredClone(serverSkills))
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.skills.settings() })
 
       toast.success('保存成功，主页刷新后生效')
-      setRedisCacheServerlessForced(data?.data?.redisCacheServerlessForced === true)
+      setRedisCacheServerlessForced(data?.redisCacheServerlessForced === true)
       const nextForm =
-        data?.data && typeof data.data.useNoSqlAsCacheRedis === 'boolean'
-          ? { ...form, useNoSqlAsCacheRedis: data.data.useNoSqlAsCacheRedis === true }
+        typeof data.useNoSqlAsCacheRedis === 'boolean'
+          ? { ...form, useNoSqlAsCacheRedis: data.useNoSqlAsCacheRedis === true }
           : form
       setForm(nextForm)
       setBaselineForm(structuredClone(nextForm))
@@ -564,14 +581,8 @@ export function useWebSettingsController() {
 
   const copyExportConfig = async () => {
     try {
-      const res = await fetch('/api/admin/settings/export')
-      const data = await res.json()
-      if (!res.ok || !data?.success || !data?.data?.encoded) {
-        toast.error(typeof data?.error === 'string' ? data.error : '导出失败')
-        return
-      }
-
-      await navigator.clipboard.writeText(data.data.encoded)
+      const encoded = await exportAdminSettings()
+      await navigator.clipboard.writeText(encoded)
       toast.success('已复制接入配置到剪贴板')
     } catch {
       toast.error('复制失败，请重试')

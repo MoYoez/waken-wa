@@ -1,10 +1,16 @@
 'use client'
 
-import { Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Loader2, Trash2 } from 'lucide-react'
 import Image from 'next/image'
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  fetchAdminInspirationOrphanAssets,
+} from '@/components/admin/admin-query-fetchers'
+import { adminQueryKeys } from '@/components/admin/admin-query-keys'
+import { deleteAdminInspirationOrphanAssets } from '@/components/admin/admin-query-mutations'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,11 +50,30 @@ function formatCreatedAt(value: string | null): string {
 }
 
 export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function OrphanImages(_, ref) {
-  const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const [tick, setTick] = useState(0)
-  const [rows, setRows] = useState<OrphanAssetRow[]>([])
+  const queryClient = useQueryClient()
   const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const rowsQuery = useQuery({
+    queryKey: adminQueryKeys.inspiration.orphanAssets(),
+    queryFn: fetchAdminInspirationOrphanAssets,
+  })
+  const rows = useMemo<OrphanAssetRow[]>(
+    () => rowsQuery.data ?? [],
+    [rowsQuery.data],
+  )
+
+  const deleteOrphansMutation = useMutation({
+    mutationFn: deleteAdminInspirationOrphanAssets,
+    onSuccess: async ({ deleted, skipped }) => {
+      toast.success(`已删除 ${deleted} 张，跳过 ${skipped} 张`)
+      clearSelection()
+      await queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.inspiration.orphanAssets(),
+      })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
 
   const eligibleKeys = useMemo(
     () => rows.filter((r) => r.eligibleForDelete).map((r) => r.publicKey),
@@ -65,35 +90,6 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
     return selectedKeys.filter((k) => eligible.has(k))
   }, [selectedKeys, eligibleKeys])
 
-  const fetchRows = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/admin/inspiration/orphan-assets')
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || !data?.success || !Array.isArray(data.data)) {
-        toast.error(typeof data?.error === 'string' ? data.error : '读取失败')
-        return
-      }
-      const nextRows = data.data as OrphanAssetRow[]
-      setRows(nextRows)
-      setSelected((prev) => {
-        const next: Record<string, boolean> = {}
-        for (const r of nextRows) {
-          if (prev[r.publicKey]) next[r.publicKey] = true
-        }
-        return next
-      })
-    } catch {
-      toast.error('网络错误')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void fetchRows()
-  }, [fetchRows, tick])
-
   const toggleSelect = (key: string, checked: boolean) => {
     setSelected((prev) => ({ ...prev, [key]: checked }))
   }
@@ -109,46 +105,29 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
   const clearSelection = () => setSelected({})
 
   useImperativeHandle(ref, () => ({
-    refresh: () => setTick((t) => t + 1),
+    refresh: () => {
+      void queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.inspiration.orphanAssets(),
+      })
+    },
   }))
 
   const doDelete = async (keys: string[]) => {
     if (keys.length === 0) return
-    setBusy(true)
-    try {
-      const res = await fetch('/api/admin/inspiration/orphan-assets', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ publicKeys: keys }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '删除失败')
-        return
-      }
-      const deleted = typeof data?.data?.deleted === 'number' ? data.data.deleted : 0
-      const skipped = typeof data?.data?.skipped === 'number' ? data.data.skipped : 0
-      toast.success(`已删除 ${deleted} 张，跳过 ${skipped} 张`)
-      clearSelection()
-      setTick((t) => t + 1)
-    } catch {
-      toast.error('网络错误')
-    } finally {
-      setBusy(false)
-    }
+    await deleteOrphansMutation.mutateAsync(keys)
   }
 
   return (
     <div className="space-y-6">
       <Card>
         <CardContent className="pt-4">
-          {rows.length > 0 && !loading && (
+          {rows.length > 0 && !rowsQuery.isLoading && (
             <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={loading || busy || eligibleKeys.length === 0}
+                disabled={rowsQuery.isLoading || deleteOrphansMutation.isPending || eligibleKeys.length === 0}
                 onClick={selectAllEligible}
               >
                 全选可清理
@@ -160,9 +139,9 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                     variant="destructive"
                     size="sm"
                     className="gap-1.5"
-                    disabled={loading || busy || selectedEligibleKeys.length === 0}
+                    disabled={rowsQuery.isLoading || deleteOrphansMutation.isPending || selectedEligibleKeys.length === 0}
                   >
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    {deleteOrphansMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                     清理所选（{selectedEligibleKeys.length}）
                   </Button>
                 </AlertDialogTrigger>
@@ -174,9 +153,9 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel disabled={busy}>取消</AlertDialogCancel>
+                    <AlertDialogCancel disabled={deleteOrphansMutation.isPending}>取消</AlertDialogCancel>
                     <AlertDialogAction
-                      disabled={busy}
+                      disabled={deleteOrphansMutation.isPending}
                       onClick={() => {
                         void doDelete(selectedEligibleKeys)
                       }}
@@ -188,7 +167,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
               </AlertDialog>
             </div>
           )}
-          {loading ? (
+          {rowsQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">加载中…</div>
           ) : rows.length === 0 ? (
             <div className="text-sm text-muted-foreground">暂无孤儿图片</div>
@@ -243,7 +222,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                               variant="outline"
                               size="icon"
                               className="h-8 w-8"
-                              disabled={busy || !r.eligibleForDelete}
+                              disabled={deleteOrphansMutation.isPending || !r.eligibleForDelete}
                               title={r.eligibleForDelete ? '删除' : '当前不可删除'}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -257,9 +236,9 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel disabled={busy}>取消</AlertDialogCancel>
+                              <AlertDialogCancel disabled={deleteOrphansMutation.isPending}>取消</AlertDialogCancel>
                               <AlertDialogAction
-                                disabled={busy}
+                                disabled={deleteOrphansMutation.isPending}
                                 onClick={() => {
                                   void doDelete([r.publicKey])
                                 }}

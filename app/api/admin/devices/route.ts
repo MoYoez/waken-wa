@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 
-import { count, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { asc, count, eq, getTableColumns, sql } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { clearActivityFeedDataCache } from '@/lib/activity-feed'
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     const [rows, [totalRow]] = await Promise.all([
       (whereClause ? baseList.where(whereClause) : baseList)
-        .orderBy(desc(devices.updatedAt))
+        .orderBy(asc(devices.id))
         .limit(limit)
         .offset(offset),
       whereClause ? baseCount.where(whereClause) : baseCount,

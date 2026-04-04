@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 
+import { approveSkillsOauthAuthorizeCode } from '@/components/admin/admin-query-mutations'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -38,18 +39,10 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId, authorizeCo
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/skills/oauth/authorize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm: true, authorizeCode }),
-      })
-      const json = await res.json().catch(() => null)
-      if (!json?.success) {
-        throw new Error(json?.error || `HTTP ${res.status}`)
-      }
-      setApproved(json.data?.approved === true)
-      setApprovedAt(String(json.data?.approvedAt ?? ''))
-      setExpiresAt(String(json.data?.expiresAt ?? ''))
+      const result = await approveSkillsOauthAuthorizeCode(authorizeCode)
+      setApproved(result.approved)
+      setApprovedAt(result.approvedAt)
+      setExpiresAt(result.expiresAt)
     } catch (err) {
       setError(err instanceof Error ? err.message : '授权失败')
     } finally {

@@ -1,12 +1,34 @@
 'use client'
 
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { Check, Copy, Plus, QrCode, Trash2 } from 'lucide-react'
 import Image from 'next/image'
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { toast } from 'sonner'
 
+import {
+  fetchAdminTokenPage,
+} from '@/components/admin/admin-query-fetchers'
+import { adminQueryKeys } from '@/components/admin/admin-query-keys'
+import {
+  createAdminToken,
+  deleteAdminToken,
+  patchAdminToken,
+} from '@/components/admin/admin-query-mutations'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +49,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,11 +63,8 @@ export interface TokenManagerHandle {
 }
 
 export const TokenManager = forwardRef<TokenManagerHandle, object>(function TokenManager(_, ref) {
-  const [tokens, setTokens] = useState<ApiTokenListRow[]>([])
-  const [total, setTotal] = useState(0)
+  const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
-  const [listTick, setListTick] = useState(0)
-  const [loading, setLoading] = useState(true)
   const [newTokenName, setNewTokenName] = useState('')
   const [newToken, setNewToken] = useState<string | null>(null)
   const [newTokenBundle, setNewTokenBundle] = useState<string | null>(null)
@@ -54,130 +72,96 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
   const [copiedTarget, setCopiedTarget] = useState<string | null>(null)
   const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [creating, setCreating] = useState(false)
   const [qrDialogOpen, setQrDialogOpen] = useState(false)
   const [qrTitle, setQrTitle] = useState('')
   const [qrEndpoint, setQrEndpoint] = useState('')
   const [qrEncoded, setQrEncoded] = useState('')
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(total / TOKEN_LIST_PAGE_SIZE)),
-    [total],
-  )
+  const tokensQuery = useQuery({
+    queryKey: adminQueryKeys.tokens.page({ page }),
+    queryFn: () => fetchAdminTokenPage({ page, pageSize: TOKEN_LIST_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+  })
+
+  const tokens = useMemo(() => tokensQuery.data?.rows ?? [], [tokensQuery.data?.rows])
+  const total = tokensQuery.data?.total ?? 0
+  const loading = tokensQuery.isLoading
+  const refreshing = tokensQuery.isFetching && !tokensQuery.isLoading
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / TOKEN_LIST_PAGE_SIZE)), [total])
+  const safePage = useMemo(() => Math.min(page, Math.max(0, totalPages - 1)), [page, totalPages])
 
   useEffect(() => {
-    if (loading) return
-    if (total <= 0) {
-      if (page !== 0) setPage(0)
-      return
-    }
-    const maxPage = Math.max(0, Math.ceil(total / TOKEN_LIST_PAGE_SIZE) - 1)
-    if (page > maxPage) setPage(maxPage)
-  }, [loading, total, page])
+    if (page <= safePage) return
+    const timer = window.setTimeout(() => {
+      setPage(safePage)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [page, safePage])
 
-  /** When `silent`, skip the list loading overlay so controlled Switches keep mounting and CSS transitions run. */
-  const fetchTokens = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent === true
-    if (!silent) setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        limit: String(TOKEN_LIST_PAGE_SIZE),
-        offset: String(page * TOKEN_LIST_PAGE_SIZE),
-      })
-      const res = await fetch(`/api/admin/tokens?${params}`)
-      const data = await res.json()
-      if (data.success) {
-        setTokens(data.data || [])
-        setTotal(typeof data.pagination?.total === 'number' ? data.pagination.total : (data.data?.length ?? 0))
-      }
-    } catch {
-      // ignore
-    } finally {
-      if (!silent) setLoading(false)
-    }
-  }, [page])
-
-  useEffect(() => {
-    void fetchTokens()
-  }, [fetchTokens, listTick])
-
-  const handleCreate = async () => {
-    if (!newTokenName.trim()) return
-
-    setCreating(true)
-    try {
-      const res = await fetch('/api/admin/tokens', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newTokenName }),
-      })
-      const data = (await res.json().catch(() => ({}))) as {
-        success?: boolean
-        error?: string
-        data?: { token: string }
-        tokenBundleBase64?: string | null
-        endpoint?: string | null
-      }
-
-      if (!res.ok || !data?.success || !data.data?.token) {
-        toast.error(typeof data?.error === 'string' ? data.error : '创建失败')
-        return
-      }
-      setNewToken(data.data.token)
+  const createTokenMutation = useMutation({
+    mutationFn: async () => {
+      return createAdminToken(newTokenName)
+    },
+    onSuccess: async (data) => {
+      setNewToken(data.token ?? null)
       setNewTokenBundle(data.tokenBundleBase64 || null)
       setNewEndpoint(data.endpoint || null)
       setPage(0)
-      setListTick((t) => t + 1)
       toast.success('Token 已创建')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'tokens'] })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
+
+  const toggleTokenMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      await patchAdminToken({ id, is_active: isActive })
+      return { isActive }
+    },
+    onSuccess: async ({ isActive }) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'tokens'] })
+      toast.success(isActive ? 'Token 已启用' : 'Token 已禁用', { duration: 2200 })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
+
+  const deleteTokenMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await deleteAdminToken(id)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'tokens'] })
+      toast.success('Token 已删除')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
+
+  const refreshTokens = async () => {
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'tokens'] })
+      await tokensQuery.refetch()
     } catch {
-      toast.error('网络错误')
-    } finally {
-      setCreating(false)
+      toast.error('刷新失败，请重试')
     }
   }
 
-  const handleToggle = async (id: number, is_active: boolean) => {
-    const prev = tokens.find((t) => t.id === id)
-    if (prev) {
-      setTokens((rows) => rows.map((t) => (t.id === id ? { ...t, isActive: is_active } : t)))
-    }
-    try {
-      const res = await fetch('/api/admin/tokens', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, is_active }),
-      })
-      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
-      if (!res.ok || !data?.success) {
-        if (prev) {
-          setTokens((rows) => rows.map((t) => (t.id === id ? { ...t, isActive: prev.isActive } : t)))
-        }
-        toast.error(typeof data?.error === 'string' ? data.error : '更新失败')
-        return
-      }
-      await fetchTokens({ silent: true })
-      toast.success(is_active ? 'Token 已启用' : 'Token 已禁用', { duration: 2200 })
-    } catch {
-      if (prev) {
-        setTokens((rows) => rows.map((t) => (t.id === id ? { ...t, isActive: prev.isActive } : t)))
-      }
-      toast.error('网络错误')
-    }
+  const handleCreate = async () => {
+    if (!newTokenName.trim()) return
+    await createTokenMutation.mutateAsync()
+  }
+
+  const handleToggle = async (id: number, isActive: boolean) => {
+    await toggleTokenMutation.mutateAsync({ id, isActive })
   }
 
   const handleDelete = async (id: number) => {
-    try {
-      const res = await fetch(`/api/admin/tokens?id=${id}`, { method: 'DELETE' })
-      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '删除失败')
-        return
-      }
-      await fetchTokens({ silent: true })
-      toast.success('Token 已删除')
-    } catch {
-      toast.error('网络错误')
-    }
+    await deleteTokenMutation.mutateAsync(id)
   }
 
   const copyToClipboard = async (text: string, target: string) => {
@@ -226,117 +210,125 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
   return (
     <div className="space-y-6">
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        {/* DialogTrigger intentionally omitted – opened via ref from parent */}
         <DialogContent>
-            <DialogHeader>
-              <DialogTitle>创建 API Token</DialogTitle>
-              <DialogDescription>
-                创建一个新的 API Token 用于上报活动数据
-              </DialogDescription>
-            </DialogHeader>
-            
-            {newToken ? (
-              <div className="space-y-4">
-                <div className="rounded-lg bg-muted p-4">
-                  <p className="text-sm text-muted-foreground mb-2">请保存以下 Token，它只会显示一次：</p>
+          <DialogHeader>
+            <DialogTitle>创建 API Token</DialogTitle>
+            <DialogDescription>
+              创建一个新的 API Token 用于上报活动数据
+            </DialogDescription>
+          </DialogHeader>
+
+          {newToken ? (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted p-4">
+                <p className="mb-2 text-sm text-muted-foreground">请保存以下 Token，它只会显示一次：</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 break-all rounded bg-background p-2 text-sm font-mono">
+                    {newToken}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => void copyToClipboard(newToken, 'create-raw-token')}
+                  >
+                    {copiedTarget === 'create-raw-token' ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {newTokenBundle ? (
+                <div className="space-y-2 rounded-lg bg-muted p-4">
+                  <p className="text-sm text-muted-foreground">
+                    一键接入配置（Base64，含 endpoint + key）
+                  </p>
+                  {newEndpoint ? (
+                    <p className="text-xs text-muted-foreground">Endpoint: {newEndpoint}</p>
+                  ) : null}
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-sm font-mono break-all bg-background p-2 rounded">
-                      {newToken}
+                    <code className="flex-1 break-all rounded bg-background p-2 text-xs font-mono">
+                      {newTokenBundle}
                     </code>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
-                      onClick={() => void copyToClipboard(newToken, 'create-raw-token')}
+                      onClick={() => void copyToClipboard(newTokenBundle, 'create-token-bundle')}
                     >
-                      {copiedTarget === 'create-raw-token' ? (
+                      {copiedTarget === 'create-token-bundle' ? (
                         <Check className="h-4 w-4" />
                       ) : (
                         <Copy className="h-4 w-4" />
                       )}
                     </Button>
                   </div>
-                </div>
-                {newTokenBundle && (
-                  <div className="rounded-lg bg-muted p-4 space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      一键接入配置（Base64，含 endpoint + key）
-                    </p>
-                    {newEndpoint && (
-                      <p className="text-xs text-muted-foreground">Endpoint: {newEndpoint}</p>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-xs font-mono break-all bg-background p-2 rounded">
-                        {newTokenBundle}
-                      </code>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => void copyToClipboard(newTokenBundle, 'create-token-bundle')}
-                      >
-                        {copiedTarget === 'create-token-bundle' ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="pt-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setQrTitle(newTokenName || '新 Token')
-                          setQrEndpoint(newEndpoint || '')
-                          setQrEncoded(newTokenBundle)
-                          setQrDialogOpen(true)
-                        }}
-                      >
-                        <QrCode className="h-4 w-4" />
-                        显示接入二维码
-                      </Button>
-                    </div>
+                  <div className="pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setQrTitle(newTokenName || '新 Token')
+                        setQrEndpoint(newEndpoint || '')
+                        setQrEncoded(newTokenBundle)
+                        setQrDialogOpen(true)
+                      }}
+                    >
+                      <QrCode className="h-4 w-4" />
+                      显示接入二维码
+                    </Button>
                   </div>
-                )}
-                <DialogFooter>
-                  <Button onClick={closeDialog}>完成</Button>
-                </DialogFooter>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="tokenName">Token 名称</Label>
-                  <Input
-                    id="tokenName"
-                    placeholder="例如：我的电脑"
-                    value={newTokenName}
-                    onChange={(e) => setNewTokenName(e.target.value)}
-                  />
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={closeDialog}>取消</Button>
-                  <Button onClick={handleCreate} disabled={creating || !newTokenName.trim()}>
-                    {creating ? '创建中...' : '创建'}
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
+              ) : null}
+
+              <DialogFooter>
+                <Button onClick={closeDialog}>完成</Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="tokenName">Token 名称</Label>
+                <Input
+                  id="tokenName"
+                  placeholder="例如：我的电脑"
+                  value={newTokenName}
+                  onChange={(event) => setNewTokenName(event.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeDialog}>
+                  取消
+                </Button>
+                <Button
+                  onClick={() => void handleCreate()}
+                  disabled={createTokenMutation.isPending || !newTokenName.trim()}
+                >
+                  {createTokenMutation.isPending ? '创建中...' : '创建'}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
       </Dialog>
 
-      {/* Token list (paginated + scroll) */}
+      <div className="flex items-center gap-3">
+        <Button type="button" variant="outline" onClick={() => void refreshTokens()}>
+          <Plus className="mr-1 h-4 w-4 opacity-0" />
+          {refreshing ? '刷新中...' : '刷新列表'}
+        </Button>
+      </div>
+
       <div className="space-y-3">
         {loading ? (
           <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              加载中...
-            </CardContent>
+            <CardContent className="py-8 text-center text-muted-foreground">加载中...</CardContent>
           </Card>
         ) : tokens.length === 0 && total > 0 ? (
           <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              正在同步页码…
-            </CardContent>
+            <CardContent className="py-8 text-center text-muted-foreground">正在同步页码…</CardContent>
           </Card>
         ) : tokens.length === 0 ? (
           <Card>
@@ -350,86 +342,90 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
             style={{ maxHeight: TOKEN_LIST_MAX_HEIGHT }}
           >
             {tokens.map((token) => (
-            <Card key={token.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{token.name}</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={token.isActive}
-                      onCheckedChange={(checked) => handleToggle(token.id, checked)}
-                    />
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>删除 Token</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            确定要删除 Token &quot;{token.name}&quot; 吗？使用此 Token 的设备将无法继续上报数据。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>取消</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(token.id)}>
-                            删除
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+              <Card key={token.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{token.name}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={token.isActive}
+                        onCheckedChange={(checked) => void handleToggle(token.id, checked)}
+                        disabled={toggleTokenMutation.isPending}
+                      />
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>删除 Token</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              确定要删除 Token &quot;{token.name}&quot; 吗？使用此 Token 的设备将无法继续上报数据。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => void handleDelete(token.id)}
+                              disabled={deleteTokenMutation.isPending}
+                            >
+                              删除
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
-                </div>
-                <CardDescription>
-                  Token: {token.token}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                  <span>
-                    创建于 {safeFormat(token.createdAt, 'yyyy-MM-dd') ?? '—'}
-                  </span>
-                  {safeFormat(token.lastUsedAt, 'MM-dd HH:mm') && (
-                    <span>
-                      最后使用 {safeFormat(token.lastUsedAt, 'MM-dd HH:mm')}
+                  <CardDescription>Token: {token.token}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                    <span>创建于 {safeFormat(token.createdAt, 'yyyy-MM-dd') ?? '—'}</span>
+                    {safeFormat(token.lastUsedAt, 'MM-dd HH:mm') ? (
+                      <span>最后使用 {safeFormat(token.lastUsedAt, 'MM-dd HH:mm')}</span>
+                    ) : null}
+                    <span className={token.isActive ? 'text-emerald-500' : 'text-muted-foreground'}>
+                      {token.isActive ? '已启用' : '已禁用'}
                     </span>
-                  )}
-                  <span className={token.isActive ? 'text-emerald-500' : 'text-muted-foreground'}>
-                    {token.isActive ? '已启用' : '已禁用'}
-                  </span>
-                </div>
-                <div className="rounded-md border border-border/60 bg-muted/20 p-3">
-                  <p className="text-xs font-medium text-foreground mb-2">最近使用设备（按最后在线）</p>
-                  {!token.recentDevices || token.recentDevices.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">暂无关联设备（上报过且绑定此 Token 的设备会出现在此）</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {token.recentDevices.map((d) => (
-                        <li
-                          key={`${token.id}-${d.generatedHashKey}`}
-                          className="text-xs space-y-1 border-b border-border/40 pb-2 last:border-0 last:pb-0"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="font-medium text-foreground">{d.displayName}</span>
-                            <span className="text-muted-foreground shrink-0">
-                              {d.lastSeenAt
-                                ? safeFormat(d.lastSeenAt, 'yyyy-MM-dd HH:mm') ?? '—'
-                                : '从未在线'}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground">设备身份牌</p>
-                          <code className="block font-mono break-all text-muted-foreground">
-                            {d.generatedHashKey}
-                          </code>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                  <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+                    <p className="mb-2 text-xs font-medium text-foreground">最近使用设备（按最后在线）</p>
+                    {!token.recentDevices || token.recentDevices.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        暂无关联设备（上报过且绑定此 Token 的设备会出现在此）
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {token.recentDevices.map((device) => (
+                          <li
+                            key={`${token.id}-${device.generatedHashKey}`}
+                            className="space-y-1 border-b border-border/40 pb-2 text-xs last:border-0 last:pb-0"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-medium text-foreground">{device.displayName}</span>
+                              <span className="shrink-0 text-muted-foreground">
+                                {device.lastSeenAt
+                                  ? safeFormat(device.lastSeenAt, 'yyyy-MM-dd HH:mm') ?? '—'
+                                  : '从未在线'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">设备身份牌</p>
+                            <code className="block break-all font-mono text-muted-foreground">
+                              {device.generatedHashKey}
+                            </code>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
@@ -441,7 +437,8 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
               {tokens.length > 0 ? (
                 <>
                   {' '}
-                  · 本页 {page * TOKEN_LIST_PAGE_SIZE + 1}–{page * TOKEN_LIST_PAGE_SIZE + tokens.length}
+                  · 本页 {safePage * TOKEN_LIST_PAGE_SIZE + 1}–
+                  {safePage * TOKEN_LIST_PAGE_SIZE + tokens.length}
                 </>
               ) : null}
             </span>
@@ -452,21 +449,23 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                   variant="outline"
                   size="sm"
                   className="h-8"
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page <= 0 || loading}
+                  onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
+                  disabled={safePage <= 0 || loading}
                 >
                   上一页
                 </Button>
                 <span className="tabular-nums text-sm">
-                  {page + 1} / {totalPages}
+                  {safePage + 1} / {totalPages}
                 </span>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   className="h-8"
-                  onClick={() => setPage((p) => p + 1)}
-                  disabled={page >= totalPages - 1 || loading}
+                  onClick={() =>
+                    setPage((currentPage) => Math.min(totalPages - 1, currentPage + 1))
+                  }
+                  disabled={safePage >= totalPages - 1 || loading}
                 >
                   下一页
                 </Button>
@@ -498,10 +497,10 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
             <p className="text-sm">
               Token: <span className="font-medium">{qrTitle || '-'}</span>
             </p>
-            {qrEndpoint && (
-              <p className="text-xs text-muted-foreground break-all">Endpoint: {qrEndpoint}</p>
-            )}
-            <div className="rounded-lg border p-4 flex items-center justify-center min-h-[280px]">
+            {qrEndpoint ? (
+              <p className="break-all text-xs text-muted-foreground">Endpoint: {qrEndpoint}</p>
+            ) : null}
+            <div className="flex min-h-[280px] items-center justify-center rounded-lg border p-4">
               {qrEncoded ? (
                 <Image
                   src={getQrImageUrl(qrEncoded)}
@@ -514,7 +513,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                 <div className="text-sm text-muted-foreground">暂无二维码数据</div>
               )}
             </div>
-            {qrEncoded && (
+            {qrEncoded ? (
               <Button
                 type="button"
                 variant="outline"
@@ -527,7 +526,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                 )}
                 {copiedTarget === 'qr-encoded' ? '已复制' : '复制接入配置'}
               </Button>
-            )}
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>

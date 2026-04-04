@@ -15,6 +15,7 @@ import { WebSettingsOpenApiPanel } from '@/components/admin/web-settings-openapi
 import { WebSettingsRuleTools } from '@/components/admin/web-settings-rule-tools'
 import { WebSettingsSecurityPanel } from '@/components/admin/web-settings-security-panel'
 import { WebSettingsSkillsPanel } from '@/components/admin/web-settings-skills-panel'
+import { ThemeModeToggle } from '@/components/theme-mode-toggle'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -69,6 +70,18 @@ function WebSettingsContent() {
   return (
     <>
       <div className="rounded-xl border bg-card p-6 space-y-5">
+        <section className="hidden rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4 lg:flex lg:items-center lg:justify-between">
+          <div className="max-w-2xl space-y-1">
+            <h3 className="text-sm font-semibold tracking-wide text-foreground">后台外观</h3>
+            <p className="text-xs leading-6 text-muted-foreground">
+              这里切换的是当前设备上的后台明暗模式，不会改动前台站点主题，也不会影响访客看到的页面风格。
+            </p>
+          </div>
+          <div className="shrink-0">
+            <ThemeModeToggle />
+          </div>
+        </section>
+
         <Tabs defaultValue="basic" className="space-y-5">
           <TabsList>
             <TabsTrigger value="basic">基础设置</TabsTrigger>

@@ -1,9 +1,15 @@
 'use client'
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2, Monitor } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  fetchAdminDeviceSummaries,
+} from '@/components/admin/admin-query-fetchers'
+import { adminQueryKeys } from '@/components/admin/admin-query-keys'
+import { createAdminActivity } from '@/components/admin/admin-query-mutations'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -39,7 +45,7 @@ type DeviceOption = {
 const WEB_RESERVED_HASH = '__web_reserved__'
 
 export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
-  const [devices, setDevices] = useState<DeviceOption[]>([])
+  const queryClient = useQueryClient()
   const [selectedHash, setSelectedHash] = useState<string>(WEB_RESERVED_HASH)
 
   const [device, setDevice] = useState('')
@@ -48,31 +54,30 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
   const [persistMinutes, setPersistMinutes] = useState('30')
   const [batteryLevel, setBatteryLevel] = useState('')
   const [isCharging, setIsCharging] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const devicesQuery = useQuery({
+    queryKey: adminQueryKeys.devices.list({ limit: 200, status: 'active' }),
+    queryFn: () => fetchAdminDeviceSummaries({ limit: 200, status: 'active' }),
+  })
+  const devices: DeviceOption[] = devicesQuery.data ?? []
 
-  // Load available active devices for the selector
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch('/api/admin/devices?limit=200')
-        const data = await res.json()
-        if (data?.success && Array.isArray(data.data)) {
-          setDevices(
-            (data.data as Record<string, unknown>[])
-              .filter((d) => d.status === 'active')
-              .map((d) => ({
-                id: Number(d.id),
-                displayName: String(d.displayName ?? ''),
-                generatedHashKey: String(d.generatedHashKey ?? ''),
-                status: String(d.status ?? 'active'),
-              })),
-          )
-        }
-      } catch {
-        // ignore — device list is optional
-      }
-    })()
-  }, [])
+  const addActivityMutation = useMutation({
+    mutationFn: createAdminActivity,
+    onSuccess: async () => {
+      toast.success('活动已添加')
+      setDevice('')
+      setProcessName('')
+      setProcessTitle('')
+      setBatteryLevel('')
+      setIsCharging(false)
+      setSelectedHash(WEB_RESERVED_HASH)
+      onSuccess?.()
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'activity-history'] })
+      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.devices.list() })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
 
   // When a known device is selected, pre-fill the device name field
   const handleDeviceSelect = (hash: string) => {
@@ -87,7 +92,6 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
 
     try {
       const parsedPersist = Math.round(Number(persistMinutes))
@@ -120,30 +124,9 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
         }
       }
 
-      const res = await fetch('/api/admin/activity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      const data = await res.json()
-
-      if (data.success) {
-        toast.success('活动已添加')
-        setDevice('')
-        setProcessName('')
-        setProcessTitle('')
-        setBatteryLevel('')
-        setIsCharging(false)
-        setSelectedHash(WEB_RESERVED_HASH)
-        onSuccess?.()
-      } else {
-        toast.error(data.error || '添加失败')
-      }
+      await addActivityMutation.mutateAsync(payload)
     } catch {
-      toast.error('网络错误')
-    } finally {
-      setLoading(false)
+      // mutation handles toast
     }
   }
 
@@ -259,8 +242,8 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
         </p>
       </div>
 
-      <Button type="submit" disabled={loading}>
-        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      <Button type="submit" disabled={addActivityMutation.isPending}>
+        {addActivityMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         添加活动
       </Button>
     </form>

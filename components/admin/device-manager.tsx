@@ -1,9 +1,25 @@
 'use client'
 
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { Copy, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  fetchAdminDevicesPage,
+  fetchAdminTokenOptions,
+} from '@/components/admin/admin-query-fetchers'
+import { adminQueryKeys as keys } from '@/components/admin/admin-query-keys'
+import {
+  createAdminDevice,
+  deleteAdminDevice,
+  patchAdminDevice,
+} from '@/components/admin/admin-query-mutations'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -118,76 +134,141 @@ export function DeviceManager({
   initialHashKey?: string
   highlightHashKey?: string
 } = {}) {
-  const [loading, setLoading] = useState(true)
-  const [items, setItems] = useState<AdminDeviceItem[]>([])
-  const [total, setTotal] = useState(0)
+  const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
   const [q, setQ] = useState(() => initialHashKey?.trim() ?? '')
   const [status, setStatus] = useState('')
-  const [tokens, setTokens] = useState<AdminTokenOption[]>([])
-
-  const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newTokenId, setNewTokenId] = useState('')
   const [newHashKey, setNewHashKey] = useState('')
-  const [reviewDevice, setReviewDevice] = useState<AdminDeviceItem | null>(null)
+  const [reviewDeviceId, setReviewDeviceId] = useState<number | null>(null)
   const highlightHandledRef = useRef(false)
+
+  const tokensQuery = useQuery({
+    queryKey: keys.tokens.options(),
+    queryFn: fetchAdminTokenOptions,
+  })
+
+  const devicesQuery = useQuery({
+    queryKey: keys.devices.page({ page, q, status }),
+    queryFn: () => fetchAdminDevicesPage({ page, q, status, pageSize: DEVICE_LIST_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+  })
+
+  const items = useMemo(() => devicesQuery.data?.items ?? [], [devicesQuery.data?.items])
+  const total = devicesQuery.data?.total ?? 0
+  const loading = devicesQuery.isLoading
+  const refreshing = devicesQuery.isFetching && !devicesQuery.isLoading
+  const tokens = tokensQuery.data ?? []
+  const reviewDevice = useMemo(
+    () => (reviewDeviceId == null ? null : items.find((item) => item.id === reviewDeviceId) ?? null),
+    [items, reviewDeviceId],
+  )
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(total / DEVICE_LIST_PAGE_SIZE)),
     [total],
   )
+  const safePage = useMemo(() => Math.min(page, Math.max(0, totalPages - 1)), [page, totalPages])
 
   useEffect(() => {
-    if (loading || total <= 0) return
-    const maxPage = Math.max(0, Math.ceil(total / DEVICE_LIST_PAGE_SIZE) - 1)
-    if (page > maxPage) setPage(maxPage)
-  }, [loading, total, page])
+    if (page <= safePage) return
+    const timer = window.setTimeout(() => {
+      setPage(safePage)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [page, safePage])
 
-  const fetchTokens = useCallback(async () => {
+  const refreshDevices = async () => {
     try {
-      const res = await fetch('/api/admin/tokens')
-      const data = await res.json()
-      if (data?.success && Array.isArray(data.data)) {
-        setTokens(data.data)
-      }
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
+      await devicesQuery.refetch()
     } catch {
-      // ignore
+      toast.error('刷新失败，请重试')
     }
-  }, [])
+  }
 
-  /** When `silent`, skip the list loading overlay so controlled Switches keep mounting and CSS transitions run. */
-  const fetchDevices = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent === true
-    if (!silent) setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        limit: String(DEVICE_LIST_PAGE_SIZE),
-        offset: String(page * DEVICE_LIST_PAGE_SIZE),
+  const createDeviceMutation = useMutation({
+    mutationFn: async () => {
+      const apiTokenId = newTokenId ? Number(newTokenId) : undefined
+      const body: Record<string, unknown> = {
+        displayName: newName.trim(),
+        apiTokenId: Number.isFinite(apiTokenId) ? apiTokenId : undefined,
+      }
+      const hk = newHashKey.trim()
+      if (hk) body.generatedHashKey = hk
+      await createAdminDevice({
+        displayName: String(body.displayName),
+        apiTokenId: typeof body.apiTokenId === 'number' ? body.apiTokenId : undefined,
+        generatedHashKey: typeof body.generatedHashKey === 'string' ? body.generatedHashKey : undefined,
       })
-      if (q.trim()) params.set('q', q.trim())
-      if (status) params.set('status', status)
+    },
+    onSuccess: async () => {
+      setNewName('')
+      setNewTokenId('')
+      setNewHashKey('')
+      setPage(0)
+      toast.success('设备已创建')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
 
-      const res = await fetch(`/api/admin/devices?${params}`)
-      const data = await res.json()
-      if (data?.success) {
-        setItems(data.data || [])
-        setTotal(data.pagination?.total || 0)
-      }
-    } catch {
-      // ignore
-    } finally {
-      if (!silent) setLoading(false)
-    }
-  }, [page, q, status])
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({
+      id,
+      nextStatus,
+    }: {
+      id: number
+      nextStatus: 'active' | 'pending' | 'revoked'
+    }) => {
+      await patchAdminDevice({ id, status: nextStatus })
+      return { id, nextStatus }
+    },
+    onSuccess: async ({ id, nextStatus }) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
+      setReviewDeviceId((deviceId) => (deviceId === id ? null : deviceId))
+      toast.success(`设备状态已更新为「${DEVICE_STATUS_LABEL[nextStatus]}」`)
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
 
-  useEffect(() => {
-    void fetchTokens()
-  }, [fetchTokens])
+  const updateSteamMutation = useMutation({
+    mutationFn: async ({
+      id,
+      showSteamNowPlaying,
+    }: {
+      id: number
+      showSteamNowPlaying: boolean
+    }) => {
+      await patchAdminDevice({ id, showSteamNowPlaying })
+      return { showSteamNowPlaying }
+    },
+    onSuccess: async ({ showSteamNowPlaying }) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
+      toastSwitchLabel('状态卡片显示 Steam 正在游玩', showSteamNowPlaying)
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
 
-  useEffect(() => {
-    void fetchDevices()
-  }, [fetchDevices])
+  const removeDeviceMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await deleteAdminDevice(id)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
+      toast.success('设备已删除')
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
 
   useEffect(() => {
     if (!highlightHashKey?.trim() || items.length === 0) return
@@ -199,109 +280,19 @@ export function DeviceManager({
 
   const createDevice = async () => {
     if (!newName.trim()) return
-    setCreating(true)
-    try {
-      const apiTokenId = newTokenId ? Number(newTokenId) : undefined
-      const body: Record<string, unknown> = {
-        displayName: newName.trim(),
-        apiTokenId: Number.isFinite(apiTokenId) ? apiTokenId : undefined,
-      }
-      const hk = newHashKey.trim()
-      if (hk) body.generatedHashKey = hk
-
-      const res = await fetch('/api/admin/devices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      const data = await res.json()
-      if (!res.ok || !data?.success) {
-        toast.error(data?.error || '创建设备失败')
-        return
-      }
-      setNewName('')
-      setNewTokenId('')
-      setNewHashKey('')
-      toast.success('设备已创建')
-      setPage(0)
-      await fetchDevices()
-    } catch {
-      toast.error('网络错误')
-    } finally {
-      setCreating(false)
-    }
+    await createDeviceMutation.mutateAsync()
   }
 
   const updateStatus = async (id: number, nextStatus: 'active' | 'pending' | 'revoked') => {
-    try {
-      const res = await fetch('/api/admin/devices', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: nextStatus }),
-      })
-      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '更新失败')
-        return
-      }
-      await fetchDevices({ silent: true })
-      setReviewDevice((d) => (d?.id === id ? null : d))
-      toast.success(`设备状态已更新为「${DEVICE_STATUS_LABEL[nextStatus]}」`)
-    } catch {
-      toast.error('网络错误')
-    }
+    await updateStatusMutation.mutateAsync({ id, nextStatus })
   }
 
   const updateShowSteamNowPlaying = async (id: number, showSteamNowPlaying: boolean) => {
-    const prev = items.find((i) => i.id === id)
-    setItems((rows) =>
-      rows.map((i) => (i.id === id ? { ...i, showSteamNowPlaying } : i)),
-    )
-    try {
-      const res = await fetch('/api/admin/devices', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, showSteamNowPlaying }),
-      })
-      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
-      if (!res.ok || !data?.success) {
-        if (prev) {
-          setItems((rows) =>
-            rows.map((i) =>
-              i.id === id ? { ...i, showSteamNowPlaying: prev.showSteamNowPlaying } : i,
-            ),
-          )
-        }
-        toast.error(typeof data?.error === 'string' ? data.error : '更新失败')
-        return
-      }
-      await fetchDevices({ silent: true })
-      toastSwitchLabel('状态卡片显示 Steam 正在游玩', showSteamNowPlaying)
-    } catch {
-      if (prev) {
-        setItems((rows) =>
-          rows.map((i) =>
-            i.id === id ? { ...i, showSteamNowPlaying: prev.showSteamNowPlaying } : i,
-          ),
-        )
-      }
-      toast.error('网络错误')
-    }
+    await updateSteamMutation.mutateAsync({ id, showSteamNowPlaying })
   }
 
   const removeDevice = async (id: number) => {
-    try {
-      const res = await fetch(`/api/admin/devices?id=${id}`, { method: 'DELETE' })
-      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '删除失败')
-        return
-      }
-      await fetchDevices({ silent: true })
-      toast.success('设备已删除')
-    } catch {
-      toast.error('网络错误')
-    }
+    await removeDeviceMutation.mutateAsync(id)
   }
 
   const copyHash = async (hash: string) => {
@@ -322,7 +313,7 @@ export function DeviceManager({
     if (match) {
       highlightHandledRef.current = true
       if (match.status === 'pending') {
-        setReviewDevice(match)
+        window.setTimeout(() => setReviewDeviceId(match.id), 0)
       } else {
         toast.info('该设备已审核')
       }
@@ -334,15 +325,6 @@ export function DeviceManager({
     highlightHandledRef.current = true
     toast.warning('未找到该设备身份牌对应的设备')
   }, [highlightHashKey, loading, items, q])
-
-  useEffect(() => {
-    setReviewDevice((d) => {
-      if (!d) return d
-      const next = items.find((i) => i.id === d.id)
-      if (!next || next.status !== 'pending') return null
-      return next
-    })
-  }, [items])
 
   return (
     <div className="space-y-6">
@@ -393,13 +375,17 @@ export function DeviceManager({
         </div>
 
         <div className="flex items-center gap-3">
-          <Button type="button" onClick={createDevice} disabled={creating || !newName.trim()}>
+          <Button
+            type="button"
+            onClick={() => void createDevice()}
+            disabled={createDeviceMutation.isPending || !newName.trim()}
+          >
             <Plus className="h-4 w-4 mr-1" />
-            {creating ? '创建中...' : '新增设备'}
+            {createDeviceMutation.isPending ? '创建中...' : '新增设备'}
           </Button>
-          <Button type="button" variant="outline" onClick={() => void fetchDevices()}>
+          <Button type="button" variant="outline" onClick={() => void refreshDevices()}>
             <RefreshCw className="h-4 w-4 mr-1" />
-            刷新
+            {refreshing ? '刷新中...' : '刷新'}
           </Button>
         </div>
       </div>
@@ -484,7 +470,12 @@ export function DeviceManager({
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => void removeDevice(item.id)}>删除</AlertDialogAction>
+                        <AlertDialogAction
+                          onClick={() => void removeDevice(item.id)}
+                          disabled={removeDeviceMutation.isPending}
+                        >
+                          删除
+                        </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -509,7 +500,7 @@ export function DeviceManager({
                         onToggleActive={() =>
                           void updateStatus(item.id, item.status === 'active' ? 'revoked' : 'active')
                         }
-                        onReview={() => setReviewDevice(item)}
+                        onReview={() => setReviewDeviceId(item.id)}
                       />
                     </div>
                   </div>
@@ -529,7 +520,7 @@ export function DeviceManager({
                         onToggleActive={() =>
                           void updateStatus(item.id, item.status === 'active' ? 'revoked' : 'active')
                         }
-                        onReview={() => setReviewDevice(item)}
+                        onReview={() => setReviewDeviceId(item.id)}
                       />
                     </div>
                   </div>
@@ -547,6 +538,7 @@ export function DeviceManager({
                       className="shrink-0 self-end sm:self-auto"
                       checked={Boolean(item.showSteamNowPlaying)}
                       onCheckedChange={(v) => void updateShowSteamNowPlaying(item.id, v)}
+                      disabled={updateSteamMutation.isPending}
                     />
                   </div>
                 </div>
@@ -562,7 +554,7 @@ export function DeviceManager({
               {items.length > 0 ? (
                 <>
                   {' '}
-                  · 本页 {page * DEVICE_LIST_PAGE_SIZE + 1}–{page * DEVICE_LIST_PAGE_SIZE + items.length}
+                  · 本页 {safePage * DEVICE_LIST_PAGE_SIZE + 1}–{safePage * DEVICE_LIST_PAGE_SIZE + items.length}
                 </>
               ) : null}
             </span>
@@ -574,20 +566,20 @@ export function DeviceManager({
                   size="sm"
                   className="h-8"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page <= 0}
+                  disabled={safePage <= 0}
                 >
                   上一页
                 </Button>
                 <span className="tabular-nums text-sm">
-                  {page + 1} / {totalPages}
+                  {safePage + 1} / {totalPages}
                 </span>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   className="h-8"
-                  onClick={() => setPage((p) => p + 1)}
-                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={safePage >= totalPages - 1}
                 >
                   下一页
                 </Button>
@@ -600,7 +592,7 @@ export function DeviceManager({
       <Dialog
         open={reviewDevice !== null}
         onOpenChange={(open) => {
-          if (!open) setReviewDevice(null)
+          if (!open) setReviewDeviceId(null)
         }}
       >
         <DialogContent className="sm:max-w-md" showCloseButton>

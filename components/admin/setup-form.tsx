@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
+import { loginAdmin, setupAdminSite } from '@/components/admin/admin-query-mutations'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import { SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES } from '@/lib/site-config-constants'
@@ -58,53 +59,34 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/setup/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: needAdminSetup ? username : undefined,
-          password: needAdminSetup ? password : undefined,
-          pageTitle: pageTitle.slice(0, PAGE_TITLE_MAX_LEN),
-          userName,
-          userBio,
-          avatarUrl,
-          userNote,
-          historyWindowMinutes,
-          currentlyText,
-          earlierText,
-          adminText,
-        }),
+      await setupAdminSite({
+        needAdminSetup,
+        username,
+        password,
+        pageTitle: pageTitle.slice(0, PAGE_TITLE_MAX_LEN),
+        userName,
+        userBio,
+        avatarUrl,
+        userNote,
+        historyWindowMinutes,
+        currentlyText,
+        earlierText,
+        adminText,
       })
-
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        setError(data.error || '初始化失败')
-        return
-      }
-
-      // 首次初始化成功后，直接登录并进入后台首页，避免再次回到 setup 流程。
       if (needAdminSetup) {
-        const loginRes = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username,
-            password,
-          }),
-        })
-        const loginData = await loginRes.json()
-        if (!loginRes.ok || !loginData?.success) {
-          setError(loginData?.error || '初始化成功，但自动登录失败，请手动登录')
-          router.push('/admin/login')
-          router.refresh()
-          return
-        }
+        await loginAdmin(username, password)
       }
-
       router.push('/admin')
       router.refresh()
-    } catch {
-      setError('网络异常，请重试')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '网络异常，请重试'
+      if (needAdminSetup && message.includes('自动登录失败')) {
+        setError(`初始化成功，但${message}`)
+        router.push('/admin/login')
+        router.refresh()
+        return
+      }
+      setError(message)
     } finally {
       setLoading(false)
     }

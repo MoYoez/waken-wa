@@ -1,5 +1,6 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import {
   CalendarDays,
   Clock3,
@@ -24,9 +25,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { MdAutoFixHigh } from 'react-icons/md'
 import { toast } from 'sonner'
 
+import { fetchActivityFeed } from '@/components/admin/admin-query-fetchers'
+import { adminQueryKeys } from '@/components/admin/admin-query-keys'
+import { logoutAdmin } from '@/components/admin/admin-query-mutations'
+import { AdminQueryProvider } from '@/components/admin/admin-query-provider'
 import { Button } from '@/components/ui/button'
 import { useViewerCount } from '@/hooks/use-viewer-count'
-import type { ActivityFeedData, ActivityFeedItem } from '@/types/activity'
+import type { ActivityFeedItem } from '@/types/activity'
 
 import { AccountSettings } from './account-settings'
 import { AddActivityForm } from './add-activity-form'
@@ -208,7 +213,7 @@ function BottomGuide({
   )
 }
 
-export function AdminDashboard({ username, initialTab, initialDeviceHash }: DashboardProps) {
+function AdminDashboardContent({ username, initialTab, initialDeviceHash }: DashboardProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<AdminTabValue>(() =>
     isAdminTabValue(initialTab) ? initialTab : 'overview',
@@ -226,9 +231,6 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     y: 0,
     ready: false,
   })
-  const [recentActivityUsage, setRecentActivityUsage] = useState<ActivityFeedItem[]>([])
-  const [recentActivityUsageLoading, setRecentActivityUsageLoading] = useState(false)
-  const [recentActivityUsageLoaded, setRecentActivityUsageLoaded] = useState(false)
   const {
     count: viewerCount,
     loading: viewerCountLoading,
@@ -259,6 +261,16 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
     [activeTab],
   )
   const activeDeviceHash = initialDeviceHash
+  const recentActivityUsageQuery = useQuery({
+    queryKey: adminQueryKeys.activity.recentUsage(),
+    queryFn: fetchActivityFeed,
+    enabled: activeTab === 'overview',
+    select: (data) =>
+      (Array.isArray(data.recentActivities) ? data.recentActivities : [])
+        .filter(shouldShowRecentRecord)
+        .slice(0, RECENT_ACTIVITY_USAGE_LIMIT),
+  })
+  const recentActivityUsage = recentActivityUsageQuery.data ?? []
 
   const updateAdminLocation = useCallback(
     (nextTab: AdminTabValue) => {
@@ -383,46 +395,15 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
   }, [activeTab, syncIndicatorToActiveTab])
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    toast.success('已登出')
-    router.push('/admin/login')
-    router.refresh()
-  }
-
-  const fetchRecentActivityUsage = useCallback(async () => {
-    setRecentActivityUsageLoading(true)
     try {
-      const res = await fetch('/api/activity', { cache: 'no-store' })
-      const data = (await res.json().catch(() => ({}))) as {
-        success?: boolean
-        data?: ActivityFeedData
-        error?: string
-      }
-
-      if (!res.ok || !data.success || !data.data || !Array.isArray(data.data.recentActivities)) {
-        throw new Error(typeof data.error === 'string' ? data.error : '读取失败')
-      }
-
-      setRecentActivityUsage(
-        data.data.recentActivities
-          .filter(shouldShowRecentRecord)
-          .slice(0, RECENT_ACTIVITY_USAGE_LIMIT),
-      )
-      setRecentActivityUsageLoaded(true)
+      await logoutAdmin()
+      toast.success('已登出')
+      router.push('/admin/login')
+      router.refresh()
     } catch (error) {
-      console.error('读取 /api/activity 使用记录失败:', error)
-      toast.error('读取 /api/activity 使用记录失败')
-    } finally {
-      setRecentActivityUsageLoaded(true)
-      setRecentActivityUsageLoading(false)
+      toast.error(error instanceof Error ? error.message : '登出失败')
     }
-  }, [])
-
-  useEffect(() => {
-    if (activeTab !== 'overview') return
-    if (recentActivityUsageLoaded || recentActivityUsageLoading) return
-    void fetchRecentActivityUsage()
-  }, [activeTab, fetchRecentActivityUsage, recentActivityUsageLoaded, recentActivityUsageLoading])
+  }
 
   const renderActivePanel = () => {
     if (activeTab === 'inspiration') {
@@ -515,10 +496,10 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => void fetchRecentActivityUsage()}
-            disabled={recentActivityUsageLoading}
+            onClick={() => void recentActivityUsageQuery.refetch()}
+            disabled={recentActivityUsageQuery.isFetching}
           >
-            {recentActivityUsageLoading ? (
+            {recentActivityUsageQuery.isFetching ? (
               <Loader2 className="mr-1 h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="mr-1 h-4 w-4" />
@@ -527,7 +508,7 @@ export function AdminDashboard({ username, initialTab, initialDeviceHash }: Dash
           </Button>
         </div>
 
-        {recentActivityUsageLoading && !recentActivityUsageLoaded ? (
+        {recentActivityUsageQuery.isLoading ? (
           <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
             正在加载最近记录...
           </div>
@@ -784,5 +765,13 @@ curl -X POST ${origin}/api/inspiration/entries \\
         {renderBottomGuide()}
       </main>
     </div>
+  )
+}
+
+export function AdminDashboard(props: DashboardProps) {
+  return (
+    <AdminQueryProvider>
+      <AdminDashboardContent {...props} />
+    </AdminQueryProvider>
   )
 }

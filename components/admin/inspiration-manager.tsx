@@ -1,10 +1,27 @@
 'use client'
 
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  fetchAdminDeviceSummaries,
+  fetchAdminInspirationEntries,
+  fetchPublicActivityFeed,
+} from '@/components/admin/admin-query-fetchers'
+import { adminQueryKeys } from '@/components/admin/admin-query-keys'
+import {
+  createInspirationEntry,
+  deleteInspirationEntry,
+  uploadInspirationAsset,
+} from '@/components/admin/admin-query-mutations'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { createLexicalTextContent, LexicalEditor } from '@/components/admin/lexical-editor'
 import { MarkdownContent } from '@/components/admin/markdown-content'
@@ -60,11 +77,8 @@ const INSPIRATION_DRAFT_STORAGE_KEY_V1 = 'waken:admin:inspiration-draft:v1'
 const INSPIRATION_DRAFT_STORAGE_KEY = 'waken:admin:inspiration-draft:v2'
 
 export function InspirationManager() {
-  const [loading, setLoading] = useState(true)
-  const [entries, setEntries] = useState<AdminInspirationEntry[]>([])
-  const [displayTimezone, setDisplayTimezone] = useState(DEFAULT_TIMEZONE)
+  const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
-  const [total, setTotal] = useState(0)
   const [q, setQ] = useState('')
 
   const [title, setTitle] = useState('')
@@ -76,10 +90,6 @@ export function InspirationManager() {
   const [attachStatusDeviceHash, setAttachStatusDeviceHash] = useState('')
   const [attachStatusActivityKey, setAttachStatusActivityKey] = useState('')
   const [attachStatusIncludeDeviceInfo, setAttachStatusIncludeDeviceInfo] = useState(false)
-  const [publicActivityFeed, setPublicActivityFeed] = useState<ActivityFeedData | null>(null)
-  const [publicActivityLoading, setPublicActivityLoading] = useState(false)
-  const [publicActivityError, setPublicActivityError] = useState<string>('')
-  const [inspirationDevices, setInspirationDevices] = useState<AdminDeviceSummary[]>([])
   const [previewEntry, setPreviewEntry] = useState<AdminInspirationEntry | null>(null)
   const [bodyImageBusy, setBodyImageBusy] = useState(false)
 
@@ -88,6 +98,39 @@ export function InspirationManager() {
   const [cropTarget, setCropTarget] = useState<'cover' | 'body'>('cover')
   const bodyImageInputRef = useRef<HTMLInputElement>(null)
   const [draftReady, setDraftReady] = useState(false)
+
+  const entriesQuery = useQuery({
+    queryKey: adminQueryKeys.inspiration.entries({ page, q }),
+    queryFn: () => fetchAdminInspirationEntries({ page, q, pageSize: INSPIRATION_LIST_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+  })
+
+  const inspirationDevicesQuery = useQuery({
+    queryKey: adminQueryKeys.inspiration.devices({ limit: 200 }),
+    queryFn: () => fetchAdminDeviceSummaries({ limit: 200 }),
+  })
+
+  const publicActivityFeedQuery = useQuery({
+    queryKey: adminQueryKeys.activity.publicFeed(),
+    queryFn: fetchPublicActivityFeed,
+    enabled: attachCurrentStatus && Boolean(attachStatusDeviceHash),
+  })
+
+  const entries = useMemo(() => entriesQuery.data?.entries ?? [], [entriesQuery.data?.entries])
+  const total = entriesQuery.data?.total ?? 0
+  const displayTimezone = entriesQuery.data?.displayTimezone ?? DEFAULT_TIMEZONE
+  const loading = entriesQuery.isLoading
+  const inspirationDevices = useMemo(
+    () => inspirationDevicesQuery.data ?? [],
+    [inspirationDevicesQuery.data],
+  )
+  const publicActivityFeed = publicActivityFeedQuery.data ?? null
+  const publicActivityLoading = publicActivityFeedQuery.isLoading
+  const publicActivityError = publicActivityFeedQuery.error
+    ? publicActivityFeedQuery.error instanceof Error
+      ? publicActivityFeedQuery.error.message
+      : '活动数据加载失败'
+    : ''
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(total / INSPIRATION_LIST_PAGE_SIZE)),
@@ -199,29 +242,6 @@ export function InspirationManager() {
     title,
   ])
 
-  const fetchEntries = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        limit: String(INSPIRATION_LIST_PAGE_SIZE),
-        offset: String(page * INSPIRATION_LIST_PAGE_SIZE),
-      })
-      if (q.trim()) params.set('q', q.trim())
-
-      const res = await fetch(`/api/inspiration/entries?${params}`)
-      const data = await res.json()
-      if (data.success) {
-        setEntries(data.data || [])
-        setTotal(data.pagination?.total || 0)
-        setDisplayTimezone(normalizeTimezone(data.displayTimezone))
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false)
-    }
-  }, [page, q])
-
   const selectedSnapshotDevice = useMemo(() => {
     if (!attachStatusDeviceHash) return null
     return inspirationDevices.find((d) => d.generatedHashKey === attachStatusDeviceHash) ?? null
@@ -295,55 +315,58 @@ export function InspirationManager() {
     setAttachStatusActivityKey(preferred.key)
   }, [attachCurrentStatus, attachStatusDeviceHash, attachStatusActivityKey, snapshotCandidates])
 
-  useEffect(() => {
-    if (!attachCurrentStatus) return
-    if (!attachStatusDeviceHash) return
+  const createEntryMutation = useMutation({
+    mutationFn: async () => {
+      await createInspirationEntry({
+        title: title.trim() || undefined,
+        content: content.trim(),
+        contentLexical,
+        imageDataUrl: imageDataUrl.trim() || undefined,
+        attachCurrentStatus,
+        preComputedStatusSnapshot: computedSnapshotText || undefined,
+        attachStatusDeviceHash: attachStatusDeviceHash.trim() || undefined,
+        attachStatusActivityKey: attachStatusActivityKey.trim() || undefined,
+        attachStatusIncludeDeviceInfo: attachStatusIncludeDeviceInfo || undefined,
+      })
+    },
+    onSuccess: async () => {
+      setTitle('')
+      setContent('')
+      setContentLexical(createLexicalTextContent(''))
+      setImageDataUrl('')
+      setAttachCurrentStatus(false)
+      setAttachStatusDeviceHash('')
+      setAttachStatusActivityKey('')
+      setAttachStatusIncludeDeviceInfo(false)
+      localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
+      setPage(0)
+      toast.success('灵感已提交')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inspiration', 'entries'] })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误，请重试')
+    },
+  })
 
-    setPublicActivityLoading(true)
-    setPublicActivityError('')
-    void (async () => {
-      try {
-        const res = await fetch('/api/activity?public=1')
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok || !data?.success || !data?.data) {
-          setPublicActivityError(typeof data?.error === 'string' ? data.error : '活动数据加载失败')
-          setPublicActivityFeed(null)
-          return
-        }
-        setPublicActivityFeed(data.data as ActivityFeedData)
-      } catch {
-        setPublicActivityError('活动数据加载失败')
-        setPublicActivityFeed(null)
-      } finally {
-        setPublicActivityLoading(false)
-      }
-    })()
-  }, [attachCurrentStatus, attachStatusDeviceHash])
+  const deleteEntryMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await deleteInspirationEntry(id)
+    },
+    onSuccess: async () => {
+      toast.success('灵感已删除')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inspiration', 'entries'] })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误，删除失败')
+    },
+  })
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch('/api/admin/devices?limit=200')
-        const data = await res.json()
-        if (data?.success && Array.isArray(data.data)) {
-          setInspirationDevices(
-            data.data.map((row: Record<string, unknown>) => ({
-              id: Number(row.id),
-              displayName: String(row.displayName ?? ''),
-              generatedHashKey: String(row.generatedHashKey ?? ''),
-              status: String(row.status ?? 'active'),
-            })),
-          )
-        }
-      } catch {
-        // ignore
-      }
-    })()
-  }, [])
-
-  useEffect(() => {
-    fetchEntries()
-  }, [fetchEntries])
+  const uploadAssetMutation = useMutation({
+    mutationFn: uploadInspirationAsset,
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '正文配图上传失败')
+    },
+  })
 
   const openCropForFile = (file: File | undefined, target: 'cover' | 'body') => {
     if (!file) return
@@ -357,65 +380,15 @@ export function InspirationManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-
     try {
-      const res = await fetch('/api/inspiration/entries', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim() || undefined,
-          content: content.trim(),
-          contentLexical,
-          imageDataUrl: imageDataUrl.trim() || undefined,
-          attachCurrentStatus,
-          // Send the pre-computed snapshot text so the server can save it directly
-          // without re-querying the activity feed (which may have already expired).
-          preComputedStatusSnapshot: computedSnapshotText || undefined,
-          // Keep legacy fields for backward compatibility with external API clients
-          attachStatusDeviceHash: attachStatusDeviceHash.trim() || undefined,
-          attachStatusActivityKey: attachStatusActivityKey.trim() || undefined,
-          attachStatusIncludeDeviceInfo: attachStatusIncludeDeviceInfo || undefined,
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '提交失败')
-        return
-      }
-
-      setTitle('')
-      setContent('')
-      setContentLexical(createLexicalTextContent(''))
-      setImageDataUrl('')
-      setAttachCurrentStatus(false)
-      setAttachStatusDeviceHash('')
-      setAttachStatusActivityKey('')
-      setAttachStatusIncludeDeviceInfo(false)
-      localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
-      toast.success('灵感已提交')
-      setPage(0)
-      setTimeout(() => void fetchEntries(), 0)
-    } catch {
-      toast.error('网络错误，请重试')
+      await createEntryMutation.mutateAsync()
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleDelete = async (id: number) => {
-    try {
-      const res = await fetch(`/api/inspiration/entries?id=${id}`, { method: 'DELETE' })
-      const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string }
-      if (!res.ok || !data?.success) {
-        toast.error(typeof data?.error === 'string' ? data.error : '删除失败')
-        return
-      }
-      toast.success('灵感已删除')
-      setTimeout(() => void fetchEntries(), 0)
-    } catch {
-      toast.error('网络错误，删除失败')
-    }
+    await deleteEntryMutation.mutateAsync(id)
   }
 
   return (
@@ -461,8 +434,6 @@ export function InspirationManager() {
                       setAttachStatusDeviceHash('')
                       setAttachStatusActivityKey('')
                       setAttachStatusIncludeDeviceInfo(false)
-                      setPublicActivityFeed(null)
-                      setPublicActivityError('')
                     }
                   }}
                 />
@@ -730,26 +701,13 @@ export function InspirationManager() {
           void (async () => {
             setBodyImageBusy(true)
             try {
-              const res = await fetch('/api/inspiration/assets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageDataUrl: dataUrl }),
-                credentials: 'include',
-              })
-              const data = await res.json().catch(() => ({}))
-              if (!res.ok || !data?.success || !data?.data?.url) {
-                toast.error(typeof data?.error === 'string' ? data.error : '正文配图上传失败')
-                return
-              }
-              const url = String(data.data.url)
+              const url = await uploadAssetMutation.mutateAsync(dataUrl)
               setContentLexical((prev) => {
                 const next = appendParagraphTextToLexical(prev, `![](${url})`)
                 setContent(lexicalTextContent(next))
                 return next
               })
               toast.success('正文配图已插入')
-            } catch {
-              toast.error('正文配图上传失败')
             } finally {
               setBodyImageBusy(false)
             }
