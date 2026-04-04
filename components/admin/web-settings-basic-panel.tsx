@@ -1,8 +1,13 @@
 'use client'
 
+import { useAtom } from 'jotai'
 import Image from 'next/image'
 
-import type { PatchSiteConfig, SiteConfig } from '@/components/admin/web-settings-types'
+import {
+  webSettingsCropDialogOpenAtom,
+  webSettingsCropSourceUrlAtom,
+  webSettingsFormAtom,
+} from '@/components/admin/web-settings-store'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -15,21 +20,22 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 
-type WebSettingsBasicPanelProps = {
-  form: SiteConfig
-  patch: PatchSiteConfig
-  cropSourceUrl: string | null
-  onFileSelected: (file?: File) => void
-  onOpenCropDialog: () => void
-}
+export function WebSettingsBasicPanel() {
+  const [form, setForm] = useAtom(webSettingsFormAtom)
+  const [cropSourceUrl, setCropSourceUrl] = useAtom(webSettingsCropSourceUrlAtom)
+  const [, setCropDialogOpen] = useAtom(webSettingsCropDialogOpenAtom)
+  const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
 
-export function WebSettingsBasicPanel({
-  form,
-  patch,
-  cropSourceUrl,
-  onFileSelected,
-  onOpenCropDialog,
-}: WebSettingsBasicPanelProps) {
+  const onFileSelected = (file?: File) => {
+    if (!file) return
+    if (cropSourceUrl) URL.revokeObjectURL(cropSourceUrl)
+    const objectUrl = URL.createObjectURL(file)
+    setCropSourceUrl(objectUrl)
+    setCropDialogOpen(true)
+  }
+
   return (
     <div className="space-y-5">
       <div className="space-y-2">
@@ -114,7 +120,7 @@ export function WebSettingsBasicPanel({
         {cropSourceUrl ? (
           <button
             type="button"
-            onClick={onOpenCropDialog}
+            onClick={() => setCropDialogOpen(true)}
             className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
           >
             重新打开裁剪

@@ -1,19 +1,18 @@
 'use client'
 
-import type { PatchSiteConfig, SiteConfig } from '@/components/admin/web-settings-types'
+import { useAtom } from 'jotai'
+
+import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 
-type WebSettingsSecurityPanelProps = {
-  form: SiteConfig
-  patch: PatchSiteConfig
-}
+export function WebSettingsSecurityPanel() {
+  const [form, setForm] = useAtom(webSettingsFormAtom)
+  const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
 
-export function WebSettingsSecurityPanel({
-  form,
-  patch,
-}: WebSettingsSecurityPanelProps) {
   return (
     <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">

@@ -1,5 +1,6 @@
 'use client'
 
+import { useAtom } from 'jotai'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -9,7 +10,11 @@ import {
   SETTINGS_APP_LIST_PAGE_SIZE,
   SETTINGS_RULES_PAGE_SIZE,
 } from '@/components/admin/web-settings-paging'
-import type { PatchSiteConfig, SiteConfig } from '@/components/admin/web-settings-types'
+import {
+  webSettingsFormAtom,
+  webSettingsHistoryAppsAtom,
+  webSettingsHistoryPlaySourcesAtom,
+} from '@/components/admin/web-settings-store'
 import { exportAppRulesJson, parseAppRulesJson } from '@/components/admin/web-settings-utils'
 import { Autocomplete } from '@/components/ui/autocomplete'
 import { Button } from '@/components/ui/button'
@@ -24,13 +29,6 @@ import {
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
-
-type WebSettingsRuleToolsProps = {
-  form: SiteConfig
-  patch: PatchSiteConfig
-  historyApps: string[]
-  historyPlaySources: string[]
-}
 
 function AppNameListEditor({
   title,
@@ -126,12 +124,14 @@ function AppNameListEditor({
   )
 }
 
-export function WebSettingsRuleTools({
-  form,
-  patch,
-  historyApps,
-  historyPlaySources,
-}: WebSettingsRuleToolsProps) {
+export function WebSettingsRuleTools() {
+  const [form, setForm] = useAtom(webSettingsFormAtom)
+  const [historyApps] = useAtom(webSettingsHistoryAppsAtom)
+  const [historyPlaySources] = useAtom(webSettingsHistoryPlaySourcesAtom)
+  const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
   const [blacklistInput, setBlacklistInput] = useState('')
   const [whitelistInput, setWhitelistInput] = useState('')
   const [nameOnlyListInput, setNameOnlyListInput] = useState('')

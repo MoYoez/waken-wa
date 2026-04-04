@@ -68,6 +68,7 @@
     "input-otp": "1.4.2",
     "ioredis": "^5.8.2",
     "jose": "^6.0.11",
+    "jotai": "^2.19.0",
     "lexical": "^0.42.0",
     "lucide-react": "^0.564.0",
     "mcp-handler": "^1.1.0",

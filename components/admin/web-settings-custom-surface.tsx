@@ -1,8 +1,10 @@
 'use client'
 
+import { useAtom } from 'jotai'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
 import type { ThemeCustomSurfaceForm } from '@/components/admin/web-settings-types'
 import { hasThemeImageSourceConfigured } from '@/components/admin/web-settings-utils'
 import { Button } from '@/components/ui/button'
@@ -20,25 +22,23 @@ import { THEME_CUSTOM_SURFACE_DEFAULTS } from '@/lib/theme-custom-surface'
 import { extractThemeSurfaceFromImage } from '@/lib/theme-image-palette'
 import { resolveThemeSurfaceActiveImage } from '@/lib/theme-image-source'
 
-type WebSettingsCustomSurfaceProps = {
-  value: ThemeCustomSurfaceForm
-  onChange: (next: ThemeCustomSurfaceForm) => void
-}
-
-export function WebSettingsCustomSurface({
-  value,
-  onChange,
-}: WebSettingsCustomSurfaceProps) {
+export function WebSettingsCustomSurface() {
+  const [form, setForm] = useAtom(webSettingsFormAtom)
+  const value = form.themeCustomSurface
   const [backgroundImageInput, setBackgroundImageInput] = useState('')
   const [themePreviewImageUrl, setThemePreviewImageUrl] = useState('')
   const [themePreviewLoading, setThemePreviewLoading] = useState(false)
   const [themePaletteApplying, setThemePaletteApplying] = useState(false)
 
+  const setThemeCustomSurface = (next: ThemeCustomSurfaceForm) => {
+    setForm((prev) => ({ ...prev, themeCustomSurface: next }))
+  }
+
   const patchThemeSurface = <K extends keyof ThemeCustomSurfaceForm>(
     key: K,
     fieldValue: ThemeCustomSurfaceForm[K],
   ) => {
-    onChange({ ...value, [key]: fieldValue })
+    setThemeCustomSurface({ ...value, [key]: fieldValue })
   }
 
   const patchThemeSurfaceImageAware = (patches: Partial<ThemeCustomSurfaceForm>) => {
@@ -52,7 +52,7 @@ export function WebSettingsCustomSurface({
       nextThemeCustomSurface.hideFloatingOrbs = true
       nextThemeCustomSurface.transparentAnimatedBg = true
     }
-    onChange(nextThemeCustomSurface)
+    setThemeCustomSurface(nextThemeCustomSurface)
   }
 
   const currentThemePreviewHint = useMemo(() => {
@@ -119,7 +119,7 @@ export function WebSettingsCustomSurface({
       const imageUrl = themePreviewImageUrl || (await resolveThemePreviewImage())
       if (!imageUrl) return
       const nextTheme = await extractThemeSurfaceFromImage(imageUrl)
-      onChange({
+      setThemeCustomSurface({
         ...value,
         ...nextTheme,
         paletteLiveScope: value.paletteLiveScope,

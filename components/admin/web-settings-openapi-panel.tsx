@@ -1,18 +1,14 @@
 'use client'
 
-import type { PatchSiteConfig, SiteConfig } from '@/components/admin/web-settings-types'
+import { useAtom } from 'jotai'
+
+import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 
-type WebSettingsOpenApiPanelProps = {
-  form: SiteConfig
-  patch: PatchSiteConfig
-}
+export function WebSettingsOpenApiPanel() {
+  const [form, setForm] = useAtom(webSettingsFormAtom)
 
-export function WebSettingsOpenApiPanel({
-  form,
-  patch,
-}: WebSettingsOpenApiPanelProps) {
   return (
     <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -27,7 +23,9 @@ export function WebSettingsOpenApiPanel({
         <Switch
           id="openapi-docs-toggle"
           checked={form.openApiDocsEnabled}
-          onCheckedChange={(value) => patch('openApiDocsEnabled', value)}
+          onCheckedChange={(value) =>
+            setForm((prev) => ({ ...prev, openApiDocsEnabled: value }))
+          }
         />
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">

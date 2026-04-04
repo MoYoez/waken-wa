@@ -1,8 +1,23 @@
 'use client'
 
+import { useAtom } from 'jotai'
 import { useState } from 'react'
 
-import type { SkillsAiAuthorizationItem } from '@/components/admin/web-settings-types'
+import {
+  webSettingsFormAtom,
+  webSettingsLegacyMcpConfiguredAtom,
+  webSettingsLegacyMcpGeneratedApiKeyAtom,
+  webSettingsPublicOriginAtom,
+  webSettingsSkillsAiAuthorizationsAtom,
+  webSettingsSkillsApiKeyConfiguredAtom,
+  webSettingsSkillsAuthModeAtom,
+  webSettingsSkillsEnabledAtom,
+  webSettingsSkillsGeneratedApiKeyAtom,
+  webSettingsSkillsOauthConfiguredAtom,
+  webSettingsSkillsOauthTokenTtlMinutesAtom,
+  webSettingsSkillsRevokingAiClientIdAtom,
+  webSettingsSkillsSavingAtom,
+} from '@/components/admin/web-settings-store'
 import { formatIsoDatetime } from '@/components/admin/web-settings-utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,56 +45,35 @@ type SaveSkillsConfigOptions = {
 }
 
 type WebSettingsSkillsPanelProps = {
-  skillsSaving: boolean
-  skillsEnabled: boolean
-  skillsAuthMode: 'oauth' | 'apikey' | ''
-  skillsApiKeyConfigured: boolean
-  skillsOauthConfigured: boolean
-  skillsOauthTokenTtlMinutes: number
-  skillsAiAuthorizations: SkillsAiAuthorizationItem[]
-  skillsRevokingAiClientId: string
-  skillsGeneratedApiKey: string
-  legacyMcpConfigured: boolean
-  legacyMcpGeneratedApiKey: string
-  publicOrigin: string
-  aiToolMode: 'skills' | 'mcp'
-  mcpThemeToolsEnabled: boolean
-  onSkillsEnabledChange: (enabled: boolean) => void
-  onSkillsAuthModeChange: (mode: 'oauth' | 'apikey' | '') => void
-  onSkillsOauthTokenTtlMinutesChange: (minutes: number) => void
-  onAiToolModeChange: (mode: 'skills' | 'mcp') => void
-  onMcpThemeToolsEnabledChange: (enabled: boolean) => void
   onSaveSkillsConfig: (options: SaveSkillsConfigOptions) => Promise<void>
   onRevokeSkillsOauthByAiClientId: (aiClientId: string) => Promise<void>
   onCopyPlainText: (value: string, successText: string) => Promise<void>
 }
 
 export function WebSettingsSkillsPanel({
-  skillsSaving,
-  skillsEnabled,
-  skillsAuthMode,
-  skillsApiKeyConfigured,
-  skillsOauthConfigured,
-  skillsOauthTokenTtlMinutes,
-  skillsAiAuthorizations,
-  skillsRevokingAiClientId,
-  skillsGeneratedApiKey,
-  legacyMcpConfigured,
-  legacyMcpGeneratedApiKey,
-  publicOrigin,
-  aiToolMode,
-  mcpThemeToolsEnabled,
-  onSkillsEnabledChange,
-  onSkillsAuthModeChange,
-  onSkillsOauthTokenTtlMinutesChange,
-  onAiToolModeChange,
-  onMcpThemeToolsEnabledChange,
   onSaveSkillsConfig,
   onRevokeSkillsOauthByAiClientId,
   onCopyPlainText,
 }: WebSettingsSkillsPanelProps) {
+  const [form, setForm] = useAtom(webSettingsFormAtom)
+  const [skillsSaving] = useAtom(webSettingsSkillsSavingAtom)
+  const [skillsEnabled, setSkillsEnabled] = useAtom(webSettingsSkillsEnabledAtom)
+  const [skillsAuthMode, setSkillsAuthMode] = useAtom(webSettingsSkillsAuthModeAtom)
+  const [skillsApiKeyConfigured] = useAtom(webSettingsSkillsApiKeyConfiguredAtom)
+  const [skillsOauthConfigured] = useAtom(webSettingsSkillsOauthConfiguredAtom)
+  const [skillsOauthTokenTtlMinutes, setSkillsOauthTokenTtlMinutes] = useAtom(
+    webSettingsSkillsOauthTokenTtlMinutesAtom,
+  )
+  const [skillsAiAuthorizations] = useAtom(webSettingsSkillsAiAuthorizationsAtom)
+  const [skillsRevokingAiClientId] = useAtom(webSettingsSkillsRevokingAiClientIdAtom)
+  const [skillsGeneratedApiKey] = useAtom(webSettingsSkillsGeneratedApiKeyAtom)
+  const [legacyMcpConfigured] = useAtom(webSettingsLegacyMcpConfiguredAtom)
+  const [legacyMcpGeneratedApiKey] = useAtom(webSettingsLegacyMcpGeneratedApiKeyAtom)
+  const [publicOrigin] = useAtom(webSettingsPublicOriginAtom)
   const [skillsAiAuthDialogOpen, setSkillsAiAuthDialogOpen] = useState(false)
   const [revokeDialogAiClientId, setRevokeDialogAiClientId] = useState('')
+  const aiToolMode = form.aiToolMode
+  const mcpThemeToolsEnabled = form.mcpThemeToolsEnabled
 
   const mdUrl = publicOrigin ? `${publicOrigin}/api/llm/md` : '/api/llm/md'
   const directUrl = skillsAuthMode
@@ -107,7 +101,7 @@ export function WebSettingsSkillsPanel({
         </div>
         <Switch
           checked={skillsEnabled}
-          onCheckedChange={(value) => onSkillsEnabledChange(Boolean(value))}
+          onCheckedChange={(value) => setSkillsEnabled(Boolean(value))}
           disabled={skillsSaving}
           className="shrink-0"
         />
@@ -117,7 +111,14 @@ export function WebSettingsSkillsPanel({
         <Label>调试模式</Label>
         <Select
           value={aiToolMode}
-          onValueChange={(value) => onAiToolModeChange(value === 'mcp' ? 'mcp' : 'skills')}
+          onValueChange={(value) =>
+            setForm((prev) => ({
+              ...prev,
+              aiToolMode: value === 'mcp' ? 'mcp' : 'skills',
+              mcpThemeToolsEnabled:
+                value === 'mcp' ? prev.mcpThemeToolsEnabled : false,
+            }))
+          }
           disabled={!skillsEnabled}
         >
           <SelectTrigger className="w-full sm:max-w-xs">
@@ -145,7 +146,7 @@ export function WebSettingsSkillsPanel({
                 value={skillsAuthMode || ''}
                 onValueChange={(value) => {
                   const mode = value === 'oauth' || value === 'apikey' ? value : ''
-                  onSkillsAuthModeChange(mode)
+                  setSkillsAuthMode(mode)
                 }}
                 disabled={skillsSaving}
               >
@@ -224,7 +225,7 @@ export function WebSettingsSkillsPanel({
                   step={1}
                   value={skillsOauthTokenTtlMinutes}
                   onChange={(event) =>
-                    onSkillsOauthTokenTtlMinutesChange(
+                    setSkillsOauthTokenTtlMinutes(
                       Math.min(1440, Math.max(5, Math.round(Number(event.target.value) || 60))),
                     )
                   }
@@ -400,7 +401,9 @@ export function WebSettingsSkillsPanel({
             </div>
             <Switch
               checked={mcpThemeToolsEnabled}
-              onCheckedChange={(value) => onMcpThemeToolsEnabledChange(Boolean(value))}
+              onCheckedChange={(value) =>
+                setForm((prev) => ({ ...prev, mcpThemeToolsEnabled: Boolean(value) }))
+              }
               className="shrink-0"
             />
           </div>

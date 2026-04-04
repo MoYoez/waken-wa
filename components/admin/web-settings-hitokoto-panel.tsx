@@ -1,6 +1,8 @@
 'use client'
 
-import type { PatchSiteConfig, SiteConfig } from '@/components/admin/web-settings-types'
+import { useAtom } from 'jotai'
+
+import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import {
@@ -13,17 +15,12 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { HITOKOTO_CATEGORY_OPTIONS } from '@/lib/hitokoto'
 
-type WebSettingsHitokotoPanelProps = {
-  form: SiteConfig
-  patch: PatchSiteConfig
-  onCategoriesChange: (next: string[]) => void
-}
+export function WebSettingsHitokotoPanel() {
+  const [form, setForm] = useAtom(webSettingsFormAtom)
+  const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
 
-export function WebSettingsHitokotoPanel({
-  form,
-  patch,
-  onCategoriesChange,
-}: WebSettingsHitokotoPanelProps) {
   return (
     <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
       <div className="grid gap-4 xl:grid-cols-2">
@@ -137,7 +134,7 @@ export function WebSettingsHitokotoPanel({
                       const next = checked
                         ? Array.from(new Set([...form.userNoteHitokotoCategories, option.id]))
                         : form.userNoteHitokotoCategories.filter((item) => item !== option.id)
-                      onCategoriesChange(next)
+                      patch('userNoteHitokotoCategories', next)
                     }}
                   />
                   <span>

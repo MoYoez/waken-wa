@@ -1,6 +1,12 @@
 'use client'
 
-import type { PatchSiteConfig, SiteConfig } from '@/components/admin/web-settings-types'
+import { useAtom } from 'jotai'
+
+import {
+  webSettingsFormAtom,
+  webSettingsInspirationDevicesAtom,
+  webSettingsRedisCacheServerlessForcedAtom,
+} from '@/components/admin/web-settings-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,20 +37,6 @@ import {
 } from '@/lib/site-config-constants'
 import { TIMEZONE_OPTIONS } from '@/lib/timezone'
 
-type InspirationDevice = {
-  id: number
-  displayName: string
-  generatedHashKey: string
-  status: string
-}
-
-type WebSettingsActivityPanelProps = {
-  form: SiteConfig
-  patch: PatchSiteConfig
-  redisCacheServerlessForced: boolean
-  inspirationDevices: InspirationDevice[]
-}
-
 function ToggleCard(props: {
   id: string
   title: string
@@ -66,12 +58,14 @@ function ToggleCard(props: {
   )
 }
 
-export function WebSettingsActivityPanel({
-  form,
-  patch,
-  redisCacheServerlessForced,
-  inspirationDevices,
-}: WebSettingsActivityPanelProps) {
+export function WebSettingsActivityPanel() {
+  const [form, setForm] = useAtom(webSettingsFormAtom)
+  const [redisCacheServerlessForced] = useAtom(webSettingsRedisCacheServerlessForcedAtom)
+  const [inspirationDevices] = useAtom(webSettingsInspirationDevicesAtom)
+  const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
   return (
     <div className="space-y-5">
       <ToggleCard
