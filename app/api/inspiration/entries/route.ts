@@ -10,7 +10,10 @@ import {
 import { getBearerApiTokenRecord, getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { devices, inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
-import { gateInspirationApiForDevice } from '@/lib/inspiration-device-allowlist'
+import {
+  extractInspirationDeviceKey,
+  gateInspirationApiForDevice,
+} from '@/lib/inspiration-device-allowlist'
 import {
   linkInspirationAssetsToEntry,
   syncInspirationAssetsForEntry,
@@ -118,16 +121,22 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
+    const bodyRecord =
+      body && typeof body === 'object' && !Array.isArray(body)
+        ? (body as Record<string, unknown>)
+        : null
     if (!session && apiToken) {
       const gate = await gateInspirationApiForDevice(
         apiToken.id,
         request,
-        body && typeof body === 'object' ? (body as Record<string, unknown>) : null,
+        bodyRecord,
       )
       if (!gate.ok) {
         return NextResponse.json({ success: false, error: gate.error }, { status: gate.status })
       }
     }
+    const tokenDeviceKey =
+      !session && apiToken ? extractInspirationDeviceKey(request, bodyRecord) : null
     const attachCurrentStatus = Boolean(body?.attachCurrentStatus)
     // Pre-computed snapshot text sent by the client (preferred path — avoids re-querying the feed).
     const preComputedStatusSnapshotRaw =
@@ -147,13 +156,31 @@ export async function POST(request: NextRequest) {
           .map((item: unknown) => String(item ?? '').trim().toLowerCase())
           .filter((item: string) => item.length > 0)
       : []
-    const attachStatusDeviceHashResolved = attachStatusDeviceHash || attachStatusDeviceHashes[0] || ''
+    const attachStatusDeviceHashResolved =
+      attachStatusDeviceHash ||
+      attachStatusDeviceHashes[0] ||
+      (tokenDeviceKey ? tokenDeviceKey.trim().toLowerCase() : '')
 
-    if (attachCurrentStatus && !session) {
-      return NextResponse.json(
-        { success: false, error: '仅登录管理员可附带当前状态' },
-        { status: 403 },
-      )
+    if (attachCurrentStatus && !session && apiToken) {
+      if (!tokenDeviceKey) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              '附带当前状态时需要提供设备身份牌（X-Device-Key 或 generatedHashKey）',
+          },
+          { status: 400 },
+        )
+      }
+      if (
+        attachStatusDeviceHashResolved &&
+        attachStatusDeviceHashResolved !== tokenDeviceKey.trim().toLowerCase()
+      ) {
+        return NextResponse.json(
+          { success: false, error: '附带当前状态仅允许使用当前设备身份牌' },
+          { status: 403 },
+        )
+      }
     }
 
     const titleRaw = body?.title ?? body?.heading
