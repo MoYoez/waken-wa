@@ -201,6 +201,55 @@ export async function redisDel(key: string): Promise<boolean> {
   }
 }
 
+export async function redisHGetAll(key: string): Promise<Record<string, string> | null> {
+  const client = getRedisClient()
+  if (!client) return null
+  try {
+    const raw = await client.hgetall(key)
+    return raw ?? {}
+  } catch {
+    return null
+  }
+}
+
+export async function redisHSet(
+  key: string,
+  field: string,
+  value: string,
+): Promise<boolean> {
+  const client = getRedisClient()
+  if (!client) return false
+  try {
+    await client.hset(key, field, value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function redisHDel(key: string, field: string): Promise<boolean> {
+  const client = getRedisClient()
+  if (!client) return false
+  try {
+    await client.hdel(key, field)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function redisExpire(key: string, ttlSeconds: number): Promise<boolean> {
+  const client = getRedisClient()
+  if (!client) return false
+  try {
+    const ttl = Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? Math.round(ttlSeconds) : 1
+    await client.expire(key, ttl)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Best-effort: delete all keys matching `prefix*` (SCAN + batched DEL). */
 export async function redisDeleteByPrefix(prefix: string): Promise<void> {
   const client = getRedisClient()
