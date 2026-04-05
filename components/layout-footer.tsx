@@ -5,10 +5,16 @@ import Link from 'next/link'
 
 import { ThemeModeToggle } from '@/components/theme-mode-toggle'
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useIsMobile } from '@/components/ui/use-mobile'
 import { useViewerCount } from '@/hooks/use-viewer-count'
 
 const TEMPLATE_REPO_HREF = 'https://github.com/MoYoez/waken-wa'
@@ -33,8 +39,29 @@ function GitHubMark({ className }: { className?: string }) {
 }
 
 export function LayoutFooter({ adminText }: { adminText: string }) {
+  const isMobile = useIsMobile()
   const { count: viewerCount, error, loading } = useViewerCount({ mode: 'heartbeat' })
   const presenceStatus = error ? '读取失败' : loading ? '同步中' : '已连接'
+  const helpBody = (
+    <div className="space-y-2 text-left">
+      <p className="font-medium">这是如何实现的？</p>
+      <p>
+        当你打开这个页面时，浏览器会定时向
+        <code className="mx-1 rounded bg-background/20 px-1">/api/viewers</code>
+        发送 heartbeat，请求当前浏览页面的人数。
+      </p>
+      <p>
+        这个计数用于显示站点当前有多少访客正在查看页面；当前实现不是 WebSocket 推送，而是周期性同步。
+      </p>
+      <p>
+        当前状态：
+        <span className={`ml-1 font-medium ${error ? 'text-amber-300' : 'text-emerald-300'}`}>
+          {presenceStatus}
+        </span>
+      </p>
+      {error ? <p>{error}</p> : null}
+    </div>
+  )
 
   return (
     <footer className="layout-footer px-4 pb-5 sm:px-6 sm:pb-8">
@@ -58,35 +85,41 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                 <span className="min-w-0 flex-1 cursor-default text-foreground">
                   正在被 <span className="tabular-nums text-primary">{viewerCount}</span> 人看爆
                 </span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
-                      aria-label="查看在线人数说明"
+                {isMobile ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                        aria-label="查看在线人数说明"
+                      >
+                        <CircleHelp className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      side="top"
+                      align="start"
+                      className="w-[min(20rem,calc(100vw-2rem))] p-3 text-xs text-muted-foreground"
                     >
-                      <CircleHelp className="h-3.5 w-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="start" className="max-w-xs space-y-2 p-3 text-left">
-                    <p className="font-medium">这是如何实现的？</p>
-                    <p>
-                      当你打开这个页面时，浏览器会定时向
-                      <code className="mx-1 rounded bg-background/20 px-1">/api/viewers</code>
-                      发送 heartbeat，请求当前浏览页面的人数。
-                    </p>
-                    <p>
-                      这个计数用于显示站点当前有多少访客正在查看页面；当前实现不是 WebSocket 推送，而是周期性同步。
-                    </p>
-                    <p>
-                      当前状态：
-                      <span className={`ml-1 font-medium ${error ? 'text-amber-300' : 'text-emerald-300'}`}>
-                        {presenceStatus}
-                      </span>
-                    </p>
-                    {error ? <p>{error}</p> : null}
-                  </TooltipContent>
-                </Tooltip>
+                      {helpBody}
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                        aria-label="查看在线人数说明"
+                      >
+                        <CircleHelp className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" align="start" className="max-w-xs space-y-2 p-3 text-left">
+                      {helpBody}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
 
               <div className="hidden items-center justify-end sm:flex">

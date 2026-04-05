@@ -30,6 +30,8 @@ import {
   getSiteSectionVariants,
 } from '@/components/site-motion'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useIsMobile } from '@/components/ui/use-mobile'
 import { isDeviceBatteryCharging } from '@/lib/activity-battery-metadata'
 import { getMediaDisplay, type MediaDisplay } from '@/lib/activity-media'
 import { cn } from '@/lib/utils'
@@ -150,6 +152,7 @@ function MediaAndSteamRow({
   media: MediaDisplay | null
   steam: SteamNowPlayingInfo | null
 }) {
+  const isMobile = useIsMobile()
   const [steamImgFailed, setSteamImgFailed] = useState(false)
 
   if (!media && !steam) return null
@@ -186,49 +189,95 @@ function MediaAndSteamRow({
               : 'w-full min-w-0 items-center justify-start',
           )}
         >
-          <HoverCard openDelay={120}>
-            <HoverCardTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  'min-w-0 items-center gap-2 rounded-md transition-colors text-left',
-                  // Steam-only: full-width flex row so MarqueeIfNeeded (flex-1) gets real width like the media row.
-                  // Paired with media: inline-flex stays compact on the right half.
-                  pair ? 'inline-flex max-w-full' : 'flex w-full justify-start',
-                  'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                )}
-              >
-                <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          {isMobile ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="查看 Steam 游戏详情"
+                  className={cn(
+                    'min-w-0 items-center gap-2 rounded-md transition-colors text-left',
+                    pair ? 'inline-flex max-w-full' : 'flex w-full justify-start',
+                    'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  )}
+                >
+                  <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  {!steamImgFailed ? (
+                    <Image
+                      src={steam.imageUrl}
+                      alt=""
+                      width={40}
+                      height={15}
+                      className="h-4 w-10 shrink-0 rounded object-cover bg-muted"
+                      onError={() => setSteamImgFailed(true)}
+                    />
+                  ) : null}
+                  <MarqueeIfNeeded text={steam.name} grow={!pair} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[min(18rem,calc(100vw-2rem))] space-y-3 p-3" align="start">
                 {!steamImgFailed ? (
                   <Image
                     src={steam.imageUrl}
                     alt=""
-                    width={40}
-                    height={15}
-                    className="h-4 w-10 shrink-0 rounded object-cover bg-muted"
+                    width={460}
+                    height={215}
+                    className="w-full max-h-32 rounded-md object-cover bg-muted"
                     onError={() => setSteamImgFailed(true)}
                   />
                 ) : null}
-                <MarqueeIfNeeded text={steam.name} grow={!pair} />
-              </button>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-72 space-y-3" align="start">
-              {!steamImgFailed ? (
-                <Image
-                  src={steam.imageUrl}
-                  alt=""
-                  width={460}
-                  height={215}
-                  className="w-full max-h-32 rounded-md object-cover bg-muted"
-                  onError={() => setSteamImgFailed(true)}
-                />
-              ) : null}
-              <div className="space-y-1">
-                <p className="text-sm font-semibold leading-snug break-words">{steam.name}</p>
-                <p className="text-xs text-muted-foreground">正在游玩（Steam）</p>
-              </div>
-            </HoverCardContent>
-          </HoverCard>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold leading-snug break-words">{steam.name}</p>
+                  <p className="text-xs text-muted-foreground">正在游玩（Steam）</p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <HoverCard openDelay={120}>
+              <HoverCardTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="查看 Steam 游戏详情"
+                  className={cn(
+                    'min-w-0 items-center gap-2 rounded-md transition-colors text-left',
+                    // Steam-only: full-width flex row so MarqueeIfNeeded (flex-1) gets real width like the media row.
+                    // Paired with media: inline-flex stays compact on the right half.
+                    pair ? 'inline-flex max-w-full' : 'flex w-full justify-start',
+                    'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  )}
+                >
+                  <Gamepad2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  {!steamImgFailed ? (
+                    <Image
+                      src={steam.imageUrl}
+                      alt=""
+                      width={40}
+                      height={15}
+                      className="h-4 w-10 shrink-0 rounded object-cover bg-muted"
+                      onError={() => setSteamImgFailed(true)}
+                    />
+                  ) : null}
+                  <MarqueeIfNeeded text={steam.name} grow={!pair} />
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-72 space-y-3" align="start">
+                {!steamImgFailed ? (
+                  <Image
+                    src={steam.imageUrl}
+                    alt=""
+                    width={460}
+                    height={215}
+                    className="w-full max-h-32 rounded-md object-cover bg-muted"
+                    onError={() => setSteamImgFailed(true)}
+                  />
+                ) : null}
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold leading-snug break-words">{steam.name}</p>
+                  <p className="text-xs text-muted-foreground">正在游玩（Steam）</p>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          )}
         </div>
       ) : null}
     </div>
