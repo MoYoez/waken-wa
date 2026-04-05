@@ -22,6 +22,8 @@ type RealtimeActivityState = Record<string, RealtimeActivityRow>
 
 let memoryState: RealtimeActivityState = {}
 let memoryLoaded = false
+let memoryLoadedAt = 0
+const REDIS_REFRESH_INTERVAL_MS = 1000
 
 function cacheKey(generatedHashKey: string, processName: string): string {
   return `${generatedHashKey}:${processName}`.toLowerCase()
@@ -44,25 +46,30 @@ function prune(state: RealtimeActivityState): RealtimeActivityState {
 
 async function loadState(): Promise<RealtimeActivityState> {
   memoryState = prune(memoryState)
-  if (memoryLoaded) {
+  const useRedis = await shouldUseRedisCache()
+  if (!useRedis) {
+    if (!memoryLoaded) {
+      memoryLoaded = true
+      memoryLoadedAt = nowMs()
+    }
     return memoryState
   }
 
-  const useRedis = await shouldUseRedisCache()
-  if (!useRedis) {
-    memoryLoaded = true
+  if (memoryLoaded && nowMs() - memoryLoadedAt < REDIS_REFRESH_INTERVAL_MS) {
     return memoryState
   }
 
   const fromRedis = await redisGetJson<RealtimeActivityState>(REALTIME_ACTIVITY_CACHE_KEY)
   memoryState = prune(fromRedis ?? {})
   memoryLoaded = true
+  memoryLoadedAt = nowMs()
   return memoryState
 }
 
 async function saveState(state: RealtimeActivityState, ttlSeconds: number): Promise<void> {
   memoryState = prune(state)
   memoryLoaded = true
+  memoryLoadedAt = nowMs()
 
   if (await shouldUseRedisCache()) {
     const safeTtl = Math.max(1, Math.round(ttlSeconds))
