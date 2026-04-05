@@ -269,6 +269,26 @@ export function DeviceManager({
     },
   })
 
+  const updatePinMutation = useMutation({
+    mutationFn: async ({
+      id,
+      pinToTop,
+    }: {
+      id: number
+      pinToTop: boolean
+    }) => {
+      await patchAdminDevice({ id, pinToTop })
+      return { pinToTop }
+    },
+    onSuccess: async ({ pinToTop }) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
+      toastSwitchLabel('设备置顶显示', pinToTop)
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
+
   const removeDeviceMutation = useMutation({
     mutationFn: async (id: number) => {
       await deleteAdminDevice(id)
@@ -301,6 +321,10 @@ export function DeviceManager({
 
   const updateShowSteamNowPlaying = async (id: number, showSteamNowPlaying: boolean) => {
     await updateSteamMutation.mutateAsync({ id, showSteamNowPlaying })
+  }
+
+  const updatePinToTop = async (id: number, pinToTop: boolean) => {
+    await updatePinMutation.mutateAsync({ id, pinToTop })
   }
 
   const removeDevice = async (id: number) => {
@@ -575,6 +599,23 @@ export function DeviceManager({
                         onReview={() => setReviewDeviceId(item.id)}
                       />
                     </div>
+                  </div>
+                  <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-3">
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <Label htmlFor={`pin-to-top-${item.id}`} className="text-xs font-medium cursor-pointer">
+                        设备置顶显示
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-snug">
+                        开启后该设备会固定排在首页状态卡片顶部，优先于其他设备的实时刷新顺序。
+                      </p>
+                    </div>
+                    <Switch
+                      id={`pin-to-top-${item.id}`}
+                      className="shrink-0 self-end sm:self-auto"
+                      checked={Boolean(item.pinToTop)}
+                      onCheckedChange={(v) => void updatePinToTop(item.id, v)}
+                      disabled={updatePinMutation.isPending}
+                    />
                   </div>
                   <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-3">
                     <div className="min-w-0 flex-1 space-y-0.5">

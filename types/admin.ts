@@ -35,6 +35,7 @@ export interface AdminDeviceItem {
   displayName: string
   generatedHashKey: string
   showSteamNowPlaying?: boolean
+  pinToTop?: boolean
   status: 'active' | 'pending' | 'revoked'
   apiTokenId: number | null
   lastSeenAt: string | null

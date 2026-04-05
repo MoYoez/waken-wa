@@ -40,6 +40,7 @@ export const devices = pgTable(
     displayName: varchar('display_name', { length: 200 }).notNull(),
     generatedHashKey: varchar('generated_hash_key', { length: 128 }).notNull().unique(),
     showSteamNowPlaying: boolean('show_steam_now_playing').notNull().default(false),
+    pinToTop: boolean('pin_to_top').default(false),
     status: varchar('status', { length: 20 }).notNull().default('active'),
     apiTokenId: integer('api_token_id').references(() => apiTokens.id, {
       onDelete: 'set null',

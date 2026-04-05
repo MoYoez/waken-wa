@@ -1,4 +1,4 @@
-import { desc, eq, gt, or } from 'drizzle-orm'
+import { desc, eq, gt, inArray, or } from 'drizzle-orm'
 
 import {
   ACTIVITY_FEED_DEFAULT_LIMIT,
@@ -328,8 +328,48 @@ export async function getActivityFeedData(
     },
   )
 
+  const activeDeviceIds = Array.from(
+    new Set(
+      activePending
+        .map((entry) => Number(entry.row.deviceId))
+        .filter((id) => Number.isFinite(id) && id > 0),
+    ),
+  )
+  const pinnedDeviceIds = new Set<number>()
+  if (activeDeviceIds.length > 0) {
+    const pinRows = await db
+      .select({
+        id: devices.id,
+        pinToTop: devices.pinToTop,
+      })
+      .from(devices)
+      .where(inArray(devices.id, activeDeviceIds))
+    for (const row of pinRows) {
+      if (row.pinToTop === true) {
+        pinnedDeviceIds.add(Number(row.id))
+      }
+    }
+  }
+
+  const sortedActivePending = activePending
+    .map((entry, index) => {
+      const deviceId = Number(entry.row.deviceId)
+      const updatedAtMs = Date.parse(String(entry.row.updatedAt ?? entry.row.startedAt ?? ''))
+      return {
+        ...entry,
+        index,
+        isPinned: Number.isFinite(deviceId) && pinnedDeviceIds.has(deviceId),
+        updatedAtMs: Number.isFinite(updatedAtMs) ? updatedAtMs : -1,
+      }
+    })
+    .sort((a, b) => {
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
+      if (a.updatedAtMs !== b.updatedAtMs) return b.updatedAtMs - a.updatedAtMs
+      return a.index - b.index
+    })
+
   const activeStatuses: ActivityFeedItem[] = []
-  for (const { hashKey, row } of activePending) {
+  for (const { hashKey, row } of sortedActivePending) {
     const sp = steamByHash.get(hashKey)
     if (sp) row.steamNowPlaying = sp
     const item = options?.includeGeneratedHashKey

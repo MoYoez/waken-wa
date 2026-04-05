@@ -185,6 +185,7 @@ export async function POST(request: NextRequest) {
         ...(typeof body?.showSteamNowPlaying === 'boolean'
           ? { showSteamNowPlaying: body.showSteamNowPlaying }
           : {}),
+        ...(typeof body?.pinToTop === 'boolean' ? { pinToTop: body.pinToTop } : {}),
         updatedAt: now,
       })
       .returning()
@@ -238,6 +239,9 @@ export async function PATCH(request: NextRequest) {
     }
     if (typeof body?.showSteamNowPlaying === 'boolean') {
       data.showSteamNowPlaying = body.showSteamNowPlaying
+    }
+    if (typeof body?.pinToTop === 'boolean') {
+      data.pinToTop = body.pinToTop
     }
 
     if (Object.keys(data).length === 0) {

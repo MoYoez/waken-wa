@@ -40,6 +40,7 @@ export const devices = sqliteTable(
     showSteamNowPlaying: integer('show_steam_now_playing', { mode: 'boolean' })
       .notNull()
       .default(false),
+    pinToTop: integer('pin_to_top', { mode: 'boolean' }).default(false),
     status: text('status').notNull().default('active'),
     apiTokenId: integer('api_token_id').references(() => apiTokens.id, {
       onDelete: 'set null',
