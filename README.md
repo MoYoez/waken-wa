@@ -45,6 +45,8 @@
 
 ## 部署
 
+> 如果需要使用，请配合 [Waken-Wa-Reporter](https://github.com/MoYoez/waken-wa-reporter)
+
 ### 1. 本机部署
 
 #### Docker（使用已打包的一键脚本）
