@@ -92,7 +92,6 @@ body::-webkit-scrollbar {
 
 @theme inline {
   --font-sans: var(--font-ubuntu), var(--font-noto-sans-sc), sans-serif;
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -143,6 +142,8 @@ body::-webkit-scrollbar {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-noto-sans-sc), var(--font-ubuntu), sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv05", "cv06", "cv07", "cv08", "cv09", "cv10";
     overflow-x: hidden;
   }
 }
