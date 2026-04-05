@@ -105,9 +105,17 @@ export async function upsertRealtimeActivity(
 ): Promise<void> {
   const state = await loadState()
   const key = cacheKey(row.generatedHashKey, row.processName)
+  const existingRow = state[key]
+  const startedAt =
+    existingRow && Number.isFinite(Date.parse(existingRow.startedAt))
+      ? existingRow.startedAt
+      : row.startedAt
   const nextRow = {
     ...row,
-    id: `rt_${row.deviceId}_${Date.parse(row.updatedAt)}_${Math.random().toString(16).slice(2, 8)}`,
+    startedAt,
+    id:
+      existingRow?.id ??
+      `rt_${row.deviceId}_${Date.parse(row.updatedAt)}_${Math.random().toString(16).slice(2, 8)}`,
   }
   state[key] = nextRow
   memoryState = prune(state)
