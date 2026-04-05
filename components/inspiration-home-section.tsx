@@ -16,7 +16,6 @@ import { Card } from '@/components/ui/card'
 import {
   inspirationLooksLikeMarkdown,
   inspirationNeedsFullPageAny,
-  inspirationPlainPreviewAny,
 } from '@/lib/inspiration-preview'
 import { cn } from '@/lib/utils'
 import type { InspirationHomeItem } from '@/types/components'
@@ -36,13 +35,29 @@ function EntryBody({
   entry,
   detailHref,
   needFull,
-  previewText,
 }: {
   entry: InspirationHomeItem
   detailHref: string
   needFull: boolean
-  previewText: string
 }) {
+  const renderedContent = entry.contentLexical ? (
+    inspirationLooksLikeMarkdown(entry.content) ? (
+      <MarkdownContent
+        markdown={entry.content}
+        className="text-xs text-muted-foreground"
+        imageClassName="max-h-44 w-auto rounded-md border border-border/60 my-2"
+      />
+    ) : (
+      <LexicalContent content={entry.contentLexical} className="text-xs text-muted-foreground" />
+    )
+  ) : (
+    <MarkdownContent
+      markdown={entry.content}
+      className="text-xs text-muted-foreground"
+      imageClassName="max-h-44 w-auto rounded-md border border-border/60 my-2"
+    />
+  )
+
   return (
     <div className="min-w-0 flex-1 flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-1.5">
@@ -67,7 +82,10 @@ function EntryBody({
 
       {needFull ? (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{previewText}</p>
+          <div className="relative max-h-24 overflow-hidden">
+            {renderedContent}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent" />
+          </div>
           <Link
             href={detailHref}
             className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
@@ -77,25 +95,7 @@ function EntryBody({
           </Link>
         </div>
       ) : (
-        <>
-          {entry.contentLexical ? (
-            inspirationLooksLikeMarkdown(entry.content) ? (
-              <MarkdownContent
-                markdown={entry.content}
-                className="text-xs text-muted-foreground"
-                imageClassName="max-h-44 w-auto rounded-md border border-border/60 my-2"
-              />
-            ) : (
-              <LexicalContent content={entry.contentLexical} className="text-xs text-muted-foreground" />
-            )
-          ) : (
-            <MarkdownContent
-              markdown={entry.content}
-              className="text-xs text-muted-foreground"
-              imageClassName="max-h-44 w-auto rounded-md border border-border/60 my-2"
-            />
-          )}
-        </>
+        renderedContent
       )}
     </div>
   )
@@ -130,11 +130,6 @@ export function InspirationHomeSection({
           {entries.map((entry) => {
           const detailHref = `/inspiration/${entry.id}`
           const needFull = inspirationNeedsFullPageAny(entry.content, entry.contentLexical, PREVIEW_CHARS)
-          const { text: previewText } = inspirationPlainPreviewAny(
-            entry.content,
-            entry.contentLexical,
-            PREVIEW_CHARS,
-          )
 
           if (entry.imageDataUrl) {
             return (
@@ -172,7 +167,6 @@ export function InspirationHomeSection({
                       entry={entry}
                       detailHref={detailHref}
                       needFull={needFull}
-                      previewText={previewText}
                     />
                   </div>
                 </Card>
@@ -195,7 +189,6 @@ export function InspirationHomeSection({
                   entry={entry}
                   detailHref={detailHref}
                   needFull={needFull}
-                  previewText={previewText}
                 />
               </Card>
             </motion.article>

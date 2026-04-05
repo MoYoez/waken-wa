@@ -26,6 +26,12 @@ function hasImageAndAtLeastOneTextLine(markdown: string): boolean {
   return textLineCount >= 1
 }
 
+function hasMarkdownImage(markdown: string): boolean {
+  const hasImage = MARKDOWN_IMAGE_RE.test(markdown)
+  MARKDOWN_IMAGE_RE.lastIndex = 0
+  return hasImage
+}
+
 /** Heuristic: whether plain text should be interpreted as markdown. */
 export function inspirationLooksLikeMarkdown(text: string): boolean {
   const value = text.trim()
@@ -60,6 +66,7 @@ export function inspirationPlainPreview(markdown: string, maxLen: number): { tex
 
 /** Whether home should offer “full article” instead of inline full markdown. */
 export function inspirationNeedsFullPage(markdown: string, maxInlineChars = 220): boolean {
+  if (hasMarkdownImage(markdown)) return true
   if (markdown.length > maxInlineChars) return true
   if (countNonEmptyLines(markdown) >= 3) return true
   if (hasImageAndAtLeastOneTextLine(markdown)) return true
@@ -86,17 +93,15 @@ export function inspirationNeedsFullPageAny(
   maxInlineChars = 220,
 ): boolean {
   const lexicalText = lexicalTextContent(contentLexical)
+  if (hasMarkdownImage(markdown)) return true
   if (lexicalText) {
     if (lexicalText.length > maxInlineChars) return true
     if (countNonEmptyLines(lexicalText) >= 3) return true
-    if (hasImageAndAtLeastOneTextLine(markdown)) return true
-    if (typeof contentLexical === 'string' && LEXICAL_IMAGE_NODE_RE.test(contentLexical)) {
-      if (countNonEmptyLines(lexicalText) >= 1) return true
-    }
+    if (typeof contentLexical === 'string' && LEXICAL_IMAGE_NODE_RE.test(contentLexical)) return true
     return false
   }
   if (typeof contentLexical === 'string' && contentLexical.trim()) {
-    if (LEXICAL_IMAGE_NODE_RE.test(contentLexical) && countNonEmptyLines(markdown) >= 1) return true
+    if (LEXICAL_IMAGE_NODE_RE.test(contentLexical)) return true
     if (/"type":"(heading|quote|list|listitem|code|table)"/.test(contentLexical)) return true
   }
   return inspirationNeedsFullPage(markdown, maxInlineChars)

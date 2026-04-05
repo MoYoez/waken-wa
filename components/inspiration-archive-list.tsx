@@ -6,12 +6,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { MarkdownContent } from '@/components/admin/markdown-content'
 import type { InspirationHomeItem } from '@/components/inspiration-home-section'
+import { LexicalContent } from '@/components/lexical-content'
 import {
   getSiteSectionTransition,
   getSiteSectionVariants,
 } from '@/components/site-motion'
-import { inspirationPlainPreviewAny } from '@/lib/inspiration-preview'
+import { inspirationLooksLikeMarkdown } from '@/lib/inspiration-preview'
 import { formatDateTimeShort, normalizeTimezone } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
 
@@ -139,7 +141,23 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
         <AnimatePresence initial={false}>
           {items.map((entry) => {
             const href = `/inspiration/${entry.id}`
-            const { text: teaser } = inspirationPlainPreviewAny(entry.content, entry.contentLexical, 160)
+            const renderedContent = entry.contentLexical ? (
+              inspirationLooksLikeMarkdown(entry.content) ? (
+                <MarkdownContent
+                  markdown={entry.content}
+                  className="text-xs text-muted-foreground"
+                  imageClassName="max-h-40 w-auto rounded-md border border-border/60 my-2"
+                />
+              ) : (
+                <LexicalContent content={entry.contentLexical} className="text-xs text-muted-foreground" />
+              )
+            ) : (
+              <MarkdownContent
+                markdown={entry.content}
+                className="text-xs text-muted-foreground"
+                imageClassName="max-h-40 w-auto rounded-md border border-border/60 my-2"
+              />
+            )
             return (
               <motion.article
                 key={entry.id}
@@ -182,7 +200,10 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                         {formatDateTimeShort(entry.createdAt, entry.displayTimezone ?? activeTimezone)}
                       </time>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">{teaser}</p>
+                    <div className="relative max-h-24 overflow-hidden">
+                      {renderedContent}
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent" />
+                    </div>
                     <Link href={href} className="text-xs font-medium text-primary hover:underline w-fit">
                       打开全文
                     </Link>
