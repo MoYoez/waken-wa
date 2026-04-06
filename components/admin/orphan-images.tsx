@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Trash2 } from 'lucide-react'
+import { ImageOff, Loader2, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -118,7 +118,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
         <CardContent className="pt-4">
           {rows.length > 0 && !rowsQuery.isLoading && (
@@ -170,10 +170,20 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
           {rowsQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">加载中…</div>
           ) : rows.length === 0 ? (
-            <div className="text-sm text-muted-foreground">暂无孤儿图片</div>
+            <div className="rounded-md border border-dashed border-border/60 bg-muted/10 px-4 py-8">
+              <div className="flex flex-col items-center justify-center gap-2 text-center">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground">
+                  <ImageOff className="h-4 w-4" />
+                </span>
+                <p className="text-sm font-medium text-foreground/85">暂无孤儿图片</p>
+                <p className="text-xs text-muted-foreground">
+                  当前素材都已被灵感正文或封面引用。
+                </p>
+              </div>
+            </div>
           ) : (
             <div
-              className="rounded-md border bg-muted/10 p-3 overflow-y-auto"
+              className="overflow-y-auto rounded-md border border-border/60 bg-background/60 p-3"
               style={{ maxHeight: ORPHAN_LIST_MAX_HEIGHT }}
             >
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -183,31 +193,32 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                     <div
                       key={r.publicKey}
                       className={cn(
-                        'rounded-lg border bg-background p-3 space-y-3',
-                        checked && 'ring-1 ring-primary/40',
+                        'space-y-2.5 rounded-md border border-border/50 bg-muted/[0.04] p-2.5 transition-colors',
+                        checked && 'border-primary/40 bg-primary/[0.04]',
                       )}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-start gap-2">
+                        <div className="flex min-w-0 flex-1 items-start gap-2">
                           <Checkbox
                             checked={checked}
                             onCheckedChange={(v) => toggleSelect(r.publicKey, v === true)}
                             disabled={!r.eligibleForDelete && checked === false}
+                            className="mt-0.5"
                           />
-                          <div className="min-w-0">
-                            <div className="text-xs font-mono truncate" title={r.publicKey}>
+                          <div className="min-w-0 flex-1">
+                            <div className="break-all text-[11px] font-mono leading-relaxed text-foreground/85" title={r.publicKey}>
                               {r.publicKey}
                             </div>
                             <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                              <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5">
+                              <span className="rounded-full border border-border/50 bg-background/80 px-2 py-0.5">
                                 {typeof r.ageMinutes === 'number' ? `${r.ageMinutes} 分钟前` : '时间未知'}
                               </span>
                               <span
                                 className={cn(
                                   'rounded-full border px-2 py-0.5',
                                   r.eligibleForDelete
-                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                    : 'border-border/60 bg-muted/30',
+                                    ? 'border-emerald-500/25 bg-emerald-500/5 text-emerald-700/90 dark:text-emerald-300'
+                                    : 'border-border/50 bg-background/80',
                                 )}
                               >
                                 {r.eligibleForDelete ? '可删除' : '不可删除'}
@@ -219,13 +230,13 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                           <AlertDialogTrigger asChild>
                             <Button
                               type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 shrink-0 px-2 text-muted-foreground hover:text-destructive"
                               disabled={deleteOrphansMutation.isPending || !r.eligibleForDelete}
                               title={r.eligibleForDelete ? '删除' : '当前不可删除'}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
@@ -256,13 +267,13 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                           alt={r.publicKey}
                           width={640}
                           height={160}
-                          className="w-full h-40 object-contain rounded-md border bg-muted/10"
+                          className="h-32 w-full rounded-md border border-border/50 bg-muted/5 object-contain"
                           loading="lazy"
                         />
                       </a>
 
-                      <div className="rounded-md border border-border/60 bg-muted/10 px-2.5 py-2 text-[11px] text-muted-foreground">
-                        <div className="font-medium text-foreground/80">创建时间</div>
+                      <div className="rounded-md border border-border/50 bg-background/70 px-2.5 py-2 text-[11px] text-muted-foreground">
+                        <div className="font-medium text-foreground/75">创建时间</div>
                         <div className="mt-1 break-all">{formatCreatedAt(r.createdAt)}</div>
                       </div>
                     </div>
