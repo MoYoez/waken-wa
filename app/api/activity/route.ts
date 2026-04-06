@@ -207,10 +207,67 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       )
     }
-    if (deviceRecord.apiTokenId && deviceRecord.apiTokenId !== tokenInfo.id) {
+
+    if (!deviceRecord.apiTokenId) {
+      const now = sqlTimestamp()
+      const [updated] = await db
+        .update(devices)
+        .set({
+          status: 'pending',
+          updatedAt: now,
+        })
+        .where(eq(devices.id, deviceRecord.id))
+        .returning()
+      if (updated) {
+        deviceRecord = updated
+      }
+      clearDeviceAuthCache()
+      const approvalUrl = buildDeviceApprovalUrl(request, generatedHashKey)
       return NextResponse.json(
-        { success: false, error: '该设备未绑定当前 Token' },
-        { status: 403 },
+        {
+          success: false,
+          error: '设备未绑定 Token，需后台绑定并审核后可用',
+          pending: true,
+          approvalUrl,
+          registration: {
+            displayName: deviceRecord.displayName,
+            generatedHashKey,
+            status: 'pending' as const,
+          },
+        },
+        { status: 202 },
+      )
+    }
+
+    if (deviceRecord.apiTokenId && deviceRecord.apiTokenId !== tokenInfo.id) {
+      const now = sqlTimestamp()
+      const [updated] = await db
+        .update(devices)
+        .set({
+          status: 'pending',
+          apiTokenId: tokenInfo.id,
+          updatedAt: now,
+        })
+        .where(eq(devices.id, deviceRecord.id))
+        .returning()
+      if (updated) {
+        deviceRecord = updated
+      }
+      clearDeviceAuthCache()
+      const approvalUrl = buildDeviceApprovalUrl(request, generatedHashKey)
+      return NextResponse.json(
+        {
+          success: false,
+          error: '设备已检测到新 Token 绑定请求：旧 Token 已解绑，待后台审核确认切换',
+          pending: true,
+          approvalUrl,
+          registration: {
+            displayName: deviceRecord.displayName,
+            generatedHashKey,
+            status: 'pending' as const,
+          },
+        },
+        { status: 202 },
       )
     }
 

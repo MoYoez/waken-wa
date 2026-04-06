@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import { count, desc, eq } from 'drizzle-orm'
+import { and, count, desc, eq, isNull } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
@@ -15,6 +15,7 @@ import { apiTokens, devices } from '@/lib/drizzle-schema'
 import { parsePaginationParams } from '@/lib/pagination'
 import { getPublicOrigin } from '@/lib/public-request-url'
 import { readJsonObject } from '@/lib/request-json'
+import { sqlTimestamp } from '@/lib/sql-timestamp'
 
 // GET - list API tokens (masked); plaintext secret is only returned once on POST create.
 export async function GET(request: NextRequest) {
@@ -210,6 +211,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     await db.delete(apiTokens).where(eq(apiTokens.id, idNum))
+    await db
+      .update(devices)
+      .set({
+        status: 'pending',
+        updatedAt: sqlTimestamp(),
+      })
+      .where(and(isNull(devices.apiTokenId), eq(devices.status, 'active')))
     clearApiTokenAuthCache()
     clearDeviceAuthCache()
 

@@ -148,6 +148,7 @@ export function DeviceManager({
   const [newTokenId, setNewTokenId] = useState('')
   const [newHashKey, setNewHashKey] = useState('')
   const [reviewDeviceId, setReviewDeviceId] = useState<number | null>(null)
+  const [reviewTokenId, setReviewTokenId] = useState('')
   const highlightHandledRef = useRef(false)
 
   const tokensQuery = useQuery({
@@ -216,11 +217,12 @@ export function DeviceManager({
       })
     },
     onSuccess: async () => {
+      const createdWithToken = Boolean(newTokenId)
       setNewName('')
       setNewTokenId('')
       setNewHashKey('')
       setPage(0)
-      toast.success('设备已创建')
+      toast.success(createdWithToken ? '设备已创建并绑定 Token' : '设备已创建，当前为待审核（未绑定 Token）')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
     },
     onError: (error) => {
@@ -263,6 +265,24 @@ export function DeviceManager({
     onSuccess: async ({ showSteamNowPlaying }) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
       toastSwitchLabel('状态卡片显示 Steam 正在游玩', showSteamNowPlaying)
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : '网络错误')
+    },
+  })
+
+  const updateBindingMutation = useMutation({
+    mutationFn: async ({ id, apiTokenId }: { id: number; apiTokenId: number | null }) => {
+      await patchAdminDevice({ id, apiTokenId })
+      return { id, apiTokenId }
+    },
+    onSuccess: async ({ apiTokenId }) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
+      if (apiTokenId == null) {
+        toast.success('已解除绑定，设备状态已转为待审核')
+      } else {
+        toast.success('设备 Token 绑定已更新')
+      }
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : '网络错误')
@@ -327,8 +347,30 @@ export function DeviceManager({
     await updatePinMutation.mutateAsync({ id, pinToTop })
   }
 
+  const updateBinding = async (id: number, apiTokenId: number | null) => {
+    await updateBindingMutation.mutateAsync({ id, apiTokenId })
+  }
+
   const removeDevice = async (id: number) => {
     await removeDeviceMutation.mutateAsync(id)
+  }
+
+  const openReview = (item: AdminDeviceItem) => {
+    setReviewDeviceId(item.id)
+    setReviewTokenId(item.apiToken?.id ? String(item.apiToken.id) : '')
+  }
+
+  const handleToggleActive = async (item: AdminDeviceItem) => {
+    if (item.status === 'active') {
+      await updateStatus(item.id, 'revoked')
+      return
+    }
+    if (!item.apiToken) {
+      toast.warning('该设备未绑定 Token，请先绑定后再启用')
+      openReview(item)
+      return
+    }
+    await updateStatus(item.id, 'active')
   }
 
   const copyHash = async (hash: string) => {
@@ -349,7 +391,10 @@ export function DeviceManager({
     if (match) {
       highlightHandledRef.current = true
       if (match.status === 'pending') {
-        window.setTimeout(() => setReviewDeviceId(match.id), 0)
+        window.setTimeout(() => {
+          setReviewDeviceId(match.id)
+          setReviewTokenId(match.apiToken?.id ? String(match.apiToken.id) : '')
+        }, 0)
       } else {
         toast.info('该设备已审核')
       }
@@ -376,16 +421,16 @@ export function DeviceManager({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-device-token">绑定 Token（可选）</Label>
+            <Label htmlFor="new-device-token">绑定 Token（建议）</Label>
             <Select
               value={newTokenId || 'none'}
               onValueChange={(v) => setNewTokenId(v === 'none' ? '' : v)}
             >
               <SelectTrigger id="new-device-token" className="w-full">
-                <SelectValue placeholder="不绑定" />
+                <SelectValue placeholder="先选择 Token" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">不绑定</SelectItem>
+                <SelectItem value="none">暂不绑定（将进入待审核）</SelectItem>
                 {tokens.map((t) => (
                   <SelectItem key={t.id} value={String(t.id)}>
                     {t.name}
@@ -573,10 +618,8 @@ export function DeviceManager({
                         item={item}
                         variant="mobile"
                         onCopyHash={() => void copyHash(item.generatedHashKey)}
-                        onToggleActive={() =>
-                          void updateStatus(item.id, item.status === 'active' ? 'revoked' : 'active')
-                        }
-                        onReview={() => setReviewDeviceId(item.id)}
+                        onToggleActive={() => void handleToggleActive(item)}
+                        onReview={() => openReview(item)}
                       />
                     </div>
                   </div>
@@ -586,17 +629,20 @@ export function DeviceManager({
                   </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <p className="text-xs text-muted-foreground min-w-0 sm:flex-1">
-                      {item.apiToken ? `Token: ${item.apiToken.name}` : 'Token: 未绑定'}
+                      {item.apiToken ? `Token: ${item.apiToken.name}` : 'Token: 未绑定（需审核）'}
                     </p>
+                    {!item.apiToken ? (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-300 sm:flex-1">
+                        未绑定 Token 的设备不能启用，上报将进入待审核。
+                      </p>
+                    ) : null}
                     <div className="hidden sm:block sm:shrink-0">
                       <DeviceListItemActions
                         item={item}
                         variant="desktop"
                         onCopyHash={() => void copyHash(item.generatedHashKey)}
-                        onToggleActive={() =>
-                          void updateStatus(item.id, item.status === 'active' ? 'revoked' : 'active')
-                        }
-                        onReview={() => setReviewDeviceId(item.id)}
+                        onToggleActive={() => void handleToggleActive(item)}
+                        onReview={() => openReview(item)}
                       />
                     </div>
                   </div>
@@ -687,7 +733,10 @@ export function DeviceManager({
       <Dialog
         open={reviewDevice !== null}
         onOpenChange={(open) => {
-          if (!open) setReviewDeviceId(null)
+          if (!open) {
+            setReviewDeviceId(null)
+            setReviewTokenId('')
+          }
         }}
       >
         <DialogContent className="sm:max-w-md" showCloseButton>
@@ -697,6 +746,7 @@ export function DeviceManager({
                 <DialogTitle>设备审核</DialogTitle>
                 <DialogDescription>
                   确认是否同意该设备接入。通过后可正常上报活动；拒绝将标记为不可用。
+                  若是更换 Token 绑定场景，旧 Token 会先解绑，待你确认后切换到新 Token。
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2 text-sm">
@@ -722,6 +772,49 @@ export function DeviceManager({
                   <span className="text-muted-foreground">绑定 Token：</span>
                   {reviewDevice.apiToken ? reviewDevice.apiToken.name : '未绑定'}
                 </p>
+                {reviewDevice.apiToken ? (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-800 dark:text-amber-200">
+                    检测到更换绑定请求：旧 Token 已解绑，审核通过后将切换为当前 Token（{reviewDevice.apiToken.name}）。
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="review-device-token">审核时绑定 Token</Label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={reviewTokenId || 'none'}
+                        onValueChange={(v) => setReviewTokenId(v === 'none' ? '' : v)}
+                      >
+                        <SelectTrigger id="review-device-token" className="flex-1">
+                          <SelectValue placeholder="选择 Token" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">不绑定</SelectItem>
+                          {tokens.map((t) => (
+                            <SelectItem key={t.id} value={String(t.id)}>
+                              {t.name}
+                              {!t.isActive ? ' (disabled)' : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={updateBindingMutation.isPending}
+                        onClick={() => {
+                          const parsed = reviewTokenId ? Number(reviewTokenId) : NaN
+                          const nextTokenId = Number.isFinite(parsed) ? parsed : null
+                          void updateBinding(reviewDevice.id, nextTokenId)
+                        }}
+                      >
+                        保存绑定
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-amber-600 dark:text-amber-300">
+                      请先绑定 Token，再点击「通过」。
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button
@@ -731,7 +824,11 @@ export function DeviceManager({
                 >
                   拒绝
                 </Button>
-                <Button type="button" onClick={() => void updateStatus(reviewDevice.id, 'active')}>
+                <Button
+                  type="button"
+                  disabled={!reviewDevice.apiToken}
+                  onClick={() => void updateStatus(reviewDevice.id, 'active')}
+                >
                   通过
                 </Button>
               </DialogFooter>

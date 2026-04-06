@@ -83,14 +83,21 @@ export async function GET(request: NextRequest) {
         tName: string | null
         tActive: boolean | null
       }) => {
+        const missingTokenBinding = rest.apiTokenId == null
+        const normalizedStatus =
+          missingTokenBinding && rest.status === 'active' ? 'pending' : rest.status
         const row: Record<string, unknown> = {
           ...rest,
+          status: normalizedStatus,
           apiToken:
             tId != null && tName != null
               ? { id: tId, name: tName, isActive: Boolean(tActive) }
               : null,
         }
-        if (rest.status === 'pending' && typeof rest.generatedHashKey === 'string') {
+        if (
+          (normalizedStatus === 'pending' || missingTokenBinding) &&
+          typeof rest.generatedHashKey === 'string'
+        ) {
           row.approvalUrl = buildDeviceApprovalUrl(request, rest.generatedHashKey)
         }
         return row
@@ -175,12 +182,13 @@ export async function POST(request: NextRequest) {
     }
 
     const now = sqlTimestamp()
+    const initialStatus = apiTokenId ? 'active' : 'pending'
     const [item] = await db
       .insert(devices)
       .values({
         displayName,
         generatedHashKey,
-        status: 'active',
+        status: initialStatus,
         apiTokenId,
         ...(typeof body?.showSteamNowPlaying === 'boolean'
           ? { showSteamNowPlaying: body.showSteamNowPlaying }
@@ -212,7 +220,15 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: '缺少有效的 id' }, { status: 400 })
     }
 
+    const [existing] = await db.select().from(devices).where(eq(devices.id, id)).limit(1)
+    if (!existing) {
+      return NextResponse.json({ success: false, error: '设备不存在' }, { status: 404 })
+    }
+
     const data: Record<string, unknown> = {}
+    let effectiveStatus = existing.status
+    let effectiveApiTokenId: number | null = existing.apiTokenId ?? null
+    let statusSpecified = false
     if (typeof body?.displayName === 'string') {
       const displayName = body.displayName.trim()
       if (!displayName) {
@@ -226,9 +242,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: false, error: '状态仅支持 active/pending/revoked' }, { status: 400 })
       }
       data.status = status
+      effectiveStatus = status
+      statusSpecified = true
     }
     if (body?.apiTokenId === null) {
       data.apiTokenId = null
+      effectiveApiTokenId = null
     } else if (typeof body?.apiTokenId === 'number' && Number.isFinite(body.apiTokenId)) {
       const tokenId = Math.floor(body.apiTokenId)
       const [token] = await db.select().from(apiTokens).where(eq(apiTokens.id, tokenId)).limit(1)
@@ -236,6 +255,18 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: false, error: '绑定的 Token 不存在' }, { status: 400 })
       }
       data.apiTokenId = tokenId
+      effectiveApiTokenId = tokenId
+    }
+
+    if (effectiveStatus === 'active' && effectiveApiTokenId == null) {
+      if (statusSpecified) {
+        return NextResponse.json(
+          { success: false, error: '设备未绑定 Token，不能直接设为已启用' },
+          { status: 400 },
+        )
+      }
+      data.status = 'pending'
+      effectiveStatus = 'pending'
     }
     if (typeof body?.showSteamNowPlaying === 'boolean') {
       data.showSteamNowPlaying = body.showSteamNowPlaying
