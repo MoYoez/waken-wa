@@ -64,8 +64,8 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
   )
 
   return (
-    <footer className="layout-footer px-4 pb-5 sm:px-6 sm:pb-8">
-      <div className="mx-auto max-w-3xl">
+    <footer className="layout-footer pb-5 sm:pb-8">
+      <div className="mx-auto max-w-2xl px-4 sm:px-6">
         <div className="footer-surface overflow-hidden rounded-[20px] text-card-foreground sm:rounded-[24px]">
           <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
