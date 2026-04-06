@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
     }
 
     let statusSnapshot: string | null = null
-    if (attachCurrentStatus && session) {
+    if (attachCurrentStatus) {
       if (preComputedStatusSnapshot) {
         // Fast path: client already computed the snapshot text from its loaded activity data.
         statusSnapshot = preComputedStatusSnapshot
@@ -308,7 +308,6 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-
     }
 
     const now = sqlTimestamp()

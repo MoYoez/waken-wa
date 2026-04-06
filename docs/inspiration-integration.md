@@ -30,7 +30,8 @@
 
 - `GET /api/inspiration/entries` 仍受整站访问锁影响；若站点已锁定，需要先完成页面解锁。
 - Bearer Token 写入路径可能额外受到后台「灵感允许设备 Hash」规则限制。
-- `attachCurrentStatus` 仅登录管理员可用。
+- `attachCurrentStatus` 可用于管理员 `session` 和 Bearer Token 写入。
+- Bearer Token 路径下，附带当前状态时必须提供当前设备身份牌（`X-Device-Key` 或 `generatedHashKey`），且只能附带当前设备自己的状态。
 
 ## 3. 常见接入流程
 

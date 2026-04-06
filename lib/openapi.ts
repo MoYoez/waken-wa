@@ -1006,7 +1006,7 @@ export function getOpenApiDocument(baseUrl: string): OpenApiDocument {
           tags: ['Inspiration'],
           summary: 'Create an inspiration entry',
           description:
-            'Write endpoint for admin sessions or bearer API tokens. Device-token writes may be further gated by the inspiration device allowlist. attachCurrentStatus works only for admin sessions.',
+            'Write endpoint for admin sessions or bearer API tokens. Device-token writes may be further gated by the inspiration device allowlist. When attachCurrentStatus is used with a bearer token, the request must provide the current device key and can only attach that device\'s status.',
           security: cookieOrBearerSecurity(
             'Use an admin session cookie for full functionality, or a bearer API token for device-originated writes.',
           ),
@@ -1068,7 +1068,7 @@ export function getOpenApiDocument(baseUrl: string): OpenApiDocument {
             '401': response('Missing admin session and missing bearer token.', {
               $ref: '#/components/schemas/ErrorEnvelope',
             }),
-            '403': response('Device token blocked by allowlist, or attachCurrentStatus attempted without admin session.', {
+            '403': response('Device token blocked by allowlist, or attachCurrentStatus attempted with a mismatched device key.', {
               $ref: '#/components/schemas/ErrorEnvelope',
             }),
             '500': response('Unexpected server error.', {
