@@ -24,7 +24,9 @@ if [ "$(id -u)" = 0 ]; then
 fi
 
 export DATABASE_URL="${DATABASE_URL:-file:/app/data/dev.db}"
-export REDIS_URL="${REDIS_URL:-}"
+export REDIS_INTERNAL_ENABLED="${REDIS_INTERNAL_ENABLED:-1}"
+export REDIS_PORT="${REDIS_PORT:-6379}"
+export REDIS_URL="${REDIS_URL:-redis://127.0.0.1:${REDIS_PORT}}"
 export REDIS_CACHE_TTL_SECONDS="${REDIS_CACHE_TTL_SECONDS:-3600}"
 
 # Config lives under /app but CLI deps are in /app/tools; TS config imports `drizzle-kit`.
@@ -41,10 +43,40 @@ case "$DATABASE_URL" in
     ;;
 esac
 
+start_internal_redis() {
+  [ "${REDIS_INTERNAL_ENABLED}" = "1" ] || return 0
+
+  mkdir -p /app/data/redis
+  if [ "$(id -u)" = 0 ]; then
+    chown -R nextjs:nodejs /app/data/redis
+    runuser -u nextjs -- redis-server \
+      --bind 127.0.0.1 \
+      --port "${REDIS_PORT}" \
+      --save 60 1 \
+      --appendonly yes \
+      --loglevel warning \
+      --dir /app/data/redis \
+      --dbfilename dump.rdb \
+      --daemonize yes
+  else
+    redis-server \
+      --bind 127.0.0.1 \
+      --port "${REDIS_PORT}" \
+      --save 60 1 \
+      --appendonly yes \
+      --loglevel warning \
+      --dir /app/data/redis \
+      --dbfilename dump.rdb \
+      --daemonize yes
+  fi
+}
+
 start_app() {
   node "$DRIZZLE_KIT_CLI" push --config "$DRIZZLE_CONFIG"
   exec node server.js
 }
+
+start_internal_redis
 
 if [ "$(id -u)" = 0 ]; then
   exec runuser -u nextjs -- env \

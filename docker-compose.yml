@@ -1,5 +1,5 @@
 # Quick start: ./deploy.sh
-# Local stack: single app service + SQLite (volume waken_sqlite_data). No Postgres.
+# Local stack: all-in-one container (Next.js app + internal Redis + SQLite).
 # Schema: Drizzle (`drizzle-kit push` in entrypoint). JWT: optional in .env; if empty, entrypoint persists /app/data/.jwt_secret.
 services:
   app:
@@ -10,7 +10,9 @@ services:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
     environment:
       DATABASE_URL: file:/app/data/dev.db
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      REDIS_INTERNAL_ENABLED: ${REDIS_INTERNAL_ENABLED:-1}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_URL: ${REDIS_URL:-redis://127.0.0.1:6379}
       REDIS_CACHE_TTL_SECONDS: ${REDIS_CACHE_TTL_SECONDS:-3600}
       HOST: "0.0.0.0"
       HOSTNAME: "0.0.0.0"
@@ -22,16 +24,6 @@ services:
       STEAM_API_KEY: ${STEAM_API_KEY:-}
     volumes:
       - waken_sqlite_data:/app/data
-    depends_on:
-      - redis
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
-    volumes:
-      - waken_redis_data:/data
 
 volumes:
   waken_sqlite_data:
-  waken_redis_data:
