@@ -16,7 +16,7 @@ type Props = {
   enabled?: boolean
 }
 
-const MIN_LOADING_MS = 720
+const MIN_LOADING_MS = 380
 const THEME_WAIT_TIMEOUT_MS = 2200
 
 function loadingLabel(scope: Props['scope']): string {

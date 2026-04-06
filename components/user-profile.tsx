@@ -22,17 +22,37 @@ import type { HitokotoJsonBody, UserNoteHitokotoEncode } from '@/types/hitokoto'
 const NOTE_BOX_CLASS =
   'block w-full min-w-0 max-w-full break-words text-sm font-semibold text-foreground leading-snug border-l-2 border-primary pl-4 pr-0'
 
+const TYPEWRITER_BASE_DELAY_MS = 54
+const TYPEWRITER_JITTER_MS = 28
+const TYPEWRITER_SPACE_BONUS_MS = 18
+const TYPEWRITER_PUNCTUATION_BONUS_MS = 72
+
+function getTypewriterDelayMs(char: string) {
+  const jitter = Math.floor(Math.random() * (TYPEWRITER_JITTER_MS * 2 + 1)) - TYPEWRITER_JITTER_MS
+
+  if (/\s/.test(char)) {
+    return TYPEWRITER_BASE_DELAY_MS + TYPEWRITER_SPACE_BONUS_MS + jitter
+  }
+
+  if (/[，。！？；：、,.!?;:~]/.test(char)) {
+    return TYPEWRITER_BASE_DELAY_MS + TYPEWRITER_PUNCTUATION_BONUS_MS + jitter
+  }
+
+  return TYPEWRITER_BASE_DELAY_MS + jitter
+}
+
 function TypewriterNoteText({
   text,
   enabled,
+  startDelayMs = 0,
   children,
 }: {
   text: string
   enabled: boolean
-  children: (displayText: string, animating: boolean) => ReactNode
+  startDelayMs?: number
+  children: (displayText: string) => ReactNode
 }) {
   const [displayText, setDisplayText] = useState(enabled ? '' : text)
-  const [animating, setAnimating] = useState(false)
   const [reduceMotion, setReduceMotion] = useState(false)
   const shouldAnimate = enabled && !reduceMotion && text.length > 1
 
@@ -46,41 +66,34 @@ function TypewriterNoteText({
   }, [])
 
   useEffect(() => {
-    if (!shouldAnimate) return
+    if (!shouldAnimate) {
+      setDisplayText(text)
+      return
+    }
 
     let index = 0
     let typingTimer = 0
     const startTimer = window.setTimeout(() => {
       setDisplayText('')
-      setAnimating(true)
-      typingTimer = window.setInterval(() => {
+      const step = () => {
         index += 1
         setDisplayText(text.slice(0, index))
         if (index >= text.length) {
-          window.clearInterval(typingTimer)
-          setAnimating(false)
+          return
         }
-      }, 48)
-    }, 0)
+        typingTimer = window.setTimeout(step, getTypewriterDelayMs(text[index] ?? ''))
+      }
+
+      step()
+    }, startDelayMs)
 
     return () => {
       window.clearTimeout(startTimer)
-      if (typingTimer) window.clearInterval(typingTimer)
+      if (typingTimer) window.clearTimeout(typingTimer)
     }
-  }, [shouldAnimate, text])
+  }, [shouldAnimate, startDelayMs, text])
 
-  return <>{children(shouldAnimate ? displayText : text, shouldAnimate || animating)}</>
-}
-
-function TypewriterCaret({ animating }: { animating: boolean }) {
-  if (!animating) return null
-  return (
-    <span
-      aria-hidden="true"
-      className="ml-0.5 inline-block h-[1em] w-px translate-y-0.5 bg-current align-middle"
-      style={{ animation: 'typewriter-caret-blink 1s linear infinite', willChange: 'opacity' }}
-    />
-  )
+  return <>{children(displayText)}</>
 }
 
 function ProfileHitokotoNote({
@@ -166,13 +179,8 @@ function ProfileHitokotoNote({
   if (phase === 'error') {
     if (fallbackToNote && fallbackNote.trim()) {
       return (
-        <TypewriterNoteText text={fallbackNote} enabled={typewriterEnabled}>
-          {(displayText, animating) => (
-            <p className={NOTE_BOX_CLASS}>
-              {displayText}
-              <TypewriterCaret animating={animating} />
-            </p>
-          )}
+        <TypewriterNoteText text={fallbackNote} enabled={typewriterEnabled} startDelayMs={100}>
+          {(displayText) => <p className={NOTE_BOX_CLASS}>{displayText}</p>}
         </TypewriterNoteText>
       )
     }
@@ -181,8 +189,8 @@ function ProfileHitokotoNote({
 
   if (uuid) {
     return (
-      <TypewriterNoteText text={text} enabled={typewriterEnabled}>
-        {(displayText, animating) => (
+      <TypewriterNoteText text={text} enabled={typewriterEnabled} startDelayMs={100}>
+        {(displayText) => (
           <p className={NOTE_BOX_CLASS}>
             <a
               href={`https://hitokoto.cn/?uuid=${encodeURIComponent(uuid)}`}
@@ -198,7 +206,6 @@ function ProfileHitokotoNote({
               )}
             >
               {displayText}
-              <TypewriterCaret animating={animating} />
             </a>
           </p>
         )}
@@ -207,13 +214,8 @@ function ProfileHitokotoNote({
   }
 
   return (
-    <TypewriterNoteText text={text} enabled={typewriterEnabled}>
-      {(displayText, animating) => (
-        <p className={NOTE_BOX_CLASS}>
-          {displayText}
-          <TypewriterCaret animating={animating} />
-        </p>
-      )}
+    <TypewriterNoteText text={text} enabled={typewriterEnabled} startDelayMs={100}>
+      {(displayText) => <p className={NOTE_BOX_CLASS}>{displayText}</p>}
     </TypewriterNoteText>
   )
 }
@@ -261,12 +263,7 @@ export function UserProfileNoteSection({
           />
         ) : (
           <TypewriterNoteText text={note} enabled={noteTypewriterEnabled}>
-            {(displayText, animating) => (
-              <p className={NOTE_BOX_CLASS}>
-                {displayText}
-                <TypewriterCaret animating={animating} />
-              </p>
-            )}
+            {(displayText) => <p className={NOTE_BOX_CLASS}>{displayText}</p>}
           </TypewriterNoteText>
         )}
       </motion.div>
