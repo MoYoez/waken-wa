@@ -52,24 +52,26 @@ function TypewriterNoteText({
   startDelayMs?: number
   children: (displayText: string) => ReactNode
 }) {
-  const [displayText, setDisplayText] = useState(enabled ? '' : text)
-  const [reduceMotion, setReduceMotion] = useState(false)
+  const [displayText, setDisplayText] = useState('')
+  const [reduceMotion, setReduceMotion] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false
+    }
+
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  })
   const shouldAnimate = enabled && !reduceMotion && text.length > 1
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
     const sync = () => setReduceMotion(media.matches)
-    sync()
     media.addEventListener('change', sync)
     return () => media.removeEventListener('change', sync)
   }, [])
 
   useEffect(() => {
-    if (!shouldAnimate) {
-      setDisplayText(text)
-      return
-    }
+    if (!shouldAnimate) return
 
     let index = 0
     let typingTimer = 0
@@ -93,7 +95,7 @@ function TypewriterNoteText({
     }
   }, [shouldAnimate, startDelayMs, text])
 
-  return <>{children(displayText)}</>
+  return <>{children(shouldAnimate ? displayText : text)}</>
 }
 
 function ProfileHitokotoNote({
