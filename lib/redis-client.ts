@@ -101,6 +101,36 @@ function ensureFixedWindowIncrCommand(client: Redis): void {
 
 let redisClient: Redis | null = null
 let redisInitAttempted = false
+let redisRuntimeDisabled = false
+let redisDisableLogged = false
+
+function shouldDisableRedisForError(error: unknown): boolean {
+  const message = String((error as { message?: unknown })?.message ?? error ?? '')
+  return (
+    message.includes('ENOTFOUND') ||
+    message.includes('ECONNREFUSED') ||
+    message.includes('EAI_AGAIN') ||
+    message.includes('ETIMEDOUT')
+  )
+}
+
+function disableRedisRuntime(error?: unknown): void {
+  redisRuntimeDisabled = true
+  if (!redisDisableLogged) {
+    redisDisableLogged = true
+    if (error) {
+      console.warn('[redis] disabled at runtime, falling back to memory/db:', error)
+    } else {
+      console.warn('[redis] disabled at runtime, falling back to memory/db')
+    }
+  }
+  if (redisClient) {
+    try {
+      redisClient.disconnect()
+    } catch {}
+  }
+  redisClient = null
+}
 
 function getRedisUrl(): string {
   return String(process.env.REDIS_URL ?? '').trim()
@@ -111,6 +141,7 @@ function shouldInitRedis(): boolean {
 }
 
 function getRedisClient(): Redis | null {
+  if (redisRuntimeDisabled) return null
   if (redisClient) return redisClient
   if (redisInitAttempted) return null
   redisInitAttempted = true
@@ -122,6 +153,15 @@ function getRedisClient(): Redis | null {
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableAutoPipelining: true,
+      retryStrategy(times) {
+        if (times >= 3) return null
+        return Math.min(times * 200, 1000)
+      },
+    })
+    redisClient.on('error', (error) => {
+      if (shouldDisableRedisForError(error)) {
+        disableRedisRuntime(error)
+      }
     })
     ensureFixedWindowIncrCommand(redisClient)
     return redisClient
