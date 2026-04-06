@@ -3,6 +3,7 @@ name: Docker
 on:
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]
 
 env:
   REGISTRY: ghcr.io
@@ -65,6 +66,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha
+            type=ref,event=tag
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -82,3 +87,4 @@ jobs:
           package-name: ${{ env.IMAGE_TITLE }}
           package-type: container
           min-versions-to-keep: 5
+          delete-only-untagged-versions: true
