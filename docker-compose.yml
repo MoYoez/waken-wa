@@ -9,7 +9,7 @@ services:
     ports:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
     environment:
-      DATABASE_URL: file:/app/data/dev.db
+      DATABASE_URL: ${DATABASE_URL:-file:/app/data/dev.db}
       REDIS_INTERNAL_ENABLED: ${REDIS_INTERNAL_ENABLED:-1}
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_URL: ${REDIS_URL:-redis://127.0.0.1:6379}
