@@ -11,6 +11,7 @@ import {
 } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import { deleteAdminInspirationOrphanAssets } from '@/components/admin/admin-query-mutations'
+import { FormattedTime } from '@/components/formatted-time'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,21 +33,6 @@ const ORPHAN_LIST_MAX_HEIGHT = 'min(75vh,56rem)'
 
 export interface OrphanImagesHandle {
   refresh: () => void
-}
-
-function formatCreatedAt(value: string | null): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  })
 }
 
 export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function OrphanImages(_, ref) {
@@ -274,7 +260,13 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
 
                       <div className="rounded-md border border-border/50 bg-background/70 px-2.5 py-2 text-[11px] text-muted-foreground">
                         <div className="font-medium text-foreground/75">创建时间</div>
-                        <div className="mt-1 break-all">{formatCreatedAt(r.createdAt)}</div>
+                        <div className="mt-1 break-all">
+                          <FormattedTime
+                            date={r.createdAt}
+                            pattern="yyyy-MM-dd HH:mm:ss"
+                            fallback="—"
+                          />
+                        </div>
                       </div>
                     </div>
                   )

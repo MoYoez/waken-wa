@@ -201,6 +201,8 @@ export const siteConfig = sqliteTable('site_config', {
   hcaptchaSiteKey: text('hcaptcha_site_key'),
   hcaptchaSecretKey: text('hcaptcha_secret_key'),
   displayTimezone: text('display_timezone').notNull().default('Asia/Shanghai'),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  forceDisplayTimezone: integer('force_display_timezone', { mode: 'boolean' }).default(false),
   activityUpdateMode: text('activity_update_mode').notNull().default('sse'),
   steamEnabled: integer('steam_enabled', { mode: 'boolean' })
     .notNull()

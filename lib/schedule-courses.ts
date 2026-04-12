@@ -13,6 +13,8 @@ import {
 } from 'date-fns'
 import { z } from 'zod'
 
+import { toWallClockDate } from '@/lib/timezone'
+
 /** Monday = 0, Sunday = 6 */
 export const WEEKDAY_MON0_MAX = 6
 
@@ -389,9 +391,11 @@ export function expandOccurrencesInWeek(
   courses: ScheduleCourse[],
   weekRef: Date,
   periodTemplate?: SchedulePeriodTemplateItem[],
+  timezone?: string | null,
 ): ScheduleOccurrence[] {
-  const ws = startOfWeek(weekRef, { weekStartsOn: 1 })
-  const we = endOfWeek(weekRef, { weekStartsOn: 1 })
+  const wallWeekRef = timezone ? toWallClockDate(weekRef, timezone) : weekRef
+  const ws = startOfWeek(wallWeekRef, { weekStartsOn: 1 })
+  const we = endOfWeek(wallWeekRef, { weekStartsOn: 1 })
   const out: ScheduleOccurrence[] = []
 
   for (const c of courses) {
@@ -448,9 +452,11 @@ export function findOngoingOccurrenceAt(
   courses: ScheduleCourse[],
   now: Date,
   periodTemplate?: SchedulePeriodTemplateItem[],
+  timezone?: string | null,
 ): ScheduleOccurrence | null {
-  const occs = expandOccurrencesInWeek(courses, now, periodTemplate)
-  const t = now.getTime()
+  const wallNow = timezone ? toWallClockDate(now, timezone) : now
+  const occs = expandOccurrencesInWeek(courses, wallNow, periodTemplate)
+  const t = wallNow.getTime()
   for (const o of occs) {
     if (o.start.getTime() <= t && t < o.end.getTime()) {
       return o
@@ -464,9 +470,11 @@ export function getOccurrencesOnCalendarDay(
   courses: ScheduleCourse[],
   dayRef: Date,
   periodTemplate?: SchedulePeriodTemplateItem[],
+  timezone?: string | null,
 ): ScheduleOccurrence[] {
-  const occs = expandOccurrencesInWeek(courses, dayRef, periodTemplate)
-  const ymd = format(startOfDay(dayRef), 'yyyy-MM-dd')
+  const wallDayRef = timezone ? toWallClockDate(dayRef, timezone) : dayRef
+  const occs = expandOccurrencesInWeek(courses, wallDayRef, periodTemplate)
+  const ymd = format(startOfDay(wallDayRef), 'yyyy-MM-dd')
   return occs
     .filter((o) => format(o.start, 'yyyy-MM-dd') === ymd)
     .sort((a, b) => a.start.getTime() - b.start.getTime())
@@ -484,12 +492,14 @@ export function resolveScheduleHomeCardState(
   courses: ScheduleCourse[],
   now: Date,
   periodTemplate?: SchedulePeriodTemplateItem[],
+  timezone?: string | null,
 ): ScheduleHomeCardState {
-  const ongoing = findOngoingOccurrenceAt(courses, now, periodTemplate)
+  const wallNow = timezone ? toWallClockDate(now, timezone) : now
+  const ongoing = findOngoingOccurrenceAt(courses, wallNow, periodTemplate)
   if (ongoing) return { kind: 'in_class', occ: ongoing }
 
-  const todayOccs = getOccurrencesOnCalendarDay(courses, now, periodTemplate)
-  const t = now.getTime()
+  const todayOccs = getOccurrencesOnCalendarDay(courses, wallNow, periodTemplate)
+  const t = wallNow.getTime()
 
   if (todayOccs.length > 0) {
     const allEnded = todayOccs.every((o) => t >= o.end.getTime())
@@ -499,7 +509,7 @@ export function resolveScheduleHomeCardState(
     if (nextUp) return { kind: 'upcoming_today', next: nextUp }
   }
 
-  const tomorrow = addDays(startOfDay(now), 1)
+  const tomorrow = addDays(startOfDay(wallNow), 1)
   const tomorrowOccs = getOccurrencesOnCalendarDay(courses, tomorrow, periodTemplate)
   if (tomorrowOccs.length > 0) return { kind: 'rest_tomorrow_has' }
   return { kind: 'rest_no_tomorrow' }

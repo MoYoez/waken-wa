@@ -1,7 +1,5 @@
 'use client'
 
-import { format } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
 import {
   AppWindow,
   Battery,
@@ -29,6 +27,7 @@ import {
   getSiteSectionTransition,
   getSiteSectionVariants,
 } from '@/components/site-motion'
+import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useIsMobile } from '@/components/ui/use-mobile'
@@ -299,6 +298,7 @@ function LastReportTime({
   value: string
   timestampFormat: string
 }) {
+  const { formatPattern } = useSiteTimeFormat()
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.span
@@ -309,7 +309,7 @@ function LastReportTime({
         exit={{ opacity: 0.45 }}
         transition={{ duration: 0.16, ease: 'easeOut' }}
       >
-        {format(new Date(value), timestampFormat, { locale: zhCN })}
+        {formatPattern(value, timestampFormat, '--')}
       </motion.span>
     </AnimatePresence>
   )
@@ -328,6 +328,7 @@ function CurrentStatusCard({
 }) {
   const [flashKey, setFlashKey] = useState<string | null>(null)
   const previousSignatureRef = useRef('')
+  const { formatPattern } = useSiteTimeFormat()
 
   const timestampFormat = 'MM/dd HH:mm:ss'
   const batteryLabel = getBatteryLabel(activity.metadata)
@@ -472,7 +473,7 @@ function CurrentStatusCard({
               </span>
             </div>
             <div className="text-xs tabular-nums text-foreground pl-5">
-              {format(new Date(activity.startedAt), timestampFormat, { locale: zhCN })}
+              {formatPattern(activity.startedAt, timestampFormat, '--')}
             </div>
           </div>
           <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">

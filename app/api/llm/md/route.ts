@@ -412,6 +412,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   pushSection(lines, '### Schedule and Time')
   pushBullets(lines, [
     '`displayTimezone`: Main timezone used for display formatting',
+    '`forceDisplayTimezone`: When `true`, all user-facing absolute times and schedule day/time calculations use `displayTimezone` instead of the visitor browser timezone',
     '`scheduleSlotMinutes`: Grid slot size; valid values are 15, 30, 45, 60',
     '`schedulePeriodTemplate`: Array of teaching periods such as morning/afternoon/evening slots',
     '`scheduleGridByWeekday`: Array of 7 weekday grid definitions',

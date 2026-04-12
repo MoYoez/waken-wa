@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { MarkdownContent } from '@/components/admin/markdown-content'
+import { FormattedTime } from '@/components/formatted-time'
 import type { InspirationHomeItem } from '@/components/inspiration-home-section'
 import { LexicalContent } from '@/components/lexical-content'
 import {
@@ -14,7 +15,7 @@ import {
   getSiteSectionVariants,
 } from '@/components/site-motion'
 import { inspirationLooksLikeMarkdown } from '@/lib/inspiration-preview'
-import { formatDateTimeShort, normalizeTimezone } from '@/lib/timezone'
+import { normalizeTimezone } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
 
 const PAGE = 10
@@ -197,9 +198,11 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                       <Link href={href} className="text-xs font-semibold hover:text-primary transition-colors">
                         {entry.title?.trim() ? entry.title : '（无标题）'}
                       </Link>
-                      <time className="text-[0.65rem] text-muted-foreground tabular-nums shrink-0 leading-none">
-                        {formatDateTimeShort(entry.createdAt, entry.displayTimezone ?? activeTimezone)}
-                      </time>
+                      <FormattedTime
+                        date={entry.createdAt}
+                        timezone={entry.displayTimezone ?? activeTimezone}
+                        className="text-[0.65rem] text-muted-foreground tabular-nums shrink-0 leading-none"
+                      />
                     </div>
                     <div className="relative max-h-24 overflow-hidden">
                       {renderedContent}

@@ -3,9 +3,11 @@ import '../styles/globals.css'
 import type { Metadata } from 'next'
 
 import { GlobalMouseTilt } from '@/components/global-mouse-tilt'
+import { SiteTimezoneProvider } from '@/components/site-timezone-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
+import { DEFAULT_TIMEZONE, normalizeTimezone } from '@/lib/timezone'
 
 export async function generateMetadata(): Promise<Metadata> {
   let title = DEFAULT_PAGE_TITLE
@@ -47,10 +49,14 @@ export default async function RootLayout({
 }>) {
   let globalMouseTiltEnabled = false
   let globalMouseTiltGyroEnabled = false
+  let displayTimezone = DEFAULT_TIMEZONE
+  let forceDisplayTimezone = false
   try {
     const row = await getSiteConfigMemoryFirst()
     globalMouseTiltEnabled = row?.globalMouseTiltEnabled === true
     globalMouseTiltGyroEnabled = row?.globalMouseTiltGyroEnabled === true
+    displayTimezone = normalizeTimezone(row?.displayTimezone)
+    forceDisplayTimezone = row?.forceDisplayTimezone === true
   } catch {
     // DB not ready during build or first boot
   }
@@ -66,11 +72,16 @@ export default async function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <GlobalMouseTilt enabled={globalMouseTiltEnabled} gyroEnabled={globalMouseTiltGyroEnabled}>
-            {children}
-          </GlobalMouseTilt>
-        </ThemeProvider>
+        <SiteTimezoneProvider
+          displayTimezone={displayTimezone}
+          forceDisplayTimezone={forceDisplayTimezone}
+        >
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <GlobalMouseTilt enabled={globalMouseTiltEnabled} gyroEnabled={globalMouseTiltGyroEnabled}>
+              {children}
+            </GlobalMouseTilt>
+          </ThemeProvider>
+        </SiteTimezoneProvider>
         <div id="site-footer-portal" />
       </body>
     </html>

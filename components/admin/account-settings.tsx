@@ -17,6 +17,7 @@ import {
   createAdminUser,
   deleteAdminUser,
 } from '@/components/admin/admin-query-mutations'
+import { FormattedTime } from '@/components/formatted-time'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -229,7 +230,7 @@ export function AccountSettings() {
                 <div>
                   <p className="text-sm font-medium text-foreground">{u.username}</p>
                   <p className="text-xs text-muted-foreground">
-                    创建于 {new Date(u.createdAt).toLocaleString('zh-CN')}
+                    创建于 <FormattedTime date={u.createdAt} pattern="yyyy-MM-dd HH:mm:ss" />
                   </p>
                 </div>
                 <AlertDialog>

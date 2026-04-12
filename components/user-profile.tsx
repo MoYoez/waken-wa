@@ -53,19 +53,14 @@ function TypewriterNoteText({
   children: (displayText: string) => ReactNode
 }) {
   const [displayText, setDisplayText] = useState('')
-  const [reduceMotion, setReduceMotion] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return false
-    }
-
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  })
+  const [reduceMotion, setReduceMotion] = useState(false)
   const shouldAnimate = enabled && !reduceMotion && text.length > 1
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
     const sync = () => setReduceMotion(media.matches)
+    sync()
     media.addEventListener('change', sync)
     return () => media.removeEventListener('change', sync)
   }, [])

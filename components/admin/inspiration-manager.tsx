@@ -32,6 +32,7 @@ import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { createLexicalTextContent, LexicalEditor } from '@/components/admin/lexical-editor'
 import { MarkdownContent } from '@/components/admin/markdown-content'
 import { LexicalContent } from '@/components/lexical-content'
+import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,7 +64,7 @@ import {
   inspirationLooksLikeMarkdown,
   inspirationPlainPreviewAny,
 } from '@/lib/inspiration-preview'
-import { DEFAULT_TIMEZONE, formatDateTimeShort, normalizeTimezone } from '@/lib/timezone'
+import { normalizeTimezone } from '@/lib/timezone'
 import type {
   ActivityFeedData,
   ActivityFeedItem,
@@ -85,6 +86,7 @@ const INSPIRATION_DRAFT_STORAGE_KEY = 'waken:admin:inspiration-draft:v2'
 export function InspirationManager() {
   const queryClient = useQueryClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
+  const { formatPattern } = useSiteTimeFormat()
   const [page, setPage] = useState(0)
   const [q, setQ] = useState('')
   const formCardRef = useRef<HTMLDivElement>(null)
@@ -128,7 +130,6 @@ export function InspirationManager() {
 
   const entries = useMemo(() => entriesQuery.data?.entries ?? [], [entriesQuery.data?.entries])
   const total = entriesQuery.data?.total ?? 0
-  const displayTimezone = entriesQuery.data?.displayTimezone ?? DEFAULT_TIMEZONE
   const loading = entriesQuery.isLoading
   const inspirationDevices = useMemo(
     () => inspirationDevicesQuery.data ?? [],
@@ -953,7 +954,7 @@ export function InspirationManager() {
                             {entry.title ? entry.title : '（无标题）'}
                           </h4>
                           <span className="text-xs text-muted-foreground">
-                            {formatDateTimeShort(entry.createdAt, displayTimezone)}
+                            {formatPattern(entry.createdAt, 'yyyy-MM-dd HH:mm', '—')}
                           </span>
                         </div>
                         <div className="mt-2 text-xs text-muted-foreground line-clamp-3 leading-relaxed">
@@ -1093,7 +1094,7 @@ export function InspirationManager() {
             <DialogTitle>{previewEntry?.title?.trim() || '（无标题）'}</DialogTitle>
             <DialogDescription>
               {previewEntry
-                ? formatDateTimeShort(previewEntry.createdAt, displayTimezone)
+                ? formatPattern(previewEntry.createdAt, 'yyyy-MM-dd HH:mm', '—')
                 : ''}
             </DialogDescription>
           </DialogHeader>

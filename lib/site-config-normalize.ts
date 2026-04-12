@@ -31,6 +31,7 @@ function normalizeAppMessageRulesField(raw: unknown): Array<{ match: string; tex
 export function normalizeSiteConfigShape(config: Record<string, any>): Record<string, any> {
   return {
     ...config,
+    forceDisplayTimezone: config.forceDisplayTimezone === true,
     themeCustomSurface: parseThemeCustomSurface(config.themeCustomSurface),
     userNoteHitokotoCategories: normalizeStringArrayField(config.userNoteHitokotoCategories),
     inspirationAllowedDeviceHashes:

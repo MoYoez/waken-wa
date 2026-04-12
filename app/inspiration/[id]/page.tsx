@@ -5,12 +5,13 @@ import { notFound } from 'next/navigation'
 
 import { MarkdownContent } from '@/components/admin/markdown-content'
 import { ContentReadingPanel } from '@/components/content-reading-panel'
+import { FormattedTime } from '@/components/formatted-time'
 import { LexicalContent } from '@/components/lexical-content'
 import { SiteReveal } from '@/components/site-reveal'
 import { db } from '@/lib/db'
 import { inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
 import { inspirationLooksLikeMarkdown } from '@/lib/inspiration-preview'
-import { coerceDbTimestampToIsoUtc, formatDateTimeShort, normalizeTimezone } from '@/lib/timezone'
+import { coerceDbTimestampToIsoUtc, normalizeTimezone } from '@/lib/timezone'
 
 
 export const dynamic = 'force-dynamic'
@@ -87,9 +88,11 @@ export default async function InspirationDetailPage({
               <h1 className="text-lg font-semibold text-foreground">
                 {entry.title?.trim() ? entry.title : '（无标题）'}
               </h1>
-              <time className="text-xs text-muted-foreground tabular-nums block">
-                {formatDateTimeShort(createdAt, displayTimezone)}
-              </time>
+              <FormattedTime
+                date={createdAt}
+                timezone={displayTimezone}
+                className="text-xs text-muted-foreground tabular-nums block"
+              />
             </header>
           </SiteReveal>
 

@@ -309,6 +309,7 @@ export function useWebSettingsController() {
             hideActivityMedia: data.hideActivityMedia === true,
             activityRejectLockappSleep: data.activityRejectLockappSleep === true,
             displayTimezone: normalizeTimezone(data.displayTimezone),
+            forceDisplayTimezone: data.forceDisplayTimezone === true,
             activityUpdateMode: normalizeActivityUpdateMode(data.activityUpdateMode),
             useNoSqlAsCacheRedis:
               data.useNoSqlAsCacheRedis === undefined

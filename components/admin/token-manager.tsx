@@ -6,8 +6,6 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { format } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
 import { Check, Copy, QrCode, RefreshCw, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
@@ -34,6 +32,7 @@ import {
   deleteAdminToken,
   patchAdminToken,
 } from '@/components/admin/admin-query-mutations'
+import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +69,7 @@ export interface TokenManagerHandle {
 export const TokenManager = forwardRef<TokenManagerHandle, object>(function TokenManager(_, ref) {
   const queryClient = useQueryClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
+  const { formatPattern } = useSiteTimeFormat()
   const [page, setPage] = useState(0)
   const [newTokenName, setNewTokenName] = useState('')
   const [newToken, setNewToken] = useState<string | null>(null)
@@ -210,9 +210,8 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
 
   const safeFormat = (value: string | null, fmt: string) => {
     if (!value) return null
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return null
-    return format(date, fmt, { locale: zhCN })
+    const text = formatPattern(value, fmt, '')
+    return text || null
   }
 
   useImperativeHandle(ref, () => ({

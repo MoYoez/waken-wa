@@ -1,9 +1,8 @@
 'use client'
 
-import { format } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
 import { Battery, BatteryCharging, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
 
+import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { useActivityFeed } from '@/hooks/use-activity-feed'
 import { useIsClient } from '@/hooks/use-is-client'
 import { useTickingMs } from '@/hooks/use-ticking-ms'
@@ -40,6 +39,7 @@ export function ActivityTimeline({
   const { feed, error } = useActivityFeed({ mode: activityUpdateMode })
   const mounted = useIsClient()
   const liveMs = useTickingMs(30_000)
+  const { formatPattern } = useSiteTimeFormat()
 
   if (!mounted) return null
 
@@ -145,9 +145,7 @@ export function ActivityTimeline({
                       </span>
                     </span>
                     <span>
-                      {format(new Date(activity.startedAt), 'HH:mm', {
-                        locale: zhCN,
-                      })}
+                      {formatPattern(activity.startedAt, 'HH:mm', '--')}
                     </span>
                     {duration > 0 && (
                       <span>

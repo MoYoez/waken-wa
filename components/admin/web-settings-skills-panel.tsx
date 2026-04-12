@@ -23,7 +23,7 @@ import {
   webSettingsSkillsRevokingAiClientIdAtom,
   webSettingsSkillsSavingAtom,
 } from '@/components/admin/web-settings-store'
-import { formatIsoDatetime } from '@/components/admin/web-settings-utils'
+import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -60,6 +60,7 @@ export function WebSettingsSkillsPanel({
   onRevokeSkillsOauthByAiClientId,
   onCopyPlainText,
 }: WebSettingsSkillsPanelProps) {
+  const { formatPattern } = useSiteTimeFormat()
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [skillsSaving] = useAtom(webSettingsSkillsSavingAtom)
   const [skillsEnabled, setSkillsEnabled] = useAtom(webSettingsSkillsEnabledAtom)
@@ -393,8 +394,8 @@ export function WebSettingsSkillsPanel({
                             <span>有效 token：{item.activeTokenCount}</span>
                           </div>
                           <div className="grid gap-2 text-[11px] text-muted-foreground sm:grid-cols-2">
-                            <span>最近确认：{formatIsoDatetime(item.lastApprovedAt)}</span>
-                            <span>最近兑换：{formatIsoDatetime(item.lastExchangedAt)}</span>
+                            <span>最近确认：{formatPattern(item.lastApprovedAt, 'yyyy-MM-dd HH:mm:ss', '—')}</span>
+                            <span>最近兑换：{formatPattern(item.lastExchangedAt, 'yyyy-MM-dd HH:mm:ss', '—')}</span>
                           </div>
                         </div>
                       ))}

@@ -172,6 +172,14 @@ export function WebSettingsActivityPanel() {
         </Select>
       </div>
 
+      <ToggleCard
+        id="force-display-timezone"
+        title="强制使用所选时区显示"
+        description="关闭时按访客浏览器本地时区显示；开启后，全站绝对时间与课表日期/时段判断统一按上方所选时区。"
+        checked={form.forceDisplayTimezone}
+        onCheckedChange={(value) => patch('forceDisplayTimezone', value)}
+      />
+
       <div className="space-y-3">
         <Label htmlFor="activity-update-mode">状态更新模式</Label>
         <p className="text-xs text-muted-foreground">

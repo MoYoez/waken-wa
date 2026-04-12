@@ -173,6 +173,8 @@ export const siteConfig = pgTable('site_config', {
   displayTimezone: varchar('display_timezone', { length: 50 })
     .notNull()
     .default('Asia/Shanghai'),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  forceDisplayTimezone: boolean('force_display_timezone').default(false),
   activityUpdateMode: varchar('activity_update_mode', { length: 20 })
     .notNull()
     .default('sse'),

@@ -24,6 +24,7 @@ import { patchAdminSettings } from '@/components/admin/admin-query-mutations'
 import { SortablePeriodTemplatePart } from '@/components/admin/sortable-period-template-part'
 import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
 import { WeekTimetableGrid } from '@/components/admin/week-timetable-grid'
+import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -156,8 +157,7 @@ function buildScheduleManagerInitialData(
   }
 }
 
-function emptyCourse(): ScheduleCourse {
-  const today = format(new Date(), 'yyyy-MM-dd')
+function emptyCourse(today: string): ScheduleCourse {
   return {
     id: newScheduleCourseId(),
     title: '',
@@ -228,6 +228,7 @@ const ScheduleManagerEditor = forwardRef<
 >(function ScheduleManagerEditor({ initialData }, ref) {
   const queryClient = useQueryClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
+  const { toDisplayWallClockDate } = useSiteTimeFormat()
   const [message, setMessage] = useState('')
   const [serverData, setServerData] = useState<Record<string, unknown>>(initialData.serverData)
   const [courses, setCourses] = useState<ScheduleCourse[]>(initialData.courses)
@@ -236,7 +237,9 @@ const ScheduleManagerEditor = forwardRef<
   )
   const [compatWarnings, setCompatWarnings] = useState<string[]>(initialData.compatWarnings)
   const [icsRaw, setIcsRaw] = useState(initialData.icsRaw)
-  const [weekRef, setWeekRef] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [weekRef, setWeekRef] = useState(() =>
+    startOfWeek(toDisplayWallClockDate(new Date()), { weekStartsOn: 1 }),
+  )
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<ScheduleCourse | null>(null)
@@ -398,7 +401,7 @@ const ScheduleManagerEditor = forwardRef<
   }
 
   const openNew = () => {
-    const draft = emptyCourse()
+    const draft = emptyCourse(format(toDisplayWallClockDate(new Date()), 'yyyy-MM-dd'))
     if (periodTemplate.length > 0) {
       draft.timeMode = 'periods'
       draft.periodIds = [periodTemplate[0].id]
@@ -796,7 +799,9 @@ const ScheduleManagerEditor = forwardRef<
             variant="secondary"
             size="sm"
             className="h-7 rounded-full px-2.5 text-xs"
-            onClick={() => setWeekRef(startOfWeek(new Date(), { weekStartsOn: 1 }))}
+            onClick={() =>
+              setWeekRef(startOfWeek(toDisplayWallClockDate(new Date()), { weekStartsOn: 1 }))
+            }
           >
             本周
           </Button>

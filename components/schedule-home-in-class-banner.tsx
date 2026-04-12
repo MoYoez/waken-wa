@@ -3,10 +3,12 @@
 import { format } from 'date-fns'
 import { type ReactNode,useEffect, useState } from 'react'
 
+import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import {
   resolveScheduleHomeCardState,
   type ScheduleCourse,
+  type ScheduleHomeCardState,
   type SchedulePeriodTemplateItem,
 } from '@/lib/schedule-courses'
 import { cn } from '@/lib/utils'
@@ -69,21 +71,24 @@ export function ScheduleHomeInClassBanner({
   afterClassesLabel,
   className,
 }: ScheduleHomeInClassBannerProps) {
+  const { effectiveTimezone, mounted } = useSiteTimeFormat()
   const idleDoneLabel = afterClassesLabel.trim() || '正在摸鱼'
-  const [cardState, setCardState] = useState(() =>
-    resolveScheduleHomeCardState(courses, new Date(), periodTemplate),
-  )
+  const [cardState, setCardState] = useState<ScheduleHomeCardState | null>(null)
 
   useEffect(() => {
+    if (!mounted) return
     const tick = () => {
-      setCardState(resolveScheduleHomeCardState(courses, new Date(), periodTemplate))
+      setCardState(
+        resolveScheduleHomeCardState(courses, new Date(), periodTemplate, effectiveTimezone),
+      )
     }
     tick()
     const id = window.setInterval(tick, 30_000)
     return () => window.clearInterval(id)
-  }, [courses, periodTemplate])
+  }, [courses, effectiveTimezone, mounted, periodTemplate])
 
   if (courses.length === 0) return null
+  if (!cardState) return null
 
   if (cardState.kind === 'upcoming_today' && !showNextUpcoming) {
     return null

@@ -84,6 +84,7 @@ export const WEB_SETTINGS_INITIAL_FORM: SiteConfig = {
   hideActivityMedia: false,
   activityRejectLockappSleep: false,
   displayTimezone: DEFAULT_TIMEZONE,
+  forceDisplayTimezone: false,
   activityUpdateMode: DEFAULT_ACTIVITY_UPDATE_MODE,
   useNoSqlAsCacheRedis: true,
   redisCacheTtlSeconds: REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,

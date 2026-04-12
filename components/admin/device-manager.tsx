@@ -25,6 +25,7 @@ import {
   deleteAdminDevice,
   patchAdminDevice,
 } from '@/components/admin/admin-query-mutations'
+import { FormattedTime } from '@/components/formatted-time'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -609,7 +610,12 @@ export function DeviceManager({
                         <span className="block sm:inline">状态: {deviceStatusLabel(item.status)}</span>
                         <span className="hidden sm:inline">{' | '}</span>
                         <span className="mt-0.5 block sm:mt-0 sm:inline">
-                          最后在线: {item.lastSeenAt ? new Date(item.lastSeenAt).toLocaleString() : '—'}
+                          最后在线:{' '}
+                          <FormattedTime
+                            date={item.lastSeenAt}
+                            pattern="yyyy-MM-dd HH:mm:ss"
+                            fallback="—"
+                          />
                         </span>
                       </p>
                     </div>
@@ -764,9 +770,11 @@ export function DeviceManager({
                 </p>
                 <p>
                   <span className="text-muted-foreground">最后在线：</span>
-                  {reviewDevice.lastSeenAt
-                    ? new Date(reviewDevice.lastSeenAt).toLocaleString()
-                    : '—'}
+                  <FormattedTime
+                    date={reviewDevice.lastSeenAt}
+                    pattern="yyyy-MM-dd HH:mm:ss"
+                    fallback="—"
+                  />
                 </p>
                 <p>
                   <span className="text-muted-foreground">绑定 Token：</span>

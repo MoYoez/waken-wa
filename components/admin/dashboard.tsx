@@ -29,6 +29,7 @@ import { fetchActivityFeed } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import { endAdminActivity, logoutAdmin } from '@/components/admin/admin-query-mutations'
 import { AdminQueryProvider } from '@/components/admin/admin-query-provider'
+import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,37 +83,18 @@ function getServerLocationOriginSnapshot() {
   return ''
 }
 
-function formatOverviewDateTime(value: string | null | undefined): string {
-  const time = Date.parse(String(value ?? ''))
-  if (!Number.isFinite(time)) return '—'
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(time))
+function formatOverviewClock(
+  value: string | null | undefined,
+  formatPattern: (value: Date | string | number | null | undefined, pattern: string, fallback?: string) => string,
+): string {
+  return formatPattern(value, 'HH:mm:ss', '--:--:--')
 }
 
-function formatOverviewClock(value: string | null | undefined): string {
-  const time = Date.parse(String(value ?? ''))
-  if (!Number.isFinite(time)) return '--:--'
-  return new Intl.DateTimeFormat('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(new Date(time))
-}
-
-function formatOverviewDate(value: string | null | undefined): string {
-  const time = Date.parse(String(value ?? ''))
-  if (!Number.isFinite(time)) return '未知时间'
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(time))
+function formatOverviewDate(
+  value: string | null | undefined,
+  formatPattern: (value: Date | string | number | null | undefined, pattern: string, fallback?: string) => string,
+): string {
+  return formatPattern(value, 'MM/dd', '未知时间')
 }
 
 function formatOverviewRelativeTime(value: string | null | undefined): string {
@@ -187,6 +169,7 @@ function BottomGuide({
 function AdminDashboardContent({ username, initialTab, initialDeviceHash }: DashboardProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { formatPattern } = useSiteTimeFormat()
   const [activeTab, setActiveTab] = useState<AdminTabValue>(() =>
     isAdminTabValue(initialTab) ? initialTab : 'overview',
   )
@@ -377,7 +360,9 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
           </div>
           <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs text-muted-foreground">
             <RefreshCw className={`h-3.5 w-3.5 ${viewerCountLoading && !viewerCountUpdatedAt ? 'animate-spin' : ''}`} />
-            <span>{viewerCountUpdatedAt ? formatOverviewClock(viewerCountUpdatedAt) : '--:--:--'}</span>
+            <span>
+              {viewerCountUpdatedAt ? formatOverviewClock(viewerCountUpdatedAt, formatPattern) : '--:--:--'}
+            </span>
           </div>
         </div>
       </div>
@@ -450,10 +435,10 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
                 >
                   <div className="hidden pt-1 text-right sm:block">
                     <p className="text-sm font-semibold tabular-nums text-foreground">
-                      {formatOverviewClock(recordTime)}
+                      {formatOverviewClock(recordTime, formatPattern)}
                     </p>
                     <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">
-                      {formatOverviewDate(recordTime)}
+                      {formatOverviewDate(recordTime, formatPattern)}
                     </p>
                   </div>
 
@@ -468,9 +453,9 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
                     <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3 sm:ml-7">
                       <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
                         <span className="font-semibold tabular-nums text-foreground">
-                          {formatOverviewClock(recordTime)}
+                          {formatOverviewClock(recordTime, formatPattern)}
                         </span>
-                        <span>{formatOverviewDate(recordTime)}</span>
+                        <span>{formatOverviewDate(recordTime, formatPattern)}</span>
                         <span>·</span>
                         <span>{formatOverviewRelativeTime(recordTime)}</span>
                       </div>

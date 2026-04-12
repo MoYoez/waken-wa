@@ -2,6 +2,7 @@
 
 import { addDays, format, startOfWeek } from 'date-fns'
 
+import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import type { ScheduleOccurrence, SchedulePeriodTemplateItem } from '@/lib/schedule-courses'
 import { cn } from '@/lib/utils'
 
@@ -115,6 +116,7 @@ export function WeekTimetableGrid({
   occurrences,
   className,
 }: WeekTimetableGridProps) {
+  const { toDisplayWallClockDate } = useSiteTimeFormat()
   const weekStart = startOfWeek(weekRef, { weekStartsOn: 1 })
   const columnDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
@@ -142,7 +144,7 @@ export function WeekTimetableGrid({
     return occurrences.filter((o) => format(o.start, 'yyyy-MM-dd') === key)
   })
 
-  const todayYmd = format(new Date(), 'yyyy-MM-dd')
+  const todayYmd = format(toDisplayWallClockDate(new Date()), 'yyyy-MM-dd')
 
   return (
     <div

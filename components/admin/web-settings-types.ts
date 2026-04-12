@@ -111,6 +111,8 @@ export interface SiteConfig {
   activityRejectLockappSleep: boolean
   /** 显示时区，默认 Asia/Shanghai */
   displayTimezone: string
+  /** When true, all absolute times and schedule day math follow displayTimezone. */
+  forceDisplayTimezone: boolean
   /** 活动状态更新模式 */
   activityUpdateMode: ActivityUpdateMode
   /** Enable Redis cache outside forced runtime environments. */

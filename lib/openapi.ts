@@ -119,6 +119,7 @@ function buildComponents(baseUrl: string) {
       captureReportedAppsEnabled: { type: 'boolean' },
       mediaPlaySourceBlocklist: { type: 'array', items: { type: 'string' } },
       displayTimezone: { type: 'string' },
+      forceDisplayTimezone: { type: 'boolean' },
     },
   }
 
@@ -282,6 +283,7 @@ function buildComponents(baseUrl: string) {
           appNameOnlyList: { type: 'array', items: { type: 'string' } },
           mediaPlaySourceBlocklist: { type: 'array', items: { type: 'string' } },
           displayTimezone: { type: 'string' },
+          forceDisplayTimezone: { type: 'boolean' },
           steamEnabled: { type: 'boolean' },
           steamId: { type: ['string', 'null'] },
           activityRejectLockappSleep: { type: 'boolean' },

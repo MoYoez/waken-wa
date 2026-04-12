@@ -447,6 +447,10 @@ export async function updateSiteConfigFromPayload(
   if (body.displayTimezone !== undefined && body.displayTimezone !== null) {
     displayTimezone = normalizeTimezone(body.displayTimezone)
   }
+  let forceDisplayTimezone = existing?.forceDisplayTimezone === true
+  if (body.forceDisplayTimezone !== undefined && body.forceDisplayTimezone !== null) {
+    forceDisplayTimezone = Boolean(body.forceDisplayTimezone)
+  }
 
   let activityUpdateMode = existing?.activityUpdateMode ?? 'sse'
   if (body.activityUpdateMode !== undefined && body.activityUpdateMode !== null) {
@@ -566,6 +570,7 @@ export async function updateSiteConfigFromPayload(
     hcaptchaSiteKey,
     hcaptchaSecretKey,
     displayTimezone,
+    forceDisplayTimezone,
     activityUpdateMode,
     useNoSqlAsCacheRedis,
     redisCacheTtlSeconds,
