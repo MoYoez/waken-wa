@@ -90,7 +90,7 @@ function WebSettingsContent() {
 
   return (
     <>
-      <div className="space-y-4 sm:space-y-5 sm:rounded-xl sm:border sm:bg-card sm:p-6">
+      <div className="space-y-4 sm:space-y-5 sm:rounded-xl sm:border sm:bg-card sm:p-6 [&_label[data-slot=label]]:leading-5">
         <section className="hidden rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4 lg:flex lg:items-center lg:justify-between">
           <div className="max-w-2xl space-y-1">
             <h3 className="text-sm font-semibold tracking-wide text-foreground">后台外观</h3>
