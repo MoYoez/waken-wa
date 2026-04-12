@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { isRemoteAvatarUrl, resolveAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 
 export function WebSettingsBasicPanel() {
@@ -39,6 +40,12 @@ export function WebSettingsBasicPanel() {
     exitY: 8,
     scale: 0.996,
   })
+  const avatarUsesRemoteUrl = isRemoteAvatarUrl(form.avatarUrl)
+  const avatarPreviewUrl = resolveAvatarUrl(
+    form.avatarUrl,
+    avatarUsesRemoteUrl && form.avatarFetchByServerEnabled,
+    'admin-preview',
+  )
 
   const onFileSelected = (file?: File) => {
     if (!file) return
@@ -120,6 +127,35 @@ export function WebSettingsBasicPanel() {
         <Label>头像地址（URL / DataURL）</Label>
         <Input value={form.avatarUrl} onChange={(event) => patch('avatarUrl', event.target.value)} />
         <p className="text-xs text-muted-foreground">可直接填写图片链接，或通过下方上传并裁剪后自动生成。</p>
+        <AnimatePresence initial={false}>
+          {avatarUsesRemoteUrl ? (
+            <motion.div
+              className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              <div className="space-y-0.5 min-w-0">
+                <Label htmlFor="avatar-fetch-by-server" className="font-normal cursor-pointer">
+                  检测到远程头像 URL，是否允许通过服务器获取头像？
+                </Label>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  开启后首页与后台预览会改为请求本站 <code className="rounded bg-muted px-1">/api/avatar</code>
+                  ，访客浏览器不再直接访问第三方图床。
+                </p>
+              </div>
+              <Switch
+                id="avatar-fetch-by-server"
+                checked={form.avatarFetchByServerEnabled}
+                onCheckedChange={(value) => patch('avatarFetchByServerEnabled', value)}
+                className="shrink-0"
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
         <input
           type="file"
           accept="image/*"
@@ -150,7 +186,7 @@ export function WebSettingsBasicPanel() {
           ) : null}
         </AnimatePresence>
         <AnimatePresence initial={false}>
-          {form.avatarUrl ? (
+          {avatarPreviewUrl ? (
             <motion.div
               className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3"
               variants={sectionVariants}
@@ -161,14 +197,16 @@ export function WebSettingsBasicPanel() {
               layout
             >
               <Image
-                src={form.avatarUrl}
+                src={avatarPreviewUrl}
                 alt="头像预览"
                 width={40}
                 height={40}
                 loading="eager"
                 className="w-10 h-10 rounded-full border border-border object-cover"
               />
-              <span className="text-xs text-muted-foreground">头像预览</span>
+              <span className="text-xs text-muted-foreground">
+                头像预览{form.avatarFetchByServerEnabled && avatarUsesRemoteUrl ? '（通过服务器获取）' : ''}
+              </span>
             </motion.div>
           ) : null}
         </AnimatePresence>

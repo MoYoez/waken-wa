@@ -28,6 +28,7 @@ export const WEB_SETTINGS_INITIAL_FORM: SiteConfig = {
   userName: '',
   userBio: '',
   avatarUrl: '',
+  avatarFetchByServerEnabled: false,
   profileOnlineAccentColor: '',
   profileOnlinePulseEnabled: true,
   userNote: '',

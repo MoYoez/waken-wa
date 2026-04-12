@@ -7,6 +7,7 @@ import type {
 import {
   REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
 } from '@/lib/activity-api-constants'
+import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import {
   normalizeHitokotoCategories,
@@ -264,6 +265,11 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
   if ('userName' in web && typeof web.userName === 'string') patch.userName = web.userName.trim()
   if ('userBio' in web && typeof web.userBio === 'string') patch.userBio = web.userBio.trim()
   if ('avatarUrl' in web && typeof web.avatarUrl === 'string') patch.avatarUrl = web.avatarUrl.trim()
+  if ('avatarFetchByServerEnabled' in web && typeof web.avatarFetchByServerEnabled === 'boolean') {
+    patch.avatarFetchByServerEnabled =
+      isRemoteAvatarUrl(typeof web.avatarUrl === 'string' ? web.avatarUrl : patch.avatarUrl) &&
+      web.avatarFetchByServerEnabled
+  }
   if ('profileOnlineAccentColor' in web) {
     if (web.profileOnlineAccentColor === null || web.profileOnlineAccentColor === '') {
       patch.profileOnlineAccentColor = ''

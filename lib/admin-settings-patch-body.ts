@@ -39,6 +39,7 @@ export function buildAdminSettingsPatchBody(
     userName: data.userName,
     userBio: data.userBio,
     avatarUrl: data.avatarUrl,
+    avatarFetchByServerEnabled: (data as Record<string, unknown>).avatarFetchByServerEnabled === true,
     profileOnlineAccentColor:
       normalizeProfileOnlineAccentColor(
         (data as Record<string, unknown>).profileOnlineAccentColor ?? '',

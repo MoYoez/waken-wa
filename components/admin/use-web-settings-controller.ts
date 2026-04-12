@@ -61,6 +61,7 @@ import {
   REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
 } from '@/lib/activity-api-constants'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
+import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE } from '@/lib/default-page-title'
 import { normalizeHitokotoCategories, normalizeHitokotoEncode } from '@/lib/hitokoto'
 import { normalizeProfileOnlineAccentColor } from '@/lib/profile-online-accent-color'
@@ -214,6 +215,8 @@ export function useWebSettingsController() {
             userName: data.userName ?? '',
             userBio: data.userBio ?? '',
             avatarUrl: data.avatarUrl ?? '',
+            avatarFetchByServerEnabled:
+              isRemoteAvatarUrl(data.avatarUrl) && data.avatarFetchByServerEnabled === true,
             profileOnlineAccentColor:
               normalizeProfileOnlineAccentColor(
                 typeof data.profileOnlineAccentColor === 'string'
@@ -509,6 +512,8 @@ export function useWebSettingsController() {
 
       const data = await patchAdminSettings({
           ...formRest,
+          avatarFetchByServerEnabled:
+            isRemoteAvatarUrl(formRest.avatarUrl) && formRest.avatarFetchByServerEnabled === true,
           mcpThemeToolsEnabled: form.mcpThemeToolsEnabled,
           redisCacheTtlSeconds: normalizedRedisTtl,
           profileOnlineAccentColor: normalizeProfileOnlineAccentColor(poTrim || '') ?? null,
@@ -556,10 +561,19 @@ export function useWebSettingsController() {
 
       toast.success('保存成功，主页刷新后生效')
       setRedisCacheServerlessForced(data?.redisCacheServerlessForced === true)
-      const nextForm =
-        typeof data.useNoSqlAsCacheRedis === 'boolean'
-          ? { ...form, useNoSqlAsCacheRedis: data.useNoSqlAsCacheRedis === true }
-          : form
+      const nextForm = {
+        ...form,
+        ...(typeof data.useNoSqlAsCacheRedis === 'boolean'
+          ? { useNoSqlAsCacheRedis: data.useNoSqlAsCacheRedis === true }
+          : {}),
+        ...(typeof data.avatarFetchByServerEnabled === 'boolean'
+          ? {
+              avatarFetchByServerEnabled:
+                isRemoteAvatarUrl(data.avatarUrl ?? form.avatarUrl) &&
+                data.avatarFetchByServerEnabled === true,
+            }
+          : {}),
+      }
       setForm(nextForm)
       setBaselineForm(structuredClone(nextForm))
     } catch {

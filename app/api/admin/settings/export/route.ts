@@ -75,6 +75,7 @@ export async function GET(request: Request) {
         userName: cfg.userName,
         userBio: cfg.userBio,
         avatarUrl: cfg.avatarUrl,
+        avatarFetchByServerEnabled: cfg.avatarFetchByServerEnabled === true,
         profileOnlineAccentColor: cfg.profileOnlineAccentColor ?? null,
         profileOnlinePulseEnabled: cfg.profileOnlinePulseEnabled !== false,
         userNote: cfg.userNote,

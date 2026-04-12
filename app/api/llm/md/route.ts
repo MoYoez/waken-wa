@@ -342,6 +342,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
     '`userName`: Public display name. Required, non-empty',
     '`userBio`: Public bio text. Required, non-empty',
     '`avatarUrl`: Avatar image URL or data URL. Required, non-empty',
+    '`avatarFetchByServerEnabled`: When true and `avatarUrl` is http/https, the server proxies avatar requests instead of visitors loading the remote URL directly',
     '`userNote`: Extra short note shown on profile area',
     '`profileOnlineAccentColor`: Optional custom online accent color. Use `#RRGGBB` or empty/null to reset',
     '`profileOnlinePulseEnabled`: Enables or disables the online dot pulse effect',

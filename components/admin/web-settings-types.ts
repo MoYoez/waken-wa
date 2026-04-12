@@ -48,6 +48,7 @@ export interface SiteConfig {
   userName: string
   userBio: string
   avatarUrl: string
+  avatarFetchByServerEnabled: boolean
   /** Empty = use theme --online; otherwise #RRGGBB */
   profileOnlineAccentColor: string
   /** Online status dot breathing animation (animate-pulse) */

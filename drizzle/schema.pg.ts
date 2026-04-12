@@ -94,6 +94,8 @@ export const siteConfig = pgTable('site_config', {
   userName: varchar('user_name', { length: 120 }).notNull(),
   userBio: text('user_bio').notNull(),
   avatarUrl: text('avatar_url').notNull(),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  avatarFetchByServerEnabled: boolean('avatar_fetch_by_server_enabled').default(false),
   /** Hex #RRGGBB for avatar online ring/dot; null = use theme --online */
   profileOnlineAccentColor: varchar('profile_online_accent_color', { length: 7 }),
   /** null in app = enable pulse on online status dot */

@@ -20,6 +20,8 @@ function siteRowToSetupInitial(row: unknown): SetupInitialConfig {
     userName: typeof r.userName === 'string' ? r.userName : '',
     userBio: typeof r.userBio === 'string' ? r.userBio : '',
     avatarUrl: typeof r.avatarUrl === 'string' ? r.avatarUrl : '',
+    avatarFetchByServerEnabled:
+      typeof r.avatarFetchByServerEnabled === 'boolean' ? r.avatarFetchByServerEnabled : false,
     userNote: typeof r.userNote === 'string' ? r.userNote : '',
     historyWindowMinutes:
       typeof r.historyWindowMinutes === 'number'

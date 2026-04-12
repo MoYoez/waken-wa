@@ -17,6 +17,7 @@ import { UserProfile, UserProfileNoteSection } from '@/components/user-profile'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 import { verifySiteLockSession } from '@/lib/auth'
+import { isRemoteAvatarUrl, resolveAvatarUrl } from '@/lib/avatar-url'
 import { db } from '@/lib/db'
 import { inspirationEntries } from '@/lib/drizzle-schema'
 import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
@@ -59,9 +60,8 @@ export default async function Home() {
   const userName = config.userName
   const userBio = config.userBio
   const avatarUrl = config.avatarUrl
-  const shouldPrefetchAvatar =
-    typeof avatarUrl === 'string' &&
-    /^https?:\/\//i.test(avatarUrl)
+  const avatarSrc = resolveAvatarUrl(avatarUrl, config.avatarFetchByServerEnabled === true, 'public')
+  const shouldPrefetchAvatar = isRemoteAvatarUrl(avatarUrl)
   const userNote = config.userNote
   const currentlyText = config.currentlyText
   const earlierText = config.earlierText
@@ -130,7 +130,7 @@ export default async function Home() {
 
   return (
     <>
-      {shouldPrefetchAvatar ? <link rel="prefetch" href={avatarUrl} as="image" /> : null}
+      {shouldPrefetchAvatar && avatarSrc ? <link rel="prefetch" href={avatarSrc} as="image" /> : null}
       <HomeScrollbarHider />
       {themeCss && (
         <style
@@ -173,7 +173,7 @@ export default async function Home() {
                         <UserProfile
                           name={userName}
                           bio={userBio}
-                          avatarUrl={avatarUrl}
+                          avatarUrl={avatarSrc}
                           profileOnlineAccentColor={config.profileOnlineAccentColor ?? null}
                           profileOnlinePulseEnabled={config.profileOnlinePulseEnabled ?? null}
                         />

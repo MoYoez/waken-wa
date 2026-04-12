@@ -84,6 +84,8 @@ export const siteConfig = sqliteTable('site_config', {
   userName: text('user_name').notNull(),
   userBio: text('user_bio').notNull(),
   avatarUrl: text('avatar_url').notNull(),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  avatarFetchByServerEnabled: integer('avatar_fetch_by_server_enabled', { mode: 'boolean' }).default(false),
   /** Hex #RRGGBB for avatar online ring/dot; null = use theme --online */
   profileOnlineAccentColor: text('profile_online_accent_color'),
   /** null/undefined in app = enable pulse on online status dot */

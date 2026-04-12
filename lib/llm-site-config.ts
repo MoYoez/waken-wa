@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS } from '@/lib/activity-api-constants'
 import { clearActivityFeedDataCache } from '@/lib/activity-feed'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
+import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import {
   isRedisCacheForcedOnServerless,
   mergeRedisCacheAdminFields,
@@ -143,6 +144,12 @@ export async function updateSiteConfigFromPayload(
   const userName = trimStr('userName')
   const userBio = trimStr('userBio')
   const avatarUrl = trimStr('avatarUrl')
+  let avatarFetchByServerEnabled =
+    isRemoteAvatarUrl(avatarUrl) && existing?.avatarFetchByServerEnabled === true
+  if (body.avatarFetchByServerEnabled !== undefined && body.avatarFetchByServerEnabled !== null) {
+    avatarFetchByServerEnabled =
+      isRemoteAvatarUrl(avatarUrl) && Boolean(body.avatarFetchByServerEnabled)
+  }
   const userNote = trimStr('userNote')
   const themePreset = strField('themePreset', 'basic')
   const themeCustomSurface = parseThemeCustomSurface(
@@ -508,6 +515,7 @@ export async function updateSiteConfigFromPayload(
     userName,
     userBio,
     avatarUrl,
+    avatarFetchByServerEnabled,
     profileOnlineAccentColor,
     profileOnlinePulseEnabled,
     userNote,

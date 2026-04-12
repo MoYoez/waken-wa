@@ -7,6 +7,7 @@ export interface SetupInitialConfig {
   userName: string
   userBio: string
   avatarUrl: string
+  avatarFetchByServerEnabled?: boolean
   userNote: string
   historyWindowMinutes: number
   currentlyText: string

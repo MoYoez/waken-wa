@@ -250,6 +250,7 @@ export async function setupAdminSite(input: {
   userName: string
   userBio: string
   avatarUrl: string
+  avatarFetchByServerEnabled: boolean
   userNote: string
   historyWindowMinutes: number
   currentlyText: string
@@ -266,6 +267,7 @@ export async function setupAdminSite(input: {
       userName: input.userName,
       userBio: input.userBio,
       avatarUrl: input.avatarUrl,
+      avatarFetchByServerEnabled: input.avatarFetchByServerEnabled,
       userNote: input.userNote,
       historyWindowMinutes: input.historyWindowMinutes,
       currentlyText: input.currentlyText,

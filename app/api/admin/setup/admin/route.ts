@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { hashPassword, validatePasswordStrength } from '@/lib/auth'
 import { getSession } from '@/lib/auth'
+import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { db, isPostgresDb } from '@/lib/db'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import { adminUsers, siteConfig } from '@/lib/drizzle-schema'
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
       userName,
       userBio,
       avatarUrl,
+      avatarFetchByServerEnabled,
       userNote,
       themePreset,
       themeCustomSurface,
@@ -66,6 +68,8 @@ export async function POST(request: NextRequest) {
     const normalizedUserName = String(userName ?? '').trim()
     const normalizedUserBio = String(userBio ?? '').trim()
     const normalizedAvatarUrl = String(avatarUrl ?? '').trim()
+    const normalizedAvatarFetchByServerEnabled =
+      isRemoteAvatarUrl(normalizedAvatarUrl) && avatarFetchByServerEnabled === true
     const normalizedUserNote = String(userNote ?? '').trim()
     const normalizedThemePreset = String(themePreset ?? 'basic').trim() || 'basic'
     const normalizedThemeCustomSurface = parseThemeCustomSurface(themeCustomSurface ?? {})
@@ -149,6 +153,7 @@ export async function POST(request: NextRequest) {
         userName: normalizedUserName,
         userBio: normalizedUserBio,
         avatarUrl: normalizedAvatarUrl,
+        avatarFetchByServerEnabled: normalizedAvatarFetchByServerEnabled,
         userNote: normalizedUserNote,
         themePreset: normalizedThemePreset,
         themeCustomSurface: normalizedThemeCustomSurface,
@@ -172,6 +177,7 @@ export async function POST(request: NextRequest) {
         userName: normalizedUserName,
         userBio: normalizedUserBio,
         avatarUrl: normalizedAvatarUrl,
+        avatarFetchByServerEnabled: normalizedAvatarFetchByServerEnabled,
         userNote: normalizedUserNote,
         themePreset: normalizedThemePreset,
         themeCustomSurface: normalizedThemeCustomSurface,

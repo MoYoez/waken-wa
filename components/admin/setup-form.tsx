@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react'
 
 import { loginAdmin, setupAdminSite } from '@/components/admin/admin-query-mutations'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
+import { Switch } from '@/components/ui/switch'
+import { isRemoteAvatarUrl, resolveAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import { SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES } from '@/lib/site-config-constants'
 import type { SetupInitialConfig } from '@/types/components'
@@ -28,6 +30,9 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
   const [userName, setUserName] = useState(initialConfig?.userName ?? '')
   const [userBio, setUserBio] = useState(initialConfig?.userBio ?? '')
   const [avatarUrl, setAvatarUrl] = useState(initialConfig?.avatarUrl ?? '')
+  const [avatarFetchByServerEnabled, setAvatarFetchByServerEnabled] = useState(
+    initialConfig?.avatarFetchByServerEnabled === true,
+  )
   const [userNote, setUserNote] = useState(initialConfig?.userNote ?? '')
   const [historyWindowMinutes, setHistoryWindowMinutes] = useState(
     initialConfig?.historyWindowMinutes ?? SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
@@ -39,6 +44,8 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const avatarUsesRemoteUrl = isRemoteAvatarUrl(avatarUrl)
+  const avatarPreviewUrl = resolveAvatarUrl(avatarUrl)
 
   useEffect(() => {
     return () => {
@@ -67,6 +74,8 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
         userName,
         userBio,
         avatarUrl,
+        avatarFetchByServerEnabled:
+          avatarUsesRemoteUrl && avatarFetchByServerEnabled,
         userNote,
         historyWindowMinutes,
         currentlyText,
@@ -222,6 +231,21 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   className="w-full px-4 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
+              {avatarUsesRemoteUrl ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-xs font-medium text-foreground">检测到远程头像 URL，是否允许通过服务器获取头像？</p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      开启后首页与后台预览会通过本站服务器代抓头像，访客浏览器不会直接请求第三方图床。
+                    </p>
+                  </div>
+                  <Switch
+                    checked={avatarFetchByServerEnabled}
+                    onCheckedChange={setAvatarFetchByServerEnabled}
+                    className="shrink-0"
+                  />
+                </div>
+              ) : null}
               <input
                 type="file"
                 accept="image/*"
@@ -242,17 +266,21 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
               <p className="text-[11px] text-muted-foreground">
                 上传后在弹窗中拖动选区，确认后保存为 128×128 正方形（PNG DataURL）
               </p>
-              {avatarUrl && (
+              {avatarPreviewUrl && (
                 <div className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3">
                   <Image
-                    src={avatarUrl}
+                    src={avatarPreviewUrl}
                     alt="avatar preview"
                     width={40}
                     height={40}
                     loading="eager"
                     className="w-10 h-10 rounded-full border border-border object-cover"
                   />
-                  <span className="text-xs text-muted-foreground">头像预览（当前将保存到数据库）</span>
+                  <span className="text-xs text-muted-foreground">
+                    头像预览（当前将保存到数据库
+                    {avatarUsesRemoteUrl && avatarFetchByServerEnabled ? '，并通过服务器获取' : ''}
+                    ）
+                  </span>
                 </div>
               )}
               {cropSourceUrl && (
