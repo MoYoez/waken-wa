@@ -15,7 +15,8 @@ const ADMIN_API_PREFIX = '/api/admin/'
 const ADMIN_SETUP_PREFIX = '/api/admin/setup'
 const HCAPTCHA_CSP_SOURCES = ['https://hcaptcha.com', 'https://*.hcaptcha.com']
 const SCALAR_SCRIPT_CSP_SOURCES = ['https://cdn.jsdelivr.net']
-const Font_Source = ['https://fonts.googleapis.com','https://fonts.loli.net']
+const FONT_STYLE_CSP_SOURCES = ['https://fonts.googleapis.com', 'https://fonts.loli.net']
+const FONT_FILE_CSP_SOURCES = ['https://fonts.gstatic.com', 'https://gstatic.loli.net']
 
 function getClientIp(request: NextRequest): string {
   return (
@@ -32,7 +33,6 @@ function addSecurityHeaders(response: NextResponse, pathname?: string): NextResp
     "'unsafe-inline'",
     process.env.NODE_ENV !== 'production' ? "'unsafe-eval'" : null,
     ...HCAPTCHA_CSP_SOURCES,
-    ...Font_Source,
     ...scalarScriptSources,
     // Cloudflare Web Analytics injects its beacon script from this origin.
     process.env.NODE_ENV === 'production'
@@ -50,8 +50,8 @@ function addSecurityHeaders(response: NextResponse, pathname?: string): NextResp
     "form-action 'self'",
     `frame-src 'self' ${HCAPTCHA_CSP_SOURCES.join(' ')}`,
     "img-src 'self' data: blob: https:",
-    `font-src 'self' data: ${Font_Source.join(' ')}`,
-    `style-src 'self' 'unsafe-inline' ${HCAPTCHA_CSP_SOURCES.join(' ')}`,
+    `font-src 'self' data: ${FONT_FILE_CSP_SOURCES.join(' ')}`,
+    `style-src 'self' 'unsafe-inline' ${HCAPTCHA_CSP_SOURCES.join(' ')} ${FONT_STYLE_CSP_SOURCES.join(' ')}`,
     `script-src ${scriptSrc}`,
     "connect-src 'self' https: wss: ws:",
   ]
