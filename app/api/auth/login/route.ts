@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { authenticateAdmin, createSession } from '@/lib/auth'
+import { resolveCookieSecureFlag } from '@/lib/cookie-security'
 import { verifyHCaptchaIfEnabled } from '@/lib/hcaptcha'
 
 export const dynamic = 'force-dynamic'
@@ -37,11 +38,10 @@ export async function POST(request: NextRequest) {
     const token = await createSession(user.id, user.username)
     
     const cookieStore = await cookies()
-    const isProduction = process.env.NODE_ENV === 'production'
 
     cookieStore.set('session', token, {
       httpOnly: true,
-      secure: isProduction,
+      secure: resolveCookieSecureFlag(request, 'session'),
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 天
       path: '/',

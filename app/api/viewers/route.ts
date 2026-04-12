@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getSession, isSiteLockSatisfied } from '@/lib/auth'
+import { resolveCookieSecureFlag } from '@/lib/cookie-security'
 import {
   createViewerPresenceId,
   getViewerPresenceCount,
@@ -19,11 +20,6 @@ async function canReadViewerPresence(): Promise<boolean> {
   const session = await getSession()
   if (session) return true
   return isSiteLockSatisfied()
-}
-
-function shouldUseSecureCookie(request: NextRequest): boolean {
-  if (request.nextUrl.protocol === 'https:') return true
-  return request.headers.get('x-forwarded-proto') === 'https'
 }
 
 export async function GET() {
@@ -57,7 +53,7 @@ export async function POST(request: NextRequest) {
       response.cookies.set(VIEWER_PRESENCE_COOKIE_NAME, viewerId, {
         httpOnly: false,
         sameSite: 'lax',
-        secure: shouldUseSecureCookie(request),
+        secure: resolveCookieSecureFlag(request, VIEWER_PRESENCE_COOKIE_NAME),
         path: '/',
         maxAge: VIEWER_PRESENCE_COOKIE_MAX_AGE_SECONDS,
       })
@@ -68,4 +64,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '更新在线访客心跳失败' }, { status: 500 })
   }
 }
-

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { createSiteLockSession } from '@/lib/auth'
+import { resolveCookieSecureFlag } from '@/lib/cookie-security'
 import { verifyHCaptchaIfEnabled } from '@/lib/hcaptcha'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     cookieStore.set('site_lock', token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: resolveCookieSecureFlag(request, 'site_lock'),
       path: '/',
       maxAge: 60 * 60 * 24,
     })

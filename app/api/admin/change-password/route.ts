@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { createSession, getSession, validatePasswordStrength } from '@/lib/auth'
+import { resolveCookieSecureFlag } from '@/lib/cookie-security'
 import { db } from '@/lib/db'
 import { adminUsers } from '@/lib/drizzle-schema'
 
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
   cookieStore.set('session', newToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: resolveCookieSecureFlag(request, 'session'),
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
