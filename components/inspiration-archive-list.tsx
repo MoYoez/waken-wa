@@ -186,6 +186,7 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                         src={entry.imageDataUrl}
                         alt=""
                         fill
+                        loading="eager"
                         className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
                         sizes="(max-width: 640px) 56px, 64px"
                       />

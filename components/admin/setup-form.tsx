@@ -249,6 +249,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                     alt="avatar preview"
                     width={40}
                     height={40}
+                    loading="eager"
                     className="w-10 h-10 rounded-full border border-border object-cover"
                   />
                   <span className="text-xs text-muted-foreground">头像预览（当前将保存到数据库）</span>

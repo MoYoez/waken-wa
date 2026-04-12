@@ -75,6 +75,7 @@ export default async function InspirationDetailPage({
                   alt=""
                   width={1200}
                   height={900}
+                  loading="eager"
                   className="w-full max-h-[min(70vh,28rem)] object-cover object-center"
                 />
               </div>

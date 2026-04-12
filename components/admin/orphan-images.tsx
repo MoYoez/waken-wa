@@ -268,7 +268,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                           width={640}
                           height={160}
                           className="h-32 w-full rounded-md border border-border/50 bg-muted/5 object-contain"
-                          loading="lazy"
+                          loading="eager"
                         />
                       </a>
 

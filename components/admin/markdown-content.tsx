@@ -78,6 +78,7 @@ function buildComponents(imageClassName: string): Components {
           alt={alt || ''}
           width={800}
           height={600}
+          loading="eager"
           className={imageClassName}
         />
       ) : null,

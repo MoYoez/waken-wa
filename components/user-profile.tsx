@@ -325,6 +325,7 @@ export function UserProfile({
               width={128}
               height={128}
               sizes="72px"
+              loading="eager"
               className="h-full w-full object-cover"
               priority
               quality={92}

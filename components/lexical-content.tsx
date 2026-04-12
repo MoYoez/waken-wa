@@ -42,6 +42,7 @@ function renderTextNode(node: LexicalNode, key: string): React.ReactNode {
           alt=""
           width={1200}
           height={900}
+          loading="eager"
           className="my-3 max-h-[min(70vh,24rem)] w-auto rounded-md border border-border/60"
         />,
       )

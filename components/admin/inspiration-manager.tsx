@@ -819,6 +819,7 @@ export function InspirationManager() {
                     alt="inspiration preview"
                     width={800}
                     height={600}
+                    loading="eager"
                     className="max-h-56 w-auto rounded-md border bg-background"
                   />
                   <Button
@@ -1019,6 +1020,7 @@ export function InspirationManager() {
                           alt="inspiration"
                           width={800}
                           height={600}
+                          loading="eager"
                           className="max-h-64 w-auto rounded-md border bg-background"
                         />
                       </div>
@@ -1082,6 +1084,7 @@ export function InspirationManager() {
                 alt="preview header image"
                 width={1200}
                 height={800}
+                loading="eager"
                 className="h-auto max-h-[min(42vh,18rem)] w-full object-cover object-center"
               />
             </div>

@@ -159,6 +159,7 @@ export function InspirationHomeSection({
                         src={entry.imageDataUrl}
                         alt=""
                         fill
+                        loading="eager"
                         className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
                         sizes="(max-width: 640px) 64px, 75px"
                       />

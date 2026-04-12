@@ -208,6 +208,7 @@ function MediaAndSteamRow({
                       alt=""
                       width={40}
                       height={15}
+                      loading="eager"
                       className="h-4 w-10 shrink-0 rounded object-cover bg-muted"
                       onError={() => setSteamImgFailed(true)}
                     />
@@ -222,6 +223,7 @@ function MediaAndSteamRow({
                     alt=""
                     width={460}
                     height={215}
+                    loading="eager"
                     className="w-full max-h-32 rounded-md object-cover bg-muted"
                     onError={() => setSteamImgFailed(true)}
                   />
@@ -253,6 +255,7 @@ function MediaAndSteamRow({
                       alt=""
                       width={40}
                       height={15}
+                      loading="eager"
                       className="h-4 w-10 shrink-0 rounded object-cover bg-muted"
                       onError={() => setSteamImgFailed(true)}
                     />
@@ -267,6 +270,7 @@ function MediaAndSteamRow({
                     alt=""
                     width={460}
                     height={215}
+                    loading="eager"
                     className="w-full max-h-32 rounded-md object-cover bg-muted"
                     onError={() => setSteamImgFailed(true)}
                   />

@@ -580,6 +580,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                   alt="token qrcode"
                   width={260}
                   height={260}
+                  loading="eager"
                   className="h-[260px] w-[260px]"
                 />
               ) : (

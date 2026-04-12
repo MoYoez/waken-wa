@@ -165,6 +165,7 @@ export function WebSettingsBasicPanel() {
                 alt="头像预览"
                 width={40}
                 height={40}
+                loading="eager"
                 className="w-10 h-10 rounded-full border border-border object-cover"
               />
               <span className="text-xs text-muted-foreground">头像预览</span>
