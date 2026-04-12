@@ -59,6 +59,9 @@ export default async function Home() {
   const userName = config.userName
   const userBio = config.userBio
   const avatarUrl = config.avatarUrl
+  const shouldPrefetchAvatar =
+    typeof avatarUrl === 'string' &&
+    /^https?:\/\//i.test(avatarUrl)
   const userNote = config.userNote
   const currentlyText = config.currentlyText
   const earlierText = config.earlierText
@@ -127,6 +130,7 @@ export default async function Home() {
 
   return (
     <>
+      {shouldPrefetchAvatar ? <link rel="prefetch" href={avatarUrl} as="image" /> : null}
       <HomeScrollbarHider />
       {themeCss && (
         <style

@@ -327,7 +327,6 @@ export function UserProfile({
               sizes="72px"
               loading="eager"
               className="h-full w-full object-cover"
-              priority
               quality={92}
             />
           </div>
