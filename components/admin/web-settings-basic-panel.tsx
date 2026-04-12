@@ -56,7 +56,7 @@ export function WebSettingsBasicPanel() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       <div className="space-y-2">
         <Label>网页标题（浏览器标签页）</Label>
         <Input
@@ -67,7 +67,7 @@ export function WebSettingsBasicPanel() {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <div className="space-y-2">
           <Label>首页名称</Label>
           <Input value={form.userName} onChange={(event) => patch('userName', event.target.value)} />
@@ -130,7 +130,7 @@ export function WebSettingsBasicPanel() {
         <AnimatePresence initial={false}>
           {avatarUsesRemoteUrl ? (
             <motion.div
-              className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3"
+              className="rounded-lg border border-dashed border-border/60 bg-muted/[0.04] px-3 py-3 sm:px-4"
               variants={sectionVariants}
               initial="initial"
               animate="animate"
@@ -138,21 +138,14 @@ export function WebSettingsBasicPanel() {
               transition={sectionTransition}
               layout
             >
-              <div className="space-y-0.5 min-w-0">
-                <Label htmlFor="avatar-fetch-by-server" className="font-normal cursor-pointer">
-                  检测到远程头像 URL，是否允许通过服务器获取头像？
-                </Label>
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs font-medium text-foreground">检测到远程头像 URL</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  开启后首页与后台预览会改为请求本站 <code className="rounded bg-muted px-1">/api/avatar</code>
-                  ，访客浏览器不再直接访问第三方图床。
+                  当前{form.avatarFetchByServerEnabled ? '已' : '未'}启用服务器代抓。可前往{' '}
+                  <span className="font-medium text-foreground">进阶设置 → 平台与访问</span>{' '}
+                  调整是否通过 <code className="rounded bg-muted px-1">/api/avatar</code> 获取头像。
                 </p>
               </div>
-              <Switch
-                id="avatar-fetch-by-server"
-                checked={form.avatarFetchByServerEnabled}
-                onCheckedChange={(value) => patch('avatarFetchByServerEnabled', value)}
-                className="shrink-0"
-              />
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -212,7 +205,7 @@ export function WebSettingsBasicPanel() {
         </AnimatePresence>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <div className="space-y-2">
           <Label>当前区块标题</Label>
           <Input value={form.currentlyText} onChange={(event) => patch('currentlyText', event.target.value)} />

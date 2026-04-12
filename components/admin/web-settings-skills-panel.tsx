@@ -9,6 +9,11 @@ import {
   getAdminSectionVariants,
 } from '@/components/admin/admin-motion'
 import {
+  WebSettingsInset,
+  WebSettingsRow,
+  WebSettingsRows,
+} from '@/components/admin/web-settings-layout'
+import {
   webSettingsFormAtom,
   webSettingsLegacyMcpConfiguredAtom,
   webSettingsLegacyMcpGeneratedApiKeyAtom,
@@ -104,23 +109,23 @@ export function WebSettingsSkillsPanel({
   }
 
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <Label className="font-normal">允许 AI 调试</Label>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            启用后，AI 可按你选择的模式进行调试。关闭后，Skills 与 MCP 都不会生效。
-          </p>
-        </div>
-        <Switch
-          checked={skillsEnabled}
-          onCheckedChange={(value) => setSkillsEnabled(Boolean(value))}
-          disabled={skillsSaving}
-          className="shrink-0"
+    <div className="space-y-4">
+      <WebSettingsRows>
+        <WebSettingsRow
+          title="允许 AI 调试"
+          description="启用后，AI 可按你选择的模式进行调试。关闭后，Skills 与 MCP 都不会生效。"
+          action={
+            <Switch
+              checked={skillsEnabled}
+              onCheckedChange={(value) => setSkillsEnabled(Boolean(value))}
+              disabled={skillsSaving}
+              className="shrink-0"
+            />
+          }
         />
-      </div>
+      </WebSettingsRows>
 
-      <div className="space-y-2">
+      <WebSettingsInset className="space-y-2">
         <Label>调试模式</Label>
         <Select
           value={aiToolMode}
@@ -148,12 +153,12 @@ export function WebSettingsSkillsPanel({
         <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
           当前已选择 {aiToolMode === 'mcp' ? 'MCP' : 'Skill'}
         </div>
-      </div>
+      </WebSettingsInset>
 
       <AnimatePresence initial={false}>
         {skillsEnabled && aiToolMode === 'skills' ? (
           <motion.div
-            className="space-y-4 rounded-md border border-border/60 bg-muted/20 px-3 py-3"
+            className="space-y-4"
             variants={sectionVariants}
             initial="initial"
             animate="animate"
@@ -308,7 +313,6 @@ export function WebSettingsSkillsPanel({
                 AI 必须先读取该文档；如使用 OAuth，必须声明并持续使用一个自己的固定 AI 名字。
               </p>
 
-              <Label className="text-xs">Skills 直连链接（验证/指引）</Label>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 该链接用于验证 token 是否可用，并返回 AI 需要的{' '}
                 <code className="rounded bg-muted px-1">LLM-Skills-*</code> 请求头模板。
@@ -455,7 +459,7 @@ export function WebSettingsSkillsPanel({
       <AnimatePresence initial={false}>
         {skillsEnabled && aiToolMode === 'mcp' ? (
           <motion.div
-            className="space-y-4 rounded-md border border-border/60 bg-muted/20 px-3 py-3"
+            className="space-y-4"
             variants={sectionVariants}
             initial="initial"
             animate="animate"

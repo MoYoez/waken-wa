@@ -16,6 +16,12 @@ import { WebSettingsActivityPanel } from '@/components/admin/web-settings-activi
 import { WebSettingsBasicPanel } from '@/components/admin/web-settings-basic-panel'
 import { WebSettingsCustomSurface } from '@/components/admin/web-settings-custom-surface'
 import { WebSettingsHitokotoPanel } from '@/components/admin/web-settings-hitokoto-panel'
+import {
+  WebSettingsInset,
+  WebSettingsRow,
+  WebSettingsRows,
+  WebSettingsSection,
+} from '@/components/admin/web-settings-layout'
 import { WebSettingsOpenApiPanel } from '@/components/admin/web-settings-openapi-panel'
 import { WebSettingsRuleTools } from '@/components/admin/web-settings-rule-tools'
 import { WebSettingsSecurityPanel } from '@/components/admin/web-settings-security-panel'
@@ -32,7 +38,9 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 
 export function WebSettings() {
   const store = useMemo(() => createStore(), [])
@@ -74,6 +82,7 @@ function WebSettingsContent() {
     exitY: 8,
     scale: 0.996,
   })
+  const avatarUsesRemoteUrl = isRemoteAvatarUrl(form.avatarUrl)
 
   if (loading) {
     return <div className="text-sm text-muted-foreground">加载配置中...</div>
@@ -81,7 +90,7 @@ function WebSettingsContent() {
 
   return (
     <>
-      <div className="space-y-4 rounded-xl border bg-card p-4 sm:space-y-5 sm:p-6">
+      <div className="space-y-4 sm:space-y-5 sm:rounded-xl sm:border sm:bg-card sm:p-6">
         <section className="hidden rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4 lg:flex lg:items-center lg:justify-between">
           <div className="max-w-2xl space-y-1">
             <h3 className="text-sm font-semibold tracking-wide text-foreground">后台外观</h3>
@@ -95,9 +104,13 @@ function WebSettingsContent() {
         </section>
 
         <Tabs defaultValue="basic" className="space-y-4 sm:space-y-5">
-          <TabsList>
-            <TabsTrigger value="basic">基础设置</TabsTrigger>
-            <TabsTrigger value="advanced">进阶设置</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-fit">
+            <TabsTrigger value="basic" className="w-full">
+              基础设置
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="w-full">
+              进阶设置
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4 sm:space-y-5">
@@ -105,14 +118,35 @@ function WebSettingsContent() {
           </TabsContent>
 
           <TabsContent value="advanced" className="space-y-4 sm:space-y-5">
-            <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-4 sm:p-5">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold tracking-wide text-foreground">平台与访问</h3>
-                <p className="text-xs text-muted-foreground">
-                  控制调试能力、开发者文档与后台访问验证。
-                </p>
-              </div>
-
+            <WebSettingsSection
+              title="平台与访问"
+              description="控制调试能力、接口开放范围、头像资源代理与后台访问验证。"
+            >
+              {avatarUsesRemoteUrl ? (
+                <WebSettingsRows>
+                  <WebSettingsRow
+                    htmlFor="avatar-fetch-by-server"
+                    title="检测到远程头像 URL，是否允许通过服务器获取头像？"
+                    description={
+                      <>
+                        开启后首页与后台预览会改为请求本站{' '}
+                        <code className="rounded bg-muted px-1">/api/avatar</code>
+                        ，访客浏览器不再直接访问第三方图床。
+                      </>
+                    }
+                    action={
+                      <Switch
+                        id="avatar-fetch-by-server"
+                        checked={form.avatarFetchByServerEnabled}
+                        onCheckedChange={(value) =>
+                          setForm((prev) => ({ ...prev, avatarFetchByServerEnabled: value }))
+                        }
+                        className="shrink-0"
+                      />
+                    }
+                  />
+                </WebSettingsRows>
+              ) : null}
               <WebSettingsSkillsPanel
                 onSaveSkillsConfig={(options) => saveSkillsConfig(options)}
                 onRevokeSkillsOauthByAiClientId={revokeSkillsOauthByAiClientId}
@@ -123,16 +157,12 @@ function WebSettingsContent() {
                 <WebSettingsOpenApiPanel />
                 <WebSettingsSecurityPanel />
               </div>
-            </section>
+            </WebSettingsSection>
 
-            <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-4 sm:p-5">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold tracking-wide text-foreground">前台展示</h3>
-                <p className="text-xs text-muted-foreground">
-                  调整首页观感、文案来源、主题细节与自定义样式。
-                </p>
-              </div>
-
+            <WebSettingsSection
+              title="前台展示"
+              description="调整首页观感、文案来源、主题细节与自定义样式。"
+            >
               <WebSettingsHitokotoPanel />
 
               <AnimatePresence initial={false}>
@@ -150,7 +180,7 @@ function WebSettingsContent() {
                 ) : null}
               </AnimatePresence>
 
-              <div className="space-y-2">
+              <WebSettingsInset className="space-y-2">
                 <Label>自定义 CSS 覆写（主界面）</Label>
                 <textarea
                   rows={8}
@@ -164,29 +194,22 @@ function WebSettingsContent() {
                 <p className="text-xs text-muted-foreground">
                   保存后会注入页面并覆盖默认样式，可用于快速主题定制。
                 </p>
-              </div>
-            </section>
+              </WebSettingsInset>
+            </WebSettingsSection>
 
-            <section className="space-y-4 rounded-xl border border-border/60 bg-muted/5 p-4 sm:p-5">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold tracking-wide text-foreground">运行与采集</h3>
-                <p className="text-xs text-muted-foreground">
-                  控制活动流、缓存、设备接入和前台状态展示行为。
-                </p>
-              </div>
-
+            <WebSettingsSection
+              title="运行与采集"
+              description="控制活动流、缓存、设备接入和前台状态展示行为。"
+            >
               <WebSettingsActivityPanel />
               <WebSettingsRuleTools />
-            </section>
+            </WebSettingsSection>
 
-            <section className="space-y-4 rounded-xl border border-dashed border-border/60 bg-background/40 p-4 sm:p-5">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold tracking-wide text-foreground">导入导出</h3>
-                <p className="text-xs text-muted-foreground">
-                  用于迁移或快速接入当前网页配置，不影响底部的统一保存流程。
-                </p>
-              </div>
-
+            <WebSettingsSection
+              title="导入导出"
+              description="用于迁移或快速接入当前网页配置，不影响底部的统一保存流程。"
+              bodyClassName="space-y-4 sm:border-dashed sm:bg-background/40"
+            >
               <div className="flex flex-wrap gap-3">
                 <Button type="button" variant="outline" onClick={() => void copyExportConfig()}>
                   一键复制接入配置（Base64）
@@ -199,7 +222,7 @@ function WebSettingsContent() {
                 「一键写入配置」会尝试从剪贴板读取 Base64，并在弹窗中确认。仅合并导出包中的网页字段到本页表单，不包含 Token；
                 写入后请用底部悬浮条保存。
               </p>
-            </section>
+            </WebSettingsSection>
           </TabsContent>
         </Tabs>
 

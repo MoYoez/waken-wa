@@ -9,6 +9,7 @@ import {
   getAdminPanelTransition,
   getAdminSectionVariants,
 } from '@/components/admin/admin-motion'
+import { WebSettingsInset } from '@/components/admin/web-settings-layout'
 import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
 import type { ThemeCustomSurfaceForm } from '@/components/admin/web-settings-types'
 import { hasThemeImageSourceConfigured } from '@/components/admin/web-settings-utils'
@@ -193,7 +194,7 @@ export function WebSettingsCustomSurface() {
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-border/60 bg-muted/15 p-3 sm:p-4">
+    <div className="space-y-4">
       <p className="text-xs text-muted-foreground leading-relaxed">
         留空则使用内置暖色默认。支持 oklch()、#hex、linear-gradient、以及安全的{' '}
         <code className="rounded bg-muted px-1">url()</code>
@@ -211,7 +212,7 @@ export function WebSettingsCustomSurface() {
         「整页 background」写在 <code className="rounded bg-muted px-1">body</code> 上，与「页面底色」分开。
         主题预设必须选 Custom surface，保存后才会注入首页。
       </p>
-      <div className="space-y-4 rounded-lg border border-border/60 bg-background/55 p-3 sm:p-4">
+      <WebSettingsInset className="space-y-4">
         <div className="space-y-2">
           <Label>背景来源</Label>
           <Select
@@ -550,7 +551,7 @@ export function WebSettingsCustomSurface() {
             </div>
           </div>
         </div>
-      </div>
+      </WebSettingsInset>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label>页面底色（仅 background-color / 令牌）</Label>

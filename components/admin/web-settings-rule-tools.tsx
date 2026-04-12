@@ -11,6 +11,11 @@ import {
 } from '@/components/admin/admin-motion'
 import { exportAdminActivityApps } from '@/components/admin/admin-query-fetchers'
 import {
+  WebSettingsInset,
+  WebSettingsRow,
+  WebSettingsRows,
+} from '@/components/admin/web-settings-layout'
+import {
   listMaxPage,
   ListPaginationBar,
   SETTINGS_APP_LIST_PAGE_SIZE,
@@ -570,7 +575,7 @@ export function WebSettingsRuleTools() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <WebSettingsInset className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <Label className="text-base">仅显示应用名</Label>
           <p className="text-xs text-muted-foreground">已配置 {noTotal} 个应用</p>
@@ -578,9 +583,9 @@ export function WebSettingsRuleTools() {
         <Button type="button" variant="secondary" className="shrink-0" onClick={() => setDialogNameOnlyOpen(true)}>
           在弹窗中编辑
         </Button>
-      </div>
+      </WebSettingsInset>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <WebSettingsInset className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <Label className="text-base">媒体来源屏蔽规则（play_source）</Label>
           <p className="text-xs text-muted-foreground">已配置 {msTotal} 条</p>
@@ -596,24 +601,23 @@ export function WebSettingsRuleTools() {
         >
           在弹窗中编辑
         </Button>
-      </div>
+      </WebSettingsInset>
 
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
-        <div className="space-y-0.5 min-w-0">
-          <Label htmlFor="capture-reported-apps" className="font-normal cursor-pointer">
-            保存上报行为的应用记录（用于规则选择/导出）
-          </Label>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            关闭后不会再新增历史记录，但会保留已保存的历史数据。
-          </p>
-        </div>
-        <Switch
-          id="capture-reported-apps"
-          checked={form.captureReportedAppsEnabled}
-          onCheckedChange={(v) => patch('captureReportedAppsEnabled', v)}
-          className="shrink-0"
+      <WebSettingsRows>
+        <WebSettingsRow
+          htmlFor="capture-reported-apps"
+          title="保存上报行为的应用记录（用于规则选择/导出）"
+          description="关闭后不会再新增历史记录，但会保留已保存的历史数据。"
+          action={
+            <Switch
+              id="capture-reported-apps"
+              checked={form.captureReportedAppsEnabled}
+              onCheckedChange={(v) => patch('captureReportedAppsEnabled', v)}
+              className="shrink-0"
+            />
+          }
         />
-      </div>
+      </WebSettingsRows>
 
       <Dialog open={dialogMediaSourceOpen} onOpenChange={setDialogMediaSourceOpen}>
         <DialogContent
