@@ -61,6 +61,8 @@ COPY --chown=nextjs:nodejs --from=builder /app/.next/static ./.next/static
 COPY --chown=nextjs:nodejs --from=builder /app/drizzle ./drizzle
 COPY --chown=nextjs:nodejs --from=builder /app/drizzle.config.sqlite.ts ./drizzle.config.sqlite.ts
 COPY --chown=nextjs:nodejs --from=builder /app/drizzle.config.pg.ts ./drizzle.config.pg.ts
+COPY --chown=nextjs:nodejs --from=builder /app/package.json ./package.json
+COPY --chown=nextjs:nodejs --from=builder /app/scripts/startup-banner.mjs ./scripts/startup-banner.mjs
 
 COPY --chown=nextjs:nodejs --from=drizzle-tools /tools ./tools
 

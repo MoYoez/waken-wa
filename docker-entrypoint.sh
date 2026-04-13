@@ -72,6 +72,7 @@ start_internal_redis() {
 }
 
 start_app() {
+  node /app/scripts/startup-banner.mjs start
   node "$DRIZZLE_KIT_CLI" push --config "$DRIZZLE_CONFIG"
   exec node server.js
 }
@@ -88,7 +89,7 @@ if [ "$(id -u)" = 0 ]; then
   export LOGNAME=nextjs
   export SHELL=/bin/sh
 
-  exec gosu nextjs sh -ec 'cd /app && node "$DRIZZLE_KIT_CLI" push --config "$DRIZZLE_CONFIG" && exec node server.js'
+  exec gosu nextjs sh -ec 'cd /app && node /app/scripts/startup-banner.mjs start && node "$DRIZZLE_KIT_CLI" push --config "$DRIZZLE_CONFIG" && exec node server.js'
 else
   start_app
 fi

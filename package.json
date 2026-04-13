@@ -2,10 +2,10 @@
   "name": "waken-wa",
   "version": "0.3.0",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/start-with-banner.mjs dev",
     "build": "next build",
     "build:postgres": "next build",
-    "start": "next start",
+    "start": "node scripts/start-with-banner.mjs start",
     "lint": "eslint .",
     "i18n:check": "node scripts/check-i18n-locales.mjs",
     "typecheck": "tsc --noEmit",
