@@ -32,14 +32,14 @@ export REDIS_CACHE_TTL_SECONDS="${REDIS_CACHE_TTL_SECONDS:-3600}"
 # Config lives under /app but CLI deps are in /app/tools; TS config imports `drizzle-kit`.
 export NODE_PATH=/app/tools/node_modules
 
-DRIZZLE_KIT_CLI=/app/tools/node_modules/drizzle-kit/bin.cjs
+export DRIZZLE_KIT_CLI=/app/tools/node_modules/drizzle-kit/bin.cjs
 
 case "$DATABASE_URL" in
   postgres:*|postgresql:*)
-    DRIZZLE_CONFIG=drizzle.config.pg.ts
+    export DRIZZLE_CONFIG=drizzle.config.pg.ts
     ;;
   *)
-    DRIZZLE_CONFIG=drizzle.config.sqlite.ts
+    export DRIZZLE_CONFIG=drizzle.config.sqlite.ts
     ;;
 esac
 
@@ -49,7 +49,7 @@ start_internal_redis() {
   mkdir -p /app/data/redis
   if [ "$(id -u)" = 0 ]; then
     chown -R nextjs:nodejs /app/data/redis
-    runuser -u nextjs -- redis-server \
+    gosu nextjs redis-server \
       --bind 127.0.0.1 \
       --port "${REDIS_PORT}" \
       --save 60 1 \
@@ -79,18 +79,16 @@ start_app() {
 start_internal_redis
 
 if [ "$(id -u)" = 0 ]; then
-  exec runuser -u nextjs -- env \
-    DATABASE_URL="$DATABASE_URL" \
-    JWT_SECRET="$JWT_SECRET" \
-    PORT="${PORT:-3000}" \
-    NODE_ENV="${NODE_ENV:-production}" \
-    REDIS_URL="$REDIS_URL" \
-    REDIS_CACHE_TTL_SECONDS="$REDIS_CACHE_TTL_SECONDS" \
-    HOST=0.0.0.0 \
-    HOSTNAME=0.0.0.0 \
-    NODE_PATH=/app/tools/node_modules \
-    HOME=/tmp \
-    sh -ec "cd /app && node $DRIZZLE_KIT_CLI push --config $DRIZZLE_CONFIG && exec node server.js"
+  export PORT="${PORT:-3000}"
+  export NODE_ENV="${NODE_ENV:-production}"
+  export HOST=0.0.0.0
+  export HOSTNAME=0.0.0.0
+  export HOME=/tmp
+  export USER=nextjs
+  export LOGNAME=nextjs
+  export SHELL=/bin/sh
+
+  exec gosu nextjs sh -ec 'cd /app && node "$DRIZZLE_KIT_CLI" push --config "$DRIZZLE_CONFIG" && exec node server.js'
 else
   start_app
 fi

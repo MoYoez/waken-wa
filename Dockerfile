@@ -48,7 +48,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends redis-server \
+  && apt-get install -y --no-install-recommends gosu redis-server tini \
   && rm -rf /var/lib/apt/lists
 
 RUN addgroup --system --gid 1001 nodejs \
@@ -74,4 +74,4 @@ ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV HOSTNAME=0.0.0.0
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "-s", "--", "/docker-entrypoint.sh"]
