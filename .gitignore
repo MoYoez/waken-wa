@@ -22,6 +22,10 @@ generated/
 
 # Remove from repo
 dev.db
+data/*.db
+data/*.db-shm
+data/*.db-wal
+!data/.gitkeep
 
 .env*.local
 .env

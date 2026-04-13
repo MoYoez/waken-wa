@@ -33,7 +33,7 @@ pnpm dev
 
 复制 [`.env.example`](.env.example) 为 `.env` / `.env.local` 并按需填写。常见项：
 
-- **`DATABASE_URL`** — 默认 SQLite（如 `file:./drizzle/dev.db`）；生产可改为 `postgres://` / `postgresql://`
+- **`DATABASE_URL`** — 默认 SQLite（如 `file:./data/dev.db`）；生产可改为 `postgres://` / `postgresql://`
 - **`JWT_SECRET`** — 管理会话签名；不设置则默认自动生成。Docker 下留空时会在数据卷中生成持久化密钥文件
 - **`NEXT_PUBLIC_BASE_URL`** — 站点对外访问地址（反向代理或生产域名）
 - **`STEAM_API_KEY`** — Steam Web API 可选；也可在管理后台「站点设置」中配置

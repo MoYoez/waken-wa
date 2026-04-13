@@ -3,6 +3,8 @@ import 'server-only'
 import Database from 'better-sqlite3'
 import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3'
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres'
+import fs from 'node:fs'
+import path from 'node:path'
 import { Pool } from 'pg'
 
 import { pgSchema } from '@/drizzle/schema.pg'
@@ -40,10 +42,14 @@ function createDb(): AppDb {
     return drizzlePg(pool, { schema: pgSchema })
   }
   const sqliteUrl =
-    raw && !isPostgresConnectionUrl(raw) ? raw : 'file:./drizzle/dev.db'
-  const path = sqliteFilePath(sqliteUrl)
+    raw && !isPostgresConnectionUrl(raw) ? raw : 'file:./data/dev.db'
+  const dbPath = sqliteFilePath(sqliteUrl)
+  const dir = path.dirname(dbPath)
+  if (dir && dir !== '.') {
+    fs.mkdirSync(dir, { recursive: true })
+  }
   const client =
-    globalThis.__wakenDrizzleSqlite ?? new Database(path)
+    globalThis.__wakenDrizzleSqlite ?? new Database(dbPath)
   if (process.env.NODE_ENV !== 'production') {
     globalThis.__wakenDrizzleSqlite = client
   }

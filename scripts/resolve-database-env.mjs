@@ -114,8 +114,8 @@ export function resolveDatabaseEnv(options = {}) {
 
   if (provider === 'sqlite') {
     if (!process.env.DATABASE_URL?.trim()) {
-      process.env.DATABASE_URL = 'file:./drizzle/dev.db'
-      console.log('[db-env] DATABASE_URL unset; using default file:./drizzle/dev.db')
+      process.env.DATABASE_URL = 'file:./data/dev.db'
+      console.log('[db-env] DATABASE_URL unset; using default file:./data/dev.db')
     }
   } else {
     const pgUrl = pick()
