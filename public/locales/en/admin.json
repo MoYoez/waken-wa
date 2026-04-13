@@ -1030,13 +1030,13 @@
   },
   "webSettingsSkills": {
     "enabledTitle": "Enable Skills / MCP",
-    "enabledDescription": "Controls whether the site exposes its Skills / MCP tool endpoints and related auth flows.",
+    "enabledDescription": "Controls whether this personal life dashboard exposes Skills / MCP tool endpoints and related auth flows for AI clients.",
     "toolModeLabel": "Tool mode",
     "toolModes": {
       "skills": "Skills",
       "mcp": "MCP"
     },
-    "toolModeHint": "Choose whether tools are exposed through the Skills-style endpoints or the MCP-compatible endpoint set.",
+    "toolModeHint": "Choose whether AI clients tune the personal life panel through Skills-style endpoints or the MCP-compatible endpoint set.",
     "currentToolMode": "Current tool mode: {{value}}",
     "authModeLabel": "Auth mode",
     "authModePlaceholder": "Select an auth mode",
@@ -1057,14 +1057,14 @@
       "disabled": "Disabled"
     },
     "apikeyTitle": "Skills API key",
-    "apikeyDescription": "Generate a single API key that an AI client can use directly.",
+    "apikeyDescription": "Generate a single API key an AI client can use to tune status, activity, and display copy.",
     "generateOrRotateKey": "Generate / rotate key",
     "generatedKeyLabel": "Generated key",
     "oauthTtlTitle": "OAuth token TTL",
     "oauthTtlDescription": "Controls how long newly issued OAuth tokens remain valid after exchange.",
     "oauthTtlCurrent": "Current TTL: {{value}} minutes",
     "mdLinkLabel": "Markdown endpoint",
-    "mdLinkHint": "This endpoint returns a Markdown description that an AI client can read before calling the direct tool endpoint.",
+    "mdLinkHint": "This endpoint returns Markdown that tells AI clients this is a personal life dashboard for status, schedule, activity traces, and inspiration entries.",
     "directLinkHintPrefix": "Direct endpoint URLs expect the",
     "directLinkHintMiddle": "header family. The actual token header is",
     "directLinkHintSuffix": "header family. The actual token header is",
@@ -1096,10 +1096,10 @@
     "revokeDialogDescription": "This revokes all active OAuth access for the selected AI client id.",
     "aiClientIdLabel": "AI client id",
     "confirmRevoke": "Confirm revoke",
-    "mcpEnabledTitle": "Enable theme tools in MCP mode",
+    "mcpEnabledTitle": "Enable life-panel tools in MCP mode",
     "mcpEnabledDescriptionPrefix": "When enabled, the MCP endpoint exposes theme tool methods controlled by",
     "mcpEnabledDescriptionSuffix": ".",
-    "mcpModeHint": "MCP mode uses a dedicated legacy API key flow and a single MCP endpoint.",
+    "mcpModeHint": "MCP mode uses a dedicated legacy API key flow and a single MCP endpoint for AI clients that can tune the personal life panel.",
     "mcpStatusLabel": "MCP status",
     "mcpStatus": "Theme tools: {{enabled}} / API key: {{apiKey}}",
     "mcpAuthModeValue": "Legacy MCP API key",
@@ -1110,7 +1110,7 @@
     "legacyMcpEndpointLabel": "Legacy MCP endpoint",
     "legacyMcpEndpointHintPrefix": "Use this endpoint with a bearer token header like",
     "legacyMcpEndpointHintSuffix": ".",
-    "disabledHint": "Enable Skills first to configure auth modes and exposed endpoints."
+    "disabledHint": "Enable Skills / MCP first to configure auth modes and expose the personal life panel tooling endpoints."
   },
   "unsavedChanges": {
     "saving": "Saving…",

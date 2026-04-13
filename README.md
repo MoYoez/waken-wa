@@ -1,13 +1,20 @@
+<div align="right">
+  <span>[<a href="./README_EN.md">English</a>]</span>
+  <span>[<a href="./README.md">简体中文</a>]</span>
+</div>
+
 > 不是被闹钟惊醒，而是温柔地、自愿地，与世界重新相遇。
 
 <p align="center">
-<h2 align="center">Waken Wa💫</h2>
-  <img src=".github/preview.png" alt="预览" />
-
+  <img src=".github/assets/logo/Logo.png" alt="Waken Wa" width="100" height="100" />
+  <h2 align="center">Waken Wa💫</h2>
   <p align="center">
     <img alt="visitors" src="https://visitor-badge.laobi.icu/badge?page_id=MoYoez/waken-wa" />
     <img alt="License" src="https://img.shields.io/github/license/MoYoez/waken-wa" />
     <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/MoYoez/waken-wa/docker-publish.yml" />
+    <a href="https://deepwiki.com/MoYoez/Waken-wa">
+      <img src="https://deepwiki.com/badge.svg" alt="DeepWiki" />
+    </a>
   </p>
 </p>
 
@@ -17,29 +24,38 @@
 
 > 🌟项目灵感来源于 [Sleepy](https://github.com/sleepy-project/sleepy) 和 [Shiro](https://github.com/Innei/Shiro)
 
----
-
-> ⚠️ **提示：该项目处于早期开发阶段，可能会有不可避免的 bug。**
-
 ## 项目特点🌟
 
-1. 🖥️ 全套 WebUI 支持，服务端快速配置上线  
-2. 🤖 支持 AI Skills / MCP 辅助修改配置  
-3. 🧩 支持各类状态与内容显示规则  
-4. 🎨 支持主题取色、背景与个性化风格定制  
-5. 📡 支持多平台状态自动同步  
-6. 🎵 支持音乐、应用与 Steam 游戏状态展示  
-7. 🗓️ 支持 ICS 日程 / 课表接入  
-8. ✍️ 支持随想录、灵感记录与内容沉淀  
+1. 🖥️ 全套 WebUI 支持，服务端快速配置上线
+2. 🤖 支持 AI Skills / MCP 辅助修改配置
+3. 🧩 支持各类状态与内容显示规则
+4. 🎨 支持主题取色、背景与个性化风格定制
+5. 📡 支持多平台状态自动同步
+6. 🎵 支持音乐、应用与 Steam 游戏状态展示
+7. 🗓️ 支持 ICS 日程 / 课表接入
+8. ✍️ 支持随想录、灵感记录与内容沉淀
 9. 🔒 支持访问锁、hCaptcha 与后台管理
 
+## 图库
 
-
-## 一些截图
-
-<img src=".github/preview-main.png" alt="主界面" />
-
-<img src=".github/preview-inspiration.png" alt="主界面" />
+<table>
+  <tr>
+    <td><img src=".github/assets/Preview/preview_main.png" alt="Waken Wa 首页" width="100%"></td>
+    <td><img src=".github/assets/Preview/preview_inspiration.png" alt="Waken Wa 灵感页面" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>个人状态首页</strong></td>
+    <td align="center"><strong>灵感与随想记录</strong></td>
+  </tr>
+  <tr>
+    <td><img src=".github/assets/Preview/preview_setting0.png" alt="Waken Wa 站点设置" width="100%"></td>
+    <td><img src=".github/assets/Preview/preview_setting1.png" alt="Waken Wa 后台配置" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>站点外观配置</strong></td>
+    <td align="center"><strong>后台管理面板</strong></td>
+  </tr>
+</table>
 
 ---
 
@@ -127,13 +143,11 @@ docker compose up -d --build
 
 > Railway 可能需要使用 Hobby 方案.
 
-
-### 3.Vercel
+### 3. Vercel
 
 > 需要使用 PostgresSQL (SupaBase / Neon) + Redis ，且开销较高 (SSE 长连接 / Realtime POST 多)
 
 > 如需使用请考虑 非 Realtime 模式上传活动，并且在后台启用 Polling （轮询）
-
 
 [![Deploy with Vercel](https://vercel.com/button)](
 https://vercel.com/new/clone?repository-url=https://github.com/MoYoez/waken-wa
@@ -144,7 +158,6 @@ https://vercel.com/new/clone?repository-url=https://github.com/MoYoez/waken-wa
 > 如果你想用自己的供应商，请在 env 的 DATABASE_URL 中 写入地址即可，请注意 Vercel 这类 Serverless 平台的URL兼容性，以防止部署失败。
 
 ## 开发
-
 
 请参考 [**DEVELOPMENT.md**](DEVELOPMENT.md)
 

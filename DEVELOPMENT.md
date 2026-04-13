@@ -1,56 +1,56 @@
-# 关于开发
+# Development
 
-## 技术栈
+## Tech Stack
 
-- **Next.js** 16.2（App Router）
+- **Next.js** 16.2 with App Router
 - **React** 19.2 / **React DOM** 19.2
 - **TypeScript** ~5.9
-- **Tailwind CSS** 4.x（`@tailwindcss/postcss`）
-- **Drizzle ORM** + **Drizzle Kit**，数据库按环境使用 **SQLite**（better-sqlite3）或 **PostgreSQL**（pg）
+- **Tailwind CSS** 4.x with `@tailwindcss/postcss`
+- **Drizzle ORM** + **Drizzle Kit**, using **SQLite** through better-sqlite3 or **PostgreSQL** through pg depending on the environment
 - **Redis** 7.0
-- **Radix UI**、**Zod**、**react-hook-form**、**jose**（JWT）、**bcryptjs**
+- **Radix UI**, **Zod**, **react-hook-form**, **jose** for JWT, and **bcryptjs**
 
-## 快速开始
+## Quick Start
 
-### 环境要求
+### Requirements
 
-- **本地开发：** Node.js 20+
-- **包管理：** 仓库以 **pnpm** 为主（也可用 npm / yarn）
-- **可选：** Docker（镜像基于 **Node.js 22**，见根目录 `Dockerfile`）
+- **Local development:** Node.js 20+
+- **Package manager:** this repository primarily uses **pnpm**. npm or yarn may also work, but pnpm is the expected path.
+- **Optional:** Docker. The image is based on **Node.js 22**; see the root `Dockerfile`.
 
-### 安装与运行
+### Install and Run
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-在浏览器中打开 [http://localhost:3000](http://localhost:3000)。
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-> 如果需要使用，请配合 [Waken-Wa-Reporter](https://github.com/MoYoez/waken-wa-reporter)
+> To use activity reporting, pair this project with [Waken-Wa-Reporter](https://github.com/MoYoez/waken-wa-reporter).
 
-### 环境变量
+### Environment Variables
 
-复制 [`.env.example`](.env.example) 为 `.env` / `.env.local` 并按需填写。常见项：
+Copy [`.env.example`](.env.example) to `.env` or `.env.local`, then fill in the values you need. Common variables:
 
-- **`DATABASE_URL`** — 默认 SQLite（如 `file:./data/dev.db`）；生产可改为 `postgres://` / `postgresql://`
-- **`JWT_SECRET`** — 管理会话签名；不设置则默认自动生成。Docker 下留空时会在数据卷中生成持久化密钥文件
-- **`NEXT_PUBLIC_BASE_URL`** — 站点对外访问地址（反向代理或生产域名）
-- **`STEAM_API_KEY`** — Steam Web API 可选；也可在管理后台「站点设置」中配置
-- **`HCAPTCHA_*`** — 整站访问锁可选
+- **`DATABASE_URL`** — defaults to SQLite, for example `file:./data/dev.db`; use `postgres://` or `postgresql://` for production PostgreSQL.
+- **`JWT_SECRET`** — signs admin sessions. If unset, it is generated automatically. In Docker, an empty value creates a persistent secret file at `/app/data/.jwt_secret`.
+- **`NEXT_PUBLIC_BASE_URL`** — public site URL, useful behind a reverse proxy or in production.
+- **`STEAM_API_KEY`** — optional Steam Web API key. It can also be configured from the admin panel under site settings.
+- **`HCAPTCHA_*`** — optional site access lock configuration.
 
-头像、昵称、简介等通过 **`/admin` 站点设置**（或首次 setup）配置。
+Avatar, nickname, bio, and related profile fields are configured from **`/admin` site settings** or during first-time setup.
 
-### 构建
+### Build
 
 ```bash
 pnpm build
 pnpm start
 ```
 
-## API 文档
+## API Docs
 
-- 交互式 API 参考：`/api-reference`
-- OpenAPI JSON：`/api/openapi.json`
-- 设备接入说明：[`docs/activity-reporting.md`](./docs/activity-reporting.md)
-- 灵感接入说明：[`docs/inspiration-integration.md`](./docs/inspiration-integration.md)
+- Interactive API reference: `/api-reference`
+- OpenAPI JSON: `/api/openapi.json`
+- Device integration guide: [`docs/activity-reporting.md`](./docs/activity-reporting.md)
+- Inspiration integration guide: [`docs/inspiration-integration.md`](./docs/inspiration-integration.md)

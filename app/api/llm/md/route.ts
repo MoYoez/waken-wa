@@ -82,7 +82,9 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   lines.push('---')
   lines.push('name: waken-wa-agent-skills')
   lines.push('description: >-')
-  lines.push('  Agent execution protocol for Waken site debugging and configuration changes.')
+  lines.push('  Agent execution protocol for Waken-Wa, a personal life dashboard /')
+  lines.push('  presence panel that turns status, schedule, activity, and inspiration')
+  lines.push('  into a gently stalkable homepage.')
   lines.push('  Read this document first, then follow the decision rules exactly.')
   lines.push('metadata:')
   lines.push('  author: waken-wa')
@@ -92,8 +94,10 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   lines.push('---')
   lines.push('')
 
-  pushSection(lines, '# Waken AI Debugging Protocol')
-  lines.push('This document is written for AI clients. Treat it as an execution protocol, not as general prose.')
+  pushSection(lines, '# Waken-Wa Life Panel AI Protocol')
+  lines.push('This document is written for AI clients. Treat Waken-Wa as a personal life dashboard: a self-hosted, intentionally shared status surface for profile, schedule, activity, app presence, inspiration entries, and site appearance.')
+  lines.push('')
+  lines.push('In product language, it is a personal life panel. In owner-side slang, it can be described as a "soft-stalking" or "视奸" style homepage, because approved visitors can glance at what the owner is doing without asking. Keep that tone playful, consent-based, and privacy-aware.')
   lines.push('')
 
   pushSection(lines, '## Absolute Base URL')
@@ -166,6 +170,8 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   ])
 
   pushSection(lines, '## Skills Flow')
+  lines.push('Skills exposes the personal life panel through plain HTTP calls, so an AI can help adjust the owner-facing "what am I doing lately" surface without needing a browser admin session.')
+  lines.push('')
   pushSection(lines, '### Required Headers')
   pushCodeLines(lines, [
     'LLM-Skills-Mode: oauth | apikey',
@@ -221,6 +227,8 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   ])
 
   pushSection(lines, '## MCP Flow')
+  lines.push('MCP exposes the same personal life panel operations as tools for clients that can mount an MCP server.')
+  lines.push('')
   lines.push('Use MCP only if all conditions are true:')
   pushBullets(lines, [
     'The preferred mode is `mcp`, or Skills cannot be used',

@@ -523,11 +523,15 @@ export function getOpenApiDocument(baseUrl: string): OpenApiDocument {
   return {
     openapi: '3.1.0',
     info: {
-      title: 'Waken External API',
+      title: 'Waken-Wa Life Panel API',
       version: '1.0.0',
-      summary: 'Public integration reference for device reporting, AI tooling, and inspiration journal APIs.',
+      summary: 'Integration reference for the Waken-Wa personal life dashboard: device presence, AI tooling, and inspiration journal APIs.',
       description: [
-        'This document covers the public integration surfaces currently intended for devices, LLM clients, and inspiration journal workflows.',
+        'Waken-Wa is a self-hosted personal life dashboard: a profile, schedule, activity, app-presence, and inspiration panel that the owner can intentionally share.',
+        '',
+        'In playful owner-side wording, the public page can be understood as a consent-based "soft-stalking" / "视奸" surface: visitors get a quick glance at the owner\'s current status and recent traces, while admin controls still decide what is exposed.',
+        '',
+        'This document covers the integration surfaces currently intended for devices, LLM clients, and inspiration journal workflows.',
         '',
         'Notes:',
         '- This reference intentionally excludes `/api/admin/*` routes.',
@@ -537,13 +541,13 @@ export function getOpenApiDocument(baseUrl: string): OpenApiDocument {
     },
     servers: [{ url: baseUrl, description: 'Current request origin' }],
     externalDocs: {
-      description: 'AI-oriented protocol markdown',
+      description: 'AI-oriented personal life panel protocol markdown',
       url: `${baseUrl}/api/llm/md`,
     },
     tags: [
-      { name: 'Device', description: 'Device reporting and optional feed-reading flows.' },
-      { name: 'LLM', description: 'Skills / HTTP-based AI integration endpoints.' },
-      { name: 'MCP', description: 'Legacy MCP verification and transport fallback.' },
+      { name: 'Device', description: 'Device reporting and feed-reading flows for the public life panel.' },
+      { name: 'LLM', description: 'Skills / HTTP-based AI integration endpoints for tuning the life panel.' },
+      { name: 'MCP', description: 'MCP verification and transport fallback for AI-assisted panel tooling.' },
       { name: 'Inspiration', description: 'Inspiration journal read/write and inline asset APIs.' },
     ],
     components: buildComponents(baseUrl),
@@ -680,7 +684,7 @@ export function getOpenApiDocument(baseUrl: string): OpenApiDocument {
           tags: ['LLM'],
           summary: 'Discover current LLM/Skills/MCP capabilities',
           description:
-            'Required first call for AI clients. Detects active mode, endpoints, next steps, and whether OAuth, API key, or legacy MCP should be used.',
+            'Required first call for AI clients that help manage the personal life panel. Detects active mode, endpoints, next steps, and whether OAuth, API key, or legacy MCP should be used.',
           parameters: [
             { $ref: '#/components/parameters/LlmMode' },
             { $ref: '#/components/parameters/LlmAi' },
@@ -716,7 +720,7 @@ export function getOpenApiDocument(baseUrl: string): OpenApiDocument {
           tags: ['LLM'],
           summary: 'Read the AI-oriented protocol markdown',
           description:
-            'Returns a Markdown protocol document written for AI clients. Scalar references it as supplemental guidance rather than replacing it.',
+            'Returns a Markdown protocol document written for AI clients working on the Waken-Wa life panel. Scalar references it as supplemental guidance rather than replacing it.',
           responses: {
             '200': {
               description: 'Markdown protocol document.',

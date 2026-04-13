@@ -1030,13 +1030,13 @@
   },
   "webSettingsSkills": {
     "enabledTitle": "启用 Skills / MCP",
-    "enabledDescription": "控制站点是否暴露 Skills / MCP 工具接口及其相关认证流程。",
+    "enabledDescription": "控制这个个人生活面板是否暴露给 AI 使用的 Skills / MCP 工具接口，以及对应认证流程。",
     "toolModeLabel": "工具模式",
     "toolModes": {
       "skills": "Skills",
       "mcp": "MCP"
     },
-    "toolModeHint": "选择工具是通过 Skills 风格接口暴露，还是通过兼容 MCP 的接口集暴露。",
+    "toolModeHint": "选择让 AI 通过 Skills 风格接口，还是通过兼容 MCP 的接口集来调整这个「视奸式」个人生活面板。",
     "currentToolMode": "当前工具模式：{{value}}",
     "authModeLabel": "认证模式",
     "authModePlaceholder": "选择认证模式",
@@ -1057,14 +1057,14 @@
       "disabled": "已禁用"
     },
     "apikeyTitle": "Skills API Key",
-    "apikeyDescription": "生成一个单独的 API Key，供 AI 客户端直接使用。",
+    "apikeyDescription": "生成一个单独的 API Key，供 AI 客户端直接调整个人状态、活动与展示文案。",
     "generateOrRotateKey": "生成 / 轮换 Key",
     "generatedKeyLabel": "生成的 Key",
     "oauthTtlTitle": "OAuth Token 有效期",
     "oauthTtlDescription": "控制新签发的 OAuth Token 在兑换后可使用多久。",
     "oauthTtlCurrent": "当前有效期：{{value}} 分钟",
     "mdLinkLabel": "Markdown 说明地址",
-    "mdLinkHint": "该接口返回 Markdown 说明，AI 客户端可先读取后再调用直连工具接口。",
+    "mdLinkHint": "该接口返回 Markdown 说明，告诉 AI 这是一个个人生活面板：用于展示状态、日程、活动轨迹和灵感记录。",
     "directLinkHintPrefix": "直连接口 URL 需要配合",
     "directLinkHintMiddle": "这一组请求头使用，实际 token 头为",
     "directLinkHintSuffix": "这一组请求头使用，实际 token 头为",
@@ -1096,10 +1096,10 @@
     "revokeDialogDescription": "这会撤销所选 AI client id 的全部有效 OAuth 访问。",
     "aiClientIdLabel": "AI client id",
     "confirmRevoke": "确认撤销",
-    "mcpEnabledTitle": "启用 MCP 工具",
+    "mcpEnabledTitle": "启用 MCP 生活面板工具",
     "mcpEnabledDescriptionPrefix": "开启后，MCP 接口会暴露由",
-    "mcpEnabledDescriptionSuffix": "控制的主题工具方法。",
-    "mcpModeHint": "MCP 模式使用单独的 Legacy API Key 流程与统一 MCP Endpoint。",
+    "mcpEnabledDescriptionSuffix": "控制的生活面板工具方法。",
+    "mcpModeHint": "MCP 模式使用单独的 Legacy API Key 流程与统一 MCP Endpoint，用于让支持 MCP 的 AI 调整这个个人生活面板。",
     "mcpStatusLabel": "MCP 状态",
     "mcpStatus": "主题工具：{{enabled}} / API Key：{{apiKey}}",
     "mcpAuthModeValue": "Legacy MCP API Key",
@@ -1110,7 +1110,7 @@
     "legacyMcpEndpointLabel": "Legacy MCP Endpoint",
     "legacyMcpEndpointHintPrefix": "调用该接口时可使用类似如下的 Bearer Token 请求头：",
     "legacyMcpEndpointHintSuffix": "。",
-    "disabledHint": "请先启用 Skills，随后才能配置认证模式和暴露的接口。"
+    "disabledHint": "请先启用 Skills / MCP，随后才能配置认证模式，并把这个个人生活面板的 AI 工具接口暴露出去。"
   },
   "unsavedChanges": {
     "saving": "保存中…",

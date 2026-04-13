@@ -1,43 +1,46 @@
-# 灵感随想录接口说明
+# Inspiration API Guide
 
-本文档补充说明灵感随想录相关的对外接口，用于设备端、脚本端或其他自动化客户端接入。
+This document describes the public integration endpoints for inspiration entries. It is intended for device clients, scripts, and other automation clients.
 
-统一 API 参考入口：
+Unified API reference:
 
-- Scalar API Reference：`/api-reference`
-- OpenAPI JSON：`/api/openapi.json`
+- Scalar API Reference: `/api-reference`
+- OpenAPI JSON: `/api/openapi.json`
 
-## 1. 接口范围
+## 1. Endpoint Scope
 
-当前包含以下接口：
+Currently available endpoints:
 
-- `GET /api/inspiration/entries`：公开读取灵感列表
-- `POST /api/inspiration/entries`：写入灵感条目
-- `DELETE /api/inspiration/entries?id=...`：删除灵感条目（仅管理员）
-- `POST /api/inspiration/assets`：上传内联图片资源
-- `GET /api/inspiration/img/{publicKey}`：公开读取图片
+- `GET /api/inspiration/entries`: publicly read the inspiration list
+- `POST /api/inspiration/entries`: create an inspiration entry
+- `DELETE /api/inspiration/entries?id=...`: delete an inspiration entry, admin only
+- `POST /api/inspiration/assets`: upload inline image assets
+- `GET /api/inspiration/img/{publicKey}`: publicly read an image
 
-## 2. 鉴权说明
+## 2. Authentication
 
-- 公开读取：
-  - `GET /api/inspiration/entries`
-  - `GET /api/inspiration/img/{publicKey}`
-- 写入接口：
-  - 支持管理员 `session` Cookie
-  - 或 `Authorization: Bearer <API_TOKEN>`
+Public read endpoints:
 
-注意：
+- `GET /api/inspiration/entries`
+- `GET /api/inspiration/img/{publicKey}`
 
-- `GET /api/inspiration/entries` 仍受整站访问锁影响；若站点已锁定，需要先完成页面解锁。
-- Bearer Token 写入路径可能额外受到后台「灵感允许设备 Hash」规则限制。
-- `attachCurrentStatus` 可用于管理员 `session` 和 Bearer Token 写入。
-- Bearer Token 路径下，附带当前状态时必须提供当前设备身份牌（`X-Device-Key` 或 `generatedHashKey`），且只能附带当前设备自己的状态。
+Write endpoints support either:
 
-## 3. 常见接入流程
+- an admin `session` cookie
+- or `Authorization: Bearer <API_TOKEN>`
 
-### 直接发文本条目
+Notes:
 
-向 `POST /api/inspiration/entries` 发送：
+- `GET /api/inspiration/entries` is still affected by the site access lock. If the site is locked, unlock the page first.
+- Bearer Token writes may also be restricted by the admin **Allowed Device Hashes for Inspiration** rule.
+- `attachCurrentStatus` can be used with both admin `session` writes and Bearer Token writes.
+- When using Bearer Token writes with current status attached, the client must provide its current device identity through `X-Device-Key` or `generatedHashKey`, and it may only attach the status of that same device.
+
+## 3. Common Integration Flows
+
+### Send a Text Entry Directly
+
+Send the following payload to `POST /api/inspiration/entries`:
 
 ```json
 {
@@ -46,17 +49,17 @@
 }
 ```
 
-### 先上传图片，再写入条目
+### Upload an Image, Then Create an Entry
 
-1. 调用 `POST /api/inspiration/assets`
-2. 获取返回的 `publicKey` 与 `url`
-3. 在客户端内容中引用该图片 URL，或直接保留资源地址备用
+1. Call `POST /api/inspiration/assets`
+2. Read the returned `publicKey` and `url`
+3. Reference the image URL in client content, or keep the asset URL for later use
 
-### 直接内联图片
+### Inline Image Upload
 
-也可以在 `POST /api/inspiration/entries` 中直接传 `imageDataUrl`，但更适合较小图片。
+You can also send `imageDataUrl` directly in `POST /api/inspiration/entries`, but this is better suited for small images.
 
-## 4. 建议
+## 4. Recommendations
 
-- 结构化字段、状态码和示例以 `/api-reference` 为准
-- 若你在做设备端集成，建议同时阅读 [activity-reporting.md](./activity-reporting.md)
+- Treat `/api-reference` as the source of truth for structured fields, status codes, and examples.
+- If you are building a device integration, also read [activity-reporting.md](./activity-reporting.md).
