@@ -2,7 +2,7 @@
 # Local: ./deploy.sh
 #   curl -fsSL https://raw.githubusercontent.com/MoYoez/waken-wa/main/deploy.sh | bash
 #
-# Optional env: WAKEN_DEPLOY_DIR, WAKEN_WORKSPACE, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL, WAKEN_IMAGE, USE_LASTEST_VERSION
+# Optional env: WAKEN_DEPLOY_DIR, WAKEN_WORKSPACE, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL, WAKEN_IMAGE, WAKEN_DOCKERHUB_IMAGE, USE_LASTEST_VERSION
 # Default clone path: $WAKEN_WORKSPACE/$WAKEN_DIR (WAKEN_WORKSPACE defaults to ~/waken-wa-deploy).
 # After a fresh clone, registry deploy keeps only docker-compose.yml (no build: .) and .env at WAKEN_WORKSPACE.
 set -euo pipefail
@@ -11,6 +11,7 @@ WAKEN_REPO_URL="${WAKEN_REPO_URL:-https://github.com/MoYoez/waken-wa.git}"
 WAKEN_BRANCH="${WAKEN_BRANCH:-}"
 WAKEN_DIR="${WAKEN_DIR:-waken-wa}"
 WAKEN_IMAGE="${WAKEN_IMAGE:-}"
+WAKEN_DOCKERHUB_IMAGE="${WAKEN_DOCKERHUB_IMAGE:-moyoez/waken-wa}"
 
 ROOT=""
 CLONED_FRESH=false
@@ -66,7 +67,7 @@ resolve_waken_version() {
     WAKEN_REF_KIND="tag"
   fi
 
-  WAKEN_IMAGE="${WAKEN_IMAGE:-ghcr.io/moyoez/waken-wa:$WAKEN_REF}"
+  WAKEN_IMAGE="${WAKEN_IMAGE:-$WAKEN_DOCKERHUB_IMAGE:$WAKEN_REF}"
 }
 
 image_exists_locally() {

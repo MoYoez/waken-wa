@@ -73,7 +73,7 @@
 curl -fsSL https://wakeme.lemonkoi.one | sh
 ```
 
-> 脚本会自动获取当前最新的 **稳定版本 tag**，并使用对应的 `ghcr.io/moyoez/waken-wa:<tag>` 镜像启动；默认不会直接追踪 `main`，适合日常自托管使用。SQLite 数据默认保存在 Docker 卷中，详见仓库内 `docker-compose.yml`。环境变量可参照 [`.env.example`](.env.example)，或在部署目录中编辑 `.env`。
+> 脚本会自动获取当前最新的 **稳定版本 tag**，并使用对应的 `moyoez/waken-wa:<tag>` Docker Hub 镜像启动；默认不会直接追踪 `main`，适合日常自托管使用。SQLite 数据默认保存在 Docker 卷中，详见仓库内 `docker-compose.yml`。环境变量可参照 [`.env.example`](.env.example)，或在部署目录中编辑 `.env`。
 
 如果你想部署最新的 `main` 分支版本，可以显式启用：
 
@@ -85,7 +85,7 @@ USE_LASTEST_VERSION=1 curl -fsSL https://wakeme.lemonkoi.one | sh
 
 ```bash
 WAKEN_BRANCH=main curl -fsSL https://wakeme.lemonkoi.one | sh
-WAKEN_IMAGE=ghcr.io/moyoez/waken-wa:v0.40 curl -fsSL https://wakeme.lemonkoi.one | sh
+WAKEN_IMAGE=moyoez/waken-wa:v0.40 curl -fsSL https://wakeme.lemonkoi.one | sh
 WAKEN_WORKSPACE=~/waken-wa-deploy curl -fsSL https://wakeme.lemonkoi.one | sh
 ```
 
