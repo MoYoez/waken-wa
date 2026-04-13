@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Shield, Trash2, User } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -35,6 +36,7 @@ import { Label } from '@/components/ui/label'
 import type { AdminUserRow } from '@/types/admin'
 
 export function AccountSettings() {
+  const { t } = useT('admin')
   const queryClient = useQueryClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
   const [newAdminUsername, setNewAdminUsername] = useState('')
@@ -67,11 +69,11 @@ export function AccountSettings() {
       queryClient.setQueryData<AdminUserRow[]>(adminQueryKeys.users.list(), (prev) =>
         Array.isArray(prev) ? [created, ...prev] : [created],
       )
-      toast.success('管理员创建成功')
+      toast.success(t('account.createAdminSuccess'))
       await queryClient.invalidateQueries({ queryKey: adminQueryKeys.users.list() })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络异常，请重试')
+      toast.error(error instanceof Error ? error.message : t('common.networkErrorRetry'))
     },
   })
 
@@ -84,11 +86,11 @@ export function AccountSettings() {
       queryClient.setQueryData<AdminUserRow[]>(adminQueryKeys.users.list(), (prev) =>
         Array.isArray(prev) ? prev.filter((user) => user.id !== deletedId) : prev,
       )
-      toast.success('管理员已删除')
+      toast.success(t('account.adminDeleted'))
       await queryClient.invalidateQueries({ queryKey: adminQueryKeys.users.list() })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络异常，请重试')
+      toast.error(error instanceof Error ? error.message : t('common.networkErrorRetry'))
     },
   })
 
@@ -102,16 +104,16 @@ export function AccountSettings() {
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-      toast.success('密码修改成功')
+      toast.success(t('account.passwordChanged'))
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络异常，请重试')
+      toast.error(error instanceof Error ? error.message : t('common.networkErrorRetry'))
     },
   })
 
   const createAdmin = async () => {
     if (!newAdminUsername.trim() || !newAdminPassword.trim()) {
-      toast.error('用户名和密码不能为空')
+      toast.error(t('account.usernamePasswordRequired'))
       return
     }
     await createAdminMutation.mutateAsync()
@@ -119,7 +121,7 @@ export function AccountSettings() {
 
   const deleteAdmin = async (id: number) => {
     if (admins.length <= 1) {
-      toast.error('至少需要保留一个管理员账户')
+      toast.error(t('account.keepAtLeastOneAdmin'))
       return
     }
     await deleteAdminMutation.mutateAsync(id)
@@ -127,56 +129,55 @@ export function AccountSettings() {
 
   const changePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast.error('请填写所有密码字段')
+      toast.error(t('account.fillAllPasswordFields'))
       return
     }
     if (newPassword !== confirmPassword) {
-      toast.error('新密码与确认密码不一致')
+      toast.error(t('account.passwordConfirmMismatch'))
       return
     }
     if (newPassword.length < 6) {
-      toast.error('新密码长度至少 6 位')
+      toast.error(t('account.newPasswordMinLength'))
       return
     }
     await changePasswordMutation.mutateAsync()
   }
 
   if (adminsQuery.isLoading) {
-    return <div className="text-sm text-muted-foreground">加载中...</div>
+    return <div className="text-sm text-muted-foreground">{t('common.loading')}</div>
   }
 
   return (
     <div className="space-y-6">
-      {/* 修改密码 */}
       <div className="rounded-xl border bg-card p-6 space-y-4">
         <h3 className="font-semibold text-foreground flex items-center gap-2">
           <Shield className="h-4 w-4" />
-          修改当前账户密码
+          {t('account.changePasswordTitle')}
         </h3>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label>当前密码</Label>
+            <Label>{t('account.currentPassword')}</Label>
             <Input
               type="password"
-              placeholder="输入当前密码"
+              placeholder={t('account.currentPasswordPlaceholder')}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>新密码</Label>
+            <Label>{t('account.newPassword')}</Label>
             <Input
               type="password"
-              placeholder="输入新密码"
+              placeholder={t('account.newPasswordPlaceholder')}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>确认新密码</Label>
+            <Label>{t('account.confirmNewPassword')}</Label>
             <Input
               type="password"
-              placeholder="再次输入新密码"
+              placeholder={t('account.confirmNewPasswordPlaceholder')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
@@ -191,15 +192,16 @@ export function AccountSettings() {
             !confirmPassword
           }
         >
-          {changePasswordMutation.isPending ? '修改中...' : '修改密码'}
+          {changePasswordMutation.isPending
+            ? t('account.changingPassword')
+            : t('account.changePassword')}
         </Button>
       </div>
 
-      {/* 管理员列表 */}
       <div className="rounded-xl border bg-card p-6 space-y-4">
         <h3 className="font-semibold text-foreground flex items-center gap-2">
           <User className="h-4 w-4" />
-          管理员账号
+          {t('account.adminAccounts')}
         </h3>
         <div className="rounded-md border divide-y">
           <AnimatePresence initial={false}>
@@ -213,7 +215,7 @@ export function AccountSettings() {
                 exit="exit"
                 transition={sectionTransition}
               >
-                暂无管理员
+                {t('account.noAdmins')}
               </motion.p>
             ) : (
               admins.map((u) => (
@@ -230,7 +232,8 @@ export function AccountSettings() {
                 <div>
                   <p className="text-sm font-medium text-foreground">{u.username}</p>
                   <p className="text-xs text-muted-foreground">
-                    创建于 <FormattedTime date={u.createdAt} pattern="yyyy-MM-dd HH:mm:ss" />
+                    {t('account.createdAt')}{' '}
+                    <FormattedTime date={u.createdAt} pattern="yyyy-MM-dd HH:mm:ss" />
                   </p>
                 </div>
                 <AlertDialog>
@@ -246,15 +249,15 @@ export function AccountSettings() {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>确认删除管理员</AlertDialogTitle>
+                      <AlertDialogTitle>{t('account.confirmDeleteAdminTitle')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        确定要删除管理员「{u.username}」吗？此操作不可恢复。
+                        {t('account.confirmDeleteAdminDescription', { username: u.username })}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>取消</AlertDialogCancel>
+                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                       <AlertDialogAction onClick={() => void deleteAdmin(u.id)}>
-                        删除
+                        {t('common.delete')}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -266,23 +269,22 @@ export function AccountSettings() {
         </div>
       </div>
 
-      {/* 新增管理员 */}
       <div className="rounded-xl border bg-card p-6 space-y-4">
-        <h3 className="font-semibold text-foreground">新增管理员</h3>
+        <h3 className="font-semibold text-foreground">{t('account.addAdminTitle')}</h3>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label>用户名</Label>
+            <Label>{t('account.username')}</Label>
             <Input
-              placeholder="新管理员用户名"
+              placeholder={t('account.newAdminUsernamePlaceholder')}
               value={newAdminUsername}
               onChange={(e) => setNewAdminUsername(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>密码</Label>
+            <Label>{t('account.password')}</Label>
             <Input
               type="password"
-              placeholder="新管理员密码"
+              placeholder={t('account.newAdminPasswordPlaceholder')}
               value={newAdminPassword}
               onChange={(e) => setNewAdminPassword(e.target.value)}
             />
@@ -295,7 +297,7 @@ export function AccountSettings() {
               }
               className="w-full sm:w-auto"
             >
-              {createAdminMutation.isPending ? '创建中...' : '新增管理员'}
+              {createAdminMutation.isPending ? t('account.creatingAdmin') : t('account.addAdmin')}
             </Button>
           </div>
         </div>

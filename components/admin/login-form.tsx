@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useT } from 'next-i18next/client'
 import { useState } from 'react'
 
 import { loginAdminWithCaptcha } from '@/components/admin/admin-query-mutations'
@@ -26,6 +27,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: LoginFormProps) {
+  const { t } = useT('auth')
   const router = useRouter()
   const searchParams = useSearchParams()
   const [username, setUsername] = useState('')
@@ -40,7 +42,7 @@ export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: L
     setError('')
 
     if (hcaptchaEnabled && !captcha.token) {
-      setError('请先完成人机验证')
+      setError(t('login.captchaRequired'))
       return
     }
 
@@ -51,12 +53,13 @@ export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: L
         username,
         password,
         hcaptchaToken: captcha.token || undefined,
+        fallbackErrorMessage: t('login.failed'),
       })
       const next = safeNextPath(searchParams.get('next'))
       router.push(next)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error, please try again')
+      setError(err instanceof Error ? err.message : t('login.networkError'))
       captcha.reset()
     } finally {
       setLoading(false)
@@ -67,14 +70,14 @@ export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: L
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <h1 className="text-2xl font-light tracking-widest text-foreground">admin</h1>
-          <p className="text-xs text-muted-foreground mt-2">manage activity records</p>
+          <h1 className="text-2xl font-light tracking-widest text-foreground">{t('login.title')}</h1>
+          <p className="text-xs text-muted-foreground mt-2">{t('login.subtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <label htmlFor="username" className="text-xs text-muted-foreground uppercase tracking-wider">
-              Username
+              {t('login.usernameLabel')}
             </label>
             <input
               id="username"
@@ -90,7 +93,7 @@ export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: L
 
           <div className="space-y-2">
             <label htmlFor="password" className="text-xs text-muted-foreground uppercase tracking-wider">
-              Password
+              {t('login.passwordLabel')}
             </label>
             <input
               id="password"
@@ -117,7 +120,7 @@ export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: L
             disabled={loading}
             className="w-full px-4 py-2 border border-border rounded-sm bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-light text-sm"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? t('login.signingIn') : t('login.signIn')}
           </button>
         </form>
       </div>

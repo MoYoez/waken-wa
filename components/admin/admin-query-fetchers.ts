@@ -7,6 +7,7 @@ import {
   readJson,
   type SuccessResponse,
 } from '@/components/admin/admin-query-shared'
+import { tAdminClient } from '@/lib/i18n/admin-client'
 import type { ActivityFeedData, ActivityFeedItem } from '@/types/activity'
 import type {
   AdminDeviceItem,
@@ -22,7 +23,9 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   const res = await fetch('/api/admin/users')
   const data = await readJson<SuccessResponse<AdminUserRow[]>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || `加载管理员失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadAdminsFailed', { status: res.status }),
+    )
   }
   return Array.isArray(data.data) ? data.data : []
 }
@@ -39,7 +42,9 @@ export async function fetchAdminDeviceSummaries(input?: {
   const res = await fetch(query ? `/api/admin/devices?${query}` : '/api/admin/devices')
   const data = await readJson<DevicesResponse>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || `加载设备列表失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadDeviceListFailed', { status: res.status }),
+    )
   }
 
   return Array.isArray(data.data)
@@ -70,7 +75,9 @@ export async function fetchAdminDevicesPage(input: {
     SuccessResponse<AdminDeviceItem[]> & { pagination?: PaginationResponse }
   >(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || `加载设备失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadDevicesFailed', { status: res.status }),
+    )
   }
   return {
     items: Array.isArray(data.data) ? data.data : [],
@@ -82,7 +89,9 @@ export async function fetchAdminInspirationOrphanAssets(): Promise<OrphanAssetRo
   const res = await fetch('/api/admin/inspiration/orphan-assets')
   const data = await readJson<SuccessResponse<OrphanAssetRow[]>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || `读取孤儿图片失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadOrphanImagesFailed', { status: res.status }),
+    )
   }
   return Array.isArray(data.data) ? data.data : []
 }
@@ -91,7 +100,9 @@ export async function fetchAdminTokenOptions(): Promise<AdminTokenOption[]> {
   const res = await fetch('/api/admin/tokens')
   const data = await readJson<SuccessResponse<AdminTokenOption[]>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || `加载 Token 失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadTokensFailed', { status: res.status }),
+    )
   }
   return Array.isArray(data.data) ? data.data : []
 }
@@ -109,7 +120,9 @@ export async function fetchAdminTokenPage(input: {
     SuccessResponse<ApiTokenListRow[]> & { pagination?: PaginationResponse }
   >(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || `加载 Token 失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadTokensFailed', { status: res.status }),
+    )
   }
   const rows = Array.isArray(data.data) ? data.data : []
   return {
@@ -122,7 +135,9 @@ export async function fetchAdminSettings(): Promise<Record<string, any>> {
   const res = await fetch('/api/admin/settings')
   const data = await readJson<SuccessResponse<Record<string, any>>>(res)
   if (!res.ok || !data?.success || !data.data) {
-    throw new Error(data?.error || `加载站点配置失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
+    )
   }
   return data.data
 }
@@ -131,7 +146,9 @@ export async function fetchAdminSkills(): Promise<AdminSkillsData> {
   const res = await fetch('/api/admin/skills')
   const data = await readJson<SuccessResponse<AdminSkillsData>>(res)
   if (!res.ok || !data?.success || !data.data) {
-    throw new Error(data?.error || `加载 Skills 配置失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadSkillsFailed', { status: res.status }),
+    )
   }
   return data.data
 }
@@ -140,7 +157,9 @@ export async function exportAdminSettings(): Promise<string> {
   const res = await fetch('/api/admin/settings/export')
   const data = await readJson<SuccessResponse<{ encoded?: string }>>(res)
   if (!res.ok || !data?.success || !data.data?.encoded) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '导出失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('query.exportFailed'),
+    )
   }
   return data.data.encoded
 }
@@ -149,7 +168,9 @@ export async function fetchActivityFeed(): Promise<ActivityFeedData> {
   const res = await fetch('/api/activity', { cache: 'no-store' })
   const data = await readJson<SuccessResponse<ActivityFeedData>>(res)
   if (!res.ok || !data?.success || !data.data) {
-    throw new Error(data?.error || `读取活动流失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadActivityFeedFailed', { status: res.status }),
+    )
   }
   return data.data
 }
@@ -158,7 +179,9 @@ export async function fetchPublicActivityFeed(): Promise<ActivityFeedData> {
   const res = await fetch('/api/activity?public=1')
   const data = await readJson<SuccessResponse<ActivityFeedData>>(res)
   if (!res.ok || !data?.success || !data.data) {
-    throw new Error(data?.error || `活动数据加载失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadPublicActivityFeedFailed', { status: res.status }),
+    )
   }
   return data.data
 }
@@ -182,7 +205,9 @@ export async function fetchActivityHistoryApps(input?: {
   )
   const data = await readJson<SuccessResponse<Array<{ processName?: unknown }>>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || `加载历史应用失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadHistoryAppsFailed', { status: res.status }),
+    )
   }
   return Array.isArray(data.data)
     ? data.data
@@ -204,7 +229,9 @@ export async function fetchActivityHistoryPlaySources(input?: {
   )
   const data = await readJson<SuccessResponse<Array<{ playSource?: unknown }>>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || `加载历史媒体来源失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadHistoryPlaySourcesFailed', { status: res.status }),
+    )
   }
   return Array.isArray(data.data)
     ? data.data
@@ -217,7 +244,9 @@ export async function exportAdminActivityApps(): Promise<unknown> {
   const res = await fetch('/api/admin/activity/apps-export')
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success || typeof data.data === 'undefined') {
-    throw new Error(typeof data?.error === 'string' ? data.error : '导出失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('query.exportFailed'),
+    )
   }
   return data.data
 }
@@ -244,7 +273,9 @@ export async function fetchAdminInspirationEntries(input: {
     }
   >(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || `加载灵感记录失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('query.loadInspirationEntriesFailed', { status: res.status }),
+    )
   }
   return {
     entries: Array.isArray(data.data) ? data.data : [],

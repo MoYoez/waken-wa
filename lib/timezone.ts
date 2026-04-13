@@ -8,21 +8,24 @@ const FORMATTER_CACHE = new Map<string, Intl.DateTimeFormat>()
 
 /** 常用时区列表 */
 export const TIMEZONE_OPTIONS = [
-  { value: 'Asia/Shanghai', label: '中国标准时间 (GMT+8)' },
-  { value: 'Asia/Tokyo', label: '日本标准时间 (GMT+9)' },
-  { value: 'Asia/Seoul', label: '韩国标准时间 (GMT+9)' },
-  { value: 'Asia/Singapore', label: '新加坡时间 (GMT+8)' },
-  { value: 'Asia/Hong_Kong', label: '香港时间 (GMT+8)' },
-  { value: 'Asia/Taipei', label: '台北时间 (GMT+8)' },
-  { value: 'Europe/London', label: '伦敦时间 (GMT+0/+1)' },
-  { value: 'Europe/Paris', label: '巴黎时间 (GMT+1/+2)' },
-  { value: 'Europe/Berlin', label: '柏林时间 (GMT+1/+2)' },
-  { value: 'America/New_York', label: '纽约时间 (GMT-5/-4)' },
-  { value: 'America/Los_Angeles', label: '洛杉矶时间 (GMT-8/-7)' },
-  { value: 'America/Chicago', label: '芝加哥时间 (GMT-6/-5)' },
-  { value: 'Australia/Sydney', label: '悉尼时间 (GMT+10/+11)' },
-  { value: 'Pacific/Auckland', label: '奥克兰时间 (GMT+12/+13)' },
-  { value: 'UTC', label: '协调世界时 (UTC)' },
+  { value: 'Asia/Shanghai', labelKey: 'webSettingsActivity.timezones.asiaShanghai' },
+  { value: 'Asia/Tokyo', labelKey: 'webSettingsActivity.timezones.asiaTokyo' },
+  { value: 'Asia/Seoul', labelKey: 'webSettingsActivity.timezones.asiaSeoul' },
+  { value: 'Asia/Singapore', labelKey: 'webSettingsActivity.timezones.asiaSingapore' },
+  { value: 'Asia/Hong_Kong', labelKey: 'webSettingsActivity.timezones.asiaHongKong' },
+  { value: 'Asia/Taipei', labelKey: 'webSettingsActivity.timezones.asiaTaipei' },
+  { value: 'Europe/London', labelKey: 'webSettingsActivity.timezones.europeLondon' },
+  { value: 'Europe/Paris', labelKey: 'webSettingsActivity.timezones.europeParis' },
+  { value: 'Europe/Berlin', labelKey: 'webSettingsActivity.timezones.europeBerlin' },
+  { value: 'America/New_York', labelKey: 'webSettingsActivity.timezones.americaNewYork' },
+  {
+    value: 'America/Los_Angeles',
+    labelKey: 'webSettingsActivity.timezones.americaLosAngeles',
+  },
+  { value: 'America/Chicago', labelKey: 'webSettingsActivity.timezones.americaChicago' },
+  { value: 'Australia/Sydney', labelKey: 'webSettingsActivity.timezones.australiaSydney' },
+  { value: 'Pacific/Auckland', labelKey: 'webSettingsActivity.timezones.pacificAuckland' },
+  { value: 'UTC', labelKey: 'webSettingsActivity.timezones.utc' },
 ] as const
 
 /**

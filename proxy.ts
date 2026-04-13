@@ -1,5 +1,19 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
+import i18nConfig from '@/i18n.config'
+import {
+  ADMIN_LANGUAGE_COOKIE_NAME,
+  getAdminLanguageFromCookie,
+  getLanguageFromAcceptLanguage,
+  getLanguageFromAcceptLanguageOrNull,
+  getLanguageFromQueryParam,
+  getLocaleLanguageFromCookie,
+  I18N_LANGUAGE_HEADER_NAME,
+  LEGACY_ADMIN_LANGUAGE_COOKIE_NAME,
+  NEXT_LOCALE_COOKIE_NAME,
+  PUBLIC_LANGUAGE_QUERY_PARAM_NAME,
+  shouldUseAdminLanguage,
+} from '@/lib/i18n/request-locale'
 import { isRateLimited } from '@/lib/rate-limit'
 
 const RATE_LIMIT_WINDOW_MS = 60_000
@@ -73,6 +87,47 @@ function addSecurityHeaders(response: NextResponse, pathname?: string): NextResp
   return response
 }
 
+function resolveRequestLanguage(request: NextRequest): string {
+  const { pathname } = request.nextUrl
+  if (shouldUseAdminLanguage(pathname)) {
+    const fromAdminCookie = getAdminLanguageFromCookie(
+      request.cookies.get(ADMIN_LANGUAGE_COOKIE_NAME)?.value,
+      request.cookies.get(LEGACY_ADMIN_LANGUAGE_COOKIE_NAME)?.value,
+    )
+    if (fromAdminCookie) return fromAdminCookie
+  }
+
+  const fromQuery = getLanguageFromQueryParam(
+    request.nextUrl.searchParams.get(PUBLIC_LANGUAGE_QUERY_PARAM_NAME),
+  )
+  if (fromQuery) return fromQuery
+
+  const referer = request.headers.get('referer')
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer)
+      const fromRefererQuery = getLanguageFromQueryParam(
+        refererUrl.searchParams.get(PUBLIC_LANGUAGE_QUERY_PARAM_NAME),
+      )
+      if (fromRefererQuery) return fromRefererQuery
+    } catch {
+      // Ignore malformed referer headers.
+    }
+  }
+
+  const fromAcceptLanguage = getLanguageFromAcceptLanguageOrNull(
+    request.headers.get('accept-language'),
+  )
+  if (fromAcceptLanguage) return fromAcceptLanguage
+
+  const fromNextLocale = getLocaleLanguageFromCookie(
+    request.cookies.get(NEXT_LOCALE_COOKIE_NAME)?.value,
+  )
+  if (fromNextLocale) return fromNextLocale
+
+  return getLanguageFromAcceptLanguage(request.headers.get('accept-language'))
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -109,7 +164,29 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return addSecurityHeaders(NextResponse.next(), pathname)
+  const headers = new Headers(request.headers)
+  headers.set(I18N_LANGUAGE_HEADER_NAME, resolveRequestLanguage(request))
+
+  const response = NextResponse.next({
+    request: {
+      headers,
+    },
+  })
+
+  if (!shouldUseAdminLanguage(pathname)) {
+    const publicLanguage = getLanguageFromQueryParam(
+      request.nextUrl.searchParams.get(PUBLIC_LANGUAGE_QUERY_PARAM_NAME),
+    )
+    if (publicLanguage) {
+      response.cookies.set(NEXT_LOCALE_COOKIE_NAME, publicLanguage, {
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365,
+      })
+    }
+  }
+
+  return addSecurityHeaders(response, pathname)
 }
 
 export const config = {

@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-query'
 import { Copy, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -60,25 +61,17 @@ import { toastSwitchLabel } from '@/lib/admin-switch-toast'
 import { cn } from '@/lib/utils'
 import type { AdminDeviceItem, AdminTokenOption } from '@/types'
 
-const DEVICE_STATUS_LABEL: Record<AdminDeviceItem['status'], string> = {
-  active: '已启用',
-  pending: '待审核',
-  revoked: '已撤销',
-}
-
-function deviceStatusLabel(status: AdminDeviceItem['status']): string {
-  return DEVICE_STATUS_LABEL[status]
-}
-
 function DeviceListItemActions({
   item,
   variant,
+  t,
   onCopyHash,
   onToggleActive,
   onReview,
 }: {
   item: AdminDeviceItem
   variant: 'mobile' | 'desktop'
+  t: (key: string, values?: Record<string, string | number>) => string
   onCopyHash: () => void
   onToggleActive: () => void
   onReview: () => void
@@ -95,15 +88,15 @@ function DeviceListItemActions({
             onClick={onCopyHash}
           >
             <Copy className="h-4 w-4 shrink-0" />
-            <span className="truncate text-left">复制身份牌</span>
+            <span className="truncate text-left">{t('devices.copyIdentity')}</span>
           </Button>
           <Button type="button" variant="outline" size="sm" className="min-h-9" onClick={onToggleActive}>
-            {item.status === 'active' ? '停用' : '启用'}
+            {item.status === 'active' ? t('devices.disable') : t('devices.enable')}
           </Button>
         </div>
         {item.status === 'pending' ? (
           <Button type="button" variant="outline" size="sm" className="min-h-9 w-full" onClick={onReview}>
-            审核
+            {t('devices.review')}
           </Button>
         ) : null}
       </div>
@@ -114,14 +107,14 @@ function DeviceListItemActions({
     <div className="flex flex-wrap items-center justify-end gap-2">
       <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={onCopyHash}>
         <Copy className="h-4 w-4 shrink-0" />
-        复制身份牌
+        {t('devices.copyIdentity')}
       </Button>
       <Button type="button" variant="outline" size="sm" className="h-8" onClick={onToggleActive}>
-        {item.status === 'active' ? '停用' : '启用'}
+        {item.status === 'active' ? t('devices.disable') : t('devices.enable')}
       </Button>
       {item.status === 'pending' ? (
         <Button type="button" variant="outline" size="sm" className="h-8" onClick={onReview}>
-          审核
+          {t('devices.review')}
         </Button>
       ) : null}
     </div>
@@ -140,6 +133,7 @@ export function DeviceManager({
   initialHashKey?: string
   highlightHashKey?: string
 } = {}) {
+  const { t } = useT('admin')
   const queryClient = useQueryClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
   const [page, setPage] = useState(0)
@@ -184,6 +178,7 @@ export function DeviceManager({
     exitY: 8,
     scale: 0.996,
   })
+  const deviceStatusLabel = (status: AdminDeviceItem['status']) => t(`devices.status.${status}`)
 
   useEffect(() => {
     if (page <= safePage) return
@@ -198,7 +193,7 @@ export function DeviceManager({
       await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
       await devicesQuery.refetch()
     } catch {
-      toast.error('刷新失败，请重试')
+      toast.error(t('devices.refreshFailed'))
     }
   }
 
@@ -223,11 +218,15 @@ export function DeviceManager({
       setNewTokenId('')
       setNewHashKey('')
       setPage(0)
-      toast.success(createdWithToken ? '设备已创建并绑定 Token' : '设备已创建，当前为待审核（未绑定 Token）')
+      toast.success(
+        createdWithToken
+          ? t('devices.deviceCreatedWithToken')
+          : t('devices.deviceCreatedPending'),
+      )
       await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -245,10 +244,10 @@ export function DeviceManager({
     onSuccess: async ({ id, nextStatus }) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
       setReviewDeviceId((deviceId) => (deviceId === id ? null : deviceId))
-      toast.success(`设备状态已更新为「${DEVICE_STATUS_LABEL[nextStatus]}」`)
+      toast.success(t('devices.statusUpdated', { status: deviceStatusLabel(nextStatus) }))
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -265,10 +264,10 @@ export function DeviceManager({
     },
     onSuccess: async ({ showSteamNowPlaying }) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
-      toastSwitchLabel('状态卡片显示 Steam 正在游玩', showSteamNowPlaying)
+      toastSwitchLabel(t('devices.showSteamTitle'), showSteamNowPlaying)
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -280,13 +279,13 @@ export function DeviceManager({
     onSuccess: async ({ apiTokenId }) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
       if (apiTokenId == null) {
-        toast.success('已解除绑定，设备状态已转为待审核')
+        toast.success(t('devices.bindingRemovedPending'))
       } else {
-        toast.success('设备 Token 绑定已更新')
+        toast.success(t('devices.bindingUpdated'))
       }
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -303,10 +302,10 @@ export function DeviceManager({
     },
     onSuccess: async ({ pinToTop }) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
-      toastSwitchLabel('设备置顶显示', pinToTop)
+      toastSwitchLabel(t('devices.pinToTopTitle'), pinToTop)
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -316,10 +315,10 @@ export function DeviceManager({
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
-      toast.success('设备已删除')
+      toast.success(t('devices.deviceDeleted'))
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -367,7 +366,7 @@ export function DeviceManager({
       return
     }
     if (!item.apiToken) {
-      toast.warning('该设备未绑定 Token，请先绑定后再启用')
+      toast.warning(t('devices.deviceNeedsToken'))
       openReview(item)
       return
     }
@@ -377,9 +376,9 @@ export function DeviceManager({
   const copyHash = async (hash: string) => {
     try {
       await navigator.clipboard.writeText(hash)
-      toast.success('设备身份牌已复制')
+      toast.success(t('devices.identityCopied'))
     } catch {
-      toast.error('复制失败，请检查浏览器权限')
+      toast.error(t('common.copyFailedBrowserPermission'))
     }
   }
 
@@ -397,7 +396,7 @@ export function DeviceManager({
           setReviewTokenId(match.apiToken?.id ? String(match.apiToken.id) : '')
         }, 0)
       } else {
-        toast.info('该设备已审核')
+        toast.info(t('devices.deviceAlreadyReviewed'))
       }
       return
     }
@@ -405,77 +404,83 @@ export function DeviceManager({
     if (q.trim() !== h) return
 
     highlightHandledRef.current = true
-    toast.warning('未找到该设备身份牌对应的设备')
-  }, [highlightHashKey, loading, items, q])
+    toast.warning(t('devices.deviceNotFound'))
+  }, [highlightHashKey, loading, items, q, t])
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border bg-card p-6 space-y-4">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="new-device-name">设备显示名</Label>
+      <div className="rounded-xl border bg-card p-4 space-y-4 sm:p-6">
+        <div className="grid min-w-0 gap-4 sm:grid-cols-3">
+          <div className="min-w-0 space-y-2 sm:col-span-2">
+            <Label htmlFor="new-device-name">{t('devices.displayName')}</Label>
             <Input
               id="new-device-name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="例如：Office-Laptop"
+              placeholder={t('devices.displayNamePlaceholder')}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="new-device-token">绑定 Token（建议）</Label>
+          <div className="min-w-0 space-y-2">
+            <Label htmlFor="new-device-token">{t('devices.bindTokenRecommended')}</Label>
             <Select
               value={newTokenId || 'none'}
               onValueChange={(v) => setNewTokenId(v === 'none' ? '' : v)}
             >
               <SelectTrigger id="new-device-token" className="w-full">
-                <SelectValue placeholder="先选择 Token" />
+                <SelectValue placeholder={t('devices.selectTokenFirst')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">暂不绑定（将进入待审核）</SelectItem>
-                {tokens.map((t) => (
-                  <SelectItem key={t.id} value={String(t.id)}>
-                    {t.name}
-                    {!t.isActive ? ' (disabled)' : ''}
+                <SelectItem value="none">{t('devices.bindLaterPending')}</SelectItem>
+                {tokens.map((tokenOption) => (
+                  <SelectItem key={tokenOption.id} value={String(tokenOption.id)}>
+                    {tokenOption.name}
+                    {!tokenOption.isActive ? t('devices.disabledTokenSuffix') : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="new-device-hash">自定义设备身份牌（可选）</Label>
+        <div className="min-w-0 space-y-2">
+          <Label htmlFor="new-device-hash">{t('devices.customIdentityOptional')}</Label>
           <Input
             id="new-device-hash"
             value={newHashKey}
             onChange={(e) => setNewHashKey(e.target.value)}
-            placeholder="留空则系统自动生成；可与「快速添加活动」中的设备身份牌一致"
+            placeholder={t('devices.customIdentityPlaceholder')}
             className="font-mono text-xs"
           />
-          <p className="text-xs text-muted-foreground">
-            8～128 字符，须唯一。可与概览中「生成随机 Key」得到的设备身份牌一致后在此粘贴创建设备。
+          <p className="break-words text-xs text-muted-foreground">
+            {t('devices.customIdentityHint')}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Button
             type="button"
+            className="w-full sm:w-auto"
             onClick={() => void createDevice()}
             disabled={createDeviceMutation.isPending || !newName.trim()}
           >
             <Plus className="h-4 w-4 mr-1" />
-            {createDeviceMutation.isPending ? '创建中...' : '新增设备'}
+            {createDeviceMutation.isPending ? t('devices.creating') : t('devices.addDevice')}
           </Button>
-          <Button type="button" variant="outline" onClick={() => void refreshDevices()}>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => void refreshDevices()}
+          >
             <RefreshCw className="h-4 w-4 mr-1" />
-            {refreshing ? '刷新中...' : '刷新'}
+            {refreshing ? t('common.refreshing') : t('common.refresh')}
           </Button>
         </div>
       </div>
 
       <div className="rounded-xl border bg-card p-4 sm:p-6 space-y-4">
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="space-y-2 flex-1 min-w-[220px]">
-            <Label htmlFor="device-q">搜索</Label>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Label htmlFor="device-q">{t('devices.search')}</Label>
             <Input
               id="device-q"
               value={q}
@@ -483,11 +488,11 @@ export function DeviceManager({
                 setQ(e.target.value)
                 setPage(0)
               }}
-              placeholder="按显示名或设备身份牌搜索"
+              placeholder={t('devices.searchPlaceholder')}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="device-status">状态</Label>
+          <div className="w-full space-y-2 sm:w-auto">
+            <Label htmlFor="device-status">{t('devices.statusLabel')}</Label>
             <Select
               value={status || 'all'}
               onValueChange={(v) => {
@@ -495,14 +500,17 @@ export function DeviceManager({
                 setPage(0)
               }}
             >
-              <SelectTrigger id="device-status" className="w-full min-w-[10rem] sm:w-[11rem]">
-                <SelectValue placeholder="全部" />
+              <SelectTrigger
+                id="device-status"
+                className="w-full min-w-0 sm:w-[11rem] sm:min-w-[11rem]"
+              >
+                <SelectValue placeholder={t('devices.all')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="active">{DEVICE_STATUS_LABEL.active}</SelectItem>
-                <SelectItem value="pending">{DEVICE_STATUS_LABEL.pending}</SelectItem>
-                <SelectItem value="revoked">{DEVICE_STATUS_LABEL.revoked}</SelectItem>
+                <SelectItem value="all">{t('devices.all')}</SelectItem>
+                <SelectItem value="active">{deviceStatusLabel('active')}</SelectItem>
+                <SelectItem value="pending">{deviceStatusLabel('pending')}</SelectItem>
+                <SelectItem value="revoked">{deviceStatusLabel('revoked')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -519,7 +527,7 @@ export function DeviceManager({
               exit="exit"
               transition={sectionTransition}
             >
-              加载中...
+              {t('common.loading')}
             </motion.p>
           ) : items.length === 0 && total > 0 ? (
             <motion.p
@@ -531,7 +539,7 @@ export function DeviceManager({
               exit="exit"
               transition={sectionTransition}
             >
-              正在同步页码…
+              {t('devices.syncingPage')}
             </motion.p>
           ) : items.length === 0 ? (
             <motion.p
@@ -543,7 +551,7 @@ export function DeviceManager({
               exit="exit"
               transition={sectionTransition}
             >
-              暂无设备
+              {t('devices.noDevices')}
             </motion.p>
           ) : (
             <motion.div
@@ -578,25 +586,25 @@ export function DeviceManager({
                         variant="ghost"
                         size="icon"
                         className="pointer-events-auto h-8 w-8 text-muted-foreground hover:text-destructive"
-                        aria-label="删除设备"
+                        aria-label={t('devices.deleteDeviceAriaLabel')}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>确认删除设备</AlertDialogTitle>
+                        <AlertDialogTitle>{t('devices.confirmDeleteDeviceTitle')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          删除后该设备身份牌将无法继续上报活动。
+                          {t('devices.confirmDeleteDeviceDescription')}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => void removeDevice(item.id)}
                           disabled={removeDeviceMutation.isPending}
                         >
-                          删除
+                          {t('common.delete')}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -607,10 +615,12 @@ export function DeviceManager({
                     <div className="min-w-0 space-y-1">
                       <p className="font-medium break-words">{item.displayName}</p>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        <span className="block sm:inline">状态: {deviceStatusLabel(item.status)}</span>
+                        <span className="block sm:inline">
+                          {t('devices.deviceStatus', { status: deviceStatusLabel(item.status) })}
+                        </span>
                         <span className="hidden sm:inline">{' | '}</span>
                         <span className="mt-0.5 block sm:mt-0 sm:inline">
-                          最后在线:{' '}
+                          {t('devices.lastOnline')}{' '}
                           <FormattedTime
                             date={item.lastSeenAt}
                             pattern="yyyy-MM-dd HH:mm:ss"
@@ -623,6 +633,7 @@ export function DeviceManager({
                       <DeviceListItemActions
                         item={item}
                         variant="mobile"
+                        t={t}
                         onCopyHash={() => void copyHash(item.generatedHashKey)}
                         onToggleActive={() => void handleToggleActive(item)}
                         onReview={() => openReview(item)}
@@ -630,22 +641,25 @@ export function DeviceManager({
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    <span className="font-sans">设备身份牌 </span>
+                    <span className="font-sans">{t('devices.identityLabel')} </span>
                     <span className="font-mono break-all">{item.generatedHashKey}</span>
                   </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <p className="text-xs text-muted-foreground min-w-0 sm:flex-1">
-                      {item.apiToken ? `Token: ${item.apiToken.name}` : 'Token: 未绑定（需审核）'}
+                      {item.apiToken
+                        ? t('devices.tokenLabel', { name: item.apiToken.name })
+                        : t('devices.tokenUnboundNeedsReview')}
                     </p>
                     {!item.apiToken ? (
                       <p className="text-[11px] text-amber-600 dark:text-amber-300 sm:flex-1">
-                        未绑定 Token 的设备不能启用，上报将进入待审核。
+                        {t('devices.unboundCannotEnable')}
                       </p>
                     ) : null}
                     <div className="hidden sm:block sm:shrink-0">
                       <DeviceListItemActions
                         item={item}
                         variant="desktop"
+                        t={t}
                         onCopyHash={() => void copyHash(item.generatedHashKey)}
                         onToggleActive={() => void handleToggleActive(item)}
                         onReview={() => openReview(item)}
@@ -655,10 +669,10 @@ export function DeviceManager({
                   <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-3">
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <Label htmlFor={`pin-to-top-${item.id}`} className="text-xs font-medium cursor-pointer">
-                        设备置顶显示
+                        {t('devices.pinToTopTitle')}
                       </Label>
                       <p className="text-[11px] text-muted-foreground leading-snug">
-                        开启后该设备会固定排在首页状态卡片顶部，优先于其他设备的实时刷新顺序。
+                        {t('devices.pinToTopDescription')}
                       </p>
                     </div>
                     <Switch
@@ -672,10 +686,10 @@ export function DeviceManager({
                   <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-3">
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <Label htmlFor={`steam-card-${item.id}`} className="text-xs font-medium cursor-pointer">
-                        状态卡片显示 Steam 正在游玩
+                        {t('devices.showSteamTitle')}
                       </Label>
                       <p className="text-[11px] text-muted-foreground leading-snug">
-                        使用网站设置中的全站 Steam ID；当本设备在线且 Steam 上报「正在游戏」时，主页状态卡片会在媒体信息旁显示当前游戏。
+                        {t('devices.showSteamDescription')}
                       </p>
                     </div>
                     <Switch
@@ -695,40 +709,44 @@ export function DeviceManager({
         </AnimatePresence>
 
         {total > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-            <span>
-              共 {total} 条
+          <div className="flex flex-col gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <span className="min-w-0 break-words">
+              {t('common.countSummary', { total })}
               {items.length > 0 ? (
                 <>
                   {' '}
-                  · 本页 {safePage * DEVICE_LIST_PAGE_SIZE + 1}–{safePage * DEVICE_LIST_PAGE_SIZE + items.length}
+                  ·{' '}
+                  {t('common.pageSummary', {
+                    start: safePage * DEVICE_LIST_PAGE_SIZE + 1,
+                    end: safePage * DEVICE_LIST_PAGE_SIZE + items.length,
+                  })}
                 </>
               ) : null}
             </span>
             {total > DEVICE_LIST_PAGE_SIZE ? (
-              <div className="flex items-center gap-2">
+              <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:flex sm:w-auto sm:items-center">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8"
+                  className="h-8 w-full sm:w-auto"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={safePage <= 0}
                 >
-                  上一页
+                  {t('common.previousPage')}
                 </Button>
-                <span className="tabular-nums text-sm">
+                <span className="text-center tabular-nums text-sm">
                   {safePage + 1} / {totalPages}
                 </span>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8"
+                  className="h-8 w-full sm:w-auto"
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={safePage >= totalPages - 1}
                 >
-                  下一页
+                  {t('common.nextPage')}
                 </Button>
               </div>
             ) : null}
@@ -749,27 +767,26 @@ export function DeviceManager({
           {reviewDevice ? (
             <>
               <DialogHeader>
-                <DialogTitle>设备审核</DialogTitle>
+                <DialogTitle>{t('devices.reviewTitle')}</DialogTitle>
                 <DialogDescription>
-                  确认是否同意该设备接入。通过后可正常上报活动；拒绝将标记为不可用。
-                  若是更换 Token 绑定场景，旧 Token 会先解绑，待你确认后切换到新 Token。
+                  {t('devices.reviewDescription')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2 text-sm">
                 <p>
-                  <span className="text-muted-foreground">显示名：</span>
+                  <span className="text-muted-foreground">{t('devices.fieldDisplayName')}</span>
                   {reviewDevice.displayName}
                 </p>
                 <p className="text-xs">
-                  <span className="text-muted-foreground">设备身份牌：</span>
+                  <span className="text-muted-foreground">{t('devices.fieldIdentity')}</span>
                   <span className="font-mono break-all">{reviewDevice.generatedHashKey}</span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">状态：</span>
+                  <span className="text-muted-foreground">{t('devices.fieldStatus')}</span>
                   {deviceStatusLabel(reviewDevice.status)}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">最后在线：</span>
+                  <span className="text-muted-foreground">{t('devices.fieldLastOnline')}</span>
                   <FormattedTime
                     date={reviewDevice.lastSeenAt}
                     pattern="yyyy-MM-dd HH:mm:ss"
@@ -777,30 +794,30 @@ export function DeviceManager({
                   />
                 </p>
                 <p>
-                  <span className="text-muted-foreground">绑定 Token：</span>
-                  {reviewDevice.apiToken ? reviewDevice.apiToken.name : '未绑定'}
+                  <span className="text-muted-foreground">{t('devices.fieldToken')}</span>
+                  {reviewDevice.apiToken ? reviewDevice.apiToken.name : t('devices.tokenUnbound')}
                 </p>
                 {reviewDevice.apiToken ? (
                   <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-800 dark:text-amber-200">
-                    检测到更换绑定请求：旧 Token 已解绑，审核通过后将切换为当前 Token（{reviewDevice.apiToken.name}）。
+                    {t('devices.bindingChangeDetected', { name: reviewDevice.apiToken.name })}
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Label htmlFor="review-device-token">审核时绑定 Token</Label>
-                    <div className="flex gap-2">
+                    <Label htmlFor="review-device-token">{t('devices.reviewBindToken')}</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <Select
                         value={reviewTokenId || 'none'}
                         onValueChange={(v) => setReviewTokenId(v === 'none' ? '' : v)}
                       >
                         <SelectTrigger id="review-device-token" className="flex-1">
-                          <SelectValue placeholder="选择 Token" />
+                          <SelectValue placeholder={t('devices.selectToken')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">不绑定</SelectItem>
-                          {tokens.map((t) => (
-                            <SelectItem key={t.id} value={String(t.id)}>
-                              {t.name}
-                              {!t.isActive ? ' (disabled)' : ''}
+                          <SelectItem value="none">{t('devices.unbind')}</SelectItem>
+                          {tokens.map((tokenOption) => (
+                            <SelectItem key={tokenOption.id} value={String(tokenOption.id)}>
+                              {tokenOption.name}
+                              {!tokenOption.isActive ? t('devices.disabledTokenSuffix') : ''}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -808,6 +825,7 @@ export function DeviceManager({
                       <Button
                         type="button"
                         variant="outline"
+                        className="w-full sm:w-auto"
                         disabled={updateBindingMutation.isPending}
                         onClick={() => {
                           const parsed = reviewTokenId ? Number(reviewTokenId) : NaN
@@ -815,11 +833,11 @@ export function DeviceManager({
                           void updateBinding(reviewDevice.id, nextTokenId)
                         }}
                       >
-                        保存绑定
+                        {t('devices.saveBinding')}
                       </Button>
                     </div>
                     <p className="text-[11px] text-amber-600 dark:text-amber-300">
-                      请先绑定 Token，再点击「通过」。
+                      {t('devices.bindTokenBeforeApprove')}
                     </p>
                   </div>
                 )}
@@ -830,14 +848,14 @@ export function DeviceManager({
                   variant="outline"
                   onClick={() => void updateStatus(reviewDevice.id, 'revoked')}
                 >
-                  拒绝
+                  {t('devices.reject')}
                 </Button>
                 <Button
                   type="button"
                   disabled={!reviewDevice.apiToken}
                   onClick={() => void updateStatus(reviewDevice.id, 'active')}
                 >
-                  通过
+                  {t('devices.approve')}
                 </Button>
               </DialogFooter>
             </>

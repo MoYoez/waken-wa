@@ -2,6 +2,7 @@
 
 import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 import type { ReactNode } from 'react'
 
 import {
@@ -79,6 +80,7 @@ function ToggleRow(props: {
 }
 
 export function WebSettingsActivityPanel() {
+  const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [redisCacheServerlessForced] = useAtom(webSettingsRedisCacheServerlessForcedAtom)
   const [inspirationDevices] = useAtom(webSettingsInspirationDevicesAtom)
@@ -98,8 +100,8 @@ export function WebSettingsActivityPanel() {
       <WebSettingsRows>
         <ToggleRow
           id="global-mouse-tilt"
-          title="全站页面视差倾斜"
-          description="开启后整页随鼠标轻微 3D 倾斜；默认关闭。后台路由不受此影响；系统「减少动效」时自动启用。"
+          title={t('webSettingsActivity.globalMouseTiltTitle')}
+          description={t('webSettingsActivity.globalMouseTiltDescription')}
           checked={form.globalMouseTiltEnabled}
           onCheckedChange={(value) => patch('globalMouseTiltEnabled', value)}
         />
@@ -116,8 +118,8 @@ export function WebSettingsActivityPanel() {
             >
               <ToggleRow
                 id="global-mouse-tilt-gyro"
-                title="支持检测陀螺仪晃动"
-                description="开启后在支持的移动设备上使用陀螺仪/设备方向驱动页面倾斜（可能需要系统权限）；不支持或未授权时会自动回退。"
+                title={t('webSettingsActivity.globalMouseTiltGyroTitle')}
+                description={t('webSettingsActivity.globalMouseTiltGyroDescription')}
                 checked={form.globalMouseTiltGyroEnabled}
                 onCheckedChange={(value) => patch('globalMouseTiltGyroEnabled', value)}
               />
@@ -127,32 +129,32 @@ export function WebSettingsActivityPanel() {
 
         <ToggleRow
           id="profile-online-pulse"
-          title="在线状态呼吸灯"
-          description="开启时首页头像右下角在线点为呼吸动画；关闭后为静态实心点。系统「减少动效」时浏览器可能仍会减弱动画。"
+          title={t('webSettingsActivity.profileOnlinePulseTitle')}
+          description={t('webSettingsActivity.profileOnlinePulseDescription')}
           checked={form.profileOnlinePulseEnabled}
           onCheckedChange={(value) => patch('profileOnlinePulseEnabled', value)}
         />
 
         <ToggleRow
           id="hide-activity-media"
-          title="不显示媒体播放"
-          description="开启后首页「当前状态」卡片不再展示正在播放的曲目与歌手（上报数据仍会保存）。"
+          title={t('webSettingsActivity.hideActivityMediaTitle')}
+          description={t('webSettingsActivity.hideActivityMediaDescription')}
           checked={form.hideActivityMedia}
           onCheckedChange={(value) => patch('hideActivityMedia', value)}
         />
 
         <ToggleRow
           id="activity-reject-lockapp-sleep"
-          title="休眠视作离线（拒绝 LockApp 进程上报）"
-          description="开启后，若上报的进程名为 LockApp 上报程序（如 LockApp.exe），服务端将拒绝写入并不更新设备最后在线时间。"
+          title={t('webSettingsActivity.activityRejectLockappSleepTitle')}
+          description={t('webSettingsActivity.activityRejectLockappSleepDescription')}
           checked={form.activityRejectLockappSleep}
           onCheckedChange={(value) => patch('activityRejectLockappSleep', value)}
         />
 
         <ToggleRow
           id="force-display-timezone"
-          title="强制使用所选时区显示"
-          description="关闭时按访客浏览器本地时区显示；开启后，全站绝对时间与课表日期/时段判断统一按上方所选时区。"
+          title={t('webSettingsActivity.forceDisplayTimezoneTitle')}
+          description={t('webSettingsActivity.forceDisplayTimezoneDescription')}
           checked={form.forceDisplayTimezone}
           onCheckedChange={(value) => patch('forceDisplayTimezone', value)}
         />
@@ -160,9 +162,11 @@ export function WebSettingsActivityPanel() {
 
       <WebSettingsInset className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="profile-online-accent">头像在线态强调色</Label>
+          <Label htmlFor="profile-online-accent">
+            {t('webSettingsActivity.profileOnlineAccentLabel')}
+          </Label>
           <p className="text-xs text-muted-foreground">
-            留空则使用当前主题自带的在线颜色。仅影响首页头像圆环与右下角在线点。
+            {t('webSettingsActivity.profileOnlineAccentHint')}
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <input
@@ -173,7 +177,7 @@ export function WebSettingsActivityPanel() {
               onChange={(event) =>
                 patch('profileOnlineAccentColor', event.target.value.toUpperCase())
               }
-              aria-label="Pick profile online accent color"
+              aria-label={t('webSettingsActivity.profileOnlineAccentAriaLabel')}
             />
             <Button
               type="button"
@@ -181,24 +185,24 @@ export function WebSettingsActivityPanel() {
               size="sm"
               onClick={() => patch('profileOnlineAccentColor', '')}
             >
-              使用主题默认
+              {t('webSettingsActivity.useThemeDefault')}
             </Button>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="display-timezone">显示时区</Label>
+          <Label htmlFor="display-timezone">{t('webSettingsActivity.displayTimezoneLabel')}</Label>
           <p className="text-xs text-muted-foreground">
-            用于显示时间的时区设置，默认为中国标准时间 (GMT+8)。
+            {t('webSettingsActivity.displayTimezoneHint')}
           </p>
           <Select value={form.displayTimezone} onValueChange={(value) => patch('displayTimezone', value)}>
             <SelectTrigger id="display-timezone" className="w-full sm:max-w-xs">
-              <SelectValue placeholder="选择时区" />
+              <SelectValue placeholder={t('webSettingsActivity.displayTimezonePlaceholder')} />
             </SelectTrigger>
             <SelectContent>
               {TIMEZONE_OPTIONS.map((timezone) => (
-                <SelectItem key={timezone.value} value={timezone.value}>
-                  {timezone.label}
+              <SelectItem key={timezone.value} value={timezone.value}>
+                  {t(timezone.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -207,9 +211,9 @@ export function WebSettingsActivityPanel() {
       </WebSettingsInset>
 
       <WebSettingsInset className="space-y-3">
-        <Label htmlFor="activity-update-mode">状态更新模式</Label>
+        <Label htmlFor="activity-update-mode">{t('webSettingsActivity.updateModeLabel')}</Label>
         <p className="text-xs text-muted-foreground">
-          选择用于获取活动状态更新的方式。不同模式在实时性和资源消耗之间有所权衡。
+          {t('webSettingsActivity.updateModeHint')}
         </p>
         <RadioGroup
           value={form.activityUpdateMode}
@@ -221,14 +225,16 @@ export function WebSettingsActivityPanel() {
               <RadioGroupItem value={option.value} id={`update-mode-${option.value}`} className="mt-1" />
               <div className="flex-1 space-y-1">
                 <Label htmlFor={`update-mode-${option.value}`} className="font-medium cursor-pointer">
-                  {option.label}
+                  {t(`webSettingsActivity.updateModes.${option.value}.label`)}
                 </Label>
-                <p className="text-xs text-muted-foreground">{option.description}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t(`webSettingsActivity.updateModes.${option.value}.description`)}
+                </p>
                 {option.warning ? (
                   <div className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2">
                     <p className="text-xs text-amber-600 dark:text-amber-400">
-                      <span className="font-semibold">注意：</span>
-                      {option.warning}
+                      <span className="font-semibold">{t('webSettingsActivity.warningLabel')}</span>
+                      {t(`webSettingsActivity.updateModes.${option.value}.warning`)}
                     </p>
                   </div>
                 ) : null}
@@ -242,12 +248,12 @@ export function WebSettingsActivityPanel() {
         <div className="space-y-3">
           <ToggleRow
             id="use-nosql-as-cache-redis"
-            title="UseNoSQLAsCache(Redis) - 使用 Redis 缓存"
-            description="开启后，活动流、站点配置、JWT 密钥缓存、限流、设备与 API Token 校验等优先走 Redis；关闭后上述用途均不走 Redis。未配置或不可用时自动回退，不会中断服务。"
+            title={t('webSettingsActivity.redisCacheTitle')}
+            description={t('webSettingsActivity.redisCacheDescription')}
             checked={form.useNoSqlAsCacheRedis}
             onCheckedChange={(value) => patch('useNoSqlAsCacheRedis', value)}
             disabled={redisCacheServerlessForced}
-            className="px-0 py-0"
+            className="px-0 py-0 sm:px-0"
           />
 
           <AnimatePresence initial={false}>
@@ -262,8 +268,7 @@ export function WebSettingsActivityPanel() {
                 layout
               >
                 <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-400">
-                  检测到 Serverless 环境（Vercel）：此项默认强制为开且无法在此关闭；若未配置
-                  {' '}REDIS_URL，相关逻辑会跳过 Redis 并回退到数据库/内存。
+                  {t('webSettingsActivity.redisCacheServerlessForced')}
                 </p>
               </motion.div>
             ) : null}
@@ -271,7 +276,7 @@ export function WebSettingsActivityPanel() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="redis-cache-ttl-seconds">Redis 缓存 TTL（秒）</Label>
+          <Label htmlFor="redis-cache-ttl-seconds">{t('webSettingsActivity.redisCacheTtlLabel')}</Label>
           <Input
             id="redis-cache-ttl-seconds"
             type="number"
@@ -287,7 +292,7 @@ export function WebSettingsActivityPanel() {
             }
           />
           <p className="text-xs text-muted-foreground">
-            聚合活动流（含数据库活动）在 Redis 中的缓存秒数。默认 3600（1 小时）；更短更实时，更长更省读库。
+            {t('webSettingsActivity.redisCacheTtlHint')}
           </p>
         </div>
       </WebSettingsInset>
@@ -295,9 +300,9 @@ export function WebSettingsActivityPanel() {
       <WebSettingsInset className="space-y-4">
         <WebSettingsRow
           htmlFor="steam-enabled"
-          title="Steam 状态"
-          description="在此配置全站 Steam 账号与 API Key；在「设备管理」中为需要展示的设备打开「状态卡片显示 Steam 正在游玩」后，该设备在线且 Steam 回报在玩游戏时，会在首页状态卡片上与音乐信息一并显示。"
-          className="px-0 py-0"
+          title={t('webSettingsActivity.steamTitle')}
+          description={t('webSettingsActivity.steamDescription')}
+          className="px-0 py-0 sm:px-0"
           action={
             <Switch
               id="steam-enabled"
@@ -319,16 +324,15 @@ export function WebSettingsActivityPanel() {
               layout
             >
               <div className="space-y-2">
-                <Label htmlFor="steam-id">Steam ID (64-bit)</Label>
+                <Label htmlFor="steam-id">{t('webSettingsActivity.steamIdLabel')}</Label>
                 <Input
                   id="steam-id"
                   value={form.steamId}
                   onChange={(event) => patch('steamId', event.target.value)}
-                  placeholder="例如: 76561198000000000"
+                  placeholder={t('webSettingsActivity.steamIdPlaceholder')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  全站共用的 Steam 64-bit ID（非按设备填写），可在
-                  {' '}
+                  {t('webSettingsActivity.steamIdHintPrefix')}{' '}
                   <a
                     href="https://steamid.io/"
                     target="_blank"
@@ -337,22 +341,21 @@ export function WebSettingsActivityPanel() {
                   >
                     steamid.io
                   </a>
-                  {' '}查询。
+                  {t('webSettingsActivity.steamIdHintSuffix')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="steam-api-key">Steam Web API Key（留空则不修改已保存的值）</Label>
+                <Label htmlFor="steam-api-key">{t('webSettingsActivity.steamApiKeyLabel')}</Label>
                 <Input
                   id="steam-api-key"
                   autoComplete="off"
                   value={form.steamApiKey}
                   onChange={(event) => patch('steamApiKey', event.target.value)}
-                  placeholder="在 Steam 开发者申请；也可使用环境变量 STEAM_API_KEY 作为后备"
+                  placeholder={t('webSettingsActivity.steamApiKeyPlaceholder')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  在
-                  {' '}
+                  {t('webSettingsActivity.steamApiKeyHintPrefix')}{' '}
                   <a
                     href="https://steamcommunity.com/dev/apikey"
                     target="_blank"
@@ -361,7 +364,7 @@ export function WebSettingsActivityPanel() {
                   >
                     steamcommunity.com/dev/apikey
                   </a>
-                  {' '}申请。保存后仅服务端使用，不会下发到前台。
+                  {t('webSettingsActivity.steamApiKeyHintSuffix')}
                 </p>
               </div>
             </motion.div>
@@ -371,7 +374,7 @@ export function WebSettingsActivityPanel() {
 
       <WebSettingsInset className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="history-window-minutes">历史窗口（分钟）</Label>
+          <Label htmlFor="history-window-minutes">{t('webSettingsActivity.historyWindowLabel')}</Label>
           <Input
             id="history-window-minutes"
             type="number"
@@ -389,7 +392,7 @@ export function WebSettingsActivityPanel() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="process-stale-seconds">进程超时判定（秒）</Label>
+          <Label htmlFor="process-stale-seconds">{t('webSettingsActivity.processStaleLabel')}</Label>
           <Input
             id="process-stale-seconds"
             type="number"
@@ -405,7 +408,9 @@ export function WebSettingsActivityPanel() {
             }
           />
           <p className="text-xs text-muted-foreground">
-            超过该时长仍未收到该进程新活动时，将自动判定为已结束。默认 {SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS} 秒。
+            {t('webSettingsActivity.processStaleHint', {
+              value: SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
+            })}
           </p>
         </div>
       </WebSettingsInset>
@@ -413,8 +418,8 @@ export function WebSettingsActivityPanel() {
       <WebSettingsRows>
         <ToggleRow
           id="auto-accept-new-devices"
-          title="自动接收本地新设备（设备身份牌）"
-          description="关闭后，未授权设备身份牌首次上报会进入待审核状态，需要在“设备管理”中手动通过。"
+          title={t('webSettingsActivity.autoAcceptNewDevicesTitle')}
+          description={t('webSettingsActivity.autoAcceptNewDevicesDescription')}
           checked={form.autoAcceptNewDevices}
           onCheckedChange={(value) => patch('autoAcceptNewDevices', value)}
         />
@@ -423,19 +428,19 @@ export function WebSettingsActivityPanel() {
       <WebSettingsInset className="space-y-4">
         <ToggleRow
           id="inspiration-device-restriction"
-          title="仅允许所选设备通过 API Token 提交「灵感随想录」"
+          title={t('webSettingsActivity.inspirationDeviceRestrictionTitle')}
           description={
             <>
-              关闭时：任意已绑定且激活、并使用同一 Token 的设备均可调用随想录接口。开启后：仅下方勾选的设备可提交；客户端请求需携带请求头{' '}
+              {t('webSettingsActivity.inspirationDeviceRestrictionDescriptionPrefix')}{' '}
               <code className="rounded bg-muted px-1 py-0.5 text-[11px]">X-Device-Key</code>
-              （值为该设备在后台的「设备身份牌」），或在 JSON 中传{' '}
+              {t('webSettingsActivity.inspirationDeviceRestrictionDescriptionMiddle')}{' '}
               <code className="rounded bg-muted px-1 py-0.5 text-[11px]">generatedHashKey</code>
-              。管理员在后台网页里提交不受此限制。
+              {t('webSettingsActivity.inspirationDeviceRestrictionDescriptionSuffix')}
             </>
           }
           checked={form.inspirationDeviceRestrictionEnabled}
           onCheckedChange={(value) => patch('inspirationDeviceRestrictionEnabled', value)}
-          className="px-0 py-0"
+          className="px-0 py-0 sm:px-0"
         />
 
         <AnimatePresence initial={false}>
@@ -450,7 +455,9 @@ export function WebSettingsActivityPanel() {
               layout
             >
               {inspirationDevices.length === 0 ? (
-                <p className="text-xs text-muted-foreground">暂无设备，请先在「设备管理」中添加。</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('webSettingsActivity.inspirationDevicesEmpty')}
+                </p>
               ) : (
                 inspirationDevices.map((device) => (
                   <label key={device.id} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -470,7 +477,9 @@ export function WebSettingsActivityPanel() {
                       {device.generatedHashKey.slice(0, 10)}…
                     </span>
                     {device.status !== 'active' ? (
-                      <span className="shrink-0 text-xs text-amber-600">({device.status})</span>
+                      <span className="shrink-0 text-xs text-amber-600">
+                        ({t(`devices.status.${device.status}`)})
+                      </span>
                     ) : null}
                   </label>
                 ))

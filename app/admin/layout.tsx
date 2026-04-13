@@ -1,3 +1,4 @@
+import { AdminLanguageToggle } from '@/components/admin/admin-language-toggle'
 import { AdminToaster } from '@/components/admin/admin-toaster'
 import { ThemeModeToggle } from '@/components/theme-mode-toggle'
 
@@ -10,12 +11,14 @@ export default function AdminLayout({
 }) {
   return (
     <>
-      <div className="pointer-events-none fixed right-4 top-4 z-50 sm:right-6 sm:top-6 lg:hidden">
-        <div className="pointer-events-auto">
-          <ThemeModeToggle />
+      <div className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex justify-center sm:inset-x-6 sm:bottom-6 lg:hidden">
+        <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-[28px] border border-border/70 bg-background/78 px-2 py-2 shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+          <AdminLanguageToggle className="border-transparent bg-transparent shadow-none backdrop-blur-0" />
+          <div className="h-8 w-px bg-border/70" aria-hidden />
+          <ThemeModeToggle className="border-transparent bg-transparent shadow-none backdrop-blur-0" />
         </div>
       </div>
-      {children}
+      <div className="pb-24 sm:pb-28 lg:pb-0">{children}</div>
       <AdminToaster />
     </>
   )

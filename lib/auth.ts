@@ -15,6 +15,11 @@ import type { SessionPayload } from '@/types/auth'
 
 export type { SessionPayload } from '@/types/auth'
 
+type PasswordStrengthTranslationKey =
+  | 'passwordStrength.minLength'
+  | 'passwordStrength.requireLetter'
+  | 'passwordStrength.requireDigit'
+
 let _dummyHash: Promise<string> | null = null
 function getDummyHash(): Promise<string> {
   if (!_dummyHash) {
@@ -174,10 +179,26 @@ export async function getBearerApiTokenRecord(
   return resolveActiveApiTokenFromPlainSecret(secret)
 }
 
-export function validatePasswordStrength(password: string): string | null {
-  if (password.length < 8) return '密码长度至少 8 位'
-  if (!/[a-zA-Z]/.test(password)) return '密码须包含至少一个字母'
-  if (!/\d/.test(password)) return '密码须包含至少一个数字'
+function defaultPasswordStrengthMessage(key: PasswordStrengthTranslationKey): string {
+  switch (key) {
+    case 'passwordStrength.minLength':
+      return '密码长度至少 8 位'
+    case 'passwordStrength.requireLetter':
+      return '密码须包含至少一个字母'
+    case 'passwordStrength.requireDigit':
+      return '密码须包含至少一个数字'
+    default:
+      return '密码不符合要求'
+  }
+}
+
+export function validatePasswordStrength(
+  password: string,
+  translate: (key: PasswordStrengthTranslationKey) => string = defaultPasswordStrengthMessage,
+): string | null {
+  if (password.length < 8) return translate('passwordStrength.minLength')
+  if (!/[a-zA-Z]/.test(password)) return translate('passwordStrength.requireLetter')
+  if (!/\d/.test(password)) return translate('passwordStrength.requireDigit')
   return null
 }
 

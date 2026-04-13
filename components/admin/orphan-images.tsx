@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ImageOff, Loader2, Trash2 } from 'lucide-react'
 import Image from 'next/image'
+import { useT } from 'next-i18next/client'
 import { forwardRef, useImperativeHandle, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -36,6 +37,7 @@ export interface OrphanImagesHandle {
 }
 
 export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function OrphanImages(_, ref) {
+  const { t } = useT('admin')
   const queryClient = useQueryClient()
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const rowsQuery = useQuery({
@@ -50,14 +52,14 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
   const deleteOrphansMutation = useMutation({
     mutationFn: deleteAdminInspirationOrphanAssets,
     onSuccess: async ({ deleted, skipped }) => {
-      toast.success(`已删除 ${deleted} 张，跳过 ${skipped} 张`)
+      toast.success(t('orphanImages.deletedSummary', { deleted, skipped }))
       clearSelection()
       await queryClient.invalidateQueries({
         queryKey: adminQueryKeys.inspiration.orphanAssets(),
       })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -116,7 +118,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                 disabled={rowsQuery.isLoading || deleteOrphansMutation.isPending || eligibleKeys.length === 0}
                 onClick={selectAllEligible}
               >
-                全选可清理
+                {t('orphanImages.selectAllEligible')}
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -128,25 +130,29 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                     disabled={rowsQuery.isLoading || deleteOrphansMutation.isPending || selectedEligibleKeys.length === 0}
                   >
                     {deleteOrphansMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                    清理所选（{selectedEligibleKeys.length}）
+                    {t('orphanImages.cleanSelected', { count: selectedEligibleKeys.length })}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>确认清理</AlertDialogTitle>
+                    <AlertDialogTitle>{t('orphanImages.confirmCleanTitle')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      将删除 {selectedEligibleKeys.length} 张未被引用的孤儿图片，此操作不可撤销。
+                      {t('orphanImages.confirmCleanDescription', {
+                        count: selectedEligibleKeys.length,
+                      })}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel disabled={deleteOrphansMutation.isPending}>取消</AlertDialogCancel>
+                    <AlertDialogCancel disabled={deleteOrphansMutation.isPending}>
+                      {t('common.cancel')}
+                    </AlertDialogCancel>
                     <AlertDialogAction
                       disabled={deleteOrphansMutation.isPending}
                       onClick={() => {
                         void doDelete(selectedEligibleKeys)
                       }}
                     >
-                      删除
+                      {t('common.delete')}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -154,16 +160,16 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
             </div>
           )}
           {rowsQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">加载中…</div>
+            <div className="text-sm text-muted-foreground">{t('common.loadingEllipsis')}</div>
           ) : rows.length === 0 ? (
             <div className="rounded-md border border-dashed border-border/60 bg-muted/10 px-4 py-8">
               <div className="flex flex-col items-center justify-center gap-2 text-center">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground">
                   <ImageOff className="h-4 w-4" />
                 </span>
-                <p className="text-sm font-medium text-foreground/85">暂无孤儿图片</p>
+                <p className="text-sm font-medium text-foreground/85">{t('orphanImages.noOrphanImages')}</p>
                 <p className="text-xs text-muted-foreground">
-                  当前素材都已被灵感正文或封面引用。
+                  {t('orphanImages.noOrphanImagesDescription')}
                 </p>
               </div>
             </div>
@@ -197,7 +203,9 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                             </div>
                             <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                               <span className="rounded-full border border-border/50 bg-background/80 px-2 py-0.5">
-                                {typeof r.ageMinutes === 'number' ? `${r.ageMinutes} 分钟前` : '时间未知'}
+                                {typeof r.ageMinutes === 'number'
+                                  ? t('orphanImages.minutesAgo', { value: r.ageMinutes })
+                                  : t('common.unknownTime')}
                               </span>
                               <span
                                 className={cn(
@@ -207,7 +215,9 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                                     : 'border-border/50 bg-background/80',
                                 )}
                               >
-                                {r.eligibleForDelete ? '可删除' : '不可删除'}
+                                {r.eligibleForDelete
+                                  ? t('orphanImages.deletable')
+                                  : t('orphanImages.notDeletable')}
                               </span>
                             </div>
                           </div>
@@ -220,27 +230,33 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                               size="sm"
                               className="h-7 shrink-0 px-2 text-muted-foreground hover:text-destructive"
                               disabled={deleteOrphansMutation.isPending || !r.eligibleForDelete}
-                              title={r.eligibleForDelete ? '删除' : '当前不可删除'}
+                              title={
+                                r.eligibleForDelete
+                                  ? t('orphanImages.deleteTooltip')
+                                  : t('orphanImages.cannotDeleteTooltip')
+                              }
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>确认删除</AlertDialogTitle>
+                              <AlertDialogTitle>{t('orphanImages.deleteTitle')}</AlertDialogTitle>
                               <AlertDialogDescription>
-                                将删除该未被引用的孤儿图片。此操作不可撤销。
+                                {t('orphanImages.deleteDescription')}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel disabled={deleteOrphansMutation.isPending}>取消</AlertDialogCancel>
+                              <AlertDialogCancel disabled={deleteOrphansMutation.isPending}>
+                                {t('common.cancel')}
+                              </AlertDialogCancel>
                               <AlertDialogAction
                                 disabled={deleteOrphansMutation.isPending}
                                 onClick={() => {
                                   void doDelete([r.publicKey])
                                 }}
                               >
-                                删除
+                                {t('common.delete')}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -259,7 +275,9 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                       </a>
 
                       <div className="rounded-md border border-border/50 bg-background/70 px-2.5 py-2 text-[11px] text-muted-foreground">
-                        <div className="font-medium text-foreground/75">创建时间</div>
+                        <div className="font-medium text-foreground/75">
+                          {t('orphanImages.createdTime')}
+                        </div>
                         <div className="mt-1 break-all">
                           <FormattedTime
                             date={r.createdAt}

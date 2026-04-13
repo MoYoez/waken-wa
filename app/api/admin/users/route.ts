@@ -5,6 +5,8 @@ import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { hashPassword, validatePasswordStrength } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { adminUsers } from '@/lib/drizzle-schema'
+import { getRequestLanguage } from '@/lib/i18n/request-locale'
+import { getT } from '@/lib/i18n/server'
 import { readJsonObject } from '@/lib/request-json'
 
 export async function GET() {
@@ -31,13 +33,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const { t } = await getT('auth', { lng: getRequestLanguage(request) })
     const { username, password } = await readJsonObject(request)
     const name = String(username ?? '').trim()
     const rawPassword = String(password ?? '')
     if (!name || !rawPassword) {
-      return NextResponse.json({ success: false, error: '请填写用户名和密码' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('adminUsers.requiredCredentials') }, { status: 400 })
     }
-    const pwError = validatePasswordStrength(rawPassword)
+    const pwError = validatePasswordStrength(rawPassword, t)
     if (pwError) {
       return NextResponse.json({ success: false, error: pwError }, { status: 400 })
     }
@@ -54,6 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data: user }, { status: 201 })
   } catch (error) {
     console.error('创建管理员失败:', error)
-    return NextResponse.json({ success: false, error: '创建失败（用户名可能已存在）' }, { status: 500 })
+    const { t } = await getT('auth', { lng: getRequestLanguage(request) })
+    return NextResponse.json({ success: false, error: t('adminUsers.createFailed') }, { status: 500 })
   }
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { Battery, BatteryCharging, Laptop, Music, Smartphone, Tablet } from 'lucide-react'
+import { useT } from 'next-i18next/client'
 
 import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { useActivityFeed } from '@/hooks/use-activity-feed'
@@ -36,6 +37,7 @@ export function ActivityTimeline({
   hideActivityMedia?: boolean
   activityUpdateMode?: ActivityUpdateMode
 }) {
+  const { t } = useT('common')
   const { feed, error } = useActivityFeed({ mode: activityUpdateMode })
   const mounted = useIsClient()
   const liveMs = useTickingMs(30_000)
@@ -46,7 +48,7 @@ export function ActivityTimeline({
   if (error) {
     return (
       <div className="text-sm text-destructive">
-        无法加载活动历史
+        {t('site.activityTimeline.loadFailed')}
       </div>
     )
   }
@@ -56,7 +58,7 @@ export function ActivityTimeline({
   if (activities.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
-        <div className="text-sm">暂无活动记录</div>
+        <div className="text-sm">{t('site.activityTimeline.empty')}</div>
       </div>
     )
   }
@@ -69,7 +71,9 @@ export function ActivityTimeline({
           const charging = isDeviceBatteryCharging(activity.metadata)
           const deviceName =
             activity.device ||
-            (activity.deviceId != null ? `device #${activity.deviceId}` : `activity #${activity.id}`)
+            (activity.deviceId != null
+              ? t('site.currentStatus.deviceFallback', { id: activity.deviceId })
+              : t('site.currentStatus.activityFallback', { id: activity.id }))
           const deviceType = getDeviceType(deviceName, activity.metadata)
           const media = hideActivityMedia ? null : getMediaDisplay(activity.metadata)
           const startedMs = new Date(activity.startedAt).getTime()
@@ -139,7 +143,7 @@ export function ActivityTimeline({
                             ) : (
                               <Battery className="h-3.5 w-3.5 shrink-0" aria-hidden />
                             )}
-                            <span>{` · 电量 ${batteryLabel}`}</span>
+                            <span>{` · ${t('site.currentStatus.batteryLabel', { value: batteryLabel })}`}</span>
                           </span>
                         ) : null}
                       </span>
@@ -150,8 +154,11 @@ export function ActivityTimeline({
                     {duration > 0 && (
                       <span>
                         {duration < 60
-                          ? `${duration}分钟`
-                          : `${Math.floor(duration / 60)}小时${duration % 60}分钟`}
+                          ? t('site.activityTimeline.durationMinutes', { value: duration })
+                          : t('site.activityTimeline.durationHoursMinutes', {
+                              hours: Math.floor(duration / 60),
+                              minutes: duration % 60,
+                            })}
                       </span>
                     )}
                   </div>

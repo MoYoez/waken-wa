@@ -1,5 +1,6 @@
 'use client'
 
+import { useT } from 'next-i18next/client'
 import { useMemo, useState } from 'react'
 
 import { approveSkillsOauthAuthorizeCode } from '@/components/admin/admin-query-mutations'
@@ -21,6 +22,7 @@ type Props = {
 }
 
 export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId, authorizeCode }: Props) {
+  const { t } = useT('admin')
   const [loading, setLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [approved, setApproved] = useState(false)
@@ -44,7 +46,7 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId, authorizeCo
       setApprovedAt(result.approvedAt)
       setExpiresAt(result.expiresAt)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '授权失败')
+      setError(err instanceof Error ? err.message : t('skillsAuthorizeCard.authorizeFailed'))
     } finally {
       setLoading(false)
     }
@@ -52,28 +54,28 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId, authorizeCo
 
   return (
     <div className="mx-auto max-w-2xl p-6 space-y-4">
-      <h1 className="text-lg font-semibold">Skills OAuth 授权</h1>
+      <h1 className="text-lg font-semibold">{t('skillsAuthorizeCard.title')}</h1>
       <p className="text-sm text-muted-foreground">
-        点击授权会弹窗确认；同意后 AI 需使用当前授权码兑换 key（有效期按后台设置）。后端仅存 hash，本页不会显示 key 明文。
+        {t('skillsAuthorizeCard.description')}
       </p>
 
       <Button type="button" onClick={() => setConfirmOpen(true)} disabled={loading}>
-        {loading ? '处理中…' : '生成授权 Token'}
+        {loading ? t('skillsAuthorizeCard.processing') : t('skillsAuthorizeCard.generateToken')}
       </Button>
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>确认签发 OAuth 授权</DialogTitle>
+            <DialogTitle>{t('skillsAuthorizeCard.confirmIssueTitle')}</DialogTitle>
             <DialogDescription>
-              允许该 AI 使用 Skills（OAuth）执行调试操作。授权默认有效期 1 小时，后端仅存 token hash。
+              {t('skillsAuthorizeCard.confirmIssueDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)} disabled={loading}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={() => void authorize()} disabled={loading}>
-              {loading ? '处理中…' : '确认并签发'}
+              {loading ? t('skillsAuthorizeCard.processing') : t('skillsAuthorizeCard.confirmAndIssue')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -86,18 +88,24 @@ export function SkillsOauthAuthorizeCard({ publicOrigin, aiClientId, authorizeCo
       {approved ? (
         <>
           <div className="rounded-lg border bg-card p-4 space-y-2">
-            <div className="text-xs text-muted-foreground">授权码（供 AI 兑换）</div>
+            <div className="text-xs text-muted-foreground">{t('skillsAuthorizeCard.codeForAi')}</div>
             <Input value={authorizeCode} readOnly className="font-mono text-xs" />
             {approvedAt ? (
-              <div className="text-xs text-muted-foreground">确认时间：{approvedAt}</div>
+              <div className="text-xs text-muted-foreground">
+                {t('skillsAuthorizeCard.approvedAt', { value: approvedAt })}
+              </div>
             ) : null}
             {expiresAt ? (
-              <div className="text-xs text-muted-foreground">过期时间：{expiresAt}</div>
+              <div className="text-xs text-muted-foreground">
+                {t('skillsAuthorizeCard.expiresAt', { value: expiresAt })}
+              </div>
             ) : null}
           </div>
 
           <div className="rounded-lg border bg-muted/20 p-4 space-y-2">
-            <div className="text-xs text-muted-foreground">给 AI 的兑换请求示例（code 换 key）</div>
+            <div className="text-xs text-muted-foreground">
+              {t('skillsAuthorizeCard.exchangeExample')}
+            </div>
             <pre className="text-xs font-mono whitespace-pre-wrap">{`POST ${publicOrigin || ''}/api/llm/oauth/exchange
 LLM-Skills-Mode: oauth
 LLM-Skills-Token: ${authorizeCode}
@@ -111,16 +119,17 @@ LLM-Skills-Request-Id: ANY_REQUEST_ID`}</pre>
 
 $body = [System.Text.Encoding]::UTF8.GetBytes('{}')
 
-Invoke-RestMethod -Method Post -Uri '${publicOrigin || ''}/api/llm/oauth/exchange' -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $body`}</pre>
+Invoke-RestMethod -Method Post -Uri '${publicOrigin || ''}/api/llm/oauth/exchange' -Headers $headers -ContentType '${t('skillsAuthorizeCard.authorizationHeader')}' -Body $body`}</pre>
             <p className="text-xs text-muted-foreground">
-              Windows PowerShell 发送中文或 emoji JSON 时，请先转成 UTF-8 bytes，再以
-              <code className="mx-1">application/json; charset=utf-8</code>
-              发送，避免被写成 <code className="mx-1">???</code>。
+              {t('skillsAuthorizeCard.powershellUtf8Hint')}
+              <code className="mx-1">{t('skillsAuthorizeCard.authorizationHeader')}</code>
+              {t('skillsAuthorizeCard.powershellUtf8HintSuffix')}{' '}
+              <code className="mx-1">{t('skillsAuthorizeCard.garbled')}</code>.
             </p>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            兑换出 key 后，再用该 key 访问验证链接：<code>{directExample}</code>
+            {t('skillsAuthorizeCard.verifyLink')} <code>{directExample}</code>
           </p>
         </>
       ) : null}

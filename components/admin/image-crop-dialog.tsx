@@ -2,6 +2,7 @@
 
 import 'react-image-crop/dist/ReactCrop.css'
 
+import { useT } from 'next-i18next/client'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ReactCrop, {
   centerCrop,
@@ -74,6 +75,7 @@ export function ImageCropDialog({
   description,
   onComplete,
 }: ImageCropDialogProps) {
+  const { t } = useT('admin')
   const [crop, setCrop] = useState<Crop>()
   const [natural, setNatural] = useState({ w: 0, h: 0 })
   const imgRef = useRef<HTMLImageElement>(null)
@@ -187,10 +189,10 @@ export function ImageCropDialog({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-            取消
+            {t('common.cancel')}
           </Button>
           <Button type="button" onClick={applyCrop} disabled={!crop || !natural.w}>
-            确认裁剪
+            {t('common.complete')}
           </Button>
         </DialogFooter>
       </DialogContent>

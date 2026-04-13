@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
+import { useT } from 'next-i18next/client'
 import {
   type CSSProperties,
   useCallback,
@@ -151,6 +152,7 @@ function MediaAndSteamRow({
   media: MediaDisplay | null
   steam: SteamNowPlayingInfo | null
 }) {
+  const { t } = useT('common')
   const isMobile = useIsMobile()
   const [steamImgFailed, setSteamImgFailed] = useState(false)
 
@@ -193,7 +195,7 @@ function MediaAndSteamRow({
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  aria-label="查看 Steam 游戏详情"
+                  aria-label={t('site.currentStatus.viewSteamDetails')}
                   className={cn(
                     'min-w-0 items-center gap-2 rounded-md transition-colors text-left',
                     pair ? 'inline-flex max-w-full' : 'flex w-full justify-start',
@@ -228,8 +230,8 @@ function MediaAndSteamRow({
                   />
                 ) : null}
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold leading-snug break-words">{steam.name}</p>
-                  <p className="text-xs text-muted-foreground">正在游玩（Steam）</p>
+        <p className="text-sm font-semibold leading-snug break-words">{steam.name}</p>
+                  <p className="text-xs text-muted-foreground">{t('site.currentStatus.steamNowPlaying')}</p>
                 </div>
               </PopoverContent>
             </Popover>
@@ -238,7 +240,7 @@ function MediaAndSteamRow({
               <HoverCardTrigger asChild>
                 <button
                   type="button"
-                  aria-label="查看 Steam 游戏详情"
+                  aria-label={t('site.currentStatus.viewSteamDetails')}
                   className={cn(
                     'min-w-0 items-center gap-2 rounded-md transition-colors text-left',
                     // Steam-only: full-width flex row so MarqueeIfNeeded (flex-1) gets real width like the media row.
@@ -276,7 +278,7 @@ function MediaAndSteamRow({
                 ) : null}
                 <div className="space-y-1">
                   <p className="text-sm font-semibold leading-snug break-words">{steam.name}</p>
-                  <p className="text-xs text-muted-foreground">正在游玩（Steam）</p>
+                  <p className="text-xs text-muted-foreground">{t('site.currentStatus.steamNowPlaying')}</p>
                 </div>
               </HoverCardContent>
             </HoverCard>
@@ -326,6 +328,7 @@ function CurrentStatusCard({
   sectionTransition: ReturnType<typeof getSiteSectionTransition>
   sectionVariants: ReturnType<typeof getSiteSectionVariants>
 }) {
+  const { t } = useT('common')
   const [flashKey, setFlashKey] = useState<string | null>(null)
   const previousSignatureRef = useRef('')
   const { formatPattern } = useSiteTimeFormat()
@@ -335,7 +338,9 @@ function CurrentStatusCard({
   const charging = isDeviceBatteryCharging(activity.metadata)
   const deviceName =
     activity.device ||
-    (activity.deviceId != null ? `device #${activity.deviceId}` : `activity #${activity.id}`)
+    (activity.deviceId != null
+      ? t('site.currentStatus.deviceFallback', { id: activity.deviceId })
+      : t('site.currentStatus.activityFallback', { id: activity.id }))
   const deviceType = getDeviceType(deviceName, activity.metadata)
   const lastReportAt = activity.lastReportAt || activity.updatedAt || activity.startedAt
   const statusLine = typeof activity.statusText === 'string' ? activity.statusText.trim() : ''
@@ -416,7 +421,7 @@ function CurrentStatusCard({
       <div className="space-y-4">
         <div className="rounded-md border border-border/50 bg-muted/55 px-3 py-2.5 space-y-2 shadow-[inset_0_1px_0_0_var(--home-card-inset-highlight)]">
           <div className="text-xs font-medium text-foreground/65 tracking-tight mb-0.5">
-            设备
+            {t('site.currentStatus.deviceLabel')}
           </div>
           <div className="text-sm text-foreground flex items-center gap-2">
             {deviceType === 'mobile' ? (
@@ -438,7 +443,7 @@ function CurrentStatusCard({
               ) : (
                 <Battery className="h-3.5 w-3.5 shrink-0" aria-hidden />
               )}
-              <span>电量 {batteryLabel}</span>
+              <span>{t('site.currentStatus.batteryLabel', { value: batteryLabel })}</span>
             </div>
           ) : null}
         </div>
@@ -468,8 +473,8 @@ function CurrentStatusCard({
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 shrink-0 text-foreground/55" aria-hidden />
-              <span className="text-xs font-medium text-foreground/65 tracking-tight">
-                开始时间
+                <span className="text-xs font-medium text-foreground/65 tracking-tight">
+                {t('site.currentStatus.startedAt')}
               </span>
             </div>
             <div className="text-xs tabular-nums text-foreground pl-5">
@@ -479,7 +484,9 @@ function CurrentStatusCard({
           <div className="flex flex-col gap-1 sm:ml-auto sm:items-end">
             <div className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 shrink-0 text-foreground/55" aria-hidden />
-              <span className="text-xs font-medium text-foreground/65 tracking-tight">最后上报</span>
+              <span className="text-xs font-medium text-foreground/65 tracking-tight">
+                {t('site.currentStatus.lastReportAt')}
+              </span>
             </div>
             <div className="text-xs tabular-nums text-foreground pl-5 sm:pl-0 w-full sm:text-right">
               <LastReportTime value={lastReportAt} timestampFormat={timestampFormat} />
@@ -492,6 +499,7 @@ function CurrentStatusCard({
 }
 
 export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps) {
+  const { t } = useT('common')
   const { feed, error } = useSharedActivityFeed()
   const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
@@ -522,7 +530,7 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
         transition={sectionTransition}
       >
         <div className="text-center text-muted-foreground">
-          <div className="text-sm">暂无设备在线状态</div>
+          <div className="text-sm">{t('site.currentStatus.noActiveStatus')}</div>
         </div>
       </motion.div>
     )

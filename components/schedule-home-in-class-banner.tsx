@@ -1,7 +1,8 @@
 'use client'
 
 import { format } from 'date-fns'
-import { type ReactNode,useEffect, useState } from 'react'
+import { useT } from 'next-i18next/client'
+import { type ReactNode, useEffect, useState } from 'react'
 
 import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
@@ -18,9 +19,9 @@ type ScheduleHomeInClassBannerProps = {
   showLocation: boolean
   showTeacher: boolean
   periodTemplate?: SchedulePeriodTemplateItem[]
-  /** When true, show the between-sessions “下一节” preview. Default false. */
+  /** When true, show the between-sessions next-class preview. */
   showNextUpcoming?: boolean
-  /** Shown in the top-left when today’s classes are all over (default 正在摸鱼). */
+  /** Shown in the top-left when today's classes are all over. */
   afterClassesLabel: string
   className?: string
 }
@@ -34,6 +35,7 @@ function MetaHoverContent({
   showLocation: boolean
   showTeacher: boolean
 }) {
+  const { t } = useT('common')
   const hasLocation = Boolean(showLocation && occ.location)
   const hasTeacher = Boolean(showTeacher && occ.teacher)
   return (
@@ -44,13 +46,13 @@ function MetaHoverContent({
     >
       {hasLocation ? (
         <div className="break-words leading-snug">
-          <span className="font-medium text-foreground">地点</span>{' '}
+          <span className="font-medium text-foreground">{t('site.schedule.location')}</span>{' '}
           <span className="text-muted-foreground">{occ.location}</span>
         </div>
       ) : null}
       {hasTeacher ? (
         <div className="break-words leading-snug">
-          <span className="font-medium text-foreground">教师</span>{' '}
+          <span className="font-medium text-foreground">{t('site.schedule.teacher')}</span>{' '}
           <span className="text-muted-foreground">{occ.teacher}</span>
         </div>
       ) : null}
@@ -71,8 +73,9 @@ export function ScheduleHomeInClassBanner({
   afterClassesLabel,
   className,
 }: ScheduleHomeInClassBannerProps) {
+  const { t } = useT('common')
   const { effectiveTimezone, mounted } = useSiteTimeFormat()
-  const idleDoneLabel = afterClassesLabel.trim() || '正在摸鱼'
+  const idleDoneLabel = afterClassesLabel.trim() || t('site.schedule.idleFallback')
   const [cardState, setCardState] = useState<ScheduleHomeCardState | null>(null)
 
   useEffect(() => {
@@ -116,7 +119,7 @@ export function ScheduleHomeInClassBanner({
       topRow = (
         <>
           <span className="text-xs font-medium uppercase tracking-wide text-primary/90 whitespace-nowrap sm:text-sm">
-            正在上课
+            {t('site.schedule.inClass')}
           </span>
           <span className="min-w-0 truncate text-right text-xs tabular-nums text-muted-foreground sm:text-sm">
             {format(o.start, 'HH:mm')} – {format(o.end, 'HH:mm')}
@@ -135,7 +138,7 @@ export function ScheduleHomeInClassBanner({
       topRow = (
         <>
           <span className="text-xs font-medium uppercase tracking-wide text-primary/90 whitespace-nowrap sm:text-sm">
-            下一节
+            {t('site.schedule.nextClass')}
           </span>
           <span className="min-w-0 truncate text-right text-xs tabular-nums text-muted-foreground sm:text-sm">
             {format(n.start, 'HH:mm')} – {format(n.end, 'HH:mm')}
@@ -157,7 +160,7 @@ export function ScheduleHomeInClassBanner({
       )
       bodyLine = (
         <div className="mt-1 min-w-0 shrink-0 text-base font-semibold leading-snug text-foreground line-clamp-2">
-          今天已经没课啦！
+          {t('site.schedule.afterClassesDone')}
         </div>
       )
       break
@@ -170,7 +173,9 @@ export function ScheduleHomeInClassBanner({
         </span>
       )
       const msg =
-        cardState.kind === 'rest_tomorrow_has' ? '明天有课哦~' : '今天没课~'
+        cardState.kind === 'rest_tomorrow_has'
+          ? t('site.schedule.tomorrowHasClass')
+          : t('site.schedule.todayNoClass')
       bodyLine = (
         <div className="mt-1 min-w-0 shrink-0 text-base font-semibold leading-snug text-foreground line-clamp-2">
           {msg}
@@ -198,7 +203,7 @@ export function ScheduleHomeInClassBanner({
           <div
             role="button"
             tabIndex={0}
-            aria-label="悬停查看地点与教师"
+            aria-label={t('site.schedule.hoverMetaAriaLabel')}
             className={cardShellClass}
           >
             {cardInner}

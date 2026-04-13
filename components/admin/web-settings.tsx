@@ -3,8 +3,10 @@
 import { Provider } from 'jotai'
 import { createStore } from 'jotai/vanilla'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 import { useMemo } from 'react'
 
+import { AdminLanguageToggle } from '@/components/admin/admin-language-toggle'
 import {
   getAdminPanelTransition,
   getAdminSectionVariants,
@@ -52,6 +54,8 @@ export function WebSettings() {
 }
 
 function WebSettingsContent() {
+  const { t: tCommon } = useT('common')
+  const { t } = useT('admin')
   const prefersReducedMotion = Boolean(useReducedMotion())
   const {
     applyImportConfig,
@@ -85,31 +89,52 @@ function WebSettingsContent() {
   const avatarUsesRemoteUrl = isRemoteAvatarUrl(form.avatarUrl)
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">加载配置中...</div>
+    return <div className="text-sm text-muted-foreground">{t('webSettings.loading')}</div>
   }
 
   return (
     <>
       <div className="space-y-4 sm:space-y-5 sm:rounded-xl sm:border sm:bg-card sm:p-6 [&_label[data-slot=label]]:leading-5">
-        <section className="hidden rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4 lg:flex lg:items-center lg:justify-between">
-          <div className="max-w-2xl space-y-1">
-            <h3 className="text-sm font-semibold tracking-wide text-foreground">后台外观</h3>
-            <p className="text-xs leading-6 text-muted-foreground">
-              这里切换的是当前设备上的后台明暗模式，不会改动前台站点主题，也不会影响访客看到的页面风格。
-            </p>
+        <section className="hidden gap-3 lg:grid lg:grid-cols-2">
+          <div className="rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="max-w-2xl space-y-1">
+                <h3 className="text-sm font-semibold tracking-wide text-foreground">
+                  {t('webSettings.adminAppearanceTitle')}
+                </h3>
+                <p className="text-xs leading-6 text-muted-foreground">
+                  {t('webSettings.adminAppearanceDescription')}
+                </p>
+              </div>
+              <div className="shrink-0">
+                <ThemeModeToggle />
+              </div>
+            </div>
           </div>
-          <div className="shrink-0">
-            <ThemeModeToggle />
+          <div className="rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="max-w-2xl space-y-1">
+                <h3 className="text-sm font-semibold tracking-wide text-foreground">
+                  {tCommon('admin.language.title')}
+                </h3>
+                <p className="text-xs leading-6 text-muted-foreground">
+                  {tCommon('admin.language.description')}
+                </p>
+              </div>
+              <div className="shrink-0">
+                <AdminLanguageToggle />
+              </div>
+            </div>
           </div>
         </section>
 
         <Tabs defaultValue="basic" className="space-y-4 sm:space-y-5">
           <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-fit">
             <TabsTrigger value="basic" className="w-full">
-              基础设置
+              {t('webSettings.tabs.basic')}
             </TabsTrigger>
             <TabsTrigger value="advanced" className="w-full">
-              进阶设置
+              {t('webSettings.tabs.advanced')}
             </TabsTrigger>
           </TabsList>
 
@@ -119,19 +144,19 @@ function WebSettingsContent() {
 
           <TabsContent value="advanced" className="space-y-4 sm:space-y-5">
             <WebSettingsSection
-              title="平台与访问"
-              description="控制调试能力、接口开放范围、头像资源代理与后台访问验证。"
+              title={t('webSettings.sections.platform.title')}
+              description={t('webSettings.sections.platform.description')}
             >
               {avatarUsesRemoteUrl ? (
                 <WebSettingsRows>
                   <WebSettingsRow
                     htmlFor="avatar-fetch-by-server"
-                    title="检测到远程头像 URL，是否允许通过服务器获取头像？"
+                    title={t('webSettings.remoteAvatar.title')}
                     description={
                       <>
-                        开启后首页与后台预览会改为请求本站{' '}
+                        {t('webSettings.remoteAvatar.descriptionPrefix')}{' '}
                         <code className="rounded bg-muted px-1">/api/avatar</code>
-                        ，访客浏览器不再直接访问第三方图床。
+                        {t('webSettings.remoteAvatar.descriptionSuffix')}
                       </>
                     }
                     action={
@@ -160,8 +185,8 @@ function WebSettingsContent() {
             </WebSettingsSection>
 
             <WebSettingsSection
-              title="前台展示"
-              description="调整首页观感、文案来源、主题细节与自定义样式。"
+              title={t('webSettings.sections.frontend.title')}
+              description={t('webSettings.sections.frontend.description')}
             >
               <WebSettingsHitokotoPanel />
 
@@ -181,7 +206,7 @@ function WebSettingsContent() {
               </AnimatePresence>
 
               <WebSettingsInset className="space-y-2">
-                <Label>自定义 CSS 覆写（主界面）</Label>
+                <Label>{t('webSettings.customCss.label')}</Label>
                 <textarea
                   rows={8}
                   value={form.customCss}
@@ -189,38 +214,37 @@ function WebSettingsContent() {
                     setForm((prev) => ({ ...prev, customCss: event.target.value }))
                   }
                   className="w-full rounded-md border bg-background px-2.5 py-2 text-sm font-mono sm:px-3"
-                  placeholder="示例：:root { --primary: oklch(0.5 0.2 30); }"
+                  placeholder={t('webSettings.customCss.placeholder')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  保存后会注入页面并覆盖默认样式，可用于快速主题定制。
+                  {t('webSettings.customCss.hint')}
                 </p>
               </WebSettingsInset>
             </WebSettingsSection>
 
             <WebSettingsSection
-              title="运行与采集"
-              description="控制活动流、缓存、设备接入和前台状态展示行为。"
+              title={t('webSettings.sections.runtime.title')}
+              description={t('webSettings.sections.runtime.description')}
             >
               <WebSettingsActivityPanel />
               <WebSettingsRuleTools />
             </WebSettingsSection>
 
             <WebSettingsSection
-              title="导入导出"
-              description="用于迁移或快速接入当前网页配置，不影响底部的统一保存流程。"
+              title={t('webSettings.sections.importExport.title')}
+              description={t('webSettings.sections.importExport.description')}
               bodyClassName="space-y-4 sm:border-dashed sm:bg-background/40"
             >
               <div className="flex flex-wrap gap-3">
                 <Button type="button" variant="outline" onClick={() => void copyExportConfig()}>
-                  一键复制接入配置（Base64）
+                  {t('webSettings.importExport.copyBundle')}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => void applyImportConfig()}>
-                  一键写入配置
+                  {t('webSettings.importExport.applyBundle')}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                「一键写入配置」会尝试从剪贴板读取 Base64，并在弹窗中确认。仅合并导出包中的网页字段到本页表单，不包含 Token；
-                写入后请用底部悬浮条保存。
+                {t('webSettings.importExport.hint')}
               </p>
             </WebSettingsSection>
           </TabsContent>
@@ -240,8 +264,8 @@ function WebSettingsContent() {
           sourceUrl={cropSourceUrl}
           aspectMode="square"
           outputSize={128}
-          title="裁剪头像"
-          description="拖动选区或边角调整范围，确认后生成 128×128 头像。"
+          title={t('setup.cropAvatarTitle')}
+          description={t('setup.cropAvatarDescription')}
           onComplete={(dataUrl) => setForm((prev) => ({ ...prev, avatarUrl: dataUrl }))}
         />
       </div>
@@ -249,21 +273,21 @@ function WebSettingsContent() {
       <Dialog open={importConfigDialogOpen} onOpenChange={setImportConfigDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>导入网页配置</DialogTitle>
+            <DialogTitle>{t('webSettings.importDialog.title')}</DialogTitle>
             <DialogDescription>
-              将用导入包中的「网页配置」覆盖当前表单（不含页面锁密码、不含 API Token）。
+              {t('webSettings.importDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="import-config-input">Base64 接入配置</Label>
+            <Label htmlFor="import-config-input">{t('webSettings.importDialog.bundleLabel')}</Label>
             <Input
               id="import-config-input"
               value={importConfigInput}
               onChange={(event) => setImportConfigInput(event.target.value)}
-              placeholder="粘贴「一键复制接入配置」导出的 Base64 全文"
+              placeholder={t('webSettings.importDialog.placeholder')}
               className="font-mono text-xs"
             />
-            <p className="text-xs text-muted-foreground">导入时会自动忽略空格与换行。</p>
+            <p className="text-xs text-muted-foreground">{t('webSettings.importDialog.hint')}</p>
           </div>
           <DialogFooter>
             <Button
@@ -271,10 +295,10 @@ function WebSettingsContent() {
               variant="outline"
               onClick={() => setImportConfigDialogOpen(false)}
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={confirmImportConfig}>
-              导入并覆盖网页配置
+              {t('webSettings.importDialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -285,8 +309,8 @@ function WebSettingsContent() {
         saving={saving}
         onSave={save}
         onRevert={revertUnsavedWebSettings}
-        saveLabel="保存配置"
-        revertLabel="撤销"
+        saveLabel={t('webSettings.saveConfig')}
+        revertLabel={t('unsavedChanges.revert')}
       />
     </>
   )

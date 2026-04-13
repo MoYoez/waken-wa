@@ -26,6 +26,8 @@ import {
   WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY,
 } from '@/lib/device-constants'
 import { devices, userActivities } from '@/lib/drizzle-schema'
+import { getRequestLanguage } from '@/lib/i18n/request-locale'
+import { getT } from '@/lib/i18n/server'
 import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
 import { readJsonObject } from '@/lib/request-json'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
@@ -39,6 +41,7 @@ export const revalidate = 0
 
 /** POST: admin manual activity (writes activity-store like public report). */
 export async function POST(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ success: false, error: '请求体格式无效' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.activity.invalidBody') }, { status: 400 })
     }
 
     const parsedBody = parseActivityReportBody(body as Record<string, unknown>, {
@@ -77,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     if (!process_name) {
       return NextResponse.json(
-        { success: false, error: '缺少必要字段: process_name' },
+        { success: false, error: t('api.activity.missingProcessName') },
         { status: 400 },
       )
     }
@@ -87,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     if (generatedHashKey.length > GENERATED_HASH_KEY_MAX_LENGTH) {
       return NextResponse.json(
-        { success: false, error: '设备身份牌长度不能超过 128' },
+        { success: false, error: t('api.activity.hashTooLong') },
         { status: 400 },
       )
     }
@@ -98,7 +101,7 @@ export async function POST(request: NextRequest) {
         .insert(devices)
         .values({
           generatedHashKey: WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY,
-          displayName: 'Web (后台快速添加)',
+          displayName: t('api.activity.webQuickAddDisplayName'),
           status: 'active',
           updatedAt: now,
         })
@@ -118,8 +121,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            '设备不可用或不存在。请在「设备管理」中创建设备并复制设备身份牌，或使用留空以使用 Web 预留设备。',
+          error: t('api.activity.deviceUnavailable'),
         },
         { status: 403 },
       )
@@ -224,12 +226,13 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error('添加活动失败:', error)
-    return NextResponse.json({ success: false, error: '添加失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.activity.addFailed') }, { status: 500 })
   }
 }
 
 /** PATCH: end admin-managed persistent activity immediately. */
 export async function PATCH(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -240,7 +243,7 @@ export async function PATCH(request: NextRequest) {
     const id = Number(body?.id)
     if (!Number.isFinite(id) || id <= 0) {
       return NextResponse.json(
-        { success: false, error: '仅支持按非 Realtime 持久活动 id 结束活动' },
+        { success: false, error: t('api.activity.invalidPersistentId') },
         { status: 400 },
       )
     }
@@ -255,7 +258,7 @@ export async function PATCH(request: NextRequest) {
       .limit(1)
 
     if (!activity) {
-      return NextResponse.json({ success: false, error: '活动不存在、已过期，或不支持立刻结束' }, { status: 404 })
+      return NextResponse.json({ success: false, error: t('api.activity.notFoundOrExpired') }, { status: 404 })
     }
 
     const pushMode = String(
@@ -264,7 +267,7 @@ export async function PATCH(request: NextRequest) {
       .trim()
       .toLowerCase()
     if (pushMode === 'realtime') {
-      return NextResponse.json({ success: false, error: 'Realtime 活动不支持立刻结束' }, { status: 409 })
+      return NextResponse.json({ success: false, error: t('api.activity.realtimeNotEndable') }, { status: 409 })
     }
 
     await db.delete(userActivities).where(eq(userActivities.id, id))
@@ -273,6 +276,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('结束活动失败:', error)
-    return NextResponse.json({ success: false, error: '结束活动失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.activity.endFailed') }, { status: 500 })
   }
 }

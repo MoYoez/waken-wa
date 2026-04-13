@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addWeeks, format, startOfWeek } from 'date-fns'
+import { addDays, addWeeks, format, startOfWeek } from 'date-fns'
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,6 +11,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -21,6 +22,7 @@ import {
 import { fetchAdminSettings } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import { patchAdminSettings } from '@/components/admin/admin-query-mutations'
+import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import { SortablePeriodTemplatePart } from '@/components/admin/sortable-period-template-part'
 import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
 import { WeekTimetableGrid } from '@/components/admin/week-timetable-grid'
@@ -69,20 +71,25 @@ import {
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
 } from '@/lib/site-config-constants'
 
-const WEEKDAY_OPTIONS: { value: number; label: string }[] = [
-  { value: 0, label: '周一' },
-  { value: 1, label: '周二' },
-  { value: 2, label: '周三' },
-  { value: 3, label: '周四' },
-  { value: 4, label: '周五' },
-  { value: 5, label: '周六' },
-  { value: 6, label: '周日' },
-]
+function getWeekdayOptions(t: (key: string) => string): { value: number; label: string }[] {
+  return [
+    { value: 0, label: t('scheduleManager.weekdays.monday') },
+    { value: 1, label: t('scheduleManager.weekdays.tuesday') },
+    { value: 2, label: t('scheduleManager.weekdays.wednesday') },
+    { value: 3, label: t('scheduleManager.weekdays.thursday') },
+    { value: 4, label: t('scheduleManager.weekdays.friday') },
+    { value: 5, label: t('scheduleManager.weekdays.saturday') },
+    { value: 6, label: t('scheduleManager.weekdays.sunday') },
+  ]
+}
 
-const PERIOD_PART_LABELS: Record<SchedulePeriodPart, string> = {
-  morning: '上午',
-  afternoon: '下午',
-  evening: '晚上',
+function getPeriodPartLabel(
+  t: (key: string) => string,
+  part: SchedulePeriodPart,
+): string {
+  if (part === 'morning') return t('scheduleManager.periodParts.morning')
+  if (part === 'afternoon') return t('scheduleManager.periodParts.afternoon')
+  return t('scheduleManager.periodParts.evening')
 }
 
 /** Fields that PATCH together; used for dirty detection vs last load/save. */
@@ -191,6 +198,7 @@ export interface ScheduleManagerHandle {
 }
 
 export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(function ScheduleManager(_, ref) {
+  const { t } = useT('admin')
   const settingsQuery = useQuery({
     queryKey: adminQueryKeys.settings.detail(),
     queryFn: fetchAdminSettings,
@@ -202,13 +210,13 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
   )
 
   if (settingsQuery.isLoading) {
-    return <div className="text-sm text-muted-foreground">加载课表配置中…</div>
+    return <div className="text-sm text-muted-foreground">{t('scheduleManager.loading')}</div>
   }
 
   if (!initialData) {
     return (
       <div className="text-sm text-muted-foreground">
-        {settingsQuery.error instanceof Error ? settingsQuery.error.message : '加载失败'}
+        {settingsQuery.error instanceof Error ? settingsQuery.error.message : t('scheduleManager.loadFailed')}
       </div>
     )
   }
@@ -226,6 +234,7 @@ const ScheduleManagerEditor = forwardRef<
   ScheduleManagerHandle,
   { initialData: ScheduleManagerInitialData }
 >(function ScheduleManagerEditor({ initialData }, ref) {
+  const { t } = useT('admin')
   const queryClient = useQueryClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
   const { toDisplayWallClockDate } = useSiteTimeFormat()
@@ -258,6 +267,7 @@ const ScheduleManagerEditor = forwardRef<
   const [scheduleBaseline, setScheduleBaseline] = useState<ScheduleFormBaseline | null>(
     initialData.scheduleBaseline,
   )
+  const weekdayOptions = useMemo(() => getWeekdayOptions(t), [t])
   const saveSettingsMutation = useMutation({
     mutationFn: patchAdminSettings,
     onSuccess: async (saved) => {
@@ -270,6 +280,21 @@ const ScheduleManagerEditor = forwardRef<
     () => expandOccurrencesInWeek(courses, weekRef, periodTemplate),
     [courses, weekRef, periodTemplate],
   )
+  const mobileWeekDays = useMemo(() => {
+    const weekStart = startOfWeek(weekRef, { weekStartsOn: 1 })
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = addDays(weekStart, index)
+      const dayKey = format(day, 'yyyy-MM-dd')
+      const items = occurrences
+        .filter((occurrence) => format(occurrence.start, 'yyyy-MM-dd') === dayKey)
+        .sort((a, b) => a.start.getTime() - b.start.getTime())
+      return {
+        date: day,
+        label: weekdayOptions[index]?.label ?? format(day, 'EEE'),
+        items,
+      }
+    })
+  }, [occurrences, weekRef, weekdayOptions])
 
   const patchPeriodTemplateItem = (
     id: string,
@@ -294,7 +319,9 @@ const ScheduleManagerEditor = forwardRef<
       ...prev,
       {
         id,
-        label: `${part === 'morning' ? '上午' : part === 'afternoon' ? '下午' : '晚上'}新节次`,
+        label: t('scheduleManager.newPeriodLabel', {
+          part: getPeriodPartLabel(t, part),
+        }),
         part,
         startTime: part === 'morning' ? '08:00' : part === 'afternoon' ? '14:00' : '19:00',
         endTime: part === 'morning' ? '09:40' : part === 'afternoon' ? '15:40' : '20:40',
@@ -330,7 +357,7 @@ const ScheduleManagerEditor = forwardRef<
 
   const save = async () => {
     if (!serverData) {
-      toast.error('尚未加载配置')
+      toast.error(t('scheduleManager.configNotLoaded'))
       return
     }
     try {
@@ -360,7 +387,7 @@ const ScheduleManagerEditor = forwardRef<
           homeAfterClassesLabel.trim() || SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
       })
       const saved = await saveSettingsMutation.mutateAsync(body)
-      toast.success('课表与主页展示已保存')
+      toast.success(t('scheduleManager.saved'))
       setServerData(saved)
       const tpl = resolveSchedulePeriodTemplate(saved.schedulePeriodTemplate)
       setPeriodTemplate(tpl)
@@ -383,7 +410,7 @@ const ScheduleManagerEditor = forwardRef<
         }),
       )
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '网络异常')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     }
   }
 
@@ -444,7 +471,7 @@ const ScheduleManagerEditor = forwardRef<
 
   const commitEditor = () => {
     if (!editing || !editing.title.trim()) {
-      setMessage('请填写课程名称')
+      setMessage(t('scheduleManager.messages.courseNameRequired'))
       return
     }
 
@@ -458,13 +485,17 @@ const ScheduleManagerEditor = forwardRef<
           ? editing.timeSessions
           : [{ startTime: editing.startTime, endTime: editing.endTime }]
       if (raw.length > MAX_TIME_SESSIONS_PER_COURSE) {
-        setMessage(`同一课程最多 ${MAX_TIME_SESSIONS_PER_COURSE} 个时段`)
+        setMessage(
+          t('scheduleManager.messages.maxTimeSessionsPerCourse', {
+            value: MAX_TIME_SESSIONS_PER_COURSE,
+          }),
+        )
         return
       }
       for (let i = 0; i < raw.length; i += 1) {
         const seg = raw[i]
         if (parseHmLocal(seg.endTime) <= parseHmLocal(seg.startTime)) {
-          setMessage(`时段 ${i + 1}：结束时间须晚于开始时间`)
+          setMessage(t('scheduleManager.messages.invalidTimeRange', { index: i + 1 }))
           return
         }
       }
@@ -482,17 +513,21 @@ const ScheduleManagerEditor = forwardRef<
     } else {
       const periodIds = Array.from(new Set((editing.periodIds ?? []).filter(Boolean)))
       if (periodIds.length === 0) {
-        setMessage('请至少选择一个节次')
+        setMessage(t('scheduleManager.messages.selectAtLeastOnePeriod'))
         return
       }
       if (periodIds.length > MAX_TIME_SESSIONS_PER_COURSE) {
-        setMessage(`同一课程最多 ${MAX_TIME_SESSIONS_PER_COURSE} 个节次`)
+        setMessage(
+          t('scheduleManager.messages.maxPeriodsPerCourse', {
+            value: MAX_TIME_SESSIONS_PER_COURSE,
+          }),
+        )
         return
       }
       const withIds: ScheduleCourse = { ...editing, periodIds, timeMode: 'periods' }
       const resolvedSessions = getCourseTimeSessions(withIds, periodTemplate)
       if (resolvedSessions.length === 0) {
-        setMessage('所选节次无效，请检查固定节次模板')
+        setMessage(t('scheduleManager.messages.invalidSelectedPeriods'))
         return
       }
       const first = resolvedSessions[0]
@@ -547,7 +582,7 @@ const ScheduleManagerEditor = forwardRef<
   const applyIcsImport = () => {
     const text = icsPaste.trim()
     if (!text) {
-      setMessage('请粘贴 ICS 内容')
+      setMessage(t('scheduleManager.messages.pasteIcsContent'))
       return
     }
     const result = importIcsToCourses(text)
@@ -570,10 +605,15 @@ const ScheduleManagerEditor = forwardRef<
     setIcsDialogOpen(false)
     setIcsPaste('')
     const w = result.warnings.length ? `（${result.warnings.join('；')}）` : ''
-    setMessage(`已导入 ${result.courses.length} 门课程${w}`)
+    setMessage(
+      t('scheduleManager.messages.importedCourses', {
+        value: result.courses.length,
+        warnings: w,
+      }),
+    )
   }
 
-  const onFileUpload = (file: File | null) => {
+  const onFileUpload = (file?: File) => {
     if (!file) return
     file.text().then((text) => {
       setIcsPaste(text)
@@ -646,76 +686,84 @@ const ScheduleManagerEditor = forwardRef<
       </AnimatePresence>
 
       <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3">
-        <h4 className="text-sm font-medium text-foreground">主页展示</h4>
+        <h4 className="text-sm font-medium text-foreground">{t('scheduleManager.homeDisplay.title')}</h4>
         <p className="text-xs text-muted-foreground">
-          开启后，访客在自己本地时间的上课时段内，会在首页个人资料右侧看到「正在上课」卡片。
+          {t('scheduleManager.homeDisplay.description')}
         </p>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <Label htmlFor="sched-in-class" className="font-normal cursor-pointer">
-            上课时间在主页显示「正在上课」
+            {t('scheduleManager.homeDisplay.showInClass')}
           </Label>
           <Switch
             id="sched-in-class"
             checked={inClassOnHome}
             onCheckedChange={setInClassOnHome}
+            className="self-end sm:self-auto"
           />
         </div>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <Label htmlFor="sched-home-next" className="font-normal cursor-pointer">
-            在课间显示「下一节」课程预告
+            {t('scheduleManager.homeDisplay.showNextUpcoming')}
           </Label>
           <Switch
             id="sched-home-next"
             checked={homeShowNextUpcoming}
             onCheckedChange={setHomeShowNextUpcoming}
             disabled={!inClassOnHome}
+            className="self-end sm:self-auto"
           />
         </div>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <Label htmlFor="sched-home-loc" className="font-normal cursor-pointer">
-            卡片中显示上课地点
+            {t('scheduleManager.homeDisplay.showLocation')}
           </Label>
           <Switch
             id="sched-home-loc"
             checked={homeShowLocation}
             onCheckedChange={setHomeShowLocation}
             disabled={!inClassOnHome}
+            className="self-end sm:self-auto"
           />
         </div>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <Label htmlFor="sched-home-teacher" className="font-normal cursor-pointer">
-            卡片中显示任课教师
+            {t('scheduleManager.homeDisplay.showTeacher')}
           </Label>
           <Switch
             id="sched-home-teacher"
             checked={homeShowTeacher}
             onCheckedChange={setHomeShowTeacher}
             disabled={!inClassOnHome}
+            className="self-end sm:self-auto"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="sched-home-after-label">今日课程已全部结束时的左侧文案</Label>
+          <Label htmlFor="sched-home-after-label">
+            {t('scheduleManager.homeDisplay.afterClassesLabel')}
+          </Label>
           <Input
             id="sched-home-after-label"
             value={homeAfterClassesLabel}
             onChange={(e) => setHomeAfterClassesLabel(e.target.value.slice(0, 40))}
-            placeholder="正在摸鱼"
+            placeholder={t('scheduleManager.homeDisplay.afterClassesPlaceholder')}
             maxLength={40}
             disabled={!inClassOnHome}
-            className="max-w-md"
+            className="w-full max-w-md"
           />
           <p className="text-xs text-muted-foreground">
-            对应首页「今天已经没课啦！」时，原「正在上课」位置显示此文案；留空保存后为「正在摸鱼」。
+            {t('scheduleManager.homeDisplay.afterClassesHint')}
           </p>
         </div>
       </div>
 
       <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5 sm:p-3 space-y-2.5 sm:space-y-3 overflow-x-hidden min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="min-w-0 text-xs font-medium text-foreground sm:text-sm">固定节次模板（全站共用）</h4>
+          <h4 className="min-w-0 text-xs font-medium text-foreground sm:text-sm">
+            {t('scheduleManager.periodTemplate.title')}
+          </h4>
         </div>
         <p className="text-[11px] text-muted-foreground text-pretty leading-relaxed sm:text-xs">
-          课程只选择节次，不再手填具体时间。修改模板后，已有课程会自动按新节次时间显示。同一时段内拖动左侧手柄调整节次顺序。
+          {t('scheduleManager.periodTemplate.description')}
         </p>
         <AnimatePresence initial={false}>
           {compatWarnings.length > 0 ? (
@@ -729,7 +777,11 @@ const ScheduleManagerEditor = forwardRef<
               layout
             >
               {compatWarnings[0]}
-              {compatWarnings.length > 1 ? ` 等 ${compatWarnings.length} 条` : ''}
+              {compatWarnings.length > 1
+                ? t('scheduleManager.periodTemplate.moreWarnings', {
+                    value: compatWarnings.length,
+                  })
+                : ''}
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -741,7 +793,9 @@ const ScheduleManagerEditor = forwardRef<
             return (
               <div key={part} className="space-y-2 min-w-0">
                 <div className="flex flex-col gap-1.5 sm:gap-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
-                  <Label className="shrink-0 text-xs font-medium sm:text-sm">{PERIOD_PART_LABELS[part]}</Label>
+                  <Label className="shrink-0 text-xs font-medium sm:text-sm">
+                    {getPeriodPartLabel(t, part)}
+                  </Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -749,11 +803,13 @@ const ScheduleManagerEditor = forwardRef<
                     className="h-8 w-full shrink-0 px-2.5 text-xs min-[480px]:w-auto sm:px-3 sm:text-sm"
                     onClick={() => addPeriodTemplateItem(part)}
                   >
-                    新增节次
+                    {t('scheduleManager.periodTemplate.addPeriod')}
                   </Button>
                 </div>
                 {rows.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground sm:text-xs">暂无节次</p>
+                  <p className="text-[11px] text-muted-foreground sm:text-xs">
+                    {t('scheduleManager.periodTemplate.noPeriods')}
+                  </p>
                 ) : (
                   <SortablePeriodTemplatePart
                     part={part}
@@ -770,19 +826,21 @@ const ScheduleManagerEditor = forwardRef<
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex items-center gap-0.5 rounded-full border border-border/60 bg-muted/25 p-0.5 shadow-sm">
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 rounded-full border border-border/60 bg-muted/25 p-0.5 shadow-sm sm:inline-flex sm:w-auto sm:flex-nowrap sm:justify-start">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-7 w-7 shrink-0 rounded-full"
             onClick={() => setWeekRef((w) => addWeeks(w, -1))}
-            aria-label="上一周"
+            aria-label={t('scheduleManager.weekNavigator.previousWeekAria')}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="text-xs tabular-nums min-w-[150px] sm:min-w-[180px] text-center text-foreground/90 px-1">
-            {format(startOfWeek(weekRef, { weekStartsOn: 1 }), 'yyyy-MM-dd')} 起
+          <div className="min-w-0 flex-1 px-1 text-center text-xs tabular-nums text-foreground/90 sm:min-w-[180px] sm:flex-none">
+            {t('scheduleManager.weekNavigator.startingFrom', {
+              value: format(startOfWeek(weekRef, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+            })}
           </div>
           <Button
             type="button"
@@ -790,7 +848,7 @@ const ScheduleManagerEditor = forwardRef<
             size="icon"
             className="h-7 w-7 shrink-0 rounded-full"
             onClick={() => setWeekRef((w) => addWeeks(w, 1))}
-            aria-label="下一周"
+            aria-label={t('scheduleManager.weekNavigator.nextWeekAria')}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -803,63 +861,129 @@ const ScheduleManagerEditor = forwardRef<
               setWeekRef(startOfWeek(toDisplayWallClockDate(new Date()), { weekStartsOn: 1 }))
             }
           >
-            本周
+            {t('scheduleManager.weekNavigator.thisWeek')}
           </Button>
         </div>
       </div>
 
-      <WeekTimetableGrid
-        weekRef={weekRef}
-        periodTemplate={periodTemplate}
-        occurrences={occurrences}
-      />
+      <div className="space-y-2 sm:hidden">
+        {mobileWeekDays.map((day) => (
+          <div
+            key={format(day.date, 'yyyy-MM-dd')}
+            className="rounded-lg border border-border/60 bg-card/50 px-3 py-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <h4 className="text-sm font-medium text-foreground">{day.label}</h4>
+                <p className="text-[11px] tabular-nums text-muted-foreground">
+                  {format(day.date, 'yyyy-MM-dd')}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+                {day.items.length}
+              </span>
+            </div>
+            {day.items.length === 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('scheduleManager.mobileWeek.emptyDay')}
+              </p>
+            ) : (
+              <div className="mt-2.5 space-y-2">
+                {day.items.map((occurrence, index) => (
+                  <div
+                    key={`${occurrence.courseId}-${occurrence.start.toISOString()}-${index}`}
+                    className="rounded-md border border-border/50 bg-background/80 px-3 py-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="break-words text-sm font-medium leading-5 text-foreground">
+                          {occurrence.title}
+                        </p>
+                        <p className="text-xs tabular-nums text-muted-foreground">
+                          {format(occurrence.start, 'HH:mm')}–{format(occurrence.end, 'HH:mm')}
+                        </p>
+                      </div>
+                      {occurrence.sessionCount && occurrence.sessionCount > 1 && occurrence.sessionOrdinal ? (
+                        <span className="shrink-0 rounded bg-primary/12 px-1.5 py-0.5 text-[10px] tabular-nums text-primary">
+                          {occurrence.sessionOrdinal}/{occurrence.sessionCount}
+                        </span>
+                      ) : null}
+                    </div>
+                    {occurrence.location || occurrence.teacher ? (
+                      <p className="mt-1 break-words text-[11px] leading-relaxed text-muted-foreground">
+                        {[occurrence.location, occurrence.teacher].filter(Boolean).join(' · ')}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden sm:block">
+        <WeekTimetableGrid
+          weekRef={weekRef}
+          periodTemplate={periodTemplate}
+          occurrences={occurrences}
+        />
+      </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h4 className="text-sm font-medium text-foreground">课程列表</h4>
-          <Button type="button" size="sm" variant="secondary" onClick={openNew}>
-            添加课程
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h4 className="text-sm font-medium text-foreground">{t('scheduleManager.courseList.title')}</h4>
+          <Button type="button" size="sm" variant="secondary" className="w-full sm:w-auto" onClick={openNew}>
+            {t('scheduleManager.courseList.addCourse')}
           </Button>
         </div>
         {courses.length === 0 ? (
-          <p className="text-sm text-muted-foreground">暂无课程，请添加或导入 ICS。</p>
+          <p className="text-sm text-muted-foreground">{t('scheduleManager.courseList.empty')}</p>
         ) : (
           <motion.ul className="space-y-1.5" layout>
             <AnimatePresence initial={false}>
               {courses.map((c) => (
                 <motion.li
                   key={c.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 bg-card/50 px-3 py-2 text-sm transition-colors hover:bg-muted/35"
+                  className="flex flex-col gap-3 rounded-lg border border-border/50 bg-card/50 px-3 py-3 text-sm transition-colors hover:bg-muted/35 sm:flex-row sm:items-center sm:justify-between"
                   variants={compactSectionVariants}
                   initial="initial"
                   animate="animate"
                   exit="exit"
                   transition={sectionTransition}
                   layout
-                >
-                  <div>
-                    <span className="font-medium">{c.title}</span>
-                    <span className="text-muted-foreground ml-2">
-                      {WEEKDAY_OPTIONS.find((w) => w.value === c.weekday)?.label}{' '}
+                  >
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="break-words font-medium text-foreground">{c.title}</p>
+                    <p className="break-words text-xs text-muted-foreground">
+                      {weekdayOptions.find((w) => w.value === c.weekday)?.label}{' '}
                       {formatCourseTimeRanges(c, periodTemplate)}
-                    </span>
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      开课 {c.anchorDate}
-                      {c.untilDate ? ` 至 ${c.untilDate}` : '（无结课）'}
-                    </span>
+                    </p>
+                    <p className="break-words text-xs text-muted-foreground">
+                      {t('scheduleManager.courseList.courseDateRange', {
+                        anchorDate: c.anchorDate,
+                        untilDate: c.untilDate ?? t('scheduleManager.courseList.noEndDate'),
+                      })}
+                    </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => openEdit(c)}>
-                      编辑
+                  <div className="flex w-full gap-2 sm:w-auto">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => openEdit(c)}
+                    >
+                      {t('scheduleManager.courseList.edit')}
                     </Button>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-destructive"
+                      className="flex-1 text-destructive sm:flex-none"
                       onClick={() => removeCourse(c.id)}
                     >
-                      删除
+                      {t('common.delete')}
                     </Button>
                   </div>
                 </motion.li>
@@ -872,34 +996,38 @@ const ScheduleManagerEditor = forwardRef<
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing?.id && courses.some((c) => c.id === editing.id) ? '编辑课程' : '添加课程'}</DialogTitle>
+            <DialogTitle>
+              {editing?.id && courses.some((c) => c.id === editing.id)
+                ? t('scheduleManager.editor.editCourse')
+                : t('scheduleManager.editor.addCourse')}
+            </DialogTitle>
           </DialogHeader>
           {editing ? (
             <div className="space-y-3 py-2">
               <div className="space-y-2">
-                <Label>课程名称</Label>
+                <Label>{t('scheduleManager.editor.courseName')}</Label>
                 <Input
                   value={editing.title}
                   onChange={(e) => setEditing({ ...editing, title: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>地点（可选）</Label>
+                <Label>{t('scheduleManager.editor.locationOptional')}</Label>
                 <Input
                   value={editing.location ?? ''}
                   onChange={(e) => setEditing({ ...editing, location: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>任课教师（可选）</Label>
+                <Label>{t('scheduleManager.editor.teacherOptional')}</Label>
                 <Input
                   value={editing.teacher ?? ''}
                   onChange={(e) => setEditing({ ...editing, teacher: e.target.value })}
-                  placeholder="仅在开启「显示任课教师」时展示"
+                  placeholder={t('scheduleManager.editor.teacherPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label>星期</Label>
+                <Label>{t('scheduleManager.editor.weekday')}</Label>
                 <Select
                   value={String(editing.weekday)}
                   onValueChange={(v) => {
@@ -918,7 +1046,7 @@ const ScheduleManagerEditor = forwardRef<
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {WEEKDAY_OPTIONS.map((w) => (
+                    {weekdayOptions.map((w) => (
                       <SelectItem key={w.value} value={String(w.value)}>
                         {w.label}
                       </SelectItem>
@@ -927,7 +1055,7 @@ const ScheduleManagerEditor = forwardRef<
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>时间方式</Label>
+                <Label>{t('scheduleManager.editor.timeMode')}</Label>
                 <RadioGroup
                   value={
                     periodTemplate.length === 0
@@ -979,13 +1107,13 @@ const ScheduleManagerEditor = forwardRef<
                       disabled={periodTemplate.length === 0}
                     />
                     <Label htmlFor="sched-tm-periods" className="font-normal cursor-pointer">
-                      固定节次（跟随模板）
+                      {t('scheduleManager.editor.fixedPeriods')}
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <RadioGroupItem value="custom" id="sched-tm-custom" />
                     <Label htmlFor="sched-tm-custom" className="font-normal cursor-pointer">
-                      自定义时间
+                      {t('scheduleManager.editor.customTime')}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -1001,9 +1129,9 @@ const ScheduleManagerEditor = forwardRef<
                     exit="exit"
                     transition={sectionTransition}
                   >
-                    <Label>时段</Label>
+                    <Label>{t('scheduleManager.editor.timeSessions')}</Label>
                     <p className="text-[11px] text-muted-foreground">
-                      手动填写开始与结束时间；同一课程可多段。
+                      {t('scheduleManager.editor.timeSessionsHint')}
                     </p>
                     {(editing.timeSessions?.length
                       ? editing.timeSessions
@@ -1082,7 +1210,7 @@ const ScheduleManagerEditor = forwardRef<
                               }
                             })
                           }}
-                          aria-label="删除时段"
+                          aria-label={t('scheduleManager.editor.deleteTimeSession')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -1117,7 +1245,7 @@ const ScheduleManagerEditor = forwardRef<
                       }
                     >
                       <Plus className="h-4 w-4 mr-1" />
-                      添加时段
+                      {t('scheduleManager.editor.addTimeSession')}
                     </Button>
                   </motion.div>
                 ) : (
@@ -1130,9 +1258,9 @@ const ScheduleManagerEditor = forwardRef<
                     exit="exit"
                     transition={sectionTransition}
                   >
-                    <Label>选择节次（可多选）</Label>
+                    <Label>{t('scheduleManager.editor.selectPeriods')}</Label>
                     <p className="text-[11px] text-muted-foreground">
-                      课程时间由固定节次模板决定。若模板修改，课程会自动按新时间变化。
+                      {t('scheduleManager.editor.selectPeriodsHint')}
                     </p>
                     <div className="space-y-2">
                       {(['morning', 'afternoon', 'evening'] as const).map((part) => {
@@ -1142,7 +1270,9 @@ const ScheduleManagerEditor = forwardRef<
                         if (rows.length === 0) return null
                         return (
                           <div key={part} className="space-y-1">
-                            <div className="text-xs text-muted-foreground">{PERIOD_PART_LABELS[part]}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {getPeriodPartLabel(t, part)}
+                            </div>
                             {rows.map((p) => {
                               const checked = Boolean(editing.periodIds?.includes(p.id))
                               return (
@@ -1185,7 +1315,7 @@ const ScheduleManagerEditor = forwardRef<
                 )}
               </AnimatePresence>
               <div className="space-y-2">
-                <Label>开课日期（首次上课）</Label>
+                <Label>{t('scheduleManager.editor.anchorDate')}</Label>
                 <Input
                   type="date"
                   value={editing.anchorDate}
@@ -1194,11 +1324,11 @@ const ScheduleManagerEditor = forwardRef<
                   }
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  须与「星期」一致；修改星期时会自动对齐到该星期最近的一天（含当天之后）。
+                  {t('scheduleManager.editor.anchorDateHint')}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>结课日期（可选，含当天）</Label>
+                <Label>{t('scheduleManager.editor.untilDate')}</Label>
                 <Input
                   type="date"
                   value={editing.untilDate ?? ''}
@@ -1214,10 +1344,10 @@ const ScheduleManagerEditor = forwardRef<
           ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={commitEditor}>
-              确定
+              {t('scheduleManager.editor.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1226,25 +1356,26 @@ const ScheduleManagerEditor = forwardRef<
       <Dialog open={icsDialogOpen} onOpenChange={setIcsDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>导入 ICS</DialogTitle>
+            <DialogTitle>{t('scheduleManager.icsImport.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label>选择文件</Label>
-              <Input
-                type="file"
+              <Label>{t('scheduleManager.icsImport.selectFile')}</Label>
+              <FileSelectTrigger
                 accept=".ics,.ical,text/calendar"
-                onChange={(e) => onFileUpload(e.target.files?.[0] ?? null)}
+                buttonLabel={t('scheduleManager.icsImport.selectFile')}
+                emptyLabel={t('common.noFileSelected')}
+                onSelect={onFileUpload}
               />
             </div>
             <div className="space-y-2">
-              <Label>或粘贴内容</Label>
+              <Label>{t('scheduleManager.icsImport.orPasteContent')}</Label>
               <Textarea
                 value={icsPaste}
                 onChange={(e) => setIcsPaste(e.target.value)}
                 rows={8}
                 className="font-mono text-xs"
-                placeholder="BEGIN:VCALENDAR..."
+                placeholder={t('scheduleManager.icsImport.placeholder')}
               />
             </div>
             <RadioGroup
@@ -1255,23 +1386,23 @@ const ScheduleManagerEditor = forwardRef<
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="replace" id="ics-replace" />
                 <Label htmlFor="ics-replace" className="font-normal cursor-pointer">
-                  替换现有课程
+                  {t('scheduleManager.icsImport.replaceExisting')}
                 </Label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="append" id="ics-append" />
                 <Label htmlFor="ics-append" className="font-normal cursor-pointer">
-                  追加（重复 UID 会生成新 id）
+                  {t('scheduleManager.icsImport.appendWithDuplicateUid')}
                 </Label>
               </div>
             </RadioGroup>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setIcsDialogOpen(false)}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={applyIcsImport}>
-              解析并写入
+              {t('scheduleManager.icsImport.parseAndWrite')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1282,8 +1413,8 @@ const ScheduleManagerEditor = forwardRef<
       saving={saveSettingsMutation.isPending}
       onSave={save}
       onRevert={revertUnsavedSchedule}
-      saveLabel="保存到站点配置"
-      revertLabel="撤销"
+      saveLabel={t('scheduleManager.saveToSiteConfig')}
+      revertLabel={t('unsavedChanges.revert')}
     />
     </>
   )

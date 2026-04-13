@@ -9,6 +9,7 @@ import {
 import { Check, Copy, QrCode, RefreshCw, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
+import { useT } from 'next-i18next/client'
 import {
   forwardRef,
   useEffect,
@@ -67,6 +68,7 @@ export interface TokenManagerHandle {
 }
 
 export const TokenManager = forwardRef<TokenManagerHandle, object>(function TokenManager(_, ref) {
+  const { t } = useT('admin')
   const queryClient = useQueryClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
   const { formatPattern } = useSiteTimeFormat()
@@ -119,11 +121,11 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
       setNewTokenBundle(data.tokenBundleBase64 || null)
       setNewEndpoint(data.endpoint || null)
       setPage(0)
-      toast.success('Token 已创建')
+      toast.success(t('tokens.created'))
       await queryClient.invalidateQueries({ queryKey: ['admin', 'tokens'] })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -134,10 +136,10 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
     },
     onSuccess: async ({ isActive }) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'tokens'] })
-      toast.success(isActive ? 'Token 已启用' : 'Token 已禁用', { duration: 2200 })
+      toast.success(isActive ? t('tokens.enabled') : t('tokens.disabled'), { duration: 2200 })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -147,10 +149,10 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'tokens'] })
-      toast.success('Token 已删除')
+      toast.success(t('tokens.deleted'))
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -159,7 +161,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
       await queryClient.invalidateQueries({ queryKey: ['admin', 'tokens'] })
       await tokensQuery.refetch()
     } catch {
-      toast.error('刷新失败，请重试')
+      toast.error(t('tokens.refreshFailed'))
     }
   }
 
@@ -179,9 +181,9 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
   const copyToClipboard = async (text: string, target: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      toast.success('已复制到剪贴板')
+      toast.success(t('common.copiedToClipboard'))
     } catch {
-      toast.error('复制失败，请检查浏览器权限')
+      toast.error(t('common.copyFailedBrowserPermission'))
       return
     }
     if (copyFeedbackTimerRef.current) clearTimeout(copyFeedbackTimerRef.current)
@@ -223,9 +225,9 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>创建 API Token</DialogTitle>
+            <DialogTitle>{t('tokens.createTitle')}</DialogTitle>
             <DialogDescription>
-              创建一个新的 API Token 用于上报活动数据
+              {t('tokens.createDescription')}
             </DialogDescription>
           </DialogHeader>
 
@@ -241,7 +243,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                 transition={sectionTransition}
               >
               <div className="rounded-lg bg-muted p-4">
-                <p className="mb-2 text-sm text-muted-foreground">请保存以下 Token，它只会显示一次：</p>
+                <p className="mb-2 text-sm text-muted-foreground">{t('tokens.saveTokenHint')}</p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 break-all rounded bg-background p-2 text-sm font-mono">
                     {newToken}
@@ -263,7 +265,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
               {newTokenBundle ? (
                 <div className="space-y-2 rounded-lg bg-muted p-4">
                   <p className="text-sm text-muted-foreground">
-                    一键接入配置（Base64，含 endpoint + key）
+                    {t('tokens.accessBundle')}
                   </p>
                   {newEndpoint ? (
                     <p className="text-xs text-muted-foreground">Endpoint: {newEndpoint}</p>
@@ -290,21 +292,21 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setQrTitle(newTokenName || '新 Token')
+                        setQrTitle(newTokenName || t('tokens.createTitle'))
                         setQrEndpoint(newEndpoint || '')
                         setQrEncoded(newTokenBundle)
                         setQrDialogOpen(true)
                       }}
                     >
                       <QrCode className="h-4 w-4" />
-                      显示接入二维码
+                      {t('tokens.showQr')}
                     </Button>
                   </div>
                 </div>
               ) : null}
 
               <DialogFooter>
-                <Button onClick={closeDialog}>完成</Button>
+                <Button onClick={closeDialog}>{t('common.complete')}</Button>
               </DialogFooter>
               </motion.div>
             ) : (
@@ -318,23 +320,23 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                 transition={sectionTransition}
               >
               <div className="space-y-2">
-                <Label htmlFor="tokenName">Token 名称</Label>
+                <Label htmlFor="tokenName">{t('tokens.tokenName')}</Label>
                 <Input
                   id="tokenName"
-                  placeholder="例如：我的电脑"
+                  placeholder={t('tokens.tokenNamePlaceholder')}
                   value={newTokenName}
                   onChange={(event) => setNewTokenName(event.target.value)}
                 />
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={closeDialog}>
-                  取消
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={() => void handleCreate()}
                   disabled={createTokenMutation.isPending || !newTokenName.trim()}
                 >
-                  {createTokenMutation.isPending ? '创建中...' : '创建'}
+                  {createTokenMutation.isPending ? t('tokens.creating') : t('common.create')}
                 </Button>
               </DialogFooter>
               </motion.div>
@@ -346,7 +348,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
       <div className="flex items-center gap-3">
         <Button type="button" variant="outline" onClick={() => void refreshTokens()} disabled={refreshing}>
           <RefreshCw className={`mr-1 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? '刷新中...' : '刷新列表'}
+          {refreshing ? t('common.refreshing') : t('tokens.refreshList')}
         </Button>
       </div>
 
@@ -362,7 +364,9 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
               transition={sectionTransition}
             >
               <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">加载中...</CardContent>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  {t('common.loading')}
+                </CardContent>
               </Card>
             </motion.div>
           ) : tokens.length === 0 && total > 0 ? (
@@ -375,7 +379,9 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
               transition={sectionTransition}
             >
               <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">正在同步页码…</CardContent>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  {t('devices.syncingPage')}
+                </CardContent>
               </Card>
             </motion.div>
           ) : tokens.length === 0 ? (
@@ -389,7 +395,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
             >
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  暂无 Token，点击「创建 Token」开始
+                  {t('tokens.noTokens')}
                 </CardContent>
               </Card>
             </motion.div>
@@ -433,41 +439,51 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>删除 Token</AlertDialogTitle>
+                            <AlertDialogTitle>{t('tokens.deleteTitle')}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              确定要删除 Token &quot;{token.name}&quot; 吗？使用此 Token 的设备将无法继续上报数据。
+                              {t('tokens.deleteDescription', { name: token.name })}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => void handleDelete(token.id)}
                               disabled={deleteTokenMutation.isPending}
                             >
-                              删除
+                              {t('common.delete')}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
                   </div>
-                  <CardDescription>Token: {token.token}</CardDescription>
+                  <CardDescription>{t('tokens.tokenPrefix')} {token.token}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                    <span>创建于 {safeFormat(token.createdAt, 'yyyy-MM-dd') ?? '—'}</span>
+                    <span>
+                      {t('tokens.createdAt', {
+                        value: safeFormat(token.createdAt, 'yyyy-MM-dd') ?? '—',
+                      })}
+                    </span>
                     {safeFormat(token.lastUsedAt, 'MM-dd HH:mm') ? (
-                      <span>最后使用 {safeFormat(token.lastUsedAt, 'MM-dd HH:mm')}</span>
+                      <span>
+                        {t('tokens.lastUsedAt', {
+                          value: safeFormat(token.lastUsedAt, 'MM-dd HH:mm') ?? '—',
+                        })}
+                      </span>
                     ) : null}
                     <span className={token.isActive ? 'text-emerald-500' : 'text-muted-foreground'}>
-                      {token.isActive ? '已启用' : '已禁用'}
+                      {token.isActive ? t('tokens.enabled') : t('tokens.disabled')}
                     </span>
                   </div>
                   <div className="rounded-md border border-border/60 bg-muted/20 p-3">
-                    <p className="mb-2 text-xs font-medium text-foreground">最近使用设备（按最后在线）</p>
+                    <p className="mb-2 text-xs font-medium text-foreground">
+                      {t('tokens.recentDevicesTitle')}
+                    </p>
                     {!token.recentDevices || token.recentDevices.length === 0 ? (
                       <p className="text-xs text-muted-foreground">
-                        暂无关联设备（上报过且绑定此 Token 的设备会出现在此）
+                        {t('tokens.noRecentDevices')}
                       </p>
                     ) : (
                       <ul className="space-y-2">
@@ -481,10 +497,12 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                               <span className="shrink-0 text-muted-foreground">
                                 {device.lastSeenAt
                                   ? safeFormat(device.lastSeenAt, 'yyyy-MM-dd HH:mm') ?? '—'
-                                  : '从未在线'}
+                                  : t('common.neverOnline')}
                               </span>
                             </div>
-                            <p className="text-[10px] text-muted-foreground">设备身份牌</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {t('tokens.deviceIdentity')}
+                            </p>
                             <code className="block break-all font-mono text-muted-foreground">
                               {device.generatedHashKey}
                             </code>
@@ -505,12 +523,15 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
         {total > 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
             <span>
-              共 {total} 条
+              {t('common.countSummary', { total })}
               {tokens.length > 0 ? (
                 <>
                   {' '}
-                  · 本页 {safePage * TOKEN_LIST_PAGE_SIZE + 1}–
-                  {safePage * TOKEN_LIST_PAGE_SIZE + tokens.length}
+                  ·{' '}
+                  {t('common.pageSummary', {
+                    start: safePage * TOKEN_LIST_PAGE_SIZE + 1,
+                    end: safePage * TOKEN_LIST_PAGE_SIZE + tokens.length,
+                  })}
                 </>
               ) : null}
             </span>
@@ -524,7 +545,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                   onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
                   disabled={safePage <= 0 || loading}
                 >
-                  上一页
+                  {t('common.previousPage')}
                 </Button>
                 <span className="tabular-nums text-sm">
                   {safePage + 1} / {totalPages}
@@ -539,7 +560,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                   }
                   disabled={safePage >= totalPages - 1 || loading}
                 >
-                  下一页
+                  {t('common.nextPage')}
                 </Button>
               </div>
             ) : null}
@@ -560,14 +581,14 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>接入二维码</DialogTitle>
+            <DialogTitle>{t('tokens.qrTitle')}</DialogTitle>
             <DialogDescription>
-              仅本次创建成功时可生成；关闭对话框后请用已保存的 Base64 或新建 Token。
+              {t('tokens.qrDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm">
-              Token: <span className="font-medium">{qrTitle || '-'}</span>
+              {t('tokens.tokenPrefix')} <span className="font-medium">{qrTitle || '-'}</span>
             </p>
             {qrEndpoint ? (
               <p className="break-all text-xs text-muted-foreground">Endpoint: {qrEndpoint}</p>
@@ -583,7 +604,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                   className="h-[260px] w-[260px]"
                 />
               ) : (
-                <div className="text-sm text-muted-foreground">暂无二维码数据</div>
+                <div className="text-sm text-muted-foreground">{t('tokens.noQrData')}</div>
               )}
             </div>
             {qrEncoded ? (
@@ -597,7 +618,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                 ) : (
                   <Copy className="h-4 w-4" />
                 )}
-                {copiedTarget === 'qr-encoded' ? '已复制' : '复制接入配置'}
+                {copiedTarget === 'qr-encoded' ? t('tokens.copied') : t('tokens.copyBundle')}
               </Button>
             ) : null}
           </div>

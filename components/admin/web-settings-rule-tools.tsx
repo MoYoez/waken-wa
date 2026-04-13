@@ -2,6 +2,7 @@
 
 import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -72,6 +73,7 @@ function AppNameListEditor({
   onPageChange: (page: number) => void
   inputClassName?: string
 }) {
+  const { t } = useT('admin')
   const prefersReducedMotion = Boolean(useReducedMotion())
   const total = value.length
   const maxPage = listMaxPage(total, SETTINGS_APP_LIST_PAGE_SIZE)
@@ -96,10 +98,14 @@ function AppNameListEditor({
           placeholder={placeholder}
           inputClassName={inputClassName}
           showClear={false}
-          emptyText={items.length > 0 ? '无匹配历史记录' : '未启用历史应用记录'}
+          emptyText={
+            items.length > 0
+              ? t('webSettingsRuleTools.appNameListEditor.noMatchingHistory')
+              : t('webSettingsRuleTools.appNameListEditor.historyDisabled')
+          }
         />
         <Button type="button" className="shrink-0" onClick={onAdd}>
-          添加
+          {t('webSettingsRuleTools.appNameListEditor.add')}
         </Button>
       </div>
 
@@ -107,7 +113,9 @@ function AppNameListEditor({
         <p className="text-xs text-muted-foreground">{emptyText}</p>
       ) : (
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">已有条目（分页）</p>
+          <p className="text-xs text-muted-foreground">
+            {t('webSettingsRuleTools.appNameListEditor.savedItemsPaged')}
+          </p>
           <motion.ul className="space-y-3" layout>
             <AnimatePresence initial={false}>
               {value.slice(start, start + SETTINGS_APP_LIST_PAGE_SIZE).map((item, localIdx) => {
@@ -131,7 +139,7 @@ function AppNameListEditor({
                       className="shrink-0"
                       onClick={() => onRemove(idx)}
                     >
-                      删除
+                      {t('common.delete')}
                     </Button>
                   </motion.li>
                 )
@@ -151,6 +159,7 @@ function AppNameListEditor({
 }
 
 export function WebSettingsRuleTools() {
+  const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [historyApps] = useAtom(webSettingsHistoryAppsAtom)
   const [historyPlaySources] = useAtom(webSettingsHistoryPlaySourcesAtom)
@@ -223,9 +232,9 @@ export function WebSettingsRuleTools() {
         mediaPlaySourceBlocklist: form.mediaPlaySourceBlocklist,
       })
       await navigator.clipboard.writeText(json)
-      toast.success('已复制规则 JSON 到剪贴板')
+      toast.success(t('webSettingsRuleTools.toasts.copiedRulesJson'))
     } catch {
-      toast.error('复制失败，请重试')
+      toast.error(t('common.copyFailedBrowserPermission'))
     }
   }
 
@@ -242,19 +251,19 @@ export function WebSettingsRuleTools() {
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
-      toast.success('已导出已使用应用 JSON')
+      toast.success(t('webSettingsRuleTools.toasts.exportedUsedAppsJson'))
     } catch {
-      toast.error('导出失败，请重试')
+      toast.error(t('query.exportFailed'))
     }
   }
 
   const confirmImportRules = () => {
     const raw = importRulesInput.trim()
     if (!raw) {
-      toast.error('请先粘贴规则 JSON')
+      toast.error(t('webSettingsRuleTools.importDialog.pasteRulesJsonFirst'))
       return
     }
-    const parsed = parseAppRulesJson(raw)
+    const parsed = parseAppRulesJson(raw, (key) => t(`webSettingsRuleTools.parseErrors.${key}`))
     if (!parsed.ok) {
       toast.error(parsed.error)
       return
@@ -268,7 +277,7 @@ export function WebSettingsRuleTools() {
     patch('mediaPlaySourceBlocklist', parsed.data.mediaPlaySourceBlocklist)
     resetEditorState()
     setImportRulesDialogOpen(false)
-    toast.success('已写入规则到表单，请记得保存')
+    toast.success(t('webSettingsRuleTools.toasts.importedRulesIntoForm'))
   }
 
   return (
@@ -276,20 +285,22 @@ export function WebSettingsRuleTools() {
       <div className="flex flex-col gap-4 rounded-lg border border-border/60 bg-card/40 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <Label className="text-base">应用匹配文案规则</Label>
-            <p className="text-xs text-muted-foreground">已保存 {rulesTotal} 条</p>
+            <Label className="text-base">{t('webSettingsRuleTools.appRules.title')}</Label>
+            <p className="text-xs text-muted-foreground">
+              {t('webSettingsRuleTools.appRules.savedCount', { value: rulesTotal })}
+            </p>
           </div>
           <Button type="button" variant="secondary" className="shrink-0" onClick={() => setDialogAppRulesOpen(true)}>
-            在弹窗中编辑
+            {t('webSettingsRuleTools.editInDialog')}
           </Button>
         </div>
         <div className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background/40 px-3 py-2.5">
           <div className="space-y-0.5 min-w-0">
             <Label htmlFor="app-rule-show-process" className="font-normal cursor-pointer">
-              命中规则时显示进程名
+              {t('webSettingsRuleTools.appRules.showProcessNameTitle')}
             </Label>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              开启后为「文案 | 进程名」；关闭则仅显示规则文案（仍隐藏原标题）。
+              {t('webSettingsRuleTools.appRules.showProcessNameDescription')}
             </p>
           </div>
           <Switch
@@ -310,16 +321,28 @@ export function WebSettingsRuleTools() {
               transition={sectionTransition}
               layout
             >
-              <p className="text-xs text-muted-foreground">规则预览（前 3 条）</p>
+              <p className="text-xs text-muted-foreground">
+                {t('webSettingsRuleTools.appRules.previewTop3')}
+              </p>
               <ul className="space-y-2">
                 {form.appMessageRules.slice(0, 3).map((rule, idx) => (
                   <li key={`${rule.match}-${idx}`} className="rounded-md border border-border/40 bg-background/55 px-3 py-2">
-                    <p className="text-xs font-medium text-foreground/80 break-all font-mono">{rule.match || '未填写 match'}</p>
-                    <p className="mt-1 text-sm text-muted-foreground break-words">{rule.text || '未填写 text'}</p>
+                    <p className="text-xs font-medium text-foreground/80 break-all font-mono">
+                      {rule.match || t('webSettingsRuleTools.appRules.matchEmpty')}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground break-words">
+                      {rule.text || t('webSettingsRuleTools.appRules.textEmpty')}
+                    </p>
                   </li>
                 ))}
               </ul>
-              {rulesTotal > 3 ? <p className="text-xs text-muted-foreground">其余 {rulesTotal - 3} 条可在弹窗中继续查看和编辑。</p> : null}
+              {rulesTotal > 3 ? (
+                <p className="text-xs text-muted-foreground">
+                  {t('webSettingsRuleTools.appRules.moreRulesHint', {
+                    value: rulesTotal - 3,
+                  })}
+                </p>
+              ) : null}
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -331,18 +354,18 @@ export function WebSettingsRuleTools() {
           showCloseButton
         >
           <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 text-left">
-            <DialogTitle>应用匹配文案规则</DialogTitle>
+            <DialogTitle>{t('webSettingsRuleTools.appRules.title')}</DialogTitle>
             <DialogDescription>
-              match 为进程/应用名，text 为展示文案；支持 {'{process}'}、{'{title}'} 占位符。
+              {t('webSettingsRuleTools.appRules.dialogDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             <div className="space-y-3">
               {form.appMessageRules.length === 0 ? (
-                <p className="text-xs text-muted-foreground">暂无规则</p>
+                <p className="text-xs text-muted-foreground">{t('webSettingsRuleTools.appRules.noRules')}</p>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">已有规则</p>
+                  <p className="text-xs text-muted-foreground">{t('webSettingsRuleTools.appRules.savedRules')}</p>
                   {form.appMessageRules
                     .slice(rulesStart, rulesStart + SETTINGS_RULES_PAGE_SIZE)
                     .map((rule, localIdx) => {
@@ -351,7 +374,10 @@ export function WebSettingsRuleTools() {
                         <div key={idx} className="space-y-3 rounded-md border bg-background/50 p-3">
                           <div className="flex items-center justify-between gap-3">
                             <p className="text-xs text-muted-foreground">
-                              规则 {idx + 1} / 共 {rulesTotal} 条
+                              {t('webSettingsRuleTools.appRules.ruleIndex', {
+                                index: idx + 1,
+                                total: rulesTotal,
+                              })}
                             </p>
                             <Button
                               type="button"
@@ -364,12 +390,14 @@ export function WebSettingsRuleTools() {
                                 )
                               }
                             >
-                              删除
+                              {t('common.delete')}
                             </Button>
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor={`rule-match-${idx}`}>match（进程/应用名）</Label>
+                            <Label htmlFor={`rule-match-${idx}`}>
+                              {t('webSettingsRuleTools.appRules.matchLabel')}
+                            </Label>
                             <Autocomplete
                               id={`rule-match-${idx}`}
                               items={appAutocompleteItems}
@@ -379,16 +407,20 @@ export function WebSettingsRuleTools() {
                                 next[idx] = { ...next[idx], match: value }
                                 patch('appMessageRules', next)
                               }}
-                              placeholder="例如：WindowsTerminal.exe"
+                              placeholder={t('webSettingsRuleTools.appRules.matchPlaceholder')}
                               showClear={false}
                               emptyText={
-                                form.captureReportedAppsEnabled ? '无匹配历史应用' : '未启用历史应用记录'
+                                form.captureReportedAppsEnabled
+                                  ? t('webSettingsRuleTools.appRules.noMatchingHistoryApp')
+                                  : t('webSettingsRuleTools.appNameListEditor.historyDisabled')
                               }
                             />
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor={`rule-text-${idx}`}>text（替换文案）</Label>
+                            <Label htmlFor={`rule-text-${idx}`}>
+                              {t('webSettingsRuleTools.appRules.textLabel')}
+                            </Label>
                             <textarea
                               id={`rule-text-${idx}`}
                               rows={3}
@@ -399,7 +431,7 @@ export function WebSettingsRuleTools() {
                                 patch('appMessageRules', next)
                               }}
                               className="w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
-                              placeholder="例如：正在编码：{title}"
+                              placeholder={t('webSettingsRuleTools.appRules.textPlaceholder')}
                             />
                           </div>
                         </div>
@@ -423,11 +455,11 @@ export function WebSettingsRuleTools() {
                   setRulesListPage(listMaxPage(next.length, SETTINGS_RULES_PAGE_SIZE))
                 }}
               >
-                添加规则
+                {t('webSettingsRuleTools.appRules.addRule')}
               </Button>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">
-              示例：match 为 `WindowsTerminal.exe`，text 为 {'正在编码：{title}'}。
+              {t('webSettingsRuleTools.appRules.example')}
             </p>
           </div>
         </DialogContent>
@@ -435,13 +467,20 @@ export function WebSettingsRuleTools() {
 
       <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/40 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <Label className="text-base">应用显示筛选</Label>
+          <Label className="text-base">{t('webSettingsRuleTools.appFilter.title')}</Label>
           <p className="text-xs text-muted-foreground">
-            {form.appFilterMode === 'blacklist' ? '黑名单' : '白名单'}模式 · 黑 {blTotal} / 白 {wlTotal} 条
+            {t('webSettingsRuleTools.appFilter.summary', {
+              mode:
+                form.appFilterMode === 'blacklist'
+                  ? t('webSettingsRuleTools.appFilter.blacklistMode')
+                  : t('webSettingsRuleTools.appFilter.whitelistMode'),
+              blacklist: blTotal,
+              whitelist: wlTotal,
+            })}
           </p>
         </div>
         <Button type="button" variant="secondary" className="shrink-0" onClick={() => setDialogAppFilterOpen(true)}>
-          在弹窗中编辑
+          {t('webSettingsRuleTools.editInDialog')}
         </Button>
       </div>
 
@@ -451,8 +490,8 @@ export function WebSettingsRuleTools() {
           showCloseButton
         >
           <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 text-left">
-            <DialogTitle>应用显示筛选</DialogTitle>
-            <DialogDescription>选择黑名单或白名单，并维护应用名列表（不区分大小写）。</DialogDescription>
+            <DialogTitle>{t('webSettingsRuleTools.appFilter.title')}</DialogTitle>
+            <DialogDescription>{t('webSettingsRuleTools.appFilter.dialogDescription')}</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             <div className="space-y-4 rounded-lg border border-border/60 bg-card/30 p-4">
@@ -465,19 +504,21 @@ export function WebSettingsRuleTools() {
                   <RadioGroupItem value="blacklist" id="filter-blacklist" className="mt-0.5" />
                   <div className="space-y-1">
                     <Label htmlFor="filter-blacklist" className="font-medium cursor-pointer">
-                      黑名单模式
+                      {t('webSettingsRuleTools.appFilter.blacklistMode')}
                     </Label>
-                    <p className="text-xs text-muted-foreground">列表中的应用将从当前状态与历史记录中隐藏。</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('webSettingsRuleTools.appFilter.blacklistDescription')}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <RadioGroupItem value="whitelist" id="filter-whitelist" className="mt-0.5" />
                   <div className="space-y-1">
                     <Label htmlFor="filter-whitelist" className="font-medium cursor-pointer">
-                      白名单模式
+                      {t('webSettingsRuleTools.appFilter.whitelistMode')}
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      仅列表中的应用会显示；白名单为空时不展示任何活动记录。
+                      {t('webSettingsRuleTools.appFilter.whitelistDescription')}
                     </p>
                   </div>
                 </div>
@@ -495,13 +536,15 @@ export function WebSettingsRuleTools() {
                     transition={sectionTransition}
                     layout
                   >
-                    <Label htmlFor="blacklist-input">黑名单应用名</Label>
+                    <Label htmlFor="blacklist-input">
+                      {t('webSettingsRuleTools.appFilter.blacklistInputLabel')}
+                    </Label>
                     <AppNameListEditor
-                      title="黑名单应用名"
-                      description="不区分大小写，每行添加一个应用名。"
-                      emptyText="暂无黑名单条目"
+                      title={t('webSettingsRuleTools.appFilter.blacklistInputLabel')}
+                      description={t('webSettingsRuleTools.appFilter.blacklistInputDescription')}
+                      emptyText={t('webSettingsRuleTools.appFilter.blacklistEmpty')}
                       inputId="blacklist-input"
-                      placeholder="例如：WeChat.exe"
+                      placeholder={t('webSettingsRuleTools.appFilter.blacklistPlaceholder')}
                       items={appAutocompleteItems}
                       value={form.appBlacklist}
                       inputValue={blacklistInput}
@@ -537,13 +580,15 @@ export function WebSettingsRuleTools() {
                     transition={sectionTransition}
                     layout
                   >
-                    <Label htmlFor="whitelist-input">白名单应用名</Label>
+                    <Label htmlFor="whitelist-input">
+                      {t('webSettingsRuleTools.appFilter.whitelistInputLabel')}
+                    </Label>
                     <AppNameListEditor
-                      title="白名单应用名"
-                      description="不区分大小写；仅这些应用会出现在前台。"
-                      emptyText="白名单为空：前台不显示任何活动"
+                      title={t('webSettingsRuleTools.appFilter.whitelistInputLabel')}
+                      description={t('webSettingsRuleTools.appFilter.whitelistInputDescription')}
+                      emptyText={t('webSettingsRuleTools.appFilter.whitelistEmpty')}
                       inputId="whitelist-input"
-                      placeholder="例如：Code.exe"
+                      placeholder={t('webSettingsRuleTools.appFilter.whitelistPlaceholder')}
                       items={appAutocompleteItems}
                       value={form.appWhitelist}
                       inputValue={whitelistInput}
@@ -577,20 +622,24 @@ export function WebSettingsRuleTools() {
 
       <WebSettingsInset className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <Label className="text-base">仅显示应用名</Label>
-          <p className="text-xs text-muted-foreground">已配置 {noTotal} 个应用</p>
+          <Label className="text-base">{t('webSettingsRuleTools.nameOnly.title')}</Label>
+          <p className="text-xs text-muted-foreground">
+            {t('webSettingsRuleTools.nameOnly.count', { value: noTotal })}
+          </p>
         </div>
         <Button type="button" variant="secondary" className="shrink-0" onClick={() => setDialogNameOnlyOpen(true)}>
-          在弹窗中编辑
+          {t('webSettingsRuleTools.editInDialog')}
         </Button>
       </WebSettingsInset>
 
       <WebSettingsInset className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <Label className="text-base">媒体来源屏蔽规则（play_source）</Label>
-          <p className="text-xs text-muted-foreground">已配置 {msTotal} 条</p>
+          <Label className="text-base">{t('webSettingsRuleTools.mediaSource.title')}</Label>
+          <p className="text-xs text-muted-foreground">
+            {t('webSettingsRuleTools.mediaSource.count', { value: msTotal })}
+          </p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            关闭「保存上报行为的应用记录」后不会再新增历史记录，但会保留已保存的历史数据。
+            {t('webSettingsRuleTools.captureReportedApps.description')}
           </p>
         </div>
         <Button
@@ -599,15 +648,15 @@ export function WebSettingsRuleTools() {
           className="shrink-0"
           onClick={() => setDialogMediaSourceOpen(true)}
         >
-          在弹窗中编辑
+          {t('webSettingsRuleTools.editInDialog')}
         </Button>
       </WebSettingsInset>
 
       <WebSettingsRows>
         <WebSettingsRow
           htmlFor="capture-reported-apps"
-          title="保存上报行为的应用记录（用于规则选择/导出）"
-          description="关闭后不会再新增历史记录，但会保留已保存的历史数据。"
+          title={t('webSettingsRuleTools.captureReportedApps.title')}
+          description={t('webSettingsRuleTools.captureReportedApps.description')}
           action={
             <Switch
               id="capture-reported-apps"
@@ -625,18 +674,18 @@ export function WebSettingsRuleTools() {
           showCloseButton
         >
           <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 text-left">
-            <DialogTitle>媒体来源屏蔽规则</DialogTitle>
+            <DialogTitle>{t('webSettingsRuleTools.mediaSource.title')}</DialogTitle>
             <DialogDescription>
-              当上报的 <code className="rounded bg-muted px-1">metadata.play_source</code> 命中时，将隐藏该条活动的媒体信息（仅移除 metadata.media）。
+              {t('webSettingsRuleTools.mediaSource.dialogDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             <AppNameListEditor
-              title="媒体来源屏蔽规则"
-              description="输入来源值（建议小写）"
-              emptyText="暂无屏蔽规则"
+              title={t('webSettingsRuleTools.mediaSource.title')}
+              description={t('webSettingsRuleTools.mediaSource.inputDescription')}
+              emptyText={t('webSettingsRuleTools.mediaSource.empty')}
               inputId="mediaSource-input"
-              placeholder="例如：system_media"
+              placeholder={t('webSettingsRuleTools.mediaSource.placeholder')}
               items={playSourceItems}
               value={form.mediaPlaySourceBlocklist}
               inputValue={mediaSourceInput}
@@ -671,18 +720,18 @@ export function WebSettingsRuleTools() {
           showCloseButton
         >
           <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 text-left">
-            <DialogTitle>仅显示应用名</DialogTitle>
+            <DialogTitle>{t('webSettingsRuleTools.nameOnly.title')}</DialogTitle>
             <DialogDescription>
-              命中后只显示应用名，不显示窗口标题等详细内容（不区分大小写）。
+              {t('webSettingsRuleTools.nameOnly.dialogDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             <AppNameListEditor
-              title="仅显示应用名"
-              description="输入应用名（不区分大小写）"
-              emptyText="暂无“仅显示应用名”配置"
+              title={t('webSettingsRuleTools.nameOnly.title')}
+              description={t('webSettingsRuleTools.nameOnly.inputDescription')}
+              emptyText={t('webSettingsRuleTools.nameOnly.empty')}
               inputId="nameOnly-input"
-              placeholder="例如：Code.exe"
+              placeholder={t('webSettingsRuleTools.nameOnly.placeholder')}
               items={appAutocompleteItems}
               value={form.appNameOnlyList}
               inputValue={nameOnlyListInput}
@@ -712,10 +761,10 @@ export function WebSettingsRuleTools() {
 
       <div className="flex flex-wrap gap-3">
         <Button type="button" variant="outline" onClick={() => void exportUsedAppsJson()}>
-          导出已使用应用（JSON）
+          {t('webSettingsRuleTools.actions.exportUsedAppsJson')}
         </Button>
         <Button type="button" variant="outline" onClick={() => void copyRulesJson()}>
-          复制规则 JSON
+          {t('webSettingsRuleTools.actions.copyRulesJson')}
         </Button>
         <Button
           type="button"
@@ -725,35 +774,35 @@ export function WebSettingsRuleTools() {
             setImportRulesDialogOpen(true)
           }}
         >
-          导入规则 JSON
+          {t('webSettingsRuleTools.actions.importRulesJson')}
         </Button>
       </div>
 
       <Dialog open={importRulesDialogOpen} onOpenChange={setImportRulesDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>导入规则 JSON</DialogTitle>
+            <DialogTitle>{t('webSettingsRuleTools.importDialog.title')}</DialogTitle>
             <DialogDescription>
-              将覆盖当前表单中的应用规则与媒体来源规则。写入后请点击保存配置。
+              {t('webSettingsRuleTools.importDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="import-rules-input">规则 JSON</Label>
+            <Label htmlFor="import-rules-input">{t('webSettingsRuleTools.importDialog.label')}</Label>
             <textarea
               id="import-rules-input"
               rows={10}
               value={importRulesInput}
               onChange={(e) => setImportRulesInput(e.target.value)}
-              placeholder="粘贴 JSON（包含 version 与 rules 字段）"
+              placeholder={t('webSettingsRuleTools.importDialog.placeholder')}
               className="w-full rounded-md border bg-background px-3 py-2 text-xs font-mono leading-relaxed"
             />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setImportRulesDialogOpen(false)}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={confirmImportRules}>
-              导入并覆盖规则
+              {t('webSettingsRuleTools.importDialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

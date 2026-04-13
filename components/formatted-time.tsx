@@ -11,23 +11,23 @@ import {
 } from '@/lib/timezone'
 
 interface FormattedTimeProps {
-  /** ISO 日期字符串或 Date 对象 */
+  /** ISO date string, Date object, or timestamp. */
   date: string | Date | number | null | undefined
-  /** 时区，默认从站点配置获取，未配置则使用 Asia/Shanghai */
+  /** Timezone. Defaults to the site setting, then Asia/Shanghai. */
   timezone?: string
-  /** 是否强制使用传入时区；未传时读取站点配置 */
+  /** Whether to force the provided timezone instead of the viewer-local one. */
   forceTimezone?: boolean
-  /** 自定义 className */
+  /** Optional className. */
   className?: string
-  /** 自定义格式，默认 yyyy-MM-dd HH:mm */
+  /** Optional date-fns pattern. Defaults to yyyy-MM-dd HH:mm. */
   pattern?: string
-  /** 未挂载且使用访客本地时区时的占位 */
+  /** Placeholder shown before mount when viewer-local timezone formatting is deferred. */
   fallback?: string
 }
 
 /**
- * 客户端时间格式化组件
- * 使用配置的时区显示时间，避免服务端/客户端水合错误
+ * Client-side time formatter.
+ * Uses the configured timezone to avoid server/client hydration mismatches.
  */
 export function FormattedTime({
   date,

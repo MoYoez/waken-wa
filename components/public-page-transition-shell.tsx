@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -19,11 +20,8 @@ type Props = {
 const MIN_LOADING_MS = 380
 const THEME_WAIT_TIMEOUT_MS = 2200
 
-function loadingLabel(scope: Props['scope']): string {
-  return scope === 'home' ? '正在准备今日状态' : '正在准备灵感碎片'
-}
-
 export function PublicPageTransitionShell({ children, scope, enabled = true }: Props) {
+  const { t } = useT('common')
   const [contentReady, setContentReady] = useState(false)
   const portalReady = useIsClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
@@ -118,7 +116,11 @@ export function PublicPageTransitionShell({ children, scope, enabled = true }: P
                   </div>
                   <div className="public-page-loader__ground" />
                 </div>
-                <p className="public-page-loader__label">{loadingLabel(scope)}</p>
+                <p className="public-page-loader__label">
+                  {scope === 'home'
+                    ? t('site.loading.page.home')
+                    : t('site.loading.page.inspiration')}
+                </p>
               </div>
             </div>
           ,

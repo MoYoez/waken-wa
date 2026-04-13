@@ -109,17 +109,17 @@ export interface SiteConfig {
    * English UI help only; behavior is server-side.
    */
   activityRejectLockappSleep: boolean
-  /** 显示时区，默认 Asia/Shanghai */
+  /** Display timezone, defaults to Asia/Shanghai. */
   displayTimezone: string
   /** When true, all absolute times and schedule day math follow displayTimezone. */
   forceDisplayTimezone: boolean
-  /** 活动状态更新模式 */
+  /** Public activity update mode. */
   activityUpdateMode: ActivityUpdateMode
   /** Enable Redis cache outside forced runtime environments. */
   useNoSqlAsCacheRedis: boolean
   /** Redis activity-feed cache TTL seconds. */
   redisCacheTtlSeconds: number
-  /** Steam 状态是否启用 */
+  /** Whether Steam status integration is enabled. */
   steamEnabled: boolean
   /** Steam 64-bit ID */
   steamId: string

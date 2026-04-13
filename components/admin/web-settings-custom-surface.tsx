@@ -2,6 +2,7 @@
 
 import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -9,6 +10,7 @@ import {
   getAdminPanelTransition,
   getAdminSectionVariants,
 } from '@/components/admin/admin-motion'
+import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import { WebSettingsInset } from '@/components/admin/web-settings-layout'
 import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
 import type { ThemeCustomSurfaceForm } from '@/components/admin/web-settings-types'
@@ -29,6 +31,7 @@ import { extractThemeSurfaceFromImage } from '@/lib/theme-image-palette'
 import { resolveThemeSurfaceActiveImage } from '@/lib/theme-image-source'
 
 export function WebSettingsCustomSurface() {
+  const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const value = form.themeCustomSurface
   const [backgroundImageInput, setBackgroundImageInput] = useState('')
@@ -115,11 +118,11 @@ export function WebSettingsCustomSurface() {
       const url = await resolveThemeSurfaceActiveImage(value)
       setThemePreviewImageUrl(url)
       if (!url) {
-        toast.error('当前背景源还没有可用图片')
+        toast.error(t('webSettingsCustomSurface.toasts.noPreviewImage'))
       }
       return url
     } catch {
-      toast.error('预览背景解析失败')
+      toast.error(t('webSettingsCustomSurface.toasts.resolvePreviewFailed'))
       return ''
     } finally {
       setThemePreviewLoading(false)
@@ -139,9 +142,9 @@ export function WebSettingsCustomSurface() {
         paletteLiveEnabled: value.paletteLiveEnabled,
       })
       setThemePreviewImageUrl(imageUrl)
-      toast.success('已按当前背景生成整套主题色，请记得保存')
+      toast.success(t('webSettingsCustomSurface.toasts.paletteApplied'))
     } catch {
-      toast.error('取色失败：图片可能不支持跨域像素读取')
+      toast.error(t('webSettingsCustomSurface.toasts.paletteFailed'))
     } finally {
       setThemePaletteApplying(false)
     }
@@ -154,7 +157,7 @@ export function WebSettingsCustomSurface() {
     if (value.backgroundImageMode === 'randomPool') {
       const exists = value.backgroundImagePool.some((item) => item === nextValue)
       if (exists) {
-        toast.error('该图片已在随机池中')
+        toast.error(t('webSettingsCustomSurface.toasts.duplicatePoolImage'))
         return
       }
       patchThemeSurfaceImageAware({
@@ -174,7 +177,7 @@ export function WebSettingsCustomSurface() {
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : ''
       if (!result) {
-        toast.error('读取图片失败')
+        toast.error(t('webSettingsCustomSurface.toasts.readImageFailed'))
         return
       }
       if (value.backgroundImageMode === 'randomPool') {
@@ -188,7 +191,7 @@ export function WebSettingsCustomSurface() {
       setThemePreviewImageUrl(result)
     }
     reader.onerror = () => {
-      toast.error('读取图片失败')
+      toast.error(t('webSettingsCustomSurface.toasts.readImageFailed'))
     }
     reader.readAsDataURL(file)
   }
@@ -196,25 +199,29 @@ export function WebSettingsCustomSurface() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground leading-relaxed">
-        留空则使用内置暖色默认。支持 oklch()、#hex、linear-gradient、以及安全的{' '}
+        {t('webSettingsCustomSurface.introLine1Prefix')}{' '}
         <code className="rounded bg-muted px-1">url()</code>
-        背景图：可使用 <code className="rounded bg-muted px-1">https://…</code>、
-        <code className="rounded bg-muted px-1">http://…</code>、站内路径{' '}
-        <code className="rounded bg-muted px-1">/images/bg.jpg</code>、相对路径{' '}
-        <code className="rounded bg-muted px-1">./a.png</code>，或{' '}
+        {t('webSettingsCustomSurface.introLine1Middle')}{' '}
+        <code className="rounded bg-muted px-1">https://…</code>、
+        <code className="rounded bg-muted px-1">http://…</code>、
+        <code className="rounded bg-muted px-1">/images/bg.jpg</code>、
+        <code className="rounded bg-muted px-1">./a.png</code>、
         <code className="rounded bg-muted px-1">data:image/…;base64,…</code>
-        （勿在地址里含未转义的右括号）。仍会过滤尖括号、花括号、@import 等。
+        {t('webSettingsCustomSurface.introLine1Suffix')}
       </p>
       <p className="text-xs text-muted-foreground leading-relaxed">
-        上面列出的多行是「各字段示例」，请分别填进对应输入框，不要把整段粘进某一个框。
-        <code className="rounded bg-muted px-1">url(&quot;…&quot;)</code> 与后面的渐变要写在「动效背景层」里，用英文逗号连成一条{' '}
-        <code className="rounded bg-muted px-1">background</code> 值（第一层画在最上）。
-        「整页 background」写在 <code className="rounded bg-muted px-1">body</code> 上，与「页面底色」分开。
-        主题预设必须选 Custom surface，保存后才会注入首页。
+        {t('webSettingsCustomSurface.introLine2Prefix')}
+        <code className="rounded bg-muted px-1">url(&quot;...&quot;)</code>{' '}
+        {t('webSettingsCustomSurface.introLine2Middle')}{' '}
+        <code className="rounded bg-muted px-1">background</code>{' '}
+        {t('webSettingsCustomSurface.introLine2AfterBackground')}
+        {t('webSettingsCustomSurface.introLine2SuffixPrefix')}{' '}
+        <code className="rounded bg-muted px-1">body</code>
+        {t('webSettingsCustomSurface.introLine2Suffix')}
       </p>
       <WebSettingsInset className="space-y-4">
         <div className="space-y-2">
-          <Label>背景来源</Label>
+          <Label>{t('webSettingsCustomSurface.backgroundSourceLabel')}</Label>
           <Select
             value={value.backgroundImageMode}
             onValueChange={(nextValue) =>
@@ -228,14 +235,21 @@ export function WebSettingsCustomSurface() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="manual">固定图片</SelectItem>
-              <SelectItem value="randomPool">随机图片池</SelectItem>
-              <SelectItem value="randomApi">随机图片 API</SelectItem>
+              <SelectItem value="manual">
+                {t('webSettingsCustomSurface.backgroundModes.manual')}
+              </SelectItem>
+              <SelectItem value="randomPool">
+                {t('webSettingsCustomSurface.backgroundModes.randomPool')}
+              </SelectItem>
+              <SelectItem value="randomApi">
+                {t('webSettingsCustomSurface.backgroundModes.randomApi')}
+              </SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            固定图片会直接作为 <code className="rounded bg-muted px-1">body background</code>；
-            随机图片池与随机 API 支持前台实时换图，也能联动实时取色。
+            {t('webSettingsCustomSurface.backgroundSourceHintPrefix')}{' '}
+            <code className="rounded bg-muted px-1">body background</code>
+            {t('webSettingsCustomSurface.backgroundSourceHintSuffix')}
           </p>
         </div>
 
@@ -252,7 +266,7 @@ export function WebSettingsCustomSurface() {
               layout
             >
             <div className="space-y-2">
-              <Label>固定背景图片 URL / DataURL</Label>
+              <Label>{t('webSettingsCustomSurface.manualImageLabel')}</Label>
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <Input
                   value={backgroundImageInput}
@@ -263,21 +277,22 @@ export function WebSettingsCustomSurface() {
                   placeholder="https://… / /images/bg.jpg / data:image/..."
                   className="min-w-0 basis-full flex-1 font-mono text-xs sm:min-w-[18rem] sm:basis-auto"
                 />
-                <Button type="button" variant="outline" onClick={() => setThemePreviewImageUrl(backgroundImageInput.trim())}>
-                  使用此图预览
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setThemePreviewImageUrl(backgroundImageInput.trim())}
+                >
+                  {t('webSettingsCustomSurface.previewThisImage')}
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>从本地导入背景图</Label>
-              <input
-                type="file"
+              <Label>{t('webSettingsCustomSurface.importLocalImageLabel')}</Label>
+              <FileSelectTrigger
                 accept="image/*"
-                onChange={(e) => {
-                  onThemeBackgroundFileSelected(e.target.files?.[0])
-                  e.target.value = ''
-                }}
-                className="w-full cursor-pointer text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-2.5 sm:file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted"
+                buttonLabel={t('common.selectFile')}
+                emptyLabel={t('common.noFileSelected')}
+                onSelect={onThemeBackgroundFileSelected}
               />
             </div>
             </motion.div>
@@ -297,27 +312,24 @@ export function WebSettingsCustomSurface() {
               layout
             >
             <div className="space-y-2">
-              <Label>随机图片池</Label>
+              <Label>{t('webSettingsCustomSurface.randomPoolLabel')}</Label>
               <div className="flex flex-wrap gap-2">
                 <Input
                   value={backgroundImageInput}
                   onChange={(e) => setBackgroundImageInput(e.target.value)}
-                  placeholder="添加 URL / DataURL 到随机图片池"
+                  placeholder={t('webSettingsCustomSurface.randomPoolPlaceholder')}
                   className="min-w-0 basis-full flex-1 font-mono text-xs sm:min-w-[18rem] sm:basis-auto"
                 />
                 <Button type="button" onClick={addThemeBackgroundImage}>
-                  添加到图片池
+                  {t('webSettingsCustomSurface.addToPool')}
                 </Button>
               </div>
             </div>
-            <input
-              type="file"
+            <FileSelectTrigger
               accept="image/*"
-              onChange={(e) => {
-                onThemeBackgroundFileSelected(e.target.files?.[0])
-                e.target.value = ''
-              }}
-              className="w-full cursor-pointer text-xs text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted/50 file:px-2.5 sm:file:px-3 file:py-1.5 file:text-foreground hover:file:bg-muted"
+              buttonLabel={t('common.selectFile')}
+              emptyLabel={t('common.noFileSelected')}
+              onSelect={onThemeBackgroundFileSelected}
             />
             {value.backgroundImagePool.length > 0 ? (
               <motion.div
@@ -355,14 +367,16 @@ export function WebSettingsCustomSurface() {
                           )
                         }
                       >
-                        删除
+                        {t('common.delete')}
                       </Button>
                     </motion.div>
                   ))}
                 </AnimatePresence>
               </motion.div>
             ) : (
-              <p className="text-xs text-muted-foreground">随机图片池为空时，前台不会有可切换图片。</p>
+              <p className="text-xs text-muted-foreground">
+                {t('webSettingsCustomSurface.randomPoolEmpty')}
+              </p>
             )}
             </motion.div>
           ) : null}
@@ -381,7 +395,7 @@ export function WebSettingsCustomSurface() {
               layout
             >
             <div className="space-y-2">
-              <Label>随机图片 API</Label>
+              <Label>{t('webSettingsCustomSurface.randomApiLabel')}</Label>
               <div className="flex flex-wrap gap-2">
                 <Input
                   value={backgroundImageInput}
@@ -400,13 +414,15 @@ export function WebSettingsCustomSurface() {
                   className="w-full sm:w-auto"
                   onClick={() => void resolveThemePreviewImage()}
                 >
-                  拉取一张预览图
+                  {t('webSettingsCustomSurface.fetchPreviewImage')}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                优先支持直接返回图片，或返回包含 <code className="rounded bg-muted px-1">url</code> /
+                {t('webSettingsCustomSurface.randomApiHintPrefix')}{' '}
+                <code className="rounded bg-muted px-1">url</code> /
                 <code className="rounded bg-muted px-1">image</code> /
-                <code className="rounded bg-muted px-1">urls.regular</code> 的 JSON。
+                <code className="rounded bg-muted px-1">urls.regular</code>
+                {t('webSettingsCustomSurface.randomApiHintSuffix')}
               </p>
             </div>
             </motion.div>
@@ -422,21 +438,27 @@ export function WebSettingsCustomSurface() {
                 onClick={() => void resolveThemePreviewImage()}
                 disabled={themePreviewLoading}
               >
-                {themePreviewLoading ? '生成预览中…' : '生成当前背景预览'}
+                {themePreviewLoading
+                  ? t('webSettingsCustomSurface.generatingPreview')
+                  : t('webSettingsCustomSurface.generatePreview')}
               </Button>
               <Button
                 type="button"
                 onClick={() => void applyPaletteFromCurrentThemeImage()}
                 disabled={themePaletteApplying || themePreviewLoading}
               >
-                {themePaletteApplying ? '取色中…' : '根据当前背景取色'}
+                {themePaletteApplying
+                  ? t('webSettingsCustomSurface.applyingPalette')
+                  : t('webSettingsCustomSurface.applyPalette')}
               </Button>
             </div>
             <div className="flex flex-col gap-3 py-1 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">启用实时取色</p>
+                <p className="text-sm font-medium text-foreground">
+                  {t('webSettingsCustomSurface.livePaletteTitle')}
+                </p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  仅对随机图片池 / 随机图片 API 生效。首屏先用已保存主题，图片加载完成后再覆盖成当前图片的配色。
+                  {t('webSettingsCustomSurface.livePaletteDescription')}
                 </p>
               </div>
               <Switch
@@ -446,7 +468,7 @@ export function WebSettingsCustomSurface() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>取色模式</Label>
+                <Label>{t('webSettingsCustomSurface.paletteModeLabel')}</Label>
                 <Select
                   value={value.paletteMode}
                   onValueChange={(nextValue) =>
@@ -462,14 +484,20 @@ export function WebSettingsCustomSurface() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manual">手动维护</SelectItem>
-                    <SelectItem value="applyFromCurrent">按钮覆盖当前主题</SelectItem>
-                    <SelectItem value="liveFromImage">随机图实时取色</SelectItem>
+                    <SelectItem value="manual">
+                      {t('webSettingsCustomSurface.paletteModes.manual')}
+                    </SelectItem>
+                    <SelectItem value="applyFromCurrent">
+                      {t('webSettingsCustomSurface.paletteModes.applyFromCurrent')}
+                    </SelectItem>
+                    <SelectItem value="liveFromImage">
+                      {t('webSettingsCustomSurface.paletteModes.liveFromImage')}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>实时取色范围</Label>
+                <Label>{t('webSettingsCustomSurface.paletteScopeLabel')}</Label>
                 <Select
                   value={value.paletteLiveScope}
                   onValueChange={(nextValue) =>
@@ -483,21 +511,29 @@ export function WebSettingsCustomSurface() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="randomOnly">仅随机图片源</SelectItem>
+                    <SelectItem value="randomOnly">
+                      {t('webSettingsCustomSurface.paletteScopes.randomOnly')}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <p className="break-all text-xs text-muted-foreground leading-relaxed">
-              最近一次按钮取色的图片：{value.paletteSeedImageUrl || '暂无'}
+              {t('webSettingsCustomSurface.lastPaletteSeedImage', {
+                value: value.paletteSeedImageUrl || t('webSettingsCustomSurface.none'),
+              })}
             </p>
           </div>
 
           <div className="space-y-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">当前背景预览</p>
+              <p className="text-sm font-medium text-foreground">
+                {t('webSettingsCustomSurface.currentPreviewTitle')}
+              </p>
               <p className="break-all text-xs text-muted-foreground">
-                {themePreviewImageUrl || currentThemePreviewHint || '还没有可预览的图片'}
+                {themePreviewImageUrl ||
+                  currentThemePreviewHint ||
+                  t('webSettingsCustomSurface.toasts.noPreviewImage')}
               </p>
             </div>
             <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/20">
@@ -514,7 +550,7 @@ export function WebSettingsCustomSurface() {
                     {/* eslint-disable-next-line @next/next/no-img-element -- admin preview supports arbitrary URLs/data URLs */}
                     <img
                       src={themePreviewImageUrl}
-                      alt="背景预览"
+                      alt={t('webSettingsCustomSurface.previewAlt')}
                       className="h-48 w-full object-cover"
                     />
                   </motion.div>
@@ -528,7 +564,7 @@ export function WebSettingsCustomSurface() {
                     exit="exit"
                     transition={sectionTransition}
                   >
-                    点击“生成当前背景预览”后，这里会显示本次用于取色的背景图。
+                    {t('webSettingsCustomSurface.previewEmptyHint')}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -554,14 +590,21 @@ export function WebSettingsCustomSurface() {
       </WebSettingsInset>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
-          <Label>页面底色（仅 background-color / 令牌）</Label>
+          <Label>{t('webSettingsCustomSurface.backgroundLabel')}</Label>
           <p className="text-xs text-muted-foreground">
-            对应 <code className="rounded bg-muted px-1">--background</code>、
+            {t('webSettingsCustomSurface.backgroundHintPrefix')}{' '}
+            <code className="rounded bg-muted px-1">--background</code>、
             <code className="rounded bg-muted px-1">--color-background</code>
-            ，供 Tailwind <code className="rounded bg-muted px-1">bg-background</code> 等使用；不会生成{' '}
-            <code className="rounded bg-muted px-1">background:</code> 简写。全屏的{' '}
-            <code className="rounded bg-muted px-1">.animated-bg</code> 叠在{' '}
-            <code className="rounded bg-muted px-1">body</code> 上面：若下面「动效背景层」留空，仍会使用内置暖色渐变盖住这里，看起来像「没改底色」。
+            {t('webSettingsCustomSurface.backgroundHintMiddle')}{' '}
+            <code className="rounded bg-muted px-1">bg-background</code>
+            {t('webSettingsCustomSurface.backgroundHintSuffix')}
+            {' '}{t('webSettingsCustomSurface.backgroundHintExtendedPrefix')}{' '}
+            <code className="rounded bg-muted px-1">background:</code>{' '}
+            {t('webSettingsCustomSurface.backgroundHintExtendedMiddle')}{' '}
+            <code className="rounded bg-muted px-1">.animated-bg</code>{' '}
+            {t('webSettingsCustomSurface.backgroundHintExtendedAfterAnimatedBg')}{' '}
+            <code className="rounded bg-muted px-1">body</code>
+            {t('webSettingsCustomSurface.backgroundHintExtendedSuffix')}
           </p>
           <Input
             value={value.background}
@@ -571,7 +614,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>主色 (--primary)</Label>
+          <Label>{t('webSettingsCustomSurface.primaryLabel')}</Label>
           <Input
             value={value.primary}
             onChange={(e) => patchThemeSurface('primary', e.target.value)}
@@ -580,7 +623,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>正文色 (--foreground)</Label>
+          <Label>{t('webSettingsCustomSurface.foregroundLabel')}</Label>
           <Input
             value={value.foreground}
             onChange={(e) => patchThemeSurface('foreground', e.target.value)}
@@ -589,7 +632,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>次级底色 (--secondary)</Label>
+          <Label>{t('webSettingsCustomSurface.secondaryLabel')}</Label>
           <Input
             value={value.secondary}
             onChange={(e) => patchThemeSurface('secondary', e.target.value)}
@@ -598,7 +641,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>强调色 (--accent)</Label>
+          <Label>{t('webSettingsCustomSurface.accentLabel')}</Label>
           <Input
             value={value.accent}
             onChange={(e) => patchThemeSurface('accent', e.target.value)}
@@ -607,7 +650,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>卡片底色 (--card)</Label>
+          <Label>{t('webSettingsCustomSurface.cardLabel')}</Label>
           <Input
             value={value.card}
             onChange={(e) => patchThemeSurface('card', e.target.value)}
@@ -616,7 +659,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>边框 (--border)</Label>
+          <Label>{t('webSettingsCustomSurface.borderLabel')}</Label>
           <Input
             value={value.border}
             onChange={(e) => patchThemeSurface('border', e.target.value)}
@@ -625,7 +668,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>弱化底色 (--muted)</Label>
+          <Label>{t('webSettingsCustomSurface.mutedLabel')}</Label>
           <Input
             value={value.muted}
             onChange={(e) => patchThemeSurface('muted', e.target.value)}
@@ -634,7 +677,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>次要文字 (--muted-foreground)</Label>
+          <Label>{t('webSettingsCustomSurface.mutedForegroundLabel')}</Label>
           <Input
             value={value.mutedForeground}
             onChange={(e) => patchThemeSurface('mutedForeground', e.target.value)}
@@ -643,7 +686,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>在线强调 (--online)</Label>
+          <Label>{t('webSettingsCustomSurface.onlineLabel')}</Label>
           <Input
             value={value.online}
             onChange={(e) => patchThemeSurface('online', e.target.value)}
@@ -652,7 +695,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2 sm:col-span-2">
-          <Label>全局圆角 (--radius)</Label>
+          <Label>{t('webSettingsCustomSurface.radiusLabel')}</Label>
           <Input
             value={value.radius}
             onChange={(e) => patchThemeSurface('radius', e.target.value)}
@@ -662,11 +705,13 @@ export function WebSettingsCustomSurface() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label>整页 background（body）</Label>
+        <Label>{t('webSettingsCustomSurface.bodyBackgroundLabel')}</Label>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          注入为 <code className="rounded bg-muted px-1">body</code> 的{' '}
-          <code className="rounded bg-muted px-1">background:</code> 简写（渐变、
-          <code className="rounded bg-muted px-1">url()</code>、多图层）。与上一项「页面底色」独立；留空则不写。
+          {t('webSettingsCustomSurface.bodyBackgroundHintPrefix')}{' '}
+          <code className="rounded bg-muted px-1">body</code>{' '}
+          {t('webSettingsCustomSurface.bodyBackgroundHintMiddle')}{' '}
+          <code className="rounded bg-muted px-1">background:</code>
+          {t('webSettingsCustomSurface.bodyBackgroundHintSuffix')}
         </p>
         <textarea
           rows={4}
@@ -677,9 +722,9 @@ export function WebSettingsCustomSurface() {
         />
       </div>
       <div className="space-y-2">
-        <Label>动效背景层 (.animated-bg)</Label>
+        <Label>{t('webSettingsCustomSurface.animatedBgLabel')}</Label>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          固定全屏、在正文后面；留空时使用下方三组默认颜色生成的首页渐变。只想让「页面底色」或「整页 background」露出来请勾选下一项。
+          {t('webSettingsCustomSurface.animatedBgHint')}
         </p>
         <Label className="flex cursor-pointer items-center gap-2">
           <input
@@ -687,7 +732,7 @@ export function WebSettingsCustomSurface() {
             checked={value.transparentAnimatedBg}
             onChange={(e) => patchThemeSurface('transparentAnimatedBg', e.target.checked)}
           />
-          <span className="text-sm">关闭动效渐变层（本层透明，只见页面底色 / body 背景）</span>
+          <span className="text-sm">{t('webSettingsCustomSurface.transparentAnimatedBgLabel')}</span>
         </Label>
         <textarea
           rows={5}
@@ -700,7 +745,7 @@ export function WebSettingsCustomSurface() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>默认动效色 1</Label>
+          <Label>{t('webSettingsCustomSurface.animatedBgTint1Label')}</Label>
           <Input
             value={value.animatedBgTint1}
             onChange={(e) => patchThemeSurface('animatedBgTint1', e.target.value)}
@@ -709,7 +754,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>默认动效色 2</Label>
+          <Label>{t('webSettingsCustomSurface.animatedBgTint2Label')}</Label>
           <Input
             value={value.animatedBgTint2}
             onChange={(e) => patchThemeSurface('animatedBgTint2', e.target.value)}
@@ -718,7 +763,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>默认动效色 3</Label>
+          <Label>{t('webSettingsCustomSurface.animatedBgTint3Label')}</Label>
           <Input
             value={value.animatedBgTint3}
             onChange={(e) => patchThemeSurface('animatedBgTint3', e.target.value)}
@@ -729,7 +774,7 @@ export function WebSettingsCustomSurface() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>浮动光斑 1</Label>
+          <Label>{t('webSettingsCustomSurface.floatingOrbColor1Label')}</Label>
           <Input
             value={value.floatingOrbColor1}
             onChange={(e) => patchThemeSurface('floatingOrbColor1', e.target.value)}
@@ -738,7 +783,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>浮动光斑 2</Label>
+          <Label>{t('webSettingsCustomSurface.floatingOrbColor2Label')}</Label>
           <Input
             value={value.floatingOrbColor2}
             onChange={(e) => patchThemeSurface('floatingOrbColor2', e.target.value)}
@@ -747,7 +792,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>浮动光斑 3</Label>
+          <Label>{t('webSettingsCustomSurface.floatingOrbColor3Label')}</Label>
           <Input
             value={value.floatingOrbColor3}
             onChange={(e) => patchThemeSurface('floatingOrbColor3', e.target.value)}
@@ -758,7 +803,7 @@ export function WebSettingsCustomSurface() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>首页卡片叠层色</Label>
+          <Label>{t('webSettingsCustomSurface.homeCardOverlayLabel')}</Label>
           <Input
             value={value.homeCardOverlay}
             onChange={(e) => patchThemeSurface('homeCardOverlay', e.target.value)}
@@ -767,7 +812,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2">
-          <Label>首页卡片暗色叠层</Label>
+          <Label>{t('webSettingsCustomSurface.homeCardOverlayDarkLabel')}</Label>
           <Input
             value={value.homeCardOverlayDark}
             onChange={(e) => patchThemeSurface('homeCardOverlayDark', e.target.value)}
@@ -776,7 +821,7 @@ export function WebSettingsCustomSurface() {
           />
         </div>
         <div className="space-y-2 sm:col-span-2">
-          <Label>首页卡片内高光</Label>
+          <Label>{t('webSettingsCustomSurface.homeCardInsetHighlightLabel')}</Label>
           <Input
             value={value.homeCardInsetHighlight}
             onChange={(e) => patchThemeSurface('homeCardInsetHighlight', e.target.value)}
@@ -791,7 +836,7 @@ export function WebSettingsCustomSurface() {
           checked={value.hideFloatingOrbs}
           onChange={(e) => patchThemeSurface('hideFloatingOrbs', e.target.checked)}
         />
-        <span className="text-sm">隐藏浮动光斑（更干净的静态渐变背景）</span>
+        <span className="text-sm">{t('webSettingsCustomSurface.hideFloatingOrbsLabel')}</span>
       </Label>
     </div>
   )

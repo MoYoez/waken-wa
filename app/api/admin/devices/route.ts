@@ -17,6 +17,8 @@ import {
   WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY,
 } from '@/lib/device-constants'
 import { apiTokens, devices } from '@/lib/drizzle-schema'
+import { getRequestLanguage } from '@/lib/i18n/request-locale'
+import { getT } from '@/lib/i18n/server'
 import { parsePaginationParams } from '@/lib/pagination'
 import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
 import { readJsonObject } from '@/lib/request-json'
@@ -31,6 +33,7 @@ function generateHashKey(seed = ''): string {
 }
 
 export async function GET(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -111,11 +114,12 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('获取设备列表失败:', error)
-    return NextResponse.json({ success: false, error: '获取失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.devices.listFailed') }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -129,13 +133,13 @@ export async function POST(request: NextRequest) {
       typeof apiTokenIdRaw === 'number' && Number.isFinite(apiTokenIdRaw) ? Math.floor(apiTokenIdRaw) : null
 
     if (!displayName) {
-      return NextResponse.json({ success: false, error: '请输入设备显示名' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.devices.nameRequired') }, { status: 400 })
     }
 
     if (apiTokenId) {
       const [token] = await db.select().from(apiTokens).where(eq(apiTokens.id, apiTokenId)).limit(1)
       if (!token) {
-        return NextResponse.json({ success: false, error: '绑定的 Token 不存在' }, { status: 400 })
+        return NextResponse.json({ success: false, error: t('api.devices.boundTokenNotFound') }, { status: 400 })
       }
     }
 
@@ -145,7 +149,7 @@ export async function POST(request: NextRequest) {
     if (customKey) {
       if (customKey === WEB_ADMIN_QUICK_ADD_DEVICE_HASH_KEY) {
         return NextResponse.json(
-          { success: false, error: '该 Key 为系统预留（Web 后台快速添加），不可手动占用' },
+          { success: false, error: t('api.devices.reservedKey') },
           { status: 400 },
         )
       }
@@ -154,7 +158,7 @@ export async function POST(request: NextRequest) {
         customKey.length < GENERATED_HASH_KEY_MIN_LENGTH
       ) {
         return NextResponse.json(
-          { success: false, error: '自定义设备身份牌长度需在 8～128 之间' },
+          { success: false, error: t('api.devices.lengthRange') },
           { status: 400 },
         )
       }
@@ -164,7 +168,7 @@ export async function POST(request: NextRequest) {
         .where(eq(devices.generatedHashKey, customKey))
         .limit(1)
       if (taken) {
-        return NextResponse.json({ success: false, error: '该设备身份牌已被使用' }, { status: 400 })
+        return NextResponse.json({ success: false, error: t('api.devices.keyUsed') }, { status: 400 })
       }
     }
 
@@ -203,11 +207,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data: item }, { status: 201 })
   } catch (error) {
     console.error('创建设备失败:', error)
-    return NextResponse.json({ success: false, error: '创建失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.devices.createFailed') }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -217,12 +222,12 @@ export async function PATCH(request: NextRequest) {
     const body = await readJsonObject(request)
     const id = Number(body?.id)
     if (!Number.isFinite(id) || id <= 0) {
-      return NextResponse.json({ success: false, error: '缺少有效的 id' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.devices.missingValidId') }, { status: 400 })
     }
 
     const [existing] = await db.select().from(devices).where(eq(devices.id, id)).limit(1)
     if (!existing) {
-      return NextResponse.json({ success: false, error: '设备不存在' }, { status: 404 })
+      return NextResponse.json({ success: false, error: t('api.devices.notFound') }, { status: 404 })
     }
 
     const data: Record<string, unknown> = {}
@@ -232,14 +237,14 @@ export async function PATCH(request: NextRequest) {
     if (typeof body?.displayName === 'string') {
       const displayName = body.displayName.trim()
       if (!displayName) {
-        return NextResponse.json({ success: false, error: '设备显示名不能为空' }, { status: 400 })
+        return NextResponse.json({ success: false, error: t('api.devices.displayNameRequired') }, { status: 400 })
       }
       data.displayName = displayName
     }
     if (typeof body?.status === 'string') {
       const status = body.status.trim().toLowerCase()
       if (status !== 'active' && status !== 'revoked' && status !== 'pending') {
-        return NextResponse.json({ success: false, error: '状态仅支持 active/pending/revoked' }, { status: 400 })
+        return NextResponse.json({ success: false, error: t('api.devices.statusInvalid') }, { status: 400 })
       }
       data.status = status
       effectiveStatus = status
@@ -252,7 +257,7 @@ export async function PATCH(request: NextRequest) {
       const tokenId = Math.floor(body.apiTokenId)
       const [token] = await db.select().from(apiTokens).where(eq(apiTokens.id, tokenId)).limit(1)
       if (!token) {
-        return NextResponse.json({ success: false, error: '绑定的 Token 不存在' }, { status: 400 })
+        return NextResponse.json({ success: false, error: t('api.devices.boundTokenNotFound') }, { status: 400 })
       }
       data.apiTokenId = tokenId
       effectiveApiTokenId = tokenId
@@ -261,7 +266,7 @@ export async function PATCH(request: NextRequest) {
     if (effectiveStatus === 'active' && effectiveApiTokenId == null) {
       if (statusSpecified) {
         return NextResponse.json(
-          { success: false, error: '设备未绑定 Token，不能直接设为已启用' },
+          { success: false, error: t('api.devices.cannotActivateWithoutToken') },
           { status: 400 },
         )
       }
@@ -276,7 +281,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (Object.keys(data).length === 0) {
-      return NextResponse.json({ success: false, error: '没有可更新的字段' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.devices.nothingToUpdate') }, { status: 400 })
     }
 
     data.updatedAt = sqlTimestamp()
@@ -292,11 +297,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true, data: item })
   } catch (error) {
     console.error('更新设备失败:', error)
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.devices.updateFailed') }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -306,7 +312,7 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const id = Number(searchParams.get('id'))
     if (!Number.isFinite(id) || id <= 0) {
-      return NextResponse.json({ success: false, error: '缺少有效的 id' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.devices.missingValidId') }, { status: 400 })
     }
 
     await db.delete(devices).where(eq(devices.id, id))
@@ -315,6 +321,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('删除设备失败:', error)
-    return NextResponse.json({ success: false, error: '删除失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.devices.deleteFailed') }, { status: 500 })
   }
 }

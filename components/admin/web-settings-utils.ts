@@ -197,7 +197,10 @@ export function exportAppRulesJson(cfg: {
   )
 }
 
-export function parseAppRulesJson(raw: string):
+export function parseAppRulesJson(
+  raw: string,
+  translateError?: (key: 'parseFailed' | 'topLevelMustBeObject' | 'unsupportedVersion' | 'missingRules') => string,
+):
   | {
       ok: true
       data: {
@@ -215,18 +218,18 @@ export function parseAppRulesJson(raw: string):
   try {
     json = JSON.parse(raw)
   } catch {
-    return { ok: false, error: 'JSON 解析失败' }
+    return { ok: false, error: translateError?.('parseFailed') ?? 'JSON parse failed' }
   }
   if (!json || typeof json !== 'object' || Array.isArray(json)) {
-    return { ok: false, error: 'JSON 顶层必须是对象' }
+    return { ok: false, error: translateError?.('topLevelMustBeObject') ?? 'The JSON top level must be an object' }
   }
   const o = json as Record<string, unknown>
   if (typeof o.version === 'number' && o.version !== 1) {
-    return { ok: false, error: '不支持的 version' }
+    return { ok: false, error: translateError?.('unsupportedVersion') ?? 'Unsupported version' }
   }
   const rules = o.rules
   if (!rules || typeof rules !== 'object' || Array.isArray(rules)) {
-    return { ok: false, error: '缺少 rules 对象' }
+    return { ok: false, error: translateError?.('missingRules') ?? 'Missing rules object' }
   }
   const r = rules as Record<string, unknown>
   const appMessageRules = normalizeRulesImport(r.appMessageRules)
@@ -337,10 +340,10 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
     patch.pageLockEnabled = web.pageLockEnabled
   }
   if ('currentlyText' in web && typeof web.currentlyText === 'string') {
-    patch.currentlyText = web.currentlyText.trim() || '当前状态'
+    patch.currentlyText = web.currentlyText.trim()
   }
   if ('earlierText' in web && typeof web.earlierText === 'string') {
-    patch.earlierText = web.earlierText.trim() || '最近的随想录'
+    patch.earlierText = web.earlierText.trim()
   }
   if ('adminText' in web && typeof web.adminText === 'string') {
     patch.adminText = web.adminText.trim() || 'admin'

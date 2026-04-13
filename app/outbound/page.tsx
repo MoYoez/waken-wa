@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { getOutboundTarget } from '@/lib/external-link'
+import { getT } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,7 @@ export default async function OutboundPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
+  const { t } = await getT('common')
   const params = await searchParams
   const targetParam = params.target
   const rawTarget = typeof targetParam === 'string' ? targetParam : Array.isArray(targetParam) ? targetParam[0] ?? '' : ''
@@ -24,19 +26,19 @@ export default async function OutboundPage({
       <div className="mx-auto flex w-full max-w-xl flex-col gap-5 rounded-3xl border border-border/70 bg-card/95 p-6 shadow-sm backdrop-blur">
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-            外部链接
+            {t('site.outbound.eyebrow')}
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">
-            你即将离开本站
+            {t('site.outbound.title')}
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            你将要访问的是第三方页面。请先仔细确认目标链接；该页面的内容、隐私政策与安全性均不由本站负责。
+            {t('site.outbound.description')}
           </p>
         </div>
 
         <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            目标地址
+            {t('site.outbound.targetLabel')}
           </p>
           <p className="mt-2 break-all font-mono text-sm leading-6 text-foreground">
             {target}
@@ -49,13 +51,13 @@ export default async function OutboundPage({
             rel="noopener noreferrer nofollow"
             className="inline-flex min-h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-90"
           >
-            继续前往
+            {t('site.outbound.continue')}
           </a>
           <Link
             href="/"
             className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
-            返回上一页
+            {t('site.outbound.back')}
           </Link>
         </div>
       </div>

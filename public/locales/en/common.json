@@ -1,0 +1,133 @@
+{
+  "admin": {
+    "language": {
+      "title": "Admin language",
+      "description": "This only affects the admin interface in the current browser. The public site still follows the request language.",
+      "ariaLabel": "Admin language switcher",
+      "switchToZhCN": "Switch admin language to Chinese",
+      "switchToEn": "Switch admin language to English",
+      "zhCN": "Chinese",
+      "en": "English"
+    }
+  },
+  "site": {
+    "online": "Online",
+    "offline": "Offline",
+    "currentStatus": {
+      "steamNowPlaying": "Now playing (Steam)",
+      "deviceLabel": "Device",
+      "batteryLabel": "Battery {{value}}",
+      "startedAt": "Started at",
+      "lastReportAt": "Last report",
+      "noActiveStatus": "No devices are currently online",
+      "viewSteamDetails": "View Steam game details",
+      "deviceFallback": "device #{{id}}",
+      "activityFallback": "activity #{{id}}"
+    },
+    "note": {
+      "loadingHitokoto": "Loading quote…",
+      "hitokotoUnavailable": "Quote is temporarily unavailable"
+    },
+    "loading": {
+      "ariaLabel": "Loading",
+      "moreAriaLabel": "Loading more",
+      "page": {
+        "home": "Preparing today's status",
+        "inspiration": "Preparing inspiration"
+      }
+    },
+    "schedule": {
+      "location": "Location",
+      "teacher": "Teacher",
+      "inClass": "In class",
+      "nextClass": "Next class",
+      "afterClassesDone": "No more classes today!",
+      "idleFallback": "Break time",
+      "tomorrowHasClass": "You have classes tomorrow~",
+      "todayNoClass": "No classes today~",
+      "hoverMetaAriaLabel": "Hover to view location and teacher"
+    },
+    "profile": {
+      "defaultName": "User",
+      "defaultBio": "Building something awesome"
+    },
+    "footer": {
+      "watchingPrefix": "Blowing up with",
+      "watchingSuffix": "viewers right now",
+      "helpAriaLabel": "View online-count details",
+      "helpTitle": "How does this work?",
+      "helpLine1Prefix": "When you open this page, the browser periodically sends heartbeats to",
+      "helpLine1Suffix": "to request the current number of viewers on this page.",
+      "helpLine2": "This count is used to show how many visitors are currently viewing the site. The current implementation uses periodic sync rather than WebSocket push.",
+      "helpStatusLabel": "Current status:",
+      "presenceFailed": "Read failed",
+      "presenceSyncing": "Syncing",
+      "presenceConnected": "Connected",
+      "forkProject": "Fork this Project"
+    },
+    "inspiration": {
+      "untitled": "(Untitled)",
+      "viewFull": "View full entry",
+      "noEntries": "No inspiration entries yet",
+      "viewMore": "View more inspiration",
+      "archiveTitle": "Inspiration",
+      "backHome": "← Back home",
+      "scrollLoadMore": "Scroll down to load more",
+      "allEntries": "All entries",
+      "openFull": "Open full entry",
+      "reachedEnd": "You've reached the end!"
+    },
+    "outbound": {
+      "eyebrow": "External link",
+      "title": "You're about to leave this site",
+      "description": "You're visiting a third-party page. Please confirm the target URL carefully first; this site is not responsible for that page's content, privacy policy, or security.",
+      "targetLabel": "Target address",
+      "continue": "Continue",
+      "back": "Go back"
+    },
+    "activityTimeline": {
+      "loadFailed": "Failed to load recent activity",
+      "empty": "No recent activity yet",
+      "durationMinutes": "{{value}} min",
+      "durationHoursMinutes": "{{hours}}h {{minutes}}m"
+    }
+  },
+  "ui": {
+    "theme": {
+      "switcher": "Theme switcher",
+      "switchToLight": "Switch to light theme",
+      "switchToSystem": "Switch to system theme",
+      "switchToDark": "Switch to dark theme"
+    },
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "more": "More"
+    },
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "previousAriaLabel": "Go to previous page",
+      "nextAriaLabel": "Go to next page",
+      "morePages": "More pages"
+    },
+    "sidebar": {
+      "title": "Sidebar",
+      "mobileDescription": "Displays the mobile sidebar.",
+      "toggle": "Toggle sidebar"
+    },
+    "dialog": {
+      "close": "Close"
+    },
+    "sheet": {
+      "close": "Close"
+    },
+    "autocomplete": {
+      "empty": "No matching items."
+    },
+    "command": {
+      "title": "Command Palette",
+      "description": "Search for a command to run..."
+    }
+  }
+}

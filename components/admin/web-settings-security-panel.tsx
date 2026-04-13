@@ -2,6 +2,7 @@
 
 import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 
 import {
   getAdminPanelTransition,
@@ -17,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 
 export function WebSettingsSecurityPanel() {
+  const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
@@ -33,10 +35,10 @@ export function WebSettingsSecurityPanel() {
     <WebSettingsInset className="space-y-4">
       <WebSettingsRow
         htmlFor="hcaptcha-toggle"
-        title="启用 hCaptcha 登录验证"
+        title={t('webSettingsSecurity.hcaptchaTitle')}
         description={
           <>
-            开启后，后台登录页将显示 hCaptcha 人机验证。需前往{' '}
+            {t('webSettingsSecurity.hcaptchaDescriptionPrefix')}{' '}
             <a
               href="https://www.hcaptcha.com/"
               target="_blank"
@@ -44,11 +46,11 @@ export function WebSettingsSecurityPanel() {
               className="underline"
             >
               hcaptcha.com
-            </a>{' '}
-            注册并获取 Site Key 和 Secret Key。
+            </a>
+            {t('webSettingsSecurity.hcaptchaDescriptionSuffix')}
           </>
         }
-        className="px-0 py-0"
+        className="px-0 py-0 sm:px-0"
         action={
           <Switch
             id="hcaptcha-toggle"
@@ -70,7 +72,7 @@ export function WebSettingsSecurityPanel() {
             layout
           >
             <div className="space-y-2">
-              <Label htmlFor="hcaptcha-sitekey">Site Key</Label>
+              <Label htmlFor="hcaptcha-sitekey">{t('webSettingsSecurity.siteKeyLabel')}</Label>
               <Input
                 id="hcaptcha-sitekey"
                 value={form.hcaptchaSiteKey}
@@ -79,12 +81,14 @@ export function WebSettingsSecurityPanel() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hcaptcha-secretkey">Secret Key（留空则不修改已保存的值）</Label>
+              <Label htmlFor="hcaptcha-secretkey">
+                {t('webSettingsSecurity.secretKeyLabel')}
+              </Label>
               <Input
                 id="hcaptcha-secretkey"
                 value={form.hcaptchaSecretKey}
                 onChange={(event) => patch('hcaptchaSecretKey', event.target.value)}
-                placeholder="留空则保留之前配置的 Secret Key"
+                placeholder={t('webSettingsSecurity.secretKeyPlaceholder')}
               />
             </div>
           </motion.div>

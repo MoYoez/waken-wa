@@ -1,6 +1,7 @@
 'use client'
 
 import { type AdminSkillsData, readJson, type SuccessResponse } from '@/components/admin/admin-query-shared'
+import { tAdminClient } from '@/lib/i18n/admin-client'
 import type { AdminUserRow } from '@/types/admin'
 import type { SetupInitialConfig } from '@/types/components'
 
@@ -15,7 +16,11 @@ export async function createAdminUser(input: {
   })
   const data = await readJson<SuccessResponse<AdminUserRow>>(res)
   if (!res.ok || !data?.success || !data.data) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '创建管理员失败')
+    throw new Error(
+      typeof data?.error === 'string'
+        ? data.error
+        : tAdminClient('mutation.createAdminUserFailed'),
+    )
   }
   return data.data
 }
@@ -24,7 +29,9 @@ export async function deleteAdminUser(id: number): Promise<void> {
   const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '删除失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
+    )
   }
 }
 
@@ -39,7 +46,11 @@ export async function changeAdminPassword(input: {
   })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '密码修改失败')
+    throw new Error(
+      typeof data?.error === 'string'
+        ? data.error
+        : tAdminClient('mutation.changePasswordFailed'),
+    )
   }
 }
 
@@ -55,7 +66,7 @@ export async function createAdminDevice(input: {
   })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || '创建设备失败')
+    throw new Error(data?.error || tAdminClient('mutation.createDeviceFailed'))
   }
 }
 
@@ -67,7 +78,9 @@ export async function patchAdminDevice(body: Record<string, unknown>): Promise<v
   })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '更新失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.updateFailed'),
+    )
   }
 }
 
@@ -75,7 +88,9 @@ export async function deleteAdminDevice(id: number): Promise<void> {
   const res = await fetch(`/api/admin/devices?id=${id}`, { method: 'DELETE' })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '删除失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
+    )
   }
 }
 
@@ -90,7 +105,9 @@ export async function deleteAdminInspirationOrphanAssets(keys: string[]): Promis
   })
   const data = await readJson<SuccessResponse<{ deleted?: number; skipped?: number }>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '删除失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
+    )
   }
   return {
     deleted: typeof data.data?.deleted === 'number' ? data.data.deleted : 0,
@@ -115,7 +132,9 @@ export async function createAdminToken(name: string): Promise<{
     }
   >(res)
   if (!res.ok || !data?.success || !data.data?.token) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '创建失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.createFailed'),
+    )
   }
   return {
     token: data.data.token,
@@ -132,7 +151,9 @@ export async function patchAdminToken(body: Record<string, unknown>): Promise<vo
   })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '更新失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.updateFailed'),
+    )
   }
 }
 
@@ -140,7 +161,9 @@ export async function deleteAdminToken(id: number): Promise<void> {
   const res = await fetch(`/api/admin/tokens?id=${id}`, { method: 'DELETE' })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '删除失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
+    )
   }
 }
 
@@ -152,7 +175,9 @@ export async function patchAdminSkills(body: Record<string, unknown>): Promise<A
   })
   const data = await readJson<SuccessResponse<AdminSkillsData>>(res)
   if (!data?.success || !data.data) {
-    throw new Error(data?.error || `保存失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('mutation.saveFailedHttp', { status: res.status }),
+    )
   }
   return data.data
 }
@@ -167,7 +192,9 @@ export async function patchAdminSettings(
   })
   const data = await readJson<SuccessResponse<Record<string, any>>>(res)
   if (!res.ok || !data?.success || !data.data) {
-    throw new Error(data?.error || `保存站点配置失败（HTTP ${res.status}）`)
+    throw new Error(
+      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
+    )
   }
   return data.data
 }
@@ -180,7 +207,9 @@ export async function createAdminActivity(payload: Record<string, unknown>): Pro
   })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '添加失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.addFailed'),
+    )
   }
 }
 
@@ -192,7 +221,11 @@ export async function endAdminActivity(id: number): Promise<void> {
   })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '结束活动失败')
+    throw new Error(
+      typeof data?.error === 'string'
+        ? data.error
+        : tAdminClient('mutation.endActivityFailed'),
+    )
   }
 }
 
@@ -205,7 +238,11 @@ export async function uploadInspirationAsset(dataUrl: string): Promise<string> {
   })
   const data = await readJson<SuccessResponse<{ url?: string }>>(res)
   if (!res.ok || !data?.success || !data.data?.url) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '正文配图上传失败')
+    throw new Error(
+      typeof data?.error === 'string'
+        ? data.error
+        : tAdminClient('mutation.uploadBodyImageFailed'),
+    )
   }
   return String(data.data.url)
 }
@@ -218,7 +255,9 @@ export async function createInspirationEntry(body: Record<string, unknown>): Pro
   })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '提交失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.submitFailed'),
+    )
   }
 }
 
@@ -230,7 +269,9 @@ export async function patchInspirationEntry(body: Record<string, unknown>): Prom
   })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '保存失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.saveFailed'),
+    )
   }
 }
 
@@ -238,7 +279,9 @@ export async function deleteInspirationEntry(id: number): Promise<void> {
   const res = await fetch(`/api/inspiration/entries?id=${id}`, { method: 'DELETE' })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(typeof data?.error === 'string' ? data.error : '删除失败')
+    throw new Error(
+      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
+    )
   }
 }
 
@@ -277,7 +320,7 @@ export async function setupAdminSite(input: {
   })
   const data = await readJson<SuccessResponse<SetupInitialConfig>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || '初始化失败')
+    throw new Error(data?.error || tAdminClient('mutation.setupFailed'))
   }
 }
 
@@ -289,6 +332,7 @@ export async function loginAdminWithCaptcha(input: {
   username: string
   password: string
   hcaptchaToken?: string
+  fallbackErrorMessage?: string
 }): Promise<void> {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
@@ -301,14 +345,16 @@ export async function loginAdminWithCaptcha(input: {
   })
   const data = await readJson<SuccessResponse<unknown>>(res)
   if (!res.ok || !data?.success) {
-    throw new Error(data?.error || '自动登录失败，请手动登录')
+    throw new Error(
+      data?.error || input.fallbackErrorMessage || tAdminClient('mutation.autoLoginFailedManual'),
+    )
   }
 }
 
 export async function logoutAdmin(): Promise<void> {
   const res = await fetch('/api/auth/logout', { method: 'POST' })
   if (!res.ok) {
-    throw new Error(`登出失败（HTTP ${res.status}）`)
+    throw new Error(tAdminClient('mutation.logoutFailedHttp', { status: res.status }))
   }
 }
 

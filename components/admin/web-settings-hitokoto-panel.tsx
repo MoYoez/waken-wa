@@ -2,6 +2,7 @@
 
 import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 
 import {
   getAdminPanelTransition,
@@ -26,6 +27,7 @@ import { Switch } from '@/components/ui/switch'
 import { HITOKOTO_CATEGORY_OPTIONS } from '@/lib/hitokoto'
 
 export function WebSettingsHitokotoPanel() {
+  const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
@@ -43,8 +45,8 @@ export function WebSettingsHitokotoPanel() {
       <WebSettingsRows>
         <WebSettingsRow
           htmlFor="page-loading-toggle"
-          title="页面 Loading 动画"
-          description="控制首页与灵感页初次进入时的加载过渡动画。"
+          title={t('webSettingsHitokoto.pageLoadingTitle')}
+          description={t('webSettingsHitokoto.pageLoadingDescription')}
           action={
             <Switch
               id="page-loading-toggle"
@@ -55,8 +57,8 @@ export function WebSettingsHitokotoPanel() {
         />
         <WebSettingsRow
           htmlFor="search-engine-indexing-toggle"
-          title="允许搜索引擎收录"
-          description="关闭后会向搜索引擎声明 noindex / nofollow。"
+          title={t('webSettingsHitokoto.searchEngineIndexingTitle')}
+          description={t('webSettingsHitokoto.searchEngineIndexingDescription')}
           action={
             <Switch
               id="search-engine-indexing-toggle"
@@ -67,8 +69,8 @@ export function WebSettingsHitokotoPanel() {
         />
         <WebSettingsRow
           htmlFor="note-typewriter-toggle"
-          title="个人备注打字机效果"
-          description="为首页备注增加逐字显示效果，对静态备注和一言回退都生效。"
+          title={t('webSettingsHitokoto.noteTypewriterTitle')}
+          description={t('webSettingsHitokoto.noteTypewriterDescription')}
           action={
             <Switch
               id="note-typewriter-toggle"
@@ -79,12 +81,12 @@ export function WebSettingsHitokotoPanel() {
         />
         <WebSettingsRow
           htmlFor="hitokoto-home-note"
-          title="首页备注使用一言（hitokoto.cn）"
+          title={t('webSettingsHitokoto.hitokotoTitle')}
           description={
             <>
-              开启后由访客浏览器请求{' '}
+              {t('webSettingsHitokoto.hitokotoDescriptionPrefix')}{' '}
               <code className="rounded bg-muted px-1">v1.hitokoto.cn</code>
-              ；句子类型可多选；不选表示不限制类型。
+              {t('webSettingsHitokoto.hitokotoDescriptionSuffix')}
             </>
           }
           action={
@@ -110,7 +112,7 @@ export function WebSettingsHitokotoPanel() {
           >
             <WebSettingsInset className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="hitokoto-encode">返回编码 encode</Label>
+                <Label htmlFor="hitokoto-encode">{t('webSettingsHitokoto.encodeLabel')}</Label>
                 <Select
                   value={form.userNoteHitokotoEncode}
                   onValueChange={(value) =>
@@ -121,8 +123,8 @@ export function WebSettingsHitokotoPanel() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="json">json（可带 uuid 跳转出处）</SelectItem>
-                    <SelectItem value="text">text（纯文本）</SelectItem>
+                    <SelectItem value="json">{t('webSettingsHitokoto.encodeOptions.json')}</SelectItem>
+                    <SelectItem value="text">{t('webSettingsHitokoto.encodeOptions.text')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -130,8 +132,8 @@ export function WebSettingsHitokotoPanel() {
               <WebSettingsRows className="rounded-lg">
                 <WebSettingsRow
                   htmlFor="hitokoto-home-note-fallback"
-                  title="一言不可用时使用备注回退"
-                  description="关闭后会直接显示“一言暂不可用”，不再自动使用上方静态备注。"
+                  title={t('webSettingsHitokoto.fallbackTitle')}
+                  description={t('webSettingsHitokoto.fallbackDescription')}
                   action={
                     <Switch
                       id="hitokoto-home-note-fallback"
@@ -145,7 +147,7 @@ export function WebSettingsHitokotoPanel() {
               </WebSettingsRows>
 
               <div className="space-y-2">
-                <Label>句子类型 c（可多选）</Label>
+                <Label>{t('webSettingsHitokoto.categoriesLabel')}</Label>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {HITOKOTO_CATEGORY_OPTIONS.map((option) => (
                     <label
@@ -163,7 +165,7 @@ export function WebSettingsHitokotoPanel() {
                         }}
                       />
                       <span>
-                        {option.id} · {option.label}
+                        {option.id} · {t(`webSettingsHitokoto.categories.${option.id}`)}
                       </span>
                     </label>
                   ))}

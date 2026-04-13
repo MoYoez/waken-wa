@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2, Monitor } from 'lucide-react'
+import { useT } from 'next-i18next/client'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -45,6 +46,7 @@ type DeviceOption = {
 const WEB_RESERVED_HASH = '__web_reserved__'
 
 export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
+  const { t } = useT('admin')
   const queryClient = useQueryClient()
   const [selectedHash, setSelectedHash] = useState<string>(WEB_RESERVED_HASH)
 
@@ -63,7 +65,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
   const addActivityMutation = useMutation({
     mutationFn: createAdminActivity,
     onSuccess: async () => {
-      toast.success('活动已添加')
+      toast.success(t('addActivity.added'))
       setDevice('')
       setProcessName('')
       setProcessTitle('')
@@ -80,7 +82,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
       ])
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误')
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
     },
   })
 
@@ -139,18 +141,17 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Device selector */}
       <div className="space-y-2">
-        <Label htmlFor="device-select">归属设备</Label>
+        <Label htmlFor="device-select">{t('addActivity.device')}</Label>
         <Select value={selectedHash} onValueChange={handleDeviceSelect}>
           <SelectTrigger id="device-select" className="w-full">
-            <SelectValue placeholder="选择设备…" />
+            <SelectValue placeholder={t('addActivity.selectDevice')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={WEB_RESERVED_HASH}>
               <span className="flex items-center gap-2">
                 <Monitor className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                Web（后台快速添加）
+                {t('addActivity.webQuickAdd')}
               </span>
             </SelectItem>
             {devices.map((d) => (
@@ -162,7 +163,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
         </Select>
         {!isWebReserved && (
           <p className="text-[11px] text-muted-foreground">
-            活动将以所选设备身份上报，设备名称已自动填入，可手动修改。
+            {t('addActivity.selectedDeviceHint')}
           </p>
         )}
       </div>
@@ -170,22 +171,28 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="device">
-            设备显示名称
-            {isWebReserved && <span className="ml-1 text-muted-foreground">（可自定义）</span>}
+            {t('addActivity.deviceDisplayName')}
+            {isWebReserved && (
+              <span className="ml-1 text-muted-foreground">{t('addActivity.customizable')}</span>
+            )}
           </Label>
           <Input
             id="device"
-            placeholder={isWebReserved ? '例如：MacBook Pro' : '已从设备列表填入，可修改'}
+            placeholder={
+              isWebReserved
+                ? t('addActivity.devicePlaceholderWeb')
+                : t('addActivity.devicePlaceholderSelected')
+            }
             value={device}
             onChange={(e) => setDevice(e.target.value)}
             required
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="process">进程名称</Label>
+          <Label htmlFor="process">{t('addActivity.processName')}</Label>
           <Input
             id="process"
-            placeholder="例如：VS Code"
+            placeholder={t('addActivity.processPlaceholder')}
             value={processName}
             onChange={(e) => setProcessName(e.target.value)}
             required
@@ -194,10 +201,10 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="title">进程标题（可选）</Label>
+        <Label htmlFor="title">{t('addActivity.processTitleOptional')}</Label>
         <Input
           id="title"
-          placeholder="例如：编辑 index.tsx"
+          placeholder={t('addActivity.processTitlePlaceholder')}
           value={processTitle}
           onChange={(e) => setProcessTitle(e.target.value)}
         />
@@ -205,7 +212,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="battery-level">电量（可选，0–100）</Label>
+          <Label htmlFor="battery-level">{t('addActivity.batteryOptional')}</Label>
           <Input
             id="battery-level"
             type="number"
@@ -213,7 +220,7 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
             inputMode="numeric"
             min={DEVICE_BATTERY_PERCENT_MIN}
             max={DEVICE_BATTERY_PERCENT_MAX}
-            placeholder="留空则不上报"
+            placeholder={t('addActivity.batteryPlaceholder')}
             value={batteryLevel}
             onChange={(e) => setBatteryLevel(e.target.value)}
           />
@@ -225,13 +232,13 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
             onCheckedChange={(v) => setIsCharging(v === true)}
           />
           <Label htmlFor="is-charging" className="cursor-pointer text-sm font-normal">
-            充电中
+            {t('addActivity.charging')}
           </Label>
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="persist">常驻时长（分钟）</Label>
+        <Label htmlFor="persist">{t('addActivity.persistMinutes')}</Label>
         <Input
           id="persist"
           type="number"
@@ -243,13 +250,13 @@ export function AddActivityForm({ onSuccess }: AddActivityFormProps) {
           onChange={(e) => setPersistMinutes(e.target.value)}
         />
         <p className="text-xs leading-relaxed text-muted-foreground">
-          无客户端上报时，超过该时间后活动会从首页「当前状态」自动结束（1–1440 分钟，与站点「进程无上报判定间隔」规则一致）。
+          {t('addActivity.persistHint')}
         </p>
       </div>
 
       <Button type="submit" disabled={addActivityMutation.isPending}>
         {addActivityMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        添加活动
+        {t('addActivity.addActivity')}
       </Button>
     </form>
   )

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
+import { getRequestLanguage } from '@/lib/i18n/request-locale'
+import { getT } from '@/lib/i18n/server'
 import { readJsonObject } from '@/lib/request-json'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
@@ -12,6 +14,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function POST(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -20,13 +23,13 @@ export async function POST(request: NextRequest) {
   const cfg = await getSiteConfigMemoryFirst()
   if (!cfg?.skillsDebugEnabled) {
     return NextResponse.json(
-      { success: false, error: 'Skills 未启用，请先在进阶设置中启用' },
+      { success: false, error: t('api.skillsOauth.debugDisabled') },
       { status: 400 },
     )
   }
   if (String(cfg.skillsAuthMode ?? '').toLowerCase() !== 'oauth') {
     return NextResponse.json(
-      { success: false, error: '当前不是 OAuth 模式，请先在进阶设置中切换' },
+      { success: false, error: t('api.skillsOauth.oauthModeRequired') },
       { status: 400 },
     )
   }
@@ -35,26 +38,26 @@ export async function POST(request: NextRequest) {
   const authorizeCode = String(body?.authorizeCode ?? '').trim()
   if (body?.confirm !== true) {
     return NextResponse.json(
-      { success: false, error: '用户未确认授权' },
+      { success: false, error: t('api.skillsOauth.confirmRequired') },
       { status: 400 },
     )
   }
   const authorizeRequest = await getSkillsOauthAuthorizeRequest(authorizeCode)
   if (!authorizeRequest) {
     return NextResponse.json(
-      { success: false, error: '授权链接无效或已过期，请重新打开新的授权链接' },
+      { success: false, error: t('api.skillsOauth.invalidLink') },
       { status: 400 },
     )
   }
   if (authorizeRequest.expiresAt.getTime() <= Date.now()) {
     return NextResponse.json(
-      { success: false, error: '授权链接已过期，请重新从 AI 获取授权链接' },
+      { success: false, error: t('api.skillsOauth.expiredLink') },
       { status: 400 },
     )
   }
   if (authorizeRequest.exchangeAt) {
     return NextResponse.json(
-      { success: false, error: '该授权码已兑换，请让 AI 重新申请新的授权链接' },
+      { success: false, error: t('api.skillsOauth.alreadyExchanged') },
       { status: 400 },
     )
   }
@@ -65,7 +68,7 @@ export async function POST(request: NextRequest) {
   )
   if (!approved) {
     return NextResponse.json(
-      { success: false, error: '授权确认失败，请刷新后重试' },
+      { success: false, error: t('api.skillsOauth.approveFailed') },
       { status: 400 },
     )
   }

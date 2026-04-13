@@ -1,6 +1,8 @@
+import { useT } from 'next-i18next/client'
+
 import { Button } from '@/components/ui/button'
 
-/** Paginate tall “规则” cards */
+/** Paginate tall rule cards. */
 export const SETTINGS_RULES_PAGE_SIZE = 5
 /** Paginate compact app-name rows */
 export const SETTINGS_APP_LIST_PAGE_SIZE = 10
@@ -21,6 +23,7 @@ export function ListPaginationBar({
   total: number
   onPageChange: (next: number) => void
 }) {
+  const { t } = useT('admin')
   if (total <= pageSize) return null
   const maxPage = listMaxPage(total, pageSize)
   const safePage = Math.min(page, maxPage)
@@ -30,7 +33,7 @@ export function ListPaginationBar({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
       <span>
-        已保存 {total} 条 · 本页 {start}–{end}
+        {t('common.countSummary', { total })} · {t('common.pageSummary', { start, end })}
       </span>
       <div className="flex items-center gap-2">
         <Button
@@ -41,7 +44,7 @@ export function ListPaginationBar({
           disabled={safePage <= 0}
           onClick={() => onPageChange(Math.max(0, safePage - 1))}
         >
-          上一页
+          {t('common.previousPage')}
         </Button>
         <span className="tabular-nums">
           {safePage + 1} / {maxPage + 1}
@@ -54,7 +57,7 @@ export function ListPaginationBar({
           disabled={safePage >= maxPage}
           onClick={() => onPageChange(Math.min(maxPage, safePage + 1))}
         >
-          下一页
+          {t('common.nextPage')}
         </Button>
       </div>
     </div>

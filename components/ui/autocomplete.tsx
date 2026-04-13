@@ -2,6 +2,7 @@
 
 import { Autocomplete as AutocompletePrimitive } from '@base-ui/react'
 import { ChevronDownIcon, XIcon } from 'lucide-react'
+import { useT } from 'next-i18next/client'
 
 import { useDialogPortalContainer } from '@/components/ui/dialog'
 import {
@@ -37,11 +38,13 @@ function Autocomplete({
   inputClassName,
   contentClassName,
   disabled = false,
-  emptyText = 'No matching items.',
+  emptyText,
   showClear = false,
   openOnInputClick = true,
 }: AutocompleteProps) {
   const dialogPortalContainer = useDialogPortalContainer()
+  const { t } = useT('common')
+  const resolvedEmptyText = emptyText ?? t('ui.autocomplete.empty')
 
   return (
     <div className={cn('w-full', className)}>
@@ -106,7 +109,7 @@ function Autocomplete({
                 data-slot="autocomplete-empty"
                 className="hidden w-full justify-center py-2 text-center text-sm text-muted-foreground group-data-empty/combobox-content:flex"
               >
-                {emptyText}
+                {resolvedEmptyText}
               </AutocompletePrimitive.Empty>
               <AutocompletePrimitive.List
                 data-slot="autocomplete-list"

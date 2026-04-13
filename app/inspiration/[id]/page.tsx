@@ -10,6 +10,7 @@ import { LexicalContent } from '@/components/lexical-content'
 import { SiteReveal } from '@/components/site-reveal'
 import { db } from '@/lib/db'
 import { inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
+import { getT } from '@/lib/i18n/server'
 import { inspirationLooksLikeMarkdown } from '@/lib/inspiration-preview'
 import { coerceDbTimestampToIsoUtc, normalizeTimezone } from '@/lib/timezone'
 
@@ -21,17 +22,22 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const { t } = await getT('common')
   const { id: raw } = await params
   const id = parseInt(raw, 10)
-  if (!Number.isFinite(id)) return { title: '随想录' }
+  if (!Number.isFinite(id)) return { title: t('site.inspiration.archiveTitle') }
 
   const [row] = await db
     .select({ title: inspirationEntries.title })
     .from(inspirationEntries)
     .where(eq(inspirationEntries.id, id))
     .limit(1)
-  const t = row?.title?.trim()
-  return { title: t ? `${t} · 随想录` : '随想录' }
+  const title = row?.title?.trim()
+  return {
+    title: title
+      ? `${title} · ${t('site.inspiration.archiveTitle')}`
+      : t('site.inspiration.archiveTitle'),
+  }
 }
 
 export default async function InspirationDetailPage({
@@ -39,6 +45,7 @@ export default async function InspirationDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const { t } = await getT('common')
   const { id: raw } = await params
   const id = parseInt(raw, 10)
   if (!Number.isFinite(id)) notFound()
@@ -60,10 +67,10 @@ export default async function InspirationDetailPage({
           <SiteReveal delay={0.04}>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground mb-8">
               <Link href="/" className="hover:text-foreground transition-colors">
-                ← 首页
+                {t('site.inspiration.backHome')}
               </Link>
               <Link href="/inspiration" className="hover:text-foreground transition-colors">
-                全部随想录
+                {t('site.inspiration.allEntries')}
               </Link>
             </div>
           </SiteReveal>
@@ -86,7 +93,7 @@ export default async function InspirationDetailPage({
           <SiteReveal delay={0.12}>
             <header className="space-y-2 mb-6">
               <h1 className="text-lg font-semibold text-foreground">
-                {entry.title?.trim() ? entry.title : '（无标题）'}
+                {entry.title?.trim() ? entry.title : t('site.inspiration.untitled')}
               </h1>
               <FormattedTime
                 date={createdAt}

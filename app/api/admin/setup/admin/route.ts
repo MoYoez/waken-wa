@@ -8,6 +8,8 @@ import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { db, isPostgresDb } from '@/lib/db'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import { adminUsers, siteConfig } from '@/lib/drizzle-schema'
+import { getRequestLanguage } from '@/lib/i18n/request-locale'
+import { getT } from '@/lib/i18n/server'
 import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { parseHistoryWindowMinutes, parseProcessStaleSeconds } from '@/lib/site-config-constants'
@@ -15,6 +17,7 @@ import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 
 export async function POST(request: NextRequest) {
+  const { t } = await getT('auth', { lng: getRequestLanguage(request) })
   try {
     const [countRows, configRows] = await Promise.all([
       db.select({ c: count() }).from(adminUsers),
@@ -26,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     if (hasAdmin && existingConfig) {
       return NextResponse.json(
-        { success: false, error: '初始化已完成，请通过后台设置页面修改配置' },
+        { success: false, error: t('setup.alreadyCompleted') },
         { status: 403 },
       )
     }
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (hasAdmin) {
       const session = await getSession()
       if (!session) {
-        return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+        return NextResponse.json({ success: false, error: t('errors.unauthorized') }, { status: 401 })
       }
     }
 
@@ -106,20 +109,20 @@ export async function POST(request: NextRequest) {
 
     if (!normalizedUserName || !normalizedUserBio || !normalizedAvatarUrl) {
       return NextResponse.json(
-        { success: false, error: '请填写首页必填信息' },
+        { success: false, error: t('setup.requiredHomeInfo') },
         { status: 400 }
       )
     }
 
     if (!hasAdmin && (!normalizedUsername || !rawPassword)) {
       return NextResponse.json(
-        { success: false, error: '请填写管理员用户名和密码' },
+        { success: false, error: t('setup.requiredAdminCredentials') },
         { status: 400 }
       )
     }
 
     if (!hasAdmin) {
-      const pwError = validatePasswordStrength(rawPassword)
+      const pwError = validatePasswordStrength(rawPassword, t)
       if (pwError) {
         return NextResponse.json(
           { success: false, error: pwError },
@@ -134,7 +137,7 @@ export async function POST(request: NextRequest) {
       !existingConfig?.pageLockPasswordHash
     ) {
       return NextResponse.json(
-        { success: false, error: '启用页面锁时请设置访问密码' },
+        { success: false, error: t('setup.pageLockPasswordRequired') },
         { status: 400 }
       )
     }
@@ -240,13 +243,13 @@ export async function POST(request: NextRequest) {
       /unique constraint failed/i.test(msg)
     ) {
       return NextResponse.json(
-        { success: false, error: '该用户名已被使用，请选择其他用户名' },
+        { success: false, error: t('setup.duplicateUsername') },
         { status: 409 },
       )
     }
     console.error('初始化管理员失败:', error)
     return NextResponse.json(
-      { success: false, error: '初始化管理员失败' },
+      { success: false, error: t('setup.initializeFailed') },
       { status: 500 }
     )
   }

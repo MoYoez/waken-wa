@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useT } from 'next-i18next/client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { MarkdownContent } from '@/components/admin/markdown-content'
@@ -24,6 +25,7 @@ const cardShell =
   'border border-border rounded-lg shadow-sm bg-card/80 backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/20'
 
 export function InspirationArchiveList({ displayTimezone }: { displayTimezone: string }) {
+  const { t } = useT('common')
   const prefersReducedMotion = Boolean(useReducedMotion())
   const [items, setItems] = useState<InspirationHomeItem[]>([])
   const [total, setTotal] = useState(0)
@@ -127,13 +129,13 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
   if (!initialDone && items.length === 0 && loading) {
     return (
       <div className="flex justify-center py-16 text-muted-foreground">
-        <Loader2 className="h-8 w-8 animate-spin" aria-label="Loading" />
+        <Loader2 className="h-8 w-8 animate-spin" aria-label={t('site.loading.ariaLabel')} />
       </div>
     )
   }
 
   if (initialDone && items.length === 0) {
-    return <p className="text-center text-sm text-muted-foreground py-12">暂无随想记录</p>
+    return <p className="text-center text-sm text-muted-foreground py-12">{t('site.inspiration.noEntries')}</p>
   }
 
   return (
@@ -196,7 +198,7 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                   <div className="min-w-0 flex-1 flex flex-col gap-1.5">
                     <div className="flex flex-wrap items-baseline justify-between gap-1.5">
                       <Link href={href} className="text-xs font-semibold hover:text-primary transition-colors">
-                        {entry.title?.trim() ? entry.title : '（无标题）'}
+                        {entry.title?.trim() ? entry.title : t('site.inspiration.untitled')}
                       </Link>
                       <FormattedTime
                         date={entry.createdAt}
@@ -209,7 +211,7 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent" />
                     </div>
                     <Link href={href} className="text-xs font-medium text-primary hover:underline w-fit">
-                      打开全文
+                      {t('site.inspiration.openFull')}
                     </Link>
                   </div>
                 </div>
@@ -231,7 +233,7 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
             exit="exit"
             transition={sectionTransition}
           >
-            <Loader2 className="h-6 w-6 animate-spin" aria-label="Loading more" />
+            <Loader2 className="h-6 w-6 animate-spin" aria-label={t('site.loading.moreAriaLabel')} />
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -247,7 +249,7 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
             exit="exit"
             transition={sectionTransition}
           >
-            到底了！
+            {t('site.inspiration.reachedEnd')}
           </motion.p>
         ) : null}
       </AnimatePresence>

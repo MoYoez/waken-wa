@@ -1,10 +1,11 @@
 'use client'
 
 import { Laptop, Moon, Sun } from 'lucide-react'
-import { useTheme } from 'next-themes'
+import { useT } from 'next-i18next/client'
 import { useEffect, useSyncExternalStore } from 'react'
 
-type ThemeMode = 'light' | 'system' | 'dark'
+import { useTheme } from '@/components/theme-provider'
+import type { ThemeMode } from '@/lib/theme'
 type ViewTransitionDocument = Document & {
   startViewTransition?: (update: () => void | Promise<void>) => {
     ready: Promise<void>
@@ -13,16 +14,17 @@ type ViewTransitionDocument = Document & {
 }
 
 const OPTIONS: Array<{
-  label: string
+  labelKey: string
   value: ThemeMode
   icon: typeof Sun
 }> = [
-  { label: 'Switch to light theme', value: 'light', icon: Sun },
-  { label: 'Switch to system theme', value: 'system', icon: Laptop },
-  { label: 'Switch to dark theme', value: 'dark', icon: Moon },
+  { labelKey: 'ui.theme.switchToLight', value: 'light', icon: Sun },
+  { labelKey: 'ui.theme.switchToSystem', value: 'system', icon: Laptop },
+  { labelKey: 'ui.theme.switchToDark', value: 'dark', icon: Moon },
 ]
 
 export function ThemeModeToggle({ className = '' }: { className?: string }) {
+  const { t } = useT('common')
   const { theme, resolvedTheme, setTheme } = useTheme()
   const mounted = useSyncExternalStore(
     () => () => undefined,
@@ -65,7 +67,7 @@ export function ThemeModeToggle({ className = '' }: { className?: string }) {
     <div
       className={`inline-flex rounded-full border border-border/80 bg-card/90 p-[3px] text-foreground shadow-sm backdrop-blur-md ${className}`.trim()}
       role="group"
-      aria-label="Theme switcher"
+      aria-label={t('ui.theme.switcher')}
     >
       {OPTIONS.map((option) => {
         const Icon = option.icon
@@ -73,7 +75,7 @@ export function ThemeModeToggle({ className = '' }: { className?: string }) {
         return (
           <button
             key={option.value}
-            aria-label={option.label}
+            aria-label={t(option.labelKey)}
             type="button"
             onClick={async (event) => {
               if (!mounted) return

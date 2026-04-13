@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
+import { useT } from 'next-i18next/client'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,6 +42,7 @@ function SortablePeriodRow({
   patchItem: (id: string, patch: Partial<SchedulePeriodTemplateItem>) => void
   removeItem: (id: string) => void
 }) {
+  const { t } = useT('admin')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: row.id,
   })
@@ -70,7 +72,7 @@ function SortablePeriodRow({
           'row-start-1 col-start-1 sm:row-start-1 sm:col-start-1',
           'h-8 w-8 sm:h-9 sm:w-9',
         )}
-        aria-label="Drag to reorder"
+        aria-label={t('sortablePeriodTemplate.dragToReorder')}
         {...attributes}
         {...listeners}
       >
@@ -79,7 +81,7 @@ function SortablePeriodRow({
       <Input
         value={row.label}
         onChange={(e) => patchItem(row.id, { label: e.target.value })}
-        placeholder="如：1-2节"
+        placeholder={t('sortablePeriodTemplate.labelPlaceholder')}
         className={cn(
           'h-8 min-w-0 px-2.5 text-sm sm:h-9 sm:px-3',
           'row-start-1 col-start-2 sm:row-start-1 sm:col-start-2',
@@ -115,7 +117,7 @@ function SortablePeriodRow({
         )}
         onClick={() => removeItem(row.id)}
       >
-        删除
+        {t('common.delete')}
       </Button>
     </div>
   )

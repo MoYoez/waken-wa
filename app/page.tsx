@@ -38,7 +38,7 @@ import {
 import { getThemePresetCss } from '@/lib/theme-css'
 import { coerceDbTimestampToIsoUtc, normalizeTimezone } from '@/lib/timezone'
 
-// 强制动态渲染，确保每次请求都获取最新数据
+// Force dynamic rendering so each request gets fresh data.
 export const dynamic = 'force-dynamic'
 
 export default async function Home() {

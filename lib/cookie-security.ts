@@ -1,5 +1,8 @@
 import type { NextRequest } from 'next/server'
 
+import { getRequestLanguage } from '@/lib/i18n/request-locale'
+import { getT } from '@/lib/i18n/server'
+
 const insecureCookieWarnings = new Set<string>()
 
 function getForwardedProto(request: NextRequest): string | null {
@@ -13,7 +16,10 @@ export function shouldUseSecureCookie(request: NextRequest): boolean {
   return getForwardedProto(request) === 'https'
 }
 
-export function resolveCookieSecureFlag(request: NextRequest, cookieName: string): boolean {
+export async function resolveCookieSecureFlag(
+  request: NextRequest,
+  cookieName: string,
+): Promise<boolean> {
   const secure = shouldUseSecureCookie(request)
   if (secure) return true
 
@@ -27,9 +33,13 @@ export function resolveCookieSecureFlag(request: NextRequest, cookieName: string
   if (!insecureCookieWarnings.has(warningKey)) {
     insecureCookieWarnings.add(warningKey)
     const forwardedProto = getForwardedProto(request) ?? 'missing'
-    console.warn(
-      `[cookie] "${cookieName}" is being downgraded without Secure because the request did not resolve to HTTPS (host=${host}, nextUrl.protocol=${request.nextUrl.protocol}, x-forwarded-proto=${forwardedProto}). Use this only for local or trusted-network deployments.`,
-    )
+    const { t } = await getT('auth', { lng: getRequestLanguage(request) })
+    console.warn(t('cookie.insecureWarning', {
+      cookieName,
+      host,
+      protocol: request.nextUrl.protocol,
+      forwardedProto,
+    }))
   }
 
   return false

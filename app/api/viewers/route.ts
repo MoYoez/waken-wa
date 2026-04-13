@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       response.cookies.set(VIEWER_PRESENCE_COOKIE_NAME, viewerId, {
         httpOnly: false,
         sameSite: 'lax',
-        secure: resolveCookieSecureFlag(request, VIEWER_PRESENCE_COOKIE_NAME),
+        secure: await resolveCookieSecureFlag(request, VIEWER_PRESENCE_COOKIE_NAME),
         path: '/',
         maxAge: VIEWER_PRESENCE_COOKIE_MAX_AGE_SECONDS,
       })

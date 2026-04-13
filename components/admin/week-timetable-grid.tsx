@@ -1,6 +1,7 @@
 'use client'
 
 import { addDays, format, startOfWeek } from 'date-fns'
+import { useT } from 'next-i18next/client'
 
 import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import type { ScheduleOccurrence, SchedulePeriodTemplateItem } from '@/lib/schedule-courses'
@@ -14,8 +15,6 @@ const HEADER_BAND_PX = 30
 const DEFAULT_START_MIN = 8 * 60
 const DEFAULT_END_MIN = 22 * 60
 const AXIS_STEP_MIN = 30
-const WEEK_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-
 function parseHm(hm: string): number {
   const [h, m] = hm.split(':').map(Number)
   return h * 60 + m
@@ -116,7 +115,17 @@ export function WeekTimetableGrid({
   occurrences,
   className,
 }: WeekTimetableGridProps) {
+  const { t } = useT('admin')
   const { toDisplayWallClockDate } = useSiteTimeFormat()
+  const weekLabels = [
+    t('scheduleManager.weekdays.monday'),
+    t('scheduleManager.weekdays.tuesday'),
+    t('scheduleManager.weekdays.wednesday'),
+    t('scheduleManager.weekdays.thursday'),
+    t('scheduleManager.weekdays.friday'),
+    t('scheduleManager.weekdays.saturday'),
+    t('scheduleManager.weekdays.sunday'),
+  ]
   const weekStart = startOfWeek(weekRef, { weekStartsOn: 1 })
   const columnDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
@@ -194,7 +203,7 @@ export function WeekTimetableGrid({
                   )}
                   style={{ height: HEADER_BAND_PX }}
                 >
-                  <div className="text-[10px]">{WEEK_LABELS[col]}</div>
+                  <div className="text-[10px]">{weekLabels[col]}</div>
                   <div className="text-[9px] font-normal tabular-nums text-muted-foreground">
                     {format(day, 'M/d')}
                   </div>
@@ -232,7 +241,10 @@ export function WeekTimetableGrid({
                     const leftPct = lane * laneW
                     const titleSuffix =
                       o.sessionCount && o.sessionCount > 1 && o.sessionOrdinal
-                        ? ` · 第${o.sessionOrdinal}/${o.sessionCount}段`
+                        ? ` · ${t('weekTimetableGrid.sessionPart', {
+                            current: o.sessionOrdinal,
+                            total: o.sessionCount,
+                          })}`
                         : ''
                     return (
                       <div

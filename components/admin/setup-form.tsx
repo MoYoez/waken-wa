@@ -2,9 +2,11 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { useT } from 'next-i18next/client'
 import { useEffect, useState } from 'react'
 
 import { loginAdmin, setupAdminSite } from '@/components/admin/admin-query-mutations'
+import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { Switch } from '@/components/ui/switch'
 import { isRemoteAvatarUrl, resolveAvatarUrl } from '@/lib/avatar-url'
@@ -20,6 +22,7 @@ interface SetupFormProps {
 }
 
 export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
+  const { t } = useT('admin')
   const router = useRouter()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -60,7 +63,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
     setError('')
 
     if (needAdminSetup && password !== confirmPassword) {
-      setError('两次输入的密码不一致')
+      setError(t('setup.passwordMismatch'))
       return
     }
 
@@ -88,9 +91,9 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
       router.push('/admin')
       router.refresh()
     } catch (err) {
-      const message = err instanceof Error ? err.message : '网络异常，请重试'
-      if (needAdminSetup && message.includes('自动登录失败')) {
-        setError(`初始化成功，但${message}`)
+      const message = err instanceof Error ? err.message : t('common.networkErrorRetry')
+      if (needAdminSetup && message.includes(t('mutation.autoLoginFailedManual'))) {
+        setError(t('setup.setupSucceededBut', { message }))
         router.push('/admin/login')
         router.refresh()
         return
@@ -105,9 +108,9 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-xl rounded-2xl border border-border/70 bg-card/90 backdrop-blur-sm p-6 shadow-lg">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold tracking-wide text-foreground">站点初始化</h1>
+          <h1 className="text-2xl font-semibold tracking-wide text-foreground">{t('setup.title')}</h1>
           <p className="text-xs text-muted-foreground mt-2">
-            {needAdminSetup ? '首次使用请配置管理员与首页信息' : '请完成首页信息配置'}
+            {needAdminSetup ? t('setup.subtitleWithAdmin') : t('setup.subtitleWithoutAdmin')}
           </p>
         </div>
 
@@ -116,9 +119,9 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
             <>
               <div className="space-y-2">
                 <label htmlFor="username" className="text-xs text-muted-foreground uppercase tracking-wider">
-                  管理员用户名
+                  {t('setup.adminUsernameLabel')}
                 </label>
-                <p className="text-[11px] text-muted-foreground">用于登录后台管理系统，建议使用易记且不易猜测的名称。</p>
+                <p className="text-[11px] text-muted-foreground">{t('setup.adminUsernameHint')}</p>
                 <input
                   id="username"
                   type="text"
@@ -133,15 +136,15 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
 
               <div className="space-y-2">
                 <label htmlFor="password" className="text-xs text-muted-foreground uppercase tracking-wider">
-                  管理员密码
+                  {t('setup.adminPasswordLabel')}
                 </label>
-                <p className="text-[11px] text-muted-foreground">用于后台登录，至少 6 位，建议包含数字与字母。</p>
+                <p className="text-[11px] text-muted-foreground">{t('setup.adminPasswordHint')}</p>
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="至少 6 位"
+                  placeholder={t('setup.adminPasswordPlaceholder')}
                   minLength={6}
                   required
                   autoComplete="new-password"
@@ -151,15 +154,15 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
 
               <div className="space-y-2">
                 <label htmlFor="confirmPassword" className="text-xs text-muted-foreground uppercase tracking-wider">
-                  确认管理员密码
+                  {t('setup.confirmAdminPasswordLabel')}
                 </label>
-                <p className="text-[11px] text-muted-foreground">再次输入管理员密码，确保输入正确。</p>
+                <p className="text-[11px] text-muted-foreground">{t('setup.confirmAdminPasswordHint')}</p>
                 <input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="再次输入密码"
+                  placeholder={t('setup.confirmAdminPasswordPlaceholder')}
                   minLength={6}
                   required
                   autoComplete="new-password"
@@ -170,11 +173,15 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
           )}
 
           <div className="pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Homepage Profile</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">
+              {t('setup.homepageProfile')}
+            </p>
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">网页标题（浏览器标签页）</label>
-                <p className="text-[11px] text-muted-foreground">浏览器标签上显示的站点标题，最多 {PAGE_TITLE_MAX_LEN} 字。</p>
+                <label className="text-xs font-medium text-foreground">{t('setup.pageTitleLabel')}</label>
+                <p className="text-[11px] text-muted-foreground">
+                  {t('setup.pageTitleHint', { max: PAGE_TITLE_MAX_LEN })}
+                </p>
                 <input
                   type="text"
                   value={pageTitle}
@@ -185,48 +192,48 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">首页名称</label>
-                <p className="text-[11px] text-muted-foreground">展示在头像右侧的主名称（例如昵称、品牌名）。</p>
+                <label className="text-xs font-medium text-foreground">{t('setup.userNameLabel')}</label>
+                <p className="text-[11px] text-muted-foreground">{t('setup.userNameHint')}</p>
                 <input
                   type="text"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
-                  placeholder="例如：Koi"
+                  placeholder={t('setup.userNamePlaceholder')}
                   required
                   className="w-full px-4 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">首页简介</label>
-                <p className="text-[11px] text-muted-foreground">名称下方的一句话简介，用于介绍你当前的定位。</p>
+                <label className="text-xs font-medium text-foreground">{t('setup.userBioLabel')}</label>
+                <p className="text-[11px] text-muted-foreground">{t('setup.userBioHint')}</p>
                 <input
                   type="text"
                   value={userBio}
                   onChange={(e) => setUserBio(e.target.value)}
-                  placeholder="例如：Code with patience and optimism."
+                  placeholder={t('setup.userBioPlaceholder')}
                   required
                   className="w-full px-4 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">首页备注</label>
-                <p className="text-[11px] text-muted-foreground">显示在简介下方的扩展说明，可写当前状态或想法。</p>
+                <label className="text-xs font-medium text-foreground">{t('setup.userNoteLabel')}</label>
+                <p className="text-[11px] text-muted-foreground">{t('setup.userNoteHint')}</p>
                 <textarea
                   value={userNote}
                   onChange={(e) => setUserNote(e.target.value)}
-                  placeholder="例如：Writing code, sipping coffee..."
+                  placeholder={t('setup.userNotePlaceholder')}
                   rows={3}
                   className="w-full px-4 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">头像地址（URL / DataURL）</label>
-                <p className="text-[11px] text-muted-foreground">可直接填写图片链接，或通过下方上传并裁剪后自动生成。</p>
+                <label className="text-xs font-medium text-foreground">{t('setup.avatarUrlLabel')}</label>
+                <p className="text-[11px] text-muted-foreground">{t('setup.avatarUrlHint')}</p>
                 <input
                   type="text"
                   value={avatarUrl}
                   onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://... 或 data:image/png;base64,..."
+                  placeholder={t('setup.avatarUrlPlaceholder')}
                   required
                   className="w-full px-4 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
@@ -234,9 +241,9 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
               {avatarUsesRemoteUrl ? (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
                   <div className="space-y-0.5 min-w-0">
-                    <p className="text-xs font-medium text-foreground">检测到远程头像 URL，是否允许通过服务器获取头像？</p>
+                    <p className="text-xs font-medium text-foreground">{t('setup.remoteAvatarFetchTitle')}</p>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      开启后首页与后台预览会通过本站服务器代抓头像，访客浏览器不会直接请求第三方图床。
+                      {t('setup.remoteAvatarFetchDescription')}
                     </p>
                   </div>
                   <Switch
@@ -246,12 +253,12 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   />
                 </div>
               ) : null}
-              <input
-                type="file"
+              <FileSelectTrigger
                 accept="image/*"
-                onChange={async (e) => {
+                buttonLabel={t('common.selectFile')}
+                emptyLabel={t('common.noFileSelected')}
+                onSelect={async (file) => {
                   setError('')
-                  const file = e.target.files?.[0]
                   if (!file) return
                   if (cropSourceUrl) {
                     URL.revokeObjectURL(cropSourceUrl)
@@ -259,12 +266,10 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   const objectUrl = URL.createObjectURL(file)
                   setCropSourceUrl(objectUrl)
                   setCropDialogOpen(true)
-                  e.target.value = ''
                 }}
-                className="w-full text-xs text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border file:border-border file:bg-muted/50 file:text-foreground hover:file:bg-muted file:cursor-pointer"
               />
               <p className="text-[11px] text-muted-foreground">
-                上传后在弹窗中拖动选区，确认后保存为 128×128 正方形（PNG DataURL）
+                {t('setup.imageUploadHint')}
               </p>
               {avatarPreviewUrl && (
                 <div className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3">
@@ -277,9 +282,12 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                     className="w-10 h-10 rounded-full border border-border object-cover"
                   />
                   <span className="text-xs text-muted-foreground">
-                    头像预览（当前将保存到数据库
-                    {avatarUsesRemoteUrl && avatarFetchByServerEnabled ? '，并通过服务器获取' : ''}
-                    ）
+                    {t('setup.avatarPreview', {
+                      fetch:
+                        avatarUsesRemoteUrl && avatarFetchByServerEnabled
+                          ? t('setup.avatarPreviewFetchSuffix')
+                          : '',
+                    })}
                   </span>
                 </div>
               )}
@@ -289,15 +297,16 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   onClick={() => setCropDialogOpen(true)}
                   className="px-3 py-2 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
                 >
-                  打开裁剪弹窗
+                  {t('setup.openCropDialog')}
                 </button>
               )}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">历史展示窗口（分钟）</label>
+                  <label className="text-xs font-medium text-foreground">{t('setup.historyWindowLabel')}</label>
                   <p className="text-[11px] text-muted-foreground">
-                    主页历史列表仅显示最近这段时间，默认 {SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES}{' '}
-                    分钟。
+                    {t('setup.historyWindowHint', {
+                      minutes: SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
+                    })}
                   </p>
                   <input
                     type="number"
@@ -317,36 +326,36 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">“当前”区块标题</label>
-                  <p className="text-[11px] text-muted-foreground">首页活动详情区域的标题文案。</p>
+                  <label className="text-xs font-medium text-foreground">{t('setup.currentSectionLabel')}</label>
+                  <p className="text-[11px] text-muted-foreground">{t('setup.currentSectionHint')}</p>
                   <input
                     type="text"
                     value={currentlyText}
                     onChange={(e) => setCurrentlyText(e.target.value)}
-                    placeholder="例如：当前状态"
+                    placeholder={t('setup.currentSectionPlaceholder')}
                     className="w-full px-3 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">随想录区块标题</label>
-                  <p className="text-[11px] text-muted-foreground">首页第二区块（最近随想录列表）的标题文案。</p>
+                  <label className="text-xs font-medium text-foreground">{t('setup.earlierSectionLabel')}</label>
+                  <p className="text-[11px] text-muted-foreground">{t('setup.earlierSectionHint')}</p>
                   <input
                     type="text"
                     value={earlierText}
                     onChange={(e) => setEarlierText(e.target.value)}
-                    placeholder="例如：最近的随想录"
+                    placeholder={t('setup.earlierSectionPlaceholder')}
                     className="w-full px-3 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">后台入口文案</label>
-                <p className="text-[11px] text-muted-foreground">显示在页脚右侧，点击后进入后台。</p>
+                <label className="text-xs font-medium text-foreground">{t('setup.adminEntryLabel')}</label>
+                <p className="text-[11px] text-muted-foreground">{t('setup.adminEntryHint')}</p>
                 <input
                   type="text"
                   value={adminText}
                   onChange={(e) => setAdminText(e.target.value)}
-                  placeholder="例如：admin / 后台"
+                  placeholder={t('setup.adminEntryPlaceholder')}
                   className="w-full px-3 py-2.5 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
@@ -360,7 +369,11 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
             disabled={loading}
             className="w-full px-4 py-2.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm shadow-sm"
           >
-            {loading ? '保存中...' : needAdminSetup ? '创建管理员并保存配置' : '保存配置'}
+            {loading
+              ? t('setup.saving')
+              : needAdminSetup
+                ? t('setup.createAdminAndSave')
+                : t('setup.saveConfig')}
           </button>
         </form>
       </div>
@@ -378,8 +391,8 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
         sourceUrl={cropSourceUrl}
         aspectMode="square"
         outputSize={128}
-        title="裁剪头像"
-        description="拖动选区或边角调整范围，确认后生成 128×128 头像。"
+        title={t('setup.cropAvatarTitle')}
+        description={t('setup.cropAvatarDescription')}
         onComplete={(dataUrl) => {
           setAvatarUrl(dataUrl)
         }}

@@ -206,7 +206,7 @@ export function LexicalEditor({
   value,
   onChange,
   onPlainTextChange,
-  placeholder = '输入内容...',
+  placeholder = 'Enter content...',
   className,
 }: {
   value: string

@@ -9,6 +9,7 @@ import {
 import { ImagePlus, Loader2, PencilLine, Trash2, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
+import { useT } from 'next-i18next/client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -28,6 +29,7 @@ import {
   patchInspirationEntry,
   uploadInspirationAsset,
 } from '@/components/admin/admin-query-mutations'
+import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { createLexicalTextContent, LexicalEditor } from '@/components/admin/lexical-editor'
 import { MarkdownContent } from '@/components/admin/markdown-content'
@@ -84,6 +86,7 @@ const INSPIRATION_DRAFT_STORAGE_KEY_V1 = 'waken:admin:inspiration-draft:v1'
 const INSPIRATION_DRAFT_STORAGE_KEY = 'waken:admin:inspiration-draft:v2'
 
 export function InspirationManager() {
+  const { t } = useT('admin')
   const queryClient = useQueryClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
   const { formatPattern } = useSiteTimeFormat()
@@ -140,7 +143,7 @@ export function InspirationManager() {
   const publicActivityError = publicActivityFeedQuery.error
     ? publicActivityFeedQuery.error instanceof Error
       ? publicActivityFeedQuery.error.message
-      : '活动数据加载失败'
+      : t('inspirationManager.publicActivityLoadFailed')
     : ''
 
   const totalPages = useMemo(
@@ -371,18 +374,18 @@ export function InspirationManager() {
       setEditingEntryId(null)
       localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
       setPage(0)
-      toast.success('灵感已提交')
+      toast.success(t('inspirationManager.toasts.submitted'))
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inspiration', 'entries'] })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误，请重试')
+      toast.error(error instanceof Error ? error.message : t('common.networkErrorRetry'))
     },
   })
 
   const updateEntryMutation = useMutation({
     mutationFn: async () => {
       if (!editingEntryId) {
-        throw new Error('缺少待编辑条目')
+        throw new Error(t('inspirationManager.missingEditingEntry'))
       }
       await patchInspirationEntry({
         id: editingEntryId,
@@ -410,11 +413,11 @@ export function InspirationManager() {
       setStatusSnapshotDraft('')
       setEditingEntryId(null)
       localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
-      toast.success('灵感已更新')
+      toast.success(t('inspirationManager.toasts.updated'))
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inspiration', 'entries'] })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误，请重试')
+      toast.error(error instanceof Error ? error.message : t('common.networkErrorRetry'))
     },
   })
 
@@ -423,18 +426,18 @@ export function InspirationManager() {
       await deleteInspirationEntry(id)
     },
     onSuccess: async () => {
-      toast.success('灵感已删除')
+      toast.success(t('inspirationManager.toasts.deleted'))
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inspiration', 'entries'] })
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '网络错误，删除失败')
+      toast.error(error instanceof Error ? error.message : t('inspirationManager.toasts.deleteFailed'))
     },
   })
 
   const uploadAssetMutation = useMutation({
     mutationFn: uploadInspirationAsset,
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '正文配图上传失败')
+      toast.error(error instanceof Error ? error.message : t('mutation.uploadBodyImageFailed'))
     },
   })
 
@@ -507,32 +510,30 @@ export function InspirationManager() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {editingEntryId ? (
               <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
-                正在编辑第 #{editingEntryId} 条灵感，保存后会直接覆盖原内容并发布。
+                {t('inspirationManager.editingNotice', { id: editingEntryId })}
               </div>
             ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="insp-title">标题（可选）</Label>
+                <Label htmlFor="insp-title">{t('inspirationManager.form.titleOptional')}</Label>
                 <Input
                   id="insp-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="例如：某次灵感 / 片段标题"
+                  placeholder={t('inspirationManager.form.titlePlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="insp-file">图片（可选，裁剪后写入）</Label>
-                <Input
+                <Label htmlFor="insp-file">{t('inspirationManager.form.imageOptional')}</Label>
+                <FileSelectTrigger
                   id="insp-file"
-                  type="file"
                   accept="image/*"
-                  onChange={(e) => {
-                    openCropForFile(e.target.files?.[0], 'cover')
-                    e.target.value = ''
-                  }}
+                  buttonLabel={t('common.selectFile')}
+                  emptyLabel={t('common.noFileSelected')}
+                  onSelect={(file) => openCropForFile(file, 'cover')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  长边上限约 {INSPIRATION_MAX_OUTPUT_EDGE}px，比例可任意调整
+                  {t('inspirationManager.form.imageHint', { value: INSPIRATION_MAX_OUTPUT_EDGE })}
                 </p>
               </div>
             </div>
@@ -551,7 +552,7 @@ export function InspirationManager() {
                     }
                   }}
                 />
-                <span>附上提交时首页「当前」状态快照</span>
+                <span>{t('inspirationManager.form.attachCurrentStatus')}</span>
               </label>
             </div>
             <AnimatePresence initial={false}>
@@ -566,7 +567,9 @@ export function InspirationManager() {
                   layout
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">可选快照设备（默认自动选择最近上报设备）</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('inspirationManager.snapshot.optionalDevice')}
+                    </p>
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
@@ -575,13 +578,15 @@ export function InspirationManager() {
                         className="h-7 text-xs"
                         onClick={() => setAttachStatusDeviceHash('')}
                       >
-                        清空
+                        {t('inspirationManager.snapshot.clear')}
                       </Button>
                     </div>
                   </div>
                   <div className="max-h-36 space-y-1 overflow-y-auto pr-1">
                     {inspirationDevices.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">暂无设备，快照将按最近上报设备生成。</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('inspirationManager.snapshot.noDevices')}
+                      </p>
                     ) : (
                       inspirationDevices.map((d) => (
                         <label
@@ -619,22 +624,28 @@ export function InspirationManager() {
                         layout
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-xs text-muted-foreground">选择用于快照显示的活动（当前 + 近期）</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t('inspirationManager.snapshot.selectActivity')}
+                          </p>
                           <label className="flex items-center gap-2 text-xs font-normal cursor-pointer">
                             <Checkbox
                               checked={attachStatusIncludeDeviceInfo}
                               onCheckedChange={(v) => setAttachStatusIncludeDeviceInfo(v === true)}
                             />
-                            <span>带上设备信息（电量）</span>
+                            <span>{t('inspirationManager.snapshot.includeDeviceInfo')}</span>
                           </label>
                         </div>
 
                         {publicActivityLoading ? (
-                          <p className="text-xs text-muted-foreground">活动数据加载中…</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t('inspirationManager.snapshot.loadingActivities')}
+                          </p>
                         ) : publicActivityError ? (
                           <p className="text-xs text-destructive">{publicActivityError}</p>
                         ) : snapshotCandidates.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">该设备暂无可用活动候选。</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t('inspirationManager.snapshot.noActivityCandidates')}
+                          </p>
                         ) : (
                           <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
                             {snapshotCandidates.map((c) => {
@@ -644,7 +655,7 @@ export function InspirationManager() {
                                 const pn = String(c.item.processName ?? '').trim()
                                 const pt = c.item.processTitle != null ? String(c.item.processTitle).trim() : ''
                                 if (pt && pn) return `${pt} | ${pn}`
-                                return pn || pt || '（无标题）'
+                                return pn || pt || t('inspirationManager.common.untitled')
                               })()
                               return (
                                 <label
@@ -660,7 +671,9 @@ export function InspirationManager() {
                                   />
                                   <div className="min-w-0 flex-1">
                                     <div className="min-w-0 truncate text-foreground/90">
-                                      {c.group === 'active' ? '当前：' : '近期：'}
+                                      {c.group === 'active'
+                                        ? t('inspirationManager.snapshot.activePrefix')
+                                        : t('inspirationManager.snapshot.recentPrefix')}
                                       {label}
                                     </div>
                                   </div>
@@ -671,7 +684,7 @@ export function InspirationManager() {
                         )}
 
                         <div className="text-[11px] text-muted-foreground">
-                          快照将使用你选中的那条活动；若不选，默认使用该设备「当前」活动。
+                          {t('inspirationManager.snapshot.selectionHint')}
                         </div>
                       </motion.div>
                     ) : null}
@@ -689,7 +702,7 @@ export function InspirationManager() {
                         layout
                       >
                         <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                          快照预览
+                          {t('inspirationManager.snapshot.preview')}
                         </p>
                         <p className="text-xs text-foreground/80 break-words">{computedSnapshotText}</p>
                       </motion.div>
@@ -704,7 +717,7 @@ export function InspirationManager() {
                         layout
                       >
                         <p className="text-[11px] text-muted-foreground">
-                          该设备暂无活动数据，提交后快照将为空。
+                          {t('inspirationManager.snapshot.noActivityDataAfterSubmit')}
                         </p>
                       </motion.div>
                     ) : null}
@@ -725,7 +738,9 @@ export function InspirationManager() {
                   layout
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">当前保留的状态快照</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('inspirationManager.snapshot.retainedSnapshot')}
+                    </p>
                     <Button
                       type="button"
                       variant="ghost"
@@ -734,7 +749,7 @@ export function InspirationManager() {
                       onClick={() => setStatusSnapshotDraft('')}
                     >
                       <X className="h-3.5 w-3.5" />
-                      移除快照
+                      {t('inspirationManager.snapshot.removeSnapshot')}
                     </Button>
                   </div>
                   <p className="text-xs break-words whitespace-pre-wrap text-foreground/80">
@@ -745,11 +760,11 @@ export function InspirationManager() {
             </AnimatePresence>
 
             <div className="space-y-2">
-              <Label htmlFor="insp-content">正文（Lexical，必填）</Label>
+              <Label htmlFor="insp-content">{t('inspirationManager.form.contentRequired')}</Label>
               <Tabs defaultValue="edit" className="w-full">
                 <TabsList className="mb-2">
-                  <TabsTrigger value="edit">编辑</TabsTrigger>
-                  <TabsTrigger value="preview">预览</TabsTrigger>
+                  <TabsTrigger value="edit">{t('inspirationManager.tabs.edit')}</TabsTrigger>
+                  <TabsTrigger value="preview">{t('inspirationManager.tabs.preview')}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="edit" className="mt-0 space-y-2">
                   <input
@@ -774,13 +789,13 @@ export function InspirationManager() {
                     ) : (
                       <ImagePlus className="h-4 w-4 mr-1" />
                     )}
-                    插入正文配图
+                    {t('inspirationManager.form.insertBodyImage')}
                   </Button>
                   <LexicalEditor
                     value={contentLexical}
                     onChange={(next) => setContentLexical(next)}
                     onPlainTextChange={(plain) => setContent(plain)}
-                    placeholder="支持基础富文本：加粗、斜体、列表、代码等"
+                    placeholder={t('inspirationManager.form.contentPlaceholder')}
                   />
                 </TabsContent>
                 <TabsContent value="preview" className="mt-0">
@@ -796,7 +811,7 @@ export function InspirationManager() {
                         <LexicalContent content={contentLexical} className="text-sm text-muted-foreground" />
                       )
                     ) : (
-                      <p className="text-sm text-muted-foreground">暂无内容</p>
+                      <p className="text-sm text-muted-foreground">{t('inspirationManager.common.noContent')}</p>
                     )}
                   </div>
                 </TabsContent>
@@ -814,10 +829,10 @@ export function InspirationManager() {
                   transition={sectionTransition}
                   layout
                 >
-                  <p className="text-xs text-muted-foreground mb-2">图片预览</p>
+                  <p className="text-xs text-muted-foreground mb-2">{t('inspirationManager.form.imagePreview')}</p>
                   <Image
                     src={imageDataUrl.trim()}
-                    alt="inspiration preview"
+                    alt={t('inspirationManager.form.imagePreviewAlt')}
                     width={800}
                     height={600}
                     loading="eager"
@@ -830,7 +845,7 @@ export function InspirationManager() {
                     className="mt-2"
                     onClick={() => setImageDataUrl('')}
                   >
-                    移除图片
+                    {t('inspirationManager.form.removeImage')}
                   </Button>
                 </motion.div>
               ) : null}
@@ -841,10 +856,14 @@ export function InspirationManager() {
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {editingEntryId ? '保存中...' : '提交中...'}
+                    {editingEntryId
+                      ? t('inspirationManager.form.saving')
+                      : t('inspirationManager.form.submitting')}
                   </>
                 ) : (
-                  editingEntryId ? '保存发布' : '提交灵感'
+                  editingEntryId
+                    ? t('inspirationManager.form.saveAndPublish')
+                    : t('inspirationManager.form.submitInspiration')
                 )}
               </Button>
               <Button
@@ -853,7 +872,9 @@ export function InspirationManager() {
                 disabled={submitting}
                 onClick={resetEditor}
               >
-                {editingEntryId ? '取消编辑' : '清空'}
+                {editingEntryId
+                  ? t('inspirationManager.form.cancelEdit')
+                  : t('inspirationManager.form.clear')}
               </Button>
             </div>
           </form>
@@ -874,8 +895,12 @@ export function InspirationManager() {
         sourceUrl={cropSourceUrl}
         aspectMode="free"
         outputSize={INSPIRATION_MAX_OUTPUT_EDGE}
-        title={cropTarget === 'body' ? '裁剪正文配图' : '裁剪封面配图'}
-        description="拖动选区或边角调整范围，确认后导出 PNG。"
+        title={
+          cropTarget === 'body'
+            ? t('inspirationManager.crop.bodyTitle')
+            : t('inspirationManager.crop.coverTitle')
+        }
+        description={t('inspirationManager.crop.description')}
         onComplete={(dataUrl) => {
           if (cropTarget === 'cover') {
             setImageDataUrl(dataUrl)
@@ -890,7 +915,7 @@ export function InspirationManager() {
                 setContent(lexicalTextContent(next))
                 return next
               })
-              toast.success('正文配图已插入')
+              toast.success(t('inspirationManager.toasts.bodyImageInserted'))
             } finally {
               setBodyImageBusy(false)
             }
@@ -898,10 +923,10 @@ export function InspirationManager() {
         }}
       />
       <div className="mt-8 space-y-3">
-        <h3 className="text-sm font-semibold text-foreground">搜索记录</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t('inspirationManager.search.title')}</h3>
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[220px] space-y-2">
-            <Label htmlFor="insp-search">关键字</Label>
+            <Label htmlFor="insp-search">{t('inspirationManager.search.keyword')}</Label>
             <Input
               id="insp-search"
               value={q}
@@ -909,7 +934,7 @@ export function InspirationManager() {
                 setQ(e.target.value)
                 setPage(0)
               }}
-              placeholder="搜索标题、正文或状态快照"
+              placeholder={t('inspirationManager.search.placeholder')}
             />
           </div>
         </div>
@@ -928,7 +953,7 @@ export function InspirationManager() {
               ))}
             </div>
           ) : entries.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground">暂无灵感记录</div>
+            <div className="py-10 text-center text-muted-foreground">{t('inspirationManager.list.empty')}</div>
           ) : (
             <motion.div
               className="divide-y overflow-y-auto overscroll-contain"
@@ -951,7 +976,7 @@ export function InspirationManager() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-semibold text-foreground truncate max-w-[420px]">
-                            {entry.title ? entry.title : '（无标题）'}
+                            {entry.title ? entry.title : t('inspirationManager.common.untitled')}
                           </h4>
                           <span className="text-xs text-muted-foreground">
                             {formatPattern(entry.createdAt, 'yyyy-MM-dd HH:mm', '—')}
@@ -973,7 +998,7 @@ export function InspirationManager() {
                           className="mt-1 h-auto px-0 text-xs"
                           onClick={() => setPreviewEntry(entry)}
                         >
-                          查看更多
+                          {t('inspirationManager.list.viewMore')}
                         </Button>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
@@ -998,15 +1023,15 @@ export function InspirationManager() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>确认删除</AlertDialogTitle>
+                              <AlertDialogTitle>{t('inspirationManager.deleteDialog.title')}</AlertDialogTitle>
                               <AlertDialogDescription>
-                                确定要删除这条灵感吗？此操作无法撤销。
+                                {t('inspirationManager.deleteDialog.description')}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                               <AlertDialogAction onClick={() => handleDelete(entry.id)}>
-                                删除
+                                {t('common.delete')}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -1018,7 +1043,7 @@ export function InspirationManager() {
                       <div className="rounded-lg border bg-muted/30 p-3">
                         <Image
                           src={entry.imageDataUrl}
-                          alt="inspiration"
+                          alt={t('inspirationManager.list.imageAlt')}
                           width={800}
                           height={600}
                           loading="eager"
@@ -1037,12 +1062,15 @@ export function InspirationManager() {
       {total > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
           <span>
-            共 {total} 条
+            {t('common.countSummary', { total })}
             {entries.length > 0 ? (
               <>
                 {' '}
-                · 本页 {page * INSPIRATION_LIST_PAGE_SIZE + 1}–
-                {page * INSPIRATION_LIST_PAGE_SIZE + entries.length}
+                ·{' '}
+                {t('common.pageSummary', {
+                  start: page * INSPIRATION_LIST_PAGE_SIZE + 1,
+                  end: page * INSPIRATION_LIST_PAGE_SIZE + entries.length,
+                })}
               </>
             ) : null}
           </span>
@@ -1056,7 +1084,7 @@ export function InspirationManager() {
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page <= 0}
               >
-                上一页
+                {t('common.previousPage')}
               </Button>
               <span className="tabular-nums text-sm">
                 {page + 1} / {totalPages}
@@ -1069,7 +1097,7 @@ export function InspirationManager() {
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page >= totalPages - 1}
               >
-                下一页
+                {t('common.nextPage')}
               </Button>
             </div>
           ) : null}
@@ -1082,7 +1110,7 @@ export function InspirationManager() {
             <div className="-mx-6 -mt-6 mb-4 overflow-hidden rounded-t-lg border-b border-border/60 bg-muted/20">
               <Image
                 src={previewEntry.imageDataUrl}
-                alt="preview header image"
+                alt={t('inspirationManager.preview.headerImageAlt')}
                 width={1200}
                 height={800}
                 loading="eager"
@@ -1091,7 +1119,7 @@ export function InspirationManager() {
             </div>
           ) : null}
           <DialogHeader>
-            <DialogTitle>{previewEntry?.title?.trim() || '（无标题）'}</DialogTitle>
+            <DialogTitle>{previewEntry?.title?.trim() || t('inspirationManager.common.untitled')}</DialogTitle>
             <DialogDescription>
               {previewEntry
                 ? formatPattern(previewEntry.createdAt, 'yyyy-MM-dd HH:mm', '—')
@@ -1122,7 +1150,7 @@ export function InspirationManager() {
           ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setPreviewEntry(null)}>
-              关闭
+              {t('inspirationManager.preview.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

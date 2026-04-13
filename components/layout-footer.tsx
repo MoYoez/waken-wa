@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, CircleHelp, Users } from 'lucide-react'
 import Link from 'next/link'
+import { useT } from 'next-i18next/client'
 
 import { ThemeModeToggle } from '@/components/theme-mode-toggle'
 import {
@@ -39,22 +40,25 @@ function GitHubMark({ className }: { className?: string }) {
 }
 
 export function LayoutFooter({ adminText }: { adminText: string }) {
+  const { t } = useT('common')
   const isMobile = useIsMobile()
   const { count: viewerCount, error, loading } = useViewerCount({ mode: 'heartbeat' })
-  const presenceStatus = error ? '读取失败' : loading ? '同步中' : '已连接'
+  const presenceStatus = error
+    ? t('site.footer.presenceFailed')
+    : loading
+      ? t('site.footer.presenceSyncing')
+      : t('site.footer.presenceConnected')
   const helpBody = (
     <div className="space-y-2 text-left">
-      <p className="font-medium">这是如何实现的？</p>
+      <p className="font-medium">{t('site.footer.helpTitle')}</p>
       <p>
-        当你打开这个页面时，浏览器会定时向
+        {t('site.footer.helpLine1Prefix')}
         <code className="mx-1 rounded bg-background/20 px-1">/api/viewers</code>
-        发送 heartbeat，请求当前浏览页面的人数。
+        {t('site.footer.helpLine1Suffix')}
       </p>
+      <p>{t('site.footer.helpLine2')}</p>
       <p>
-        这个计数用于显示站点当前有多少访客正在查看页面；当前实现不是 WebSocket 推送，而是周期性同步。
-      </p>
-      <p>
-        当前状态：
+        {t('site.footer.helpStatusLabel')}
         <span className={`ml-1 font-medium ${error ? 'text-amber-300' : 'text-emerald-300'}`}>
           {presenceStatus}
         </span>
@@ -83,7 +87,9 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                 </span>
                 <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
                 <span className="min-w-0 flex-1 cursor-default text-foreground">
-                  正在被 <span className="tabular-nums text-primary">{viewerCount}</span> 人看爆
+                  {t('site.footer.watchingPrefix')}{' '}
+                  <span className="tabular-nums text-primary">{viewerCount}</span>{' '}
+                  {t('site.footer.watchingSuffix')}
                 </span>
                 {isMobile ? (
                   <Popover>
@@ -91,7 +97,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                       <button
                         type="button"
                         className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
-                        aria-label="查看在线人数说明"
+                        aria-label={t('site.footer.helpAriaLabel')}
                       >
                         <CircleHelp className="h-3.5 w-3.5" />
                       </button>
@@ -110,7 +116,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                       <button
                         type="button"
                         className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
-                        aria-label="查看在线人数说明"
+                        aria-label={t('site.footer.helpAriaLabel')}
                       >
                         <CircleHelp className="h-3.5 w-3.5" />
                       </button>
@@ -143,7 +149,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                   href={TEMPLATE_REPO_HREF}
                 >
                   <GitHubMark />
-                  <span>Fork this Project</span>
+                  <span>{t('site.footer.forkProject')}</span>
                   <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
                 </a>
               </div>

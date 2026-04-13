@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useRouter } from 'next/navigation'
+import { useT } from 'next-i18next/client'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { MdAutoFixHigh } from 'react-icons/md'
 import { toast } from 'sonner'
@@ -49,6 +50,7 @@ import {
   ADMIN_SHORT_EVENT_FILTER_MS,
 } from '@/constants/admin-dashboard'
 import { useViewerCount } from '@/hooks/use-viewer-count'
+import { normalizeRequestLanguage } from '@/lib/i18n/request-locale'
 import type { ActivityFeedItem } from '@/types/activity'
 import type { AdminTabValue } from '@/types/admin-dashboard'
 
@@ -93,30 +95,39 @@ function formatOverviewClock(
 function formatOverviewDate(
   value: string | null | undefined,
   formatPattern: (value: Date | string | number | null | undefined, pattern: string, fallback?: string) => string,
+  fallback: string,
 ): string {
-  return formatPattern(value, 'MM/dd', '未知时间')
+  return formatPattern(value, 'MM/dd', fallback)
 }
 
-function formatOverviewRelativeTime(value: string | null | undefined): string {
+function formatOverviewRelativeTime(
+  value: string | null | undefined,
+  locale: string,
+  justNowLabel: string,
+): string {
   const time = Date.parse(String(value ?? ''))
-  if (!Number.isFinite(time)) return '刚刚'
+  if (!Number.isFinite(time)) return justNowLabel
 
   const diffMs = time - Date.now()
   const absMs = Math.abs(diffMs)
-  const rtf = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' })
+  const normalizedLocale = normalizeRequestLanguage(locale) === 'zh-CN' ? 'zh-CN' : 'en'
+  const rtf = new Intl.RelativeTimeFormat(normalizedLocale, { numeric: 'auto' })
 
-  if (absMs < 60_000) return '刚刚'
+  if (absMs < 60_000) return justNowLabel
   if (absMs < 3_600_000) return rtf.format(Math.round(diffMs / 60_000), 'minute')
   if (absMs < 86_400_000) return rtf.format(Math.round(diffMs / 3_600_000), 'hour')
   return rtf.format(Math.round(diffMs / 86_400_000), 'day')
 }
 
-function buildRecentRecordSummary(record: ActivityFeedItem): string {
+function buildRecentRecordSummary(
+  record: ActivityFeedItem,
+  emptyDescription: string,
+): string {
   const statusLine = typeof record.statusText === 'string' ? record.statusText.trim() : ''
   if (statusLine) return statusLine
   if (record.processTitle?.trim()) return record.processTitle.trim()
   if (record.processName?.trim()) return record.processName.trim()
-  return '暂无状态描述'
+  return emptyDescription
 }
 
 function getRecordPushMode(record: ActivityFeedItem): 'realtime' | 'active' {
@@ -167,6 +178,7 @@ function BottomGuide({
 }
 
 function AdminDashboardContent({ username, initialTab, initialDeviceHash }: DashboardProps) {
+  const { i18n, t } = useT('admin')
   const router = useRouter()
   const queryClient = useQueryClient()
   const { formatPattern } = useSiteTimeFormat()
@@ -216,11 +228,18 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     [prefersReducedMotion],
   )
 
-  const activeTabMeta = useMemo(
+  const translatedTabs = useMemo(
     () =>
-      ADMIN_DASHBOARD_TAB_ITEMS.find((item) => item.value === activeTab) ??
-      ADMIN_DASHBOARD_TAB_ITEMS[0],
-    [activeTab],
+      ADMIN_DASHBOARD_TAB_ITEMS.map((item) => ({
+        ...item,
+        label: t(`dashboard.tabs.${item.value}.label`),
+        description: t(`dashboard.tabs.${item.value}.description`),
+      })),
+    [t],
+  )
+  const activeTabMeta = useMemo(
+    () => translatedTabs.find((item) => item.value === activeTab) ?? translatedTabs[0],
+    [activeTab, translatedTabs],
   )
   const activeDeviceHash = initialDeviceHash
   const recentActivityUsageQuery = useQuery({
@@ -236,7 +255,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
   const endActivityMutation = useMutation({
     mutationFn: endAdminActivity,
     onSuccess: async () => {
-      toast.success('活动已结束')
+      toast.success(t('dashboard.activityEnded'))
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: adminQueryKeys.activity.recentUsage() }),
         queryClient.invalidateQueries({ queryKey: adminQueryKeys.activity.feed() }),
@@ -244,7 +263,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
       ])
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : '结束活动失败')
+      toast.error(error instanceof Error ? error.message : t('mutation.endActivityFailed'))
     },
   })
 
@@ -295,11 +314,11 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
   const handleLogout = async () => {
     try {
       await logoutAdmin()
-      toast.success('已登出')
+      toast.success(t('dashboard.logoutSuccess'))
       router.push('/admin/login')
       router.refresh()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '登出失败')
+      toast.error(error instanceof Error ? error.message : t('dashboard.logoutFailed'))
     }
   }
 
@@ -332,10 +351,10 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
           <div className="space-y-1">
             <h3 className="font-semibold text-foreground flex items-center gap-2">
               <Users className="h-4 w-4" />
-              当前在线访客
+              {t('dashboard.viewerCountTitle')}
             </h3>
             <p className="text-sm leading-6 text-muted-foreground">
-              与首页公开展示同步，后台只读查看，不参与人数统计。
+              {t('dashboard.viewerCountDescription')}
             </p>
           </div>
           <div className="rounded-full border border-primary/15 bg-primary/8 p-3 text-primary shadow-sm">
@@ -350,12 +369,18 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               {viewerCountError
-                ? '读取在线访客数失败'
+                ? t('dashboard.viewerCountLoadFailed')
                 : viewerCountLoading && !viewerCountUpdatedAt
-                  ? '正在读取最新人数...'
+                  ? t('dashboard.viewerCountLoading')
                   : viewerCountUpdatedAt
-                    ? `最后更新 ${formatOverviewRelativeTime(viewerCountUpdatedAt)}`
-                    : '等待首个访客心跳'}
+                    ? t('dashboard.viewerCountLastUpdated', {
+                        value: formatOverviewRelativeTime(
+                          viewerCountUpdatedAt,
+                          i18n.language,
+                          t('dashboard.justNow'),
+                        ),
+                      })
+                    : t('dashboard.viewerCountWaiting')}
             </p>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs text-muted-foreground">
@@ -371,11 +396,11 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
             <Clock3 className="h-4 w-4" />
-            快速添加活动
+            {t('dashboard.quickAddTitle')}
           </h3>
           <Button type="button" variant="outline" size="sm" onClick={() => handleTabChange('devices')}>
             <MonitorSmartphone className="h-4 w-4 mr-1" />
-            打开设备管理
+            {t('dashboard.openDeviceManager')}
           </Button>
         </div>
         <AddActivityForm />
@@ -386,10 +411,10 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
           <div className="space-y-1">
             <h3 className="font-semibold text-foreground flex items-center gap-2">
               <Clock3 className="h-4 w-4" />
-              最近记录
+              {t('dashboard.recentRecordsTitle')}
             </h3>
             <p className="text-sm leading-6 text-muted-foreground">
-              按时间顺序看看最近在做什么。
+              {t('dashboard.recentRecordsDescription')}
             </p>
           </div>
           <Button
@@ -404,23 +429,23 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
             ) : (
               <RefreshCw className="mr-1 h-4 w-4" />
             )}
-            刷新
+            {t('common.refresh')}
           </Button>
         </div>
 
         {recentActivityUsageQuery.isLoading ? (
           <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
-            正在加载最近记录...
+            {t('dashboard.recentRecordsLoading')}
           </div>
         ) : recentActivityUsage.length === 0 ? (
           <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
-            还没有最近记录。
+            {t('dashboard.recentRecordsEmpty')}
           </div>
         ) : (
           <div className="space-y-0">
             {recentActivityUsage.map((record, index) => {
               const recordTime = record.lastReportAt || record.updatedAt || record.startedAt
-              const summary = buildRecentRecordSummary(record)
+              const summary = buildRecentRecordSummary(record, t('dashboard.noStatusDescription'))
               const isPersistentRecord =
                 getRecordPushMode(record) === 'active' && typeof record.id === 'number'
               const persistentRecordId = isPersistentRecord ? (record.id as number) : null
@@ -438,7 +463,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
                       {formatOverviewClock(recordTime, formatPattern)}
                     </p>
                     <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">
-                      {formatOverviewDate(recordTime, formatPattern)}
+                      {formatOverviewDate(recordTime, formatPattern, t('common.unknownTime'))}
                     </p>
                   </div>
 
@@ -455,18 +480,18 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
                         <span className="font-semibold tabular-nums text-foreground">
                           {formatOverviewClock(recordTime, formatPattern)}
                         </span>
-                        <span>{formatOverviewDate(recordTime, formatPattern)}</span>
+                        <span>{formatOverviewDate(recordTime, formatPattern, t('common.unknownTime'))}</span>
                         <span>·</span>
-                        <span>{formatOverviewRelativeTime(recordTime)}</span>
+                        <span>{formatOverviewRelativeTime(recordTime, i18n.language, t('dashboard.justNow'))}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <p className="text-sm font-medium leading-6 text-foreground">{summary}</p>
                         <span className="hidden text-xs text-muted-foreground sm:inline">
-                          {formatOverviewRelativeTime(recordTime)}
+                          {formatOverviewRelativeTime(recordTime, i18n.language, t('dashboard.justNow'))}
                         </span>
                       </div>
                       <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        {record.device || '未知设备'}
+                        {record.device || t('dashboard.unknownDevice')}
                         {record.processName ? ` · ${record.processName}` : ''}
                       </p>
                       {isPersistentRecord ? (
@@ -484,18 +509,18 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
                                 ) : (
                                   <OctagonX className="mr-1 h-4 w-4" />
                                 )}
-                                立刻结束活动
+                                {t('dashboard.endActivityNow')}
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>确认结束活动</AlertDialogTitle>
+                                <AlertDialogTitle>{t('dashboard.confirmEndActivityTitle')}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  确定要立刻结束「{summary}」吗？结束后这条非 Realtime 活动会立即从当前状态里移除。
+                                  {t('dashboard.confirmEndActivityDescription', { summary })}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>取消</AlertDialogCancel>
+                                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                                 <AlertDialogAction
                                   disabled={endingThisRecord}
                                   onClick={() =>
@@ -504,7 +529,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
                                       : undefined
                                   }
                                 >
-                                  {endingThisRecord ? '结束中...' : '确认结束'}
+                                  {endingThisRecord ? t('dashboard.endingActivity') : t('dashboard.confirmEnd')}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -526,12 +551,14 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     if (activeTab === 'tokens') {
       return (
         <BottomGuide
-          title="API 使用说明"
+          title={t('dashboard.tokensGuide.title')}
           description={
             <>
-              <p>用于脚本或设备侧直接上报活动数据。</p>
+              <p>{t('dashboard.tokensGuide.descriptionLine1')}</p>
               <p>
-                字段 <code className="rounded bg-muted px-1">generatedHashKey</code> 即设备在后台的「设备身份牌」。
+                {t('dashboard.tokensGuide.descriptionLine2Prefix')}{' '}
+                <code className="rounded bg-muted px-1">generatedHashKey</code>{' '}
+                {t('dashboard.tokensGuide.descriptionLine2Suffix')}
               </p>
             </>
           }
@@ -543,7 +570,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     "device": "MacBook Pro",
     "device_type": "desktop",
     "process_name": "VS Code",
-    "process_title": "编辑 index.tsx",
+    "process_title": "${t('dashboard.tokensGuide.exampleProcessTitle')}",
     "battery_level": 82,
     "is_charging": true,
     "push_mode": "realtime"
@@ -555,18 +582,24 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     if (activeTab === 'inspiration') {
       return (
         <BottomGuide
-          title="API 提交（可从脚本或设备直接上报）"
+          title={t('dashboard.inspirationGuide.title')}
           description={
             <>
               <p>
-                使用与「活动上报」相同的 <code className="rounded bg-muted px-1">API Token</code>。
-                <code className="rounded bg-muted px-1">contentLexical</code> 为 Lexical JSON，
-                <code className="rounded bg-muted px-1">content</code> 可作为兼容纯文本。
+                {t('dashboard.inspirationGuide.descriptionLine1Prefix')}{' '}
+                <code className="rounded bg-muted px-1">API Token</code>。{' '}
+                <code className="rounded bg-muted px-1">contentLexical</code>{' '}
+                {t('dashboard.inspirationGuide.descriptionLine1Middle')}{' '}
+                <code className="rounded bg-muted px-1">content</code>{' '}
+                {t('dashboard.inspirationGuide.descriptionLine1Suffix')}
               </p>
               <p>
-                正文内嵌图请先调用 <code className="rounded bg-muted px-1">POST /api/inspiration/assets</code>，
-                再把返回的 <code className="rounded bg-muted px-1">url</code> 插入正文。若已开启设备限制，
-                两个请求都需要带 <code className="rounded bg-muted px-1">X-Device-Key</code>。
+                {t('dashboard.inspirationGuide.descriptionLine2Prefix')}{' '}
+                <code className="rounded bg-muted px-1">POST /api/inspiration/assets</code>
+                ，{t('dashboard.inspirationGuide.descriptionLine2Middle')}{' '}
+                <code className="rounded bg-muted px-1">url</code>{' '}
+                {t('dashboard.inspirationGuide.descriptionLine2Suffix')}{' '}
+                <code className="rounded bg-muted px-1">X-Device-Key</code>。
               </p>
             </>
           }
@@ -581,7 +614,7 @@ curl -X POST ${origin}/api/inspiration/assets \\
 curl -X POST ${origin}/api/inspiration/entries \\
   -H "Authorization: Bearer YOUR_TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"title":"可选","contentLexical":{"root":{"type":"root","children":[...]}},"imageDataUrl":null,"attachCurrentStatus":true,"attachStatusDeviceHash":"your_device_generated_hash_key"}'`}
+  -d '{"title":"${t('dashboard.inspirationGuide.exampleTitleValue')}","contentLexical":{"root":{"type":"root","children":[...]}},"imageDataUrl":null,"attachCurrentStatus":true,"attachStatusDeviceHash":"your_device_generated_hash_key"}'`}
         />
       )
     }
@@ -592,9 +625,13 @@ curl -X POST ${origin}/api/inspiration/entries \\
   const renderPanelAction = () => {
     if (activeTab === 'tokens') {
       return (
-        <Button size="sm" className="shrink-0" onClick={() => tokenManagerRef.current?.openCreate()}>
+        <Button
+          size="sm"
+          className="w-full sm:w-auto"
+          onClick={() => tokenManagerRef.current?.openCreate()}
+        >
           <Plus className="h-4 w-4" />
-          创建 Token
+          {t('dashboard.actions.createToken')}
         </Button>
       )
     }
@@ -603,24 +640,34 @@ curl -X POST ${origin}/api/inspiration/entries \\
         <Button
           size="sm"
           variant="outline"
-          className="shrink-0"
+          className="w-full sm:w-auto"
           onClick={() => orphanImagesRef.current?.refresh()}
         >
           <RefreshCw className="h-4 w-4" />
-          刷新
+          {t('common.refresh')}
         </Button>
       )
     }
     if (activeTab === 'schedule') {
       return (
-        <div className="flex shrink-0 gap-2">
-          <Button size="sm" variant="outline" onClick={() => scheduleManagerRef.current?.openImport()}>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => scheduleManagerRef.current?.openImport()}
+          >
             <Upload className="h-4 w-4" />
-            导入 ICS
+            {t('dashboard.actions.importIcs')}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => scheduleManagerRef.current?.downloadIcs()}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => scheduleManagerRef.current?.downloadIcs()}
+          >
             <Download className="h-4 w-4" />
-            导出 ICS
+            {t('dashboard.actions.exportIcs')}
           </Button>
         </div>
       )
@@ -650,10 +697,10 @@ curl -X POST ${origin}/api/inspiration/entries \\
               </div>
               <div className="min-w-0 space-y-1">
                 <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                  Waken 后台
+                  {t('dashboard.brandTitle')}
                 </h1>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  欢迎，{username}
+                  {t('dashboard.welcome', { username })}
                 </p>
               </div>
             </div>
@@ -661,11 +708,11 @@ curl -X POST ${origin}/api/inspiration/entries \\
             <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
               <Button variant="outline" className="admin-soft-button min-h-10" onClick={() => router.push('/')}>
                 <Home className="mr-2 h-4 w-4" />
-                返回前台
+                {t('dashboard.backToSite')}
               </Button>
               <Button variant="ghost" className="admin-soft-button min-h-10" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
-                登出
+                {t('dashboard.logout')}
               </Button>
             </div>
           </div>
@@ -676,7 +723,7 @@ curl -X POST ${origin}/api/inspiration/entries \\
         <section className="admin-rail-shell">
           <div className="admin-tabs-shell">
             <div ref={tabsRailRef} className="admin-tabs-rail">
-              {ADMIN_DASHBOARD_TAB_ITEMS.map((item, index) => {
+              {translatedTabs.map((item, index) => {
                 const Icon = item.icon
                 const selected = activeTab === item.value
                 return (
@@ -722,12 +769,12 @@ curl -X POST ${origin}/api/inspiration/entries \\
               exit="exit"
               transition={panelTransition}
             >
-              <div className="mb-5 flex items-start justify-between gap-4 border-b border-border/60 pb-4">
-                <div>
-                  <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              <div className="mb-5 flex flex-col gap-3 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0 flex-1">
+                  <h2 className="break-words text-lg font-semibold tracking-tight text-foreground">
                     {activeTabMeta.label}
                   </h2>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-1 break-words text-sm leading-6 text-muted-foreground">
                     {activeTabMeta.description}
                   </p>
                 </div>

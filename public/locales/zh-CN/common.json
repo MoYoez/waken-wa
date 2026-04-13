@@ -1,0 +1,133 @@
+{
+  "admin": {
+    "language": {
+      "title": "后台语言",
+      "description": "只影响当前浏览器中的后台界面；前台仍按请求语言显示。",
+      "ariaLabel": "后台语言切换",
+      "switchToZhCN": "切换后台语言为中文",
+      "switchToEn": "切换后台语言为英文",
+      "zhCN": "中文",
+      "en": "English"
+    }
+  },
+  "site": {
+    "online": "在线",
+    "offline": "离线",
+    "currentStatus": {
+      "steamNowPlaying": "正在游玩（Steam）",
+      "deviceLabel": "设备",
+      "batteryLabel": "电量 {{value}}",
+      "startedAt": "开始时间",
+      "lastReportAt": "最后上报",
+      "noActiveStatus": "暂无设备在线状态",
+      "viewSteamDetails": "查看 Steam 游戏详情",
+      "deviceFallback": "设备 #{{id}}",
+      "activityFallback": "活动 #{{id}}"
+    },
+    "note": {
+      "loadingHitokoto": "加载一言…",
+      "hitokotoUnavailable": "一言暂不可用"
+    },
+    "loading": {
+      "ariaLabel": "加载中",
+      "moreAriaLabel": "正在加载更多",
+      "page": {
+        "home": "正在准备今日状态",
+        "inspiration": "正在准备灵感碎片"
+      }
+    },
+    "schedule": {
+      "location": "地点",
+      "teacher": "教师",
+      "inClass": "正在上课",
+      "nextClass": "下一节",
+      "afterClassesDone": "今天已经没课啦！",
+      "idleFallback": "正在摸鱼",
+      "tomorrowHasClass": "明天有课哦~",
+      "todayNoClass": "今天没课~",
+      "hoverMetaAriaLabel": "悬停查看地点与教师"
+    },
+    "profile": {
+      "defaultName": "用户",
+      "defaultBio": "正在构建一些有意思的东西"
+    },
+    "footer": {
+      "watchingPrefix": "正在被",
+      "watchingSuffix": "人看爆",
+      "helpAriaLabel": "查看在线人数说明",
+      "helpTitle": "这是如何实现的？",
+      "helpLine1Prefix": "当你打开这个页面时，浏览器会定时向",
+      "helpLine1Suffix": "发送 heartbeat，请求当前浏览页面的人数。",
+      "helpLine2": "这个计数用于显示站点当前有多少访客正在查看页面；当前实现不是 WebSocket 推送，而是周期性同步。",
+      "helpStatusLabel": "当前状态：",
+      "presenceFailed": "读取失败",
+      "presenceSyncing": "同步中",
+      "presenceConnected": "已连接",
+      "forkProject": "Fork this Project"
+    },
+    "inspiration": {
+      "untitled": "（无标题）",
+      "viewFull": "查看全文",
+      "noEntries": "暂无随想记录",
+      "viewMore": "查看更多随想录",
+      "archiveTitle": "随想录",
+      "backHome": "← 返回首页",
+      "scrollLoadMore": "向下滚动自动加载更多",
+      "allEntries": "全部随想录",
+      "openFull": "打开全文",
+      "reachedEnd": "到底了！"
+    },
+    "outbound": {
+      "eyebrow": "外部链接",
+      "title": "你即将离开本站",
+      "description": "你将要访问的是第三方页面。请先仔细确认目标链接；该页面的内容、隐私政策与安全性均不由本站负责。",
+      "targetLabel": "目标地址",
+      "continue": "继续前往",
+      "back": "返回上一页"
+    },
+    "activityTimeline": {
+      "loadFailed": "加载最近活动失败",
+      "empty": "最近还没有活动记录",
+      "durationMinutes": "{{value}} 分钟",
+      "durationHoursMinutes": "{{hours}} 小时 {{minutes}} 分钟"
+    }
+  },
+  "ui": {
+    "theme": {
+      "switcher": "主题切换",
+      "switchToLight": "切换为浅色主题",
+      "switchToSystem": "切换为跟随系统",
+      "switchToDark": "切换为深色主题"
+    },
+    "breadcrumb": {
+      "label": "面包屑导航",
+      "more": "更多"
+    },
+    "pagination": {
+      "label": "分页导航",
+      "previous": "上一页",
+      "next": "下一页",
+      "previousAriaLabel": "前往上一页",
+      "nextAriaLabel": "前往下一页",
+      "morePages": "更多页面"
+    },
+    "sidebar": {
+      "title": "侧边栏",
+      "mobileDescription": "显示移动端侧边栏。",
+      "toggle": "切换侧边栏"
+    },
+    "dialog": {
+      "close": "关闭"
+    },
+    "sheet": {
+      "close": "关闭"
+    },
+    "autocomplete": {
+      "empty": "没有匹配项。"
+    },
+    "command": {
+      "title": "命令面板",
+      "description": "搜索要执行的命令..."
+    }
+  }
+}

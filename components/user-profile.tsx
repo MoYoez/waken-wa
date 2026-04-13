@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
+import { useT } from 'next-i18next/client'
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import { useSharedActivityFeed } from '@/components/activity-feed-provider'
@@ -106,6 +107,7 @@ function ProfileHitokotoNote({
   fallbackToNote: boolean
   typewriterEnabled: boolean
 }) {
+  const { t } = useT('common')
   const prefersReducedMotion = Boolean(useReducedMotion())
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [text, setText] = useState('')
@@ -168,7 +170,7 @@ function ProfileHitokotoNote({
         exit="exit"
         transition={sectionTransition}
       >
-        加载一言…
+        {t('site.note.loadingHitokoto')}
       </motion.p>
     )
   }
@@ -181,7 +183,7 @@ function ProfileHitokotoNote({
         </TypewriterNoteText>
       )
     }
-    return <p className={NOTE_BOX_CLASS}>一言暂不可用</p>
+    return <p className={NOTE_BOX_CLASS}>{t('site.note.hitokotoUnavailable')}</p>
   }
 
   if (uuid) {
@@ -219,7 +221,7 @@ function ProfileHitokotoNote({
 
 export type { UserProfileNoteSectionProps } from '@/types/components'
 
-/** Full-width note / 一言 under the profile row so text can reach the card’s right inner edge (spans past the schedule column). */
+/** Full-width note block under the profile row so text can reach the card's right inner edge. */
 export function UserProfileNoteSection({
   note = '',
   noteHitokotoEnabled = false,
@@ -279,12 +281,13 @@ interface UserProfileProps {
 }
 
 export function UserProfile({
-  name = 'User',
-  bio = 'Building something awesome',
+  name,
+  bio,
   avatarUrl = '/avatar.jpg',
   profileOnlineAccentColor = null,
   profileOnlinePulseEnabled = null,
 }: UserProfileProps) {
+  const { t } = useT('common')
   const { feed } = useSharedActivityFeed()
   const isOnline = Boolean(feed?.activeStatuses?.length)
   const onlineHex = normalizeProfileOnlineAccentColor(profileOnlineAccentColor ?? '')
@@ -293,6 +296,8 @@ export function UserProfile({
     onlineHex != null
       ? ({ [PROFILE_ONLINE_ACCENT_VAR]: onlineHex } as CSSProperties)
       : undefined
+  const resolvedName = name?.trim() || t('site.profile.defaultName')
+  const resolvedBio = bio?.trim() || t('site.profile.defaultBio')
 
   return (
     <div className="w-full min-w-0">
@@ -301,7 +306,7 @@ export function UserProfile({
         <div
           className="relative flex-shrink-0"
           style={accentVarStyle}
-          aria-label={isOnline ? '在线' : '离线'}
+          aria-label={isOnline ? t('site.online') : t('site.offline')}
         >
           <div
             className={cn(
@@ -316,7 +321,7 @@ export function UserProfile({
           >
             <Image
               src={avatarUrl}
-              alt={name}
+              alt={resolvedName}
               width={128}
               height={128}
               sizes="72px"
@@ -334,17 +339,17 @@ export function UserProfile({
               isOnline && onlineHex && 'bg-[var(--ProfileOnlineAccent)]',
               isOnline && onlineHex && onlinePulse && 'animate-pulse',
             )}
-            title={isOnline ? '在线' : '离线'}
+            title={isOnline ? t('site.online') : t('site.offline')}
           />
         </div>
 
         {/* Name & Bio */}
         <div className="min-w-0 flex-1">
           <h1 className="text-base font-semibold text-foreground leading-snug">
-            {name}
+            {resolvedName}
           </h1>
           <p className="text-sm text-muted-foreground font-light mt-0.5">
-            {bio}
+            {resolvedBio}
           </p>
         </div>
       </div>

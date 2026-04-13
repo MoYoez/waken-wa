@@ -12,6 +12,8 @@ import { clearApiTokenAuthCache, storedFormFromPlainSecret } from '@/lib/api-tok
 import { db } from '@/lib/db'
 import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
 import { apiTokens, devices } from '@/lib/drizzle-schema'
+import { getRequestLanguage } from '@/lib/i18n/request-locale'
+import { getT } from '@/lib/i18n/server'
 import { parsePaginationParams } from '@/lib/pagination'
 import { getPublicOrigin } from '@/lib/public-request-url'
 import { readJsonObject } from '@/lib/request-json'
@@ -19,6 +21,7 @@ import { sqlTimestamp } from '@/lib/sql-timestamp'
 
 // GET - list API tokens (masked); plaintext secret is only returned once on POST create.
 export async function GET(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -109,12 +112,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: maskedTokens })
   } catch (error) {
     console.error('获取 Token 失败:', error)
-    return NextResponse.json({ success: false, error: '获取失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.tokens.getFailed') }, { status: 500 })
   }
 }
 
 // POST - 创建新 Token
 export async function POST(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -124,7 +128,7 @@ export async function POST(request: NextRequest) {
     const { name } = await readJsonObject(request)
 
     if (!name) {
-      return NextResponse.json({ success: false, error: '请输入名称' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.tokens.nameRequired') }, { status: 400 })
     }
 
     const plainToken = crypto.randomBytes(32).toString('hex')
@@ -159,12 +163,13 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error('创建 Token 失败:', error)
-    return NextResponse.json({ success: false, error: '创建失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.tokens.createFailed') }, { status: 500 })
   }
 }
 
 // PATCH - 切换 Token 状态
 export async function PATCH(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -174,10 +179,10 @@ export async function PATCH(request: NextRequest) {
     const { id, is_active } = await readJsonObject(request)
 
     if (typeof id !== 'number' || !Number.isFinite(id)) {
-      return NextResponse.json({ success: false, error: '无效的 ID' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.tokens.invalidId') }, { status: 400 })
     }
     if (typeof is_active !== 'boolean') {
-      return NextResponse.json({ success: false, error: '无效的状态值' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.tokens.invalidStatusValue') }, { status: 400 })
     }
 
     await db.update(apiTokens).set({ isActive: is_active }).where(eq(apiTokens.id, id))
@@ -187,12 +192,13 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('更新 Token 失败:', error)
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.tokens.updateFailed') }, { status: 500 })
   }
 }
 
 // DELETE - 删除 Token
 export async function DELETE(request: NextRequest) {
+  const { t } = await getT('admin', { lng: getRequestLanguage(request) })
   const session = await requireAdminSession()
   if (!session) {
     return unauthorizedJson()
@@ -203,11 +209,11 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id')
 
     if (!id) {
-      return NextResponse.json({ success: false, error: '缺少有效的 ID' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.tokens.missingId') }, { status: 400 })
     }
     const idNum = parseInt(id, 10)
     if (isNaN(idNum)) {
-      return NextResponse.json({ success: false, error: '无效的 ID' }, { status: 400 })
+      return NextResponse.json({ success: false, error: t('api.tokens.invalidId') }, { status: 400 })
     }
 
     await db.delete(apiTokens).where(eq(apiTokens.id, idNum))
@@ -224,6 +230,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('删除 Token 失败:', error)
-    return NextResponse.json({ success: false, error: '删除失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: t('api.tokens.deleteFailed') }, { status: 500 })
   }
 }

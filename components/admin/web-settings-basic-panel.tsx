@@ -3,16 +3,19 @@
 import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
+import { useT } from 'next-i18next/client'
 
 import {
   getAdminPanelTransition,
   getAdminSectionVariants,
 } from '@/components/admin/admin-motion'
+import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import {
   webSettingsCropDialogOpenAtom,
   webSettingsCropSourceUrlAtom,
   webSettingsFormAtom,
 } from '@/components/admin/web-settings-store'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -27,6 +30,7 @@ import { isRemoteAvatarUrl, resolveAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 
 export function WebSettingsBasicPanel() {
+  const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [cropSourceUrl, setCropSourceUrl] = useAtom(webSettingsCropSourceUrlAtom)
   const [, setCropDialogOpen] = useAtom(webSettingsCropDialogOpenAtom)
@@ -58,7 +62,7 @@ export function WebSettingsBasicPanel() {
   return (
     <div className="space-y-4 sm:space-y-5">
       <div className="space-y-2">
-        <Label>网页标题（浏览器标签页）</Label>
+        <Label>{t('webSettingsBasic.pageTitleLabel')}</Label>
         <Input
           value={form.pageTitle}
           maxLength={PAGE_TITLE_MAX_LEN}
@@ -69,27 +73,28 @@ export function WebSettingsBasicPanel() {
 
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <div className="space-y-2">
-          <Label>首页名称</Label>
+          <Label>{t('webSettingsBasic.userNameLabel')}</Label>
           <Input value={form.userName} onChange={(event) => patch('userName', event.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>首页简介</Label>
+          <Label>{t('webSettingsBasic.userBioLabel')}</Label>
           <Input value={form.userBio} onChange={(event) => patch('userBio', event.target.value)} />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label>首页备注</Label>
+        <Label>{t('webSettingsBasic.userNoteLabel')}</Label>
         <Input value={form.userNote} onChange={(event) => patch('userNote', event.target.value)} />
       </div>
 
       <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
         <div className="space-y-0.5 min-w-0">
           <Label htmlFor="hitokoto-home-note-basic" className="font-normal cursor-pointer">
-            首页备注使用一言（hitokoto.cn）
+            {t('webSettingsBasic.hitokotoTitle')}
           </Label>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            开启后由访客浏览器请求 <code className="rounded bg-muted px-1">v1.hitokoto.cn</code>。
+            {t('webSettingsBasic.hitokotoDescriptionPrefix')}{' '}
+            <code className="rounded bg-muted px-1">v1.hitokoto.cn</code>。
           </p>
         </div>
         <Switch
@@ -101,62 +106,37 @@ export function WebSettingsBasicPanel() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="theme-preset-basic">主题预设</Label>
+        <Label htmlFor="theme-preset-basic">{t('webSettingsBasic.themePresetLabel')}</Label>
         <Select value={form.themePreset} onValueChange={(value) => patch('themePreset', value)}>
           <SelectTrigger id="theme-preset-basic" className="w-full">
-            <SelectValue placeholder="选择主题预设" />
+            <SelectValue placeholder={t('webSettingsBasic.themePresetPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="basic">Basic - 默认主题</SelectItem>
-            <SelectItem value="obsidian">Obsidian - 纯黑极简</SelectItem>
-            <SelectItem value="mono">Mono - 纯白极简</SelectItem>
-            <SelectItem value="midnight">Midnight - 深邃蓝紫</SelectItem>
-            <SelectItem value="ocean">Ocean - 深海蓝绿</SelectItem>
-            <SelectItem value="nord">Nord - 北欧冷淡</SelectItem>
-            <SelectItem value="forest">Forest - 自然森林</SelectItem>
-            <SelectItem value="sakura">Sakura - 柔和樱花</SelectItem>
-            <SelectItem value="lavender">Lavender - 淡雅薰衣草</SelectItem>
-            <SelectItem value="amber">Amber - 温暖琥珀</SelectItem>
-            <SelectItem value="customSurface">Custom surface - 自定义背景 / 圆角 / 配色</SelectItem>
+            <SelectItem value="basic">{t('webSettingsBasic.themePresets.basic')}</SelectItem>
+            <SelectItem value="obsidian">{t('webSettingsBasic.themePresets.obsidian')}</SelectItem>
+            <SelectItem value="mono">{t('webSettingsBasic.themePresets.mono')}</SelectItem>
+            <SelectItem value="midnight">{t('webSettingsBasic.themePresets.midnight')}</SelectItem>
+            <SelectItem value="ocean">{t('webSettingsBasic.themePresets.ocean')}</SelectItem>
+            <SelectItem value="nord">{t('webSettingsBasic.themePresets.nord')}</SelectItem>
+            <SelectItem value="forest">{t('webSettingsBasic.themePresets.forest')}</SelectItem>
+            <SelectItem value="sakura">{t('webSettingsBasic.themePresets.sakura')}</SelectItem>
+            <SelectItem value="lavender">{t('webSettingsBasic.themePresets.lavender')}</SelectItem>
+            <SelectItem value="amber">{t('webSettingsBasic.themePresets.amber')}</SelectItem>
+            <SelectItem value="customSurface">{t('webSettingsBasic.themePresets.customSurface')}</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">自定义背景 / CSS / 规则等请去「进阶设置」。</p>
+        <p className="text-xs text-muted-foreground">{t('webSettingsBasic.themePresetHint')}</p>
       </div>
 
       <div className="space-y-2">
-        <Label>头像地址（URL / DataURL）</Label>
+        <Label>{t('webSettingsBasic.avatarUrlLabel')}</Label>
         <Input value={form.avatarUrl} onChange={(event) => patch('avatarUrl', event.target.value)} />
-        <p className="text-xs text-muted-foreground">可直接填写图片链接，或通过下方上传并裁剪后自动生成。</p>
-        <AnimatePresence initial={false}>
-          {avatarUsesRemoteUrl ? (
-            <motion.div
-              className="rounded-lg border border-dashed border-border/60 bg-muted/[0.04] px-3 py-3 sm:px-4"
-              variants={sectionVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={sectionTransition}
-              layout
-            >
-              <div className="min-w-0 space-y-1">
-                <p className="text-xs font-medium text-foreground">检测到远程头像 URL</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  当前{form.avatarFetchByServerEnabled ? '已' : '未'}启用服务器代抓。可前往{' '}
-                  <span className="font-medium text-foreground">进阶设置 → 平台与访问</span>{' '}
-                  调整是否通过 <code className="rounded bg-muted px-1">/api/avatar</code> 获取头像。
-                </p>
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-        <input
-          type="file"
+        <p className="text-xs text-muted-foreground">{t('webSettingsBasic.avatarUrlHint')}</p>
+        <FileSelectTrigger
           accept="image/*"
-          onChange={(event) => {
-            onFileSelected(event.target.files?.[0])
-            event.target.value = ''
-          }}
-          className="w-full text-xs text-muted-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border file:border-border file:bg-muted/50 file:text-foreground hover:file:bg-muted file:cursor-pointer"
+          buttonLabel={t('common.selectFile')}
+          emptyLabel={t('common.noFileSelected')}
+          onSelect={onFileSelected}
         />
         <AnimatePresence initial={false}>
           {cropSourceUrl ? (
@@ -173,7 +153,7 @@ export function WebSettingsBasicPanel() {
                 onClick={() => setCropDialogOpen(true)}
                 className="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
               >
-                重新打开裁剪
+                {t('webSettingsBasic.reopenCrop')}
               </button>
             </motion.div>
           ) : null}
@@ -191,14 +171,17 @@ export function WebSettingsBasicPanel() {
             >
               <Image
                 src={avatarPreviewUrl}
-                alt="头像预览"
+                alt={t('webSettingsBasic.avatarPreviewAlt')}
                 width={40}
                 height={40}
                 loading="eager"
                 className="w-10 h-10 rounded-full border border-border object-cover"
               />
               <span className="text-xs text-muted-foreground">
-                头像预览{form.avatarFetchByServerEnabled && avatarUsesRemoteUrl ? '（通过服务器获取）' : ''}
+                {t('webSettingsBasic.avatarPreview')}
+                {form.avatarFetchByServerEnabled && avatarUsesRemoteUrl
+                  ? t('webSettingsBasic.avatarPreviewFetchSuffix')
+                  : ''}
               </span>
             </motion.div>
           ) : null}
@@ -207,17 +190,17 @@ export function WebSettingsBasicPanel() {
 
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         <div className="space-y-2">
-          <Label>当前区块标题</Label>
+          <Label>{t('webSettingsBasic.currentlyTextLabel')}</Label>
           <Input value={form.currentlyText} onChange={(event) => patch('currentlyText', event.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>随想录区块标题</Label>
+          <Label>{t('webSettingsBasic.earlierTextLabel')}</Label>
           <Input value={form.earlierText} onChange={(event) => patch('earlierText', event.target.value)} />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label>后台入口文案</Label>
+        <Label>{t('webSettingsBasic.adminTextLabel')}</Label>
         <Input value={form.adminText} onChange={(event) => patch('adminText', event.target.value)} />
       </div>
 
@@ -228,11 +211,11 @@ export function WebSettingsBasicPanel() {
             checked={form.pageLockEnabled}
             onChange={(event) => patch('pageLockEnabled', event.target.checked)}
           />
-          启用页面访问密码锁
+          {t('webSettingsBasic.pageLockEnabledLabel')}
         </Label>
         <Input
           type="password"
-          placeholder="设置/更新页面访问密码（留空则不修改）"
+          placeholder={t('webSettingsBasic.pageLockPasswordPlaceholder')}
           value={form.pageLockPassword}
           onChange={(event) => patch('pageLockPassword', event.target.value)}
         />

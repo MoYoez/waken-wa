@@ -2,6 +2,7 @@
 
 import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useT } from 'next-i18next/client'
 import { useState } from 'react'
 
 import {
@@ -65,6 +66,7 @@ export function WebSettingsSkillsPanel({
   onRevokeSkillsOauthByAiClientId,
   onCopyPlainText,
 }: WebSettingsSkillsPanelProps) {
+  const { t } = useT('admin')
   const { formatPattern } = useSiteTimeFormat()
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [skillsSaving] = useAtom(webSettingsSkillsSavingAtom)
@@ -112,8 +114,8 @@ export function WebSettingsSkillsPanel({
     <div className="space-y-4">
       <WebSettingsRows>
         <WebSettingsRow
-          title="允许 AI 调试"
-          description="启用后，AI 可按你选择的模式进行调试。关闭后，Skills 与 MCP 都不会生效。"
+          title={t('webSettingsSkills.enabledTitle')}
+          description={t('webSettingsSkills.enabledDescription')}
           action={
             <Switch
               checked={skillsEnabled}
@@ -126,7 +128,7 @@ export function WebSettingsSkillsPanel({
       </WebSettingsRows>
 
       <WebSettingsInset className="space-y-2">
-        <Label>调试模式</Label>
+        <Label>{t('webSettingsSkills.toolModeLabel')}</Label>
         <Select
           value={aiToolMode}
           onValueChange={(value) =>
@@ -143,15 +145,20 @@ export function WebSettingsSkillsPanel({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="skills">Skill</SelectItem>
-            <SelectItem value="mcp">MCP</SelectItem>
+            <SelectItem value="skills">{t('webSettingsSkills.toolModes.skills')}</SelectItem>
+            <SelectItem value="mcp">{t('webSettingsSkills.toolModes.mcp')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          选择 AI 调试时使用的工具链。切换后需要点击页面底部保存网页配置。
+          {t('webSettingsSkills.toolModeHint')}
         </p>
         <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
-          当前已选择 {aiToolMode === 'mcp' ? 'MCP' : 'Skill'}
+          {t('webSettingsSkills.currentToolMode', {
+            value:
+              aiToolMode === 'mcp'
+                ? t('webSettingsSkills.toolModes.mcp')
+                : t('webSettingsSkills.toolModes.skills'),
+          })}
         </div>
       </WebSettingsInset>
 
@@ -168,7 +175,7 @@ export function WebSettingsSkillsPanel({
           >
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>认证模式</Label>
+              <Label>{t('webSettingsSkills.authModeLabel')}</Label>
               <Select
                 value={skillsAuthMode || ''}
                 onValueChange={(value) => {
@@ -178,27 +185,36 @@ export function WebSettingsSkillsPanel({
                 disabled={skillsSaving}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择 OAuth / APIKEY" />
+                  <SelectValue placeholder={t('webSettingsSkills.authModePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="oauth">OAuth 授权链接（有效期可配置）</SelectItem>
-                  <SelectItem value="apikey">APIKEY 认证（默认无限）</SelectItem>
+                  <SelectItem value="oauth">{t('webSettingsSkills.authModes.oauth')}</SelectItem>
+                  <SelectItem value="apikey">{t('webSettingsSkills.authModes.apikey')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>授权状态</Label>
+              <Label>{t('webSettingsSkills.authStatusLabel')}</Label>
               <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
                 {skillsAuthMode === 'oauth' ? (
                   <>
-                    OAuth：{skillsOauthConfigured ? '已授权' : '未授权'}
-                    {' '}· 以 AI 标识维度签发，可并存多个 token
+                    {t('webSettingsSkills.oauthStatus', {
+                      value: skillsOauthConfigured
+                        ? t('webSettingsSkills.status.authorized')
+                        : t('webSettingsSkills.status.unauthorized'),
+                    })}
                   </>
                 ) : skillsAuthMode === 'apikey' ? (
-                  <>APIKEY：{skillsApiKeyConfigured ? '已配置' : '未配置（请生成/轮换）'}</>
+                  <>
+                    {t('webSettingsSkills.apikeyStatus', {
+                      value: skillsApiKeyConfigured
+                        ? t('webSettingsSkills.status.configured')
+                        : t('webSettingsSkills.status.notConfigured'),
+                    })}
+                  </>
                 ) : (
-                  <>未选择认证模式</>
+                  <>{t('webSettingsSkills.authModeUnselected')}</>
                 )}
               </div>
             </div>
@@ -217,9 +233,9 @@ export function WebSettingsSkillsPanel({
               >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <Label className="text-sm font-normal">APIKEY</Label>
+                  <Label className="text-sm font-normal">{t('webSettingsSkills.apikeyTitle')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    默认无限期；仅本次显示明文，请复制后妥善保存（后端仅存 hash）。
+                    {t('webSettingsSkills.apikeyDescription')}
                   </p>
                 </div>
                 <Button
@@ -229,13 +245,15 @@ export function WebSettingsSkillsPanel({
                   disabled={skillsSaving}
                   onClick={() => void onSaveSkillsConfig({ rotateApiKey: true })}
                 >
-                  {skillsSaving ? '处理中…' : '生成 / 轮换 Key'}
+                  {skillsSaving
+                    ? t('skillsAuthorizeCard.processing')
+                    : t('webSettingsSkills.generateOrRotateKey')}
                 </Button>
               </div>
 
               {skillsGeneratedApiKey ? (
                 <div className="space-y-2">
-                  <Label className="text-xs">本次生成的 Key（请立即复制）</Label>
+                  <Label className="text-xs">{t('webSettingsSkills.generatedKeyLabel')}</Label>
                   <Input value={skillsGeneratedApiKey} readOnly className="font-mono text-xs" />
                 </div>
               ) : null}
@@ -256,9 +274,9 @@ export function WebSettingsSkillsPanel({
               >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <Label className="text-sm font-normal">OAuth Key 有效期</Label>
+                  <Label className="text-sm font-normal">{t('webSettingsSkills.oauthTtlTitle')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    code 兑换后的 key 有效期（分钟）。范围 5-1440。
+                    {t('webSettingsSkills.oauthTtlDescription')}
                   </p>
                 </div>
               </div>
@@ -278,7 +296,9 @@ export function WebSettingsSkillsPanel({
                   disabled={skillsSaving}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  当前设置：{skillsOauthTokenTtlMinutes} 分钟
+                  {t('webSettingsSkills.oauthTtlCurrent', {
+                    value: skillsOauthTokenTtlMinutes,
+                  })}
                 </p>
               </div>
               </motion.div>
@@ -296,7 +316,7 @@ export function WebSettingsSkillsPanel({
                 transition={sectionTransition}
                 layout
               >
-              <Label className="text-xs">固定技能说明（完整链接）</Label>
+              <Label className="text-xs">{t('webSettingsSkills.mdLinkLabel')}</Label>
               <div className="flex gap-2">
                 <Input value={mdUrl} readOnly className="font-mono text-xs" />
                 <Button
@@ -304,20 +324,23 @@ export function WebSettingsSkillsPanel({
                   variant="outline"
                   size="sm"
                   className="shrink-0"
-                  onClick={() => void onCopyPlainText(mdUrl, '已复制 skills.md 链接')}
+                  onClick={() =>
+                    void onCopyPlainText(mdUrl, t('webSettingsSkills.toasts.copiedMdUrl'))
+                  }
                 >
-                  一键复制
+                  {t('webSettingsSkills.copy')}
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                AI 必须先读取该文档；如使用 OAuth，必须声明并持续使用一个自己的固定 AI 名字。
+                {t('webSettingsSkills.mdLinkHint')}
               </p>
 
               <p className="text-xs text-muted-foreground leading-relaxed">
-                该链接用于验证 token 是否可用，并返回 AI 需要的{' '}
-                <code className="rounded bg-muted px-1">LLM-Skills-*</code> 请求头模板。
-                APIKEY 模式请在请求头填写 <code className="rounded bg-muted px-1">LLM-Skills-Token</code>；
-                OAuth 模式必须先确定一个自己的固定 AI 名字，再由 AI 自己携带该名字请求；这里不预填 AI 名字。
+                {t('webSettingsSkills.directLinkHintPrefix')}{' '}
+                <code className="rounded bg-muted px-1">LLM-Skills-*</code>{' '}
+                {t('webSettingsSkills.directLinkHintMiddle')}{' '}
+                {t('webSettingsSkills.directLinkHintSuffix')}{' '}
+                <code className="rounded bg-muted px-1">LLM-Skills-Token</code>。
               </p>
               <div className="flex gap-2">
                 <Input value={directUrl} readOnly className="font-mono text-xs" />
@@ -326,9 +349,11 @@ export function WebSettingsSkillsPanel({
                   variant="outline"
                   size="sm"
                   className="shrink-0"
-                  onClick={() => void onCopyPlainText(directUrl, '已复制 Skills 直连链接')}
+                  onClick={() =>
+                    void onCopyPlainText(directUrl, t('webSettingsSkills.toasts.copiedDirectUrl'))
+                  }
                 >
-                  一键复制
+                  {t('webSettingsSkills.copy')}
                 </Button>
               </div>
               </motion.div>
@@ -348,9 +373,9 @@ export function WebSettingsSkillsPanel({
               >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <Label className="text-xs">AI 授权情况</Label>
+                  <Label className="text-xs">{t('webSettingsSkills.aiAuthTitle')}</Label>
                   <p className="text-[11px] text-muted-foreground">
-                    按 AI 标识展示；仅显示脱敏状态，不显示 code/key 明文。
+                    {t('webSettingsSkills.aiAuthDescription')}
                   </p>
                 </div>
                 <Button
@@ -359,18 +384,18 @@ export function WebSettingsSkillsPanel({
                   size="sm"
                   onClick={() => setSkillsAiAuthDialogOpen(true)}
                 >
-                  查看授权情况
+                  {t('webSettingsSkills.viewAiAuth')}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                当前记录数：{skillsAiAuthorizations.length}（点击「查看授权情况」在弹窗中管理）
+                {t('webSettingsSkills.aiAuthCount', { value: skillsAiAuthorizations.length })}
               </p>
               <Dialog open={skillsAiAuthDialogOpen} onOpenChange={setSkillsAiAuthDialogOpen}>
                 <DialogContent className="sm:max-w-3xl">
                   <DialogHeader>
-                    <DialogTitle>AI 授权情况</DialogTitle>
+                    <DialogTitle>{t('webSettingsSkills.aiAuthDialogTitle')}</DialogTitle>
                     <DialogDescription>
-                      按 AI 标识查看授权统计与有效 token，可在此执行按 AI 撤销授权。
+                      {t('webSettingsSkills.aiAuthDialogDescription')}
                     </DialogDescription>
                   </DialogHeader>
                   {skillsAiAuthorizations.length > 0 ? (
@@ -389,27 +414,37 @@ export function WebSettingsSkillsPanel({
                               disabled={skillsSaving || skillsRevokingAiClientId === item.aiClientId}
                               onClick={() => setRevokeDialogAiClientId(item.aiClientId)}
                             >
-                              {skillsRevokingAiClientId === item.aiClientId ? '撤销中…' : '撤销该 AI 授权'}
+                              {skillsRevokingAiClientId === item.aiClientId
+                                ? t('webSettingsSkills.revoking')
+                                : t('webSettingsSkills.revokeAiAuth')}
                             </Button>
                           </div>
                           <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-                            <span>待确认 code：{item.pendingCodeCount}</span>
-                            <span>已确认未兑换 code：{item.approvedCodeCount}</span>
-                            <span>有效 token：{item.activeTokenCount}</span>
+                            <span>{t('webSettingsSkills.pendingCodes', { value: item.pendingCodeCount })}</span>
+                            <span>{t('webSettingsSkills.approvedCodes', { value: item.approvedCodeCount })}</span>
+                            <span>{t('webSettingsSkills.activeTokens', { value: item.activeTokenCount })}</span>
                           </div>
                           <div className="grid gap-2 text-[11px] text-muted-foreground sm:grid-cols-2">
-                            <span>最近确认：{formatPattern(item.lastApprovedAt, 'yyyy-MM-dd HH:mm:ss', '—')}</span>
-                            <span>最近兑换：{formatPattern(item.lastExchangedAt, 'yyyy-MM-dd HH:mm:ss', '—')}</span>
+                            <span>
+                              {t('webSettingsSkills.lastApproved', {
+                                value: formatPattern(item.lastApprovedAt, 'yyyy-MM-dd HH:mm:ss', '—'),
+                              })}
+                            </span>
+                            <span>
+                              {t('webSettingsSkills.lastExchanged', {
+                                value: formatPattern(item.lastExchangedAt, 'yyyy-MM-dd HH:mm:ss', '—'),
+                              })}
+                            </span>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">暂无 AI 授权记录</p>
+                    <p className="text-sm text-muted-foreground">{t('webSettingsSkills.noAiAuth')}</p>
                   )}
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setSkillsAiAuthDialogOpen(false)}>
-                      关闭
+                      {t('webSettingsSkills.close')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -422,13 +457,13 @@ export function WebSettingsSkillsPanel({
               >
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>确认撤销 AI OAuth 授权</DialogTitle>
+                    <DialogTitle>{t('webSettingsSkills.revokeDialogTitle')}</DialogTitle>
                     <DialogDescription>
-                      将撤销该 AI 标识下所有仍有效的 OAuth token。此操作会立即生效。
+                      {t('webSettingsSkills.revokeDialogDescription')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs">
-                    AI 标识：<code>{revokeDialogAiClientId || '—'}</code>
+                    {t('webSettingsSkills.aiClientIdLabel')}: <code>{revokeDialogAiClientId || '—'}</code>
                   </div>
                   <DialogFooter>
                     <Button
@@ -437,14 +472,14 @@ export function WebSettingsSkillsPanel({
                       onClick={() => setRevokeDialogAiClientId('')}
                       disabled={skillsSaving || Boolean(skillsRevokingAiClientId)}
                     >
-                      取消
+                      {t('common.cancel')}
                     </Button>
                     <Button
                       type="button"
                       onClick={() => void handleConfirmRevoke()}
                       disabled={!revokeDialogAiClientId || skillsSaving || Boolean(skillsRevokingAiClientId)}
                     >
-                      确认撤销
+                      {t('webSettingsSkills.confirmRevoke')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -469,10 +504,11 @@ export function WebSettingsSkillsPanel({
           >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <Label className="font-normal">启用 MCP</Label>
+              <Label className="font-normal">{t('webSettingsSkills.mcpEnabledTitle')}</Label>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                使用数据库中的 deprecated 字段 <code className="rounded bg-muted px-1">mcpThemeToolsEnabled</code>{' '}
-                控制是否启用。默认只接受独立 MCP API Key。
+                {t('webSettingsSkills.mcpEnabledDescriptionPrefix')}{' '}
+                <code className="rounded bg-muted px-1">mcpThemeToolsEnabled</code>{' '}
+                {t('webSettingsSkills.mcpEnabledDescriptionSuffix')}
               </p>
             </div>
             <Switch
@@ -485,22 +521,28 @@ export function WebSettingsSkillsPanel({
           </div>
 
           <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
-            选中 MCP 后，Skills HTTP 调试接口会自动关闭；切回 Skill 后，MCP 也会自动关闭。
+            {t('webSettingsSkills.mcpModeHint')}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>MCP 状态</Label>
+              <Label>{t('webSettingsSkills.mcpStatusLabel')}</Label>
               <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
-                {mcpThemeToolsEnabled ? 'MCP 已启用' : 'MCP 未启用'}
-                {' '}· API Key：{legacyMcpConfigured ? '已配置' : '未配置（请生成/轮换）'}
+                {t('webSettingsSkills.mcpStatus', {
+                  enabled: mcpThemeToolsEnabled
+                    ? t('webSettingsSkills.status.enabled')
+                    : t('webSettingsSkills.status.disabled'),
+                  apiKey: legacyMcpConfigured
+                    ? t('webSettingsSkills.status.configured')
+                    : t('webSettingsSkills.status.notConfigured'),
+                })}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>认证模式</Label>
+              <Label>{t('webSettingsSkills.authModeLabel')}</Label>
               <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
-                API Key Only
+                {t('webSettingsSkills.mcpAuthModeValue')}
               </div>
             </div>
           </div>
@@ -508,9 +550,9 @@ export function WebSettingsSkillsPanel({
           <div className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
-                <Label className="text-sm font-normal">独立 MCP API Key</Label>
+                <Label className="text-sm font-normal">{t('webSettingsSkills.legacyMcpKeyTitle')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  仅供旧式 MCP endpoint 和专用校验接口使用，和 Skills API Key 分离。
+                  {t('webSettingsSkills.legacyMcpKeyDescription')}
                 </p>
               </div>
               <Button
@@ -520,20 +562,22 @@ export function WebSettingsSkillsPanel({
                 disabled={skillsSaving}
                 onClick={() => void onSaveSkillsConfig({ rotateLegacyMcpKey: true })}
               >
-                {skillsSaving ? '处理中…' : '生成 / 轮换 Key'}
+                {skillsSaving
+                  ? t('skillsAuthorizeCard.processing')
+                  : t('webSettingsSkills.generateOrRotateKey')}
               </Button>
             </div>
 
             {legacyMcpGeneratedApiKey ? (
               <div className="space-y-2">
-                <Label className="text-xs">本次生成的 MCP Key（请立即复制）</Label>
+                <Label className="text-xs">{t('webSettingsSkills.generatedLegacyMcpKeyLabel')}</Label>
                 <Input value={legacyMcpGeneratedApiKey} readOnly className="font-mono text-xs" />
               </div>
             ) : null}
           </div>
 
           <div className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3">
-            <Label className="text-xs">MCP API Key 校验地址</Label>
+            <Label className="text-xs">{t('webSettingsSkills.legacyMcpApiKeyUrlLabel')}</Label>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input value={legacyMcpApiKeyUrl} readOnly className="font-mono text-xs" />
                 <Button
@@ -541,15 +585,20 @@ export function WebSettingsSkillsPanel({
                   variant="outline"
                   size="sm"
                   className="w-full shrink-0 sm:w-auto"
-                  onClick={() => void onCopyPlainText(legacyMcpApiKeyUrl, '已复制 MCP API Key 校验地址')}
+                  onClick={() =>
+                    void onCopyPlainText(
+                      legacyMcpApiKeyUrl,
+                      t('webSettingsSkills.toasts.copiedLegacyMcpApiKeyUrl'),
+                    )
+                  }
                 >
-                  一键复制
+                  {t('webSettingsSkills.copy')}
                 </Button>
               </div>
           </div>
 
           <div className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3">
-            <Label className="text-xs">MCP Endpoint</Label>
+            <Label className="text-xs">{t('webSettingsSkills.legacyMcpEndpointLabel')}</Label>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input value={legacyMcpEndpointUrl} readOnly className="font-mono text-xs" />
                 <Button
@@ -557,14 +606,22 @@ export function WebSettingsSkillsPanel({
                   variant="outline"
                   size="sm"
                   className="w-full shrink-0 sm:w-auto"
-                  onClick={() => void onCopyPlainText(legacyMcpEndpointUrl, '已复制 MCP endpoint')}
+                  onClick={() =>
+                    void onCopyPlainText(
+                      legacyMcpEndpointUrl,
+                      t('webSettingsSkills.toasts.copiedLegacyMcpEndpoint'),
+                    )
+                  }
                 >
-                  一键复制
+                  {t('webSettingsSkills.copy')}
                 </Button>
               </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              默认使用 <code className="rounded bg-muted px-1">Authorization: Bearer YOUR_LEGACY_MCP_APIKEY</code>{' '}
-              认证。切换开关后，记得点击页面底部保存网页配置。
+              {t('webSettingsSkills.legacyMcpEndpointHintPrefix')}{' '}
+              <code className="rounded bg-muted px-1">
+                Authorization: Bearer YOUR_LEGACY_MCP_APIKEY
+              </code>{' '}
+              {t('webSettingsSkills.legacyMcpEndpointHintSuffix')}
             </p>
           </div>
           </motion.div>
@@ -582,7 +639,7 @@ export function WebSettingsSkillsPanel({
             transition={sectionTransition}
             layout
           >
-            当前未开启“允许 AI 调试”，因此不会展示当前模式的详细配置。
+            {t('webSettingsSkills.disabledHint')}
           </motion.div>
         ) : null}
       </AnimatePresence>

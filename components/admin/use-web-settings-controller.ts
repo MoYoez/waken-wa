@@ -2,6 +2,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAtom } from 'jotai'
+import { useT } from 'next-i18next/client'
 import { useCallback, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 
@@ -77,6 +78,7 @@ import {
 import { normalizeTimezone } from '@/lib/timezone'
 
 export function useWebSettingsController() {
+  const { t } = useT('admin')
   const queryClient = useQueryClient()
   const [loading, setLoading] = useAtom(webSettingsLoadingAtom)
   const [saving, setSaving] = useAtom(webSettingsSavingAtom)
@@ -266,8 +268,14 @@ export function useWebSettingsController() {
             hcaptchaEnabled: Boolean(data.hcaptchaEnabled),
             hcaptchaSiteKey: data.hcaptchaSiteKey ?? '',
             hcaptchaSecretKey: '',
-            currentlyText: data.currentlyText ?? '当前状态',
-            earlierText: data.earlierText ?? '最近的随想录',
+            currentlyText:
+              typeof data.currentlyText === 'string' && data.currentlyText.trim().length > 0
+                ? data.currentlyText
+                : t('webSettingsBasic.currentlyTextDefault'),
+            earlierText:
+              typeof data.earlierText === 'string' && data.earlierText.trim().length > 0
+                ? data.earlierText
+                : t('webSettingsBasic.earlierTextDefault'),
             adminText: data.adminText ?? 'admin',
             autoAcceptNewDevices: Boolean(data.autoAcceptNewDevices),
             inspirationDeviceRestrictionEnabled: Array.isArray(
@@ -336,6 +344,7 @@ export function useWebSettingsController() {
     setForm,
     setLoading,
     setRedisCacheServerlessForced,
+    t,
   ])
 
   useEffect(() => {
@@ -349,9 +358,11 @@ export function useWebSettingsController() {
   useEffect(() => {
     if (!skillsQuery.error) return
     toast.error(
-      skillsQuery.error instanceof Error ? skillsQuery.error.message : '加载 Skills 配置失败',
+      skillsQuery.error instanceof Error
+        ? skillsQuery.error.message
+        : t('query.loadSkillsFailed', { status: 'unknown' }),
     )
-  }, [skillsQuery.error])
+  }, [skillsQuery.error, t])
 
   useEffect(() => {
     if (!form.captureReportedAppsEnabled) {
@@ -421,11 +432,11 @@ export function useWebSettingsController() {
       )
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.skills.settings() })
       if (options?.successMessage !== null) {
-        toast.success(options?.successMessage || '已保存 Skills 设置')
+        toast.success(options?.successMessage || t('webSettingsSkills.toasts.saved'))
       }
     } catch (error) {
       console.error(error)
-      toast.error('保存失败')
+      toast.error(t('mutation.saveFailed'))
     } finally {
       setSkillsSaving(false)
     }
@@ -437,7 +448,7 @@ export function useWebSettingsController() {
     setSkillsRevokingAiClientId(normalized)
     try {
       await saveSkillsConfig({ revokeOauthForAiClientId: normalized }, { successMessage: null })
-      toast.success(`已撤销 AI ${normalized} 的 OAuth 授权`)
+      toast.success(t('webSettingsSkills.toasts.revoked', { value: normalized }))
     } finally {
       setSkillsRevokingAiClientId('')
     }
@@ -478,7 +489,7 @@ export function useWebSettingsController() {
 
       const poTrim = form.profileOnlineAccentColor.trim()
       if (poTrim && !normalizeProfileOnlineAccentColor(poTrim)) {
-        toast.error('头像在线色格式无效，请使用 #RRGGBB 或留空')
+        toast.error(t('webSettingsActivity.profileOnlineAccentInvalid'))
         setSaving(false)
         return
       }
@@ -560,7 +571,7 @@ export function useWebSettingsController() {
       setBaselineSkillsConfig(structuredClone(serverSkills))
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.skills.settings() })
 
-      toast.success('保存成功，主页刷新后生效')
+      toast.success(t('webSettings.toasts.saved'))
       setRedisCacheServerlessForced(data?.redisCacheServerlessForced === true)
       const nextForm = {
         ...form,
@@ -578,7 +589,7 @@ export function useWebSettingsController() {
       setForm(nextForm)
       setBaselineForm(structuredClone(nextForm))
     } catch {
-      toast.error('网络异常，请重试')
+      toast.error(t('common.networkErrorRetry'))
     } finally {
       setSaving(false)
     }
@@ -598,9 +609,9 @@ export function useWebSettingsController() {
     try {
       const encoded = await exportAdminSettings()
       await navigator.clipboard.writeText(encoded)
-      toast.success('已复制接入配置到剪贴板')
+      toast.success(t('webSettings.importExport.copied'))
     } catch {
-      toast.error('复制失败，请重试')
+      toast.error(t('common.copyFailedBrowserPermission'))
     }
   }
 
@@ -618,13 +629,13 @@ export function useWebSettingsController() {
   const confirmImportConfig = () => {
     const raw = importConfigInput.trim()
     if (!raw) {
-      toast.error('请先粘贴 Base64 接入配置')
+      toast.error(t('webSettings.importDialog.empty'))
       return
     }
     const compact = raw.replace(/\s+/g, '')
     const parsed = parseExportPayload(compact)
     if (!parsed) {
-      toast.error('格式无效：请确认是本站「一键复制接入配置」导出的 Base64 全文')
+      toast.error(t('webSettings.importDialog.invalid'))
       return
     }
     const partial = webPayloadToFormPatch(parsed.web)
@@ -634,7 +645,7 @@ export function useWebSettingsController() {
       pageLockPassword: '',
     }))
     setImportConfigDialogOpen(false)
-    toast.success('已写入网页配置，请记得保存')
+    toast.success(t('webSettings.importDialog.applied'))
   }
 
   const copyPlainText = async (value: string, successText: string) => {
@@ -642,7 +653,7 @@ export function useWebSettingsController() {
       await navigator.clipboard.writeText(value)
       toast.success(successText)
     } catch {
-      toast.error('复制失败，请重试')
+      toast.error(t('common.copyFailedBrowserPermission'))
     }
   }
 

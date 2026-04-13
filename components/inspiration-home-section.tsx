@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useT } from 'next-i18next/client'
 
 import { MarkdownContent } from '@/components/admin/markdown-content'
 import { FormattedTime } from '@/components/formatted-time'
@@ -40,6 +41,7 @@ function EntryBody({
   detailHref: string
   needFull: boolean
 }) {
+  const { t } = useT('common')
   const renderedContent = entry.contentLexical ? (
     inspirationLooksLikeMarkdown(entry.content) ? (
       <MarkdownContent
@@ -65,7 +67,7 @@ function EntryBody({
           href={detailHref}
           className="text-xs font-semibold text-foreground hover:text-primary transition-colors"
         >
-          {entry.title?.trim() ? entry.title : '（无标题）'}
+          {entry.title?.trim() ? entry.title : t('site.inspiration.untitled')}
         </Link>
         <FormattedTime 
           date={entry.createdAt} 
@@ -90,7 +92,7 @@ function EntryBody({
             href={detailHref}
             className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
           >
-            查看全文
+            {t('site.inspiration.viewFull')}
             <ChevronRight className="h-3 w-3" aria-hidden />
           </Link>
         </div>
@@ -109,6 +111,7 @@ export function InspirationHomeSection({
   /** True when there are more entries than shown on the home page */
   showArchiveLink?: boolean
 }) {
+  const { t } = useT('common')
   const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
   const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
@@ -119,7 +122,7 @@ export function InspirationHomeSection({
 
   if (entries.length === 0) {
     return (
-      <div className="text-center text-muted-foreground py-8 text-sm">暂无随想记录</div>
+      <div className="text-center text-muted-foreground py-8 text-sm">{t('site.inspiration.noEntries')}</div>
     )
   }
 
@@ -212,7 +215,7 @@ export function InspirationHomeSection({
               href="/inspiration"
               className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-0.5"
             >
-              查看更多随想录
+              {t('site.inspiration.viewMore')}
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </motion.div>

@@ -7,22 +7,25 @@ import { createSession, getSession, validatePasswordStrength } from '@/lib/auth'
 import { resolveCookieSecureFlag } from '@/lib/cookie-security'
 import { db } from '@/lib/db'
 import { adminUsers } from '@/lib/drizzle-schema'
+import { getRequestLanguage } from '@/lib/i18n/request-locale'
+import { getT } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  const { t } = await getT('auth', { lng: getRequestLanguage(request) })
   const session = await getSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未登录' }, { status: 401 })
+    return NextResponse.json({ success: false, error: t('session.notLoggedIn') }, { status: 401 })
   }
 
   const { currentPassword, newPassword } = await request.json()
 
   if (!currentPassword || !newPassword) {
-    return NextResponse.json({ success: false, error: '缺少必要参数' }, { status: 400 })
+    return NextResponse.json({ success: false, error: t('changePassword.missingParams') }, { status: 400 })
   }
 
-  const pwError = validatePasswordStrength(newPassword)
+  const pwError = validatePasswordStrength(newPassword, t)
   if (pwError) {
     return NextResponse.json({ success: false, error: pwError }, { status: 400 })
   }
@@ -30,12 +33,12 @@ export async function POST(request: NextRequest) {
   const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.id, session.userId)).limit(1)
 
   if (!admin) {
-    return NextResponse.json({ success: false, error: '用户不存在' }, { status: 404 })
+    return NextResponse.json({ success: false, error: t('changePassword.userNotFound') }, { status: 404 })
   }
 
   const valid = await bcrypt.compare(currentPassword, admin.passwordHash)
   if (!valid) {
-    return NextResponse.json({ success: false, error: '当前密码错误' }, { status: 400 })
+    return NextResponse.json({ success: false, error: t('changePassword.currentPasswordIncorrect') }, { status: 400 })
   }
 
   const newHash = await bcrypt.hash(newPassword, 12)
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
   cookieStore.set('session', newToken, {
     httpOnly: true,
-    secure: resolveCookieSecureFlag(request, 'session'),
+    secure: await resolveCookieSecureFlag(request, 'session'),
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
