@@ -6,7 +6,7 @@
 > Not jolted awake by an alarm, but gently and willingly meeting the world again.
 
 <p align="center">
-  <img src=".github/assets/logo/Logo.png" alt="Waken Wa" width="100" height="100" />
+  <img src=".github/assets/logo/Logo.png" alt="Waken Wa" width="100" height="100">
   <h2 align="center">Waken Wa💫</h2>
   <p align="center">
     <img alt="visitors" src="https://visitor-badge.laobi.icu/badge?page_id=MoYoez/waken-wa" />

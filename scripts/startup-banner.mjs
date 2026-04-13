@@ -19,10 +19,31 @@ __        __    _                  __        __
    \_/\_/ \__,_|_|\_\___|_| |_|      \_/\_/ \__,_|
 `
 
+// Glad To See you! Thanks for using my program and found this! I hope you like it.
+const mottos = [
+  'If I say yes, will you take me with you?', // PEAK
+  'If you want, we can disappear together.', // Persona 5
+  'I don’t want to forget you.',  // To the moon
+  'We could just leave Night City. Right now.',  // Cyberpunk 2077
+  'Is it okay for someone like me… to wish for something like this?', // lucy -the eternity she wished for- my love.
+  'Why don’t you stay a little longer?', // Touhou Mystia's Izakaya
+  'Stay Hungry, Stay Foolish.', // Steve Jobs
+  'Is escape a selfish goal? Does survival justify your choices?', // The Alters
+  'It is end? Or just a new beginning?', // Minecraft.
+  '踏平坎坷成大道。' // 黑神话：悟空
+]
+
+function getDailyMotto() {
+  const dayKey = new Date().toISOString().slice(0, 10)
+  const seed = [...dayKey].reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  return mottos[seed % mottos.length]
+}
+
 export function printStartupBanner(mode = process.env.NODE_ENV || 'startup') {
   const label = mode === 'dev' ? 'development' : mode === 'start' ? 'production' : mode
   console.log(`${cyan}${banner}${reset}`)
-  console.log(`${dim}Waken-Wa v${packageJson.version} · ${label}${reset}\n`)
+  console.log(`${dim}Waken-Wa v${packageJson.version} · ${label}${reset}`)
+  console.log(`${dim}"${getDailyMotto()}"${reset}\n`)
 }
 
 if (process.argv[1] === currentFile) {

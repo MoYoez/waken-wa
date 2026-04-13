@@ -6,7 +6,7 @@
 > 不是被闹钟惊醒，而是温柔地、自愿地，与世界重新相遇。
 
 <p align="center">
-  <img src=".github/assets/logo/Logo.png" alt="Waken Wa" width="100" height="100" />
+  <img src=".github/assets/logo/Logo.png" alt="Waken Wa" width="100" height="100">
   <h2 align="center">Waken Wa💫</h2>
   <p align="center">
     <img alt="visitors" src="https://visitor-badge.laobi.icu/badge?page_id=MoYoez/waken-wa" />
