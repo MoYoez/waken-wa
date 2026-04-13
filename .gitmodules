@@ -1,3 +1,0 @@
-[submodule "reporter/go"]
-	path = reporter/go
-	url = https://github.com/MoYoez/waken-wa-reporter
