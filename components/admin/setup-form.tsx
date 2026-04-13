@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useT } from 'next-i18next/client'
 import { useEffect, useState } from 'react'
 
+import { AdminLanguageToggle } from '@/components/admin/admin-language-toggle'
 import { loginAdmin, setupAdminSite } from '@/components/admin/admin-query-mutations'
 import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
@@ -105,16 +106,20 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-xl rounded-2xl border border-border/70 bg-card/90 backdrop-blur-sm p-6 shadow-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold tracking-wide text-foreground">{t('setup.title')}</h1>
+    <div className="flex min-h-[calc(100svh-6rem)] items-start justify-center bg-background px-3 py-4 sm:px-4 sm:py-6 lg:min-h-screen lg:items-center">
+      <div className="w-full max-w-xl rounded-xl border border-border/70 bg-card/90 p-4 shadow-lg backdrop-blur-sm sm:rounded-2xl sm:p-6">
+        <div className="mb-5 hidden justify-end lg:flex">
+          <AdminLanguageToggle />
+        </div>
+
+        <div className="mb-5 text-center sm:mb-8">
+          <h1 className="text-xl font-semibold tracking-wide text-foreground sm:text-2xl">{t('setup.title')}</h1>
           <p className="text-xs text-muted-foreground mt-2">
             {needAdminSetup ? t('setup.subtitleWithAdmin') : t('setup.subtitleWithoutAdmin')}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 max-h-[78vh] overflow-y-auto pr-1">
+        <form onSubmit={handleSubmit} className="max-h-[calc(100svh-15rem)] space-y-5 overflow-y-auto pr-1 sm:max-h-[78vh]">
           {needAdminSetup && (
             <>
               <div className="space-y-2">
@@ -300,7 +305,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   {t('setup.openCropDialog')}
                 </button>
               )}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground">{t('setup.historyWindowLabel')}</label>
                   <p className="text-[11px] text-muted-foreground">
@@ -324,7 +329,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground">{t('setup.currentSectionLabel')}</label>
                   <p className="text-[11px] text-muted-foreground">{t('setup.currentSectionHint')}</p>
