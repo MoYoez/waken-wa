@@ -2,18 +2,20 @@
 # Local: ./deploy.sh
 #   curl -fsSL https://raw.githubusercontent.com/MoYoez/waken-wa/main/deploy.sh | bash
 #
-# Optional env: WAKEN_DEPLOY_DIR, WAKEN_WORKSPACE, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL, WAKEN_IMAGE
+# Optional env: WAKEN_DEPLOY_DIR, WAKEN_WORKSPACE, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL, WAKEN_IMAGE, USE_LASTEST_VERSION
 # Default clone path: $WAKEN_WORKSPACE/$WAKEN_DIR (WAKEN_WORKSPACE defaults to ~/waken-wa-deploy).
 # After a fresh clone, registry deploy keeps only docker-compose.yml (no build: .) and .env at WAKEN_WORKSPACE.
 set -euo pipefail
 
 WAKEN_REPO_URL="${WAKEN_REPO_URL:-https://github.com/MoYoez/waken-wa.git}"
-WAKEN_BRANCH="${WAKEN_BRANCH:-main}"
+WAKEN_BRANCH="${WAKEN_BRANCH:-}"
 WAKEN_DIR="${WAKEN_DIR:-waken-wa}"
-WAKEN_IMAGE="${WAKEN_IMAGE:-ghcr.io/moyoez/waken-wa:main}"
+WAKEN_IMAGE="${WAKEN_IMAGE:-}"
 
 ROOT=""
 CLONED_FRESH=false
+WAKEN_REF=""
+WAKEN_REF_KIND=""
 
 waken_expand_workspace() {
   local ws="${WAKEN_WORKSPACE:-${HOME:-/tmp}/waken-wa-deploy}"
@@ -33,6 +35,38 @@ compose() {
     echo "错误：需要 Docker Compose v2（docker compose）或 docker-compose（v1）。" >&2
     exit 1
   fi
+}
+
+latest_stable_tag() {
+  git ls-remote --tags --refs "$WAKEN_REPO_URL" 'v*' |
+    awk '{ sub("refs/tags/", "", $2); print $2 }' |
+    grep -Ev '[-+](alpha|beta|rc|pre|canary|dev)' |
+    sort -V |
+    tail -n 1
+}
+
+resolve_waken_version() {
+  if [ -n "${USE_LASTEST_VERSION:-}" ]; then
+    WAKEN_REF="${WAKEN_BRANCH:-main}"
+    WAKEN_REF_KIND="branch"
+    WAKEN_IMAGE="${WAKEN_IMAGE:-ghcr.io/moyoez/waken-wa:main}"
+    echo "USE_LASTEST_VERSION is set; using latest main." >&2
+    return
+  fi
+
+  if [ -n "$WAKEN_BRANCH" ]; then
+    WAKEN_REF="$WAKEN_BRANCH"
+    WAKEN_REF_KIND="branch"
+  else
+    WAKEN_REF="$(latest_stable_tag || true)"
+    if [ -z "$WAKEN_REF" ]; then
+      echo "错误：无法从 $WAKEN_REPO_URL 获取稳定版本 tag。可设置 USE_LASTEST_VERSION=1 使用 main。" >&2
+      exit 1
+    fi
+    WAKEN_REF_KIND="tag"
+  fi
+
+  WAKEN_IMAGE="${WAKEN_IMAGE:-ghcr.io/moyoez/waken-wa:$WAKEN_REF}"
 }
 
 image_exists_locally() {
@@ -146,9 +180,14 @@ resolve_project_root() {
 
   if [ -d "$clone_target/.git" ]; then
     echo "正在更新仓库：$clone_target ..." >&2
-    git -C "$clone_target" fetch --depth 1 origin "$WAKEN_BRANCH"
-    git -C "$clone_target" checkout "$WAKEN_BRANCH" 2>/dev/null || git -C "$clone_target" checkout -B "$WAKEN_BRANCH" "origin/$WAKEN_BRANCH"
-    git -C "$clone_target" reset --hard "origin/$WAKEN_BRANCH"
+    if [ "$WAKEN_REF_KIND" = "tag" ]; then
+      git -C "$clone_target" fetch --depth 1 origin "refs/tags/$WAKEN_REF:refs/tags/$WAKEN_REF"
+      git -C "$clone_target" checkout --detach "$WAKEN_REF"
+    else
+      git -C "$clone_target" fetch --depth 1 origin "$WAKEN_REF"
+      git -C "$clone_target" checkout "$WAKEN_REF" 2>/dev/null || git -C "$clone_target" checkout -B "$WAKEN_REF" "origin/$WAKEN_REF"
+      git -C "$clone_target" reset --hard "origin/$WAKEN_REF"
+    fi
     (cd "$clone_target" && git submodule update --init --recursive --depth 1) >&2
     ROOT="$(cd "$clone_target" && pwd)"
     return
@@ -159,13 +198,14 @@ resolve_project_root() {
     exit 1
   fi
 
-  echo "正在克隆 $WAKEN_REPO_URL（分支 $WAKEN_BRANCH）到 $clone_target ..." >&2
-  git clone --depth 1 -b "$WAKEN_BRANCH" "$WAKEN_REPO_URL" "$clone_target"
+  echo "正在克隆 $WAKEN_REPO_URL（$WAKEN_REF_KIND $WAKEN_REF）到 $clone_target ..." >&2
+  git clone --depth 1 -b "$WAKEN_REF" "$WAKEN_REPO_URL" "$clone_target"
   (cd "$clone_target" && git submodule update --init --recursive --depth 1) >&2
   ROOT="$(cd "$clone_target" && pwd)"
   CLONED_FRESH=true
 }
 
+resolve_waken_version
 resolve_project_root
 cd "$ROOT"
 
