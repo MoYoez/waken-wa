@@ -188,4 +188,8 @@ https://vercel.com/new/clone?repository-url=https://github.com/MoYoez/waken-wa
 
 本项目以 [**GNU Affero General Public License v3.0**](LICENSE)（AGPL-3.0）授权发布。完整条款见仓库根目录 [`LICENSE`](LICENSE)。
 
+## Thanks
+
+本项目在 [**LINUX DO**](https://linux.do/) 上宣发，感谢支持！
+
 ---

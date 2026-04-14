@@ -188,4 +188,8 @@ See [**DEVELOPMENT.md**](DEVELOPMENT.md).
 
 This project is licensed under the [**GNU Affero General Public License v3.0**](LICENSE) (AGPL-3.0). See [`LICENSE`](LICENSE) in the repository root for the full license text.
 
+## Thanks
+
+This project was promoted on [**LINUX DO**](https://linux.do/). Thanks for the support!
+
 ---
