@@ -7,6 +7,10 @@ import type {
 import {
   REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
 } from '@/lib/activity-api-constants'
+import {
+  type AppMessageRuleGroup,
+  normalizeAppMessageRules,
+} from '@/lib/app-message-rules'
 import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import {
@@ -144,14 +148,8 @@ export function parseExportPayload(encoded: string): { web: Record<string, unkno
   return { web: web as Record<string, unknown> }
 }
 
-export function normalizeRulesImport(rules: unknown): Array<{ match: string; text: string }> {
-  if (!Array.isArray(rules)) return []
-  return rules
-    .map((r) => ({
-      match: String((r as { match?: unknown })?.match ?? '').trim(),
-      text: String((r as { text?: unknown })?.text ?? '').trim(),
-    }))
-    .filter((r) => r.match.length > 0 && r.text.length > 0)
+export function normalizeRulesImport(rules: unknown): AppMessageRuleGroup[] {
+  return normalizeAppMessageRules(rules)
 }
 
 export function normalizeStringListImport(items: unknown): string[] {
@@ -170,7 +168,7 @@ export function normalizeStringListImport(items: unknown): string[] {
 }
 
 export function exportAppRulesJson(cfg: {
-  appMessageRules: Array<{ match: string; text: string }>
+  appMessageRules: AppMessageRuleGroup[]
   appMessageRulesShowProcessName: boolean
   appFilterMode: 'blacklist' | 'whitelist'
   appBlacklist: string[]
@@ -180,7 +178,7 @@ export function exportAppRulesJson(cfg: {
 }): string {
   return JSON.stringify(
     {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       rules: {
         appMessageRules: cfg.appMessageRules,
@@ -204,7 +202,7 @@ export function parseAppRulesJson(
   | {
       ok: true
       data: {
-        appMessageRules: Array<{ match: string; text: string }>
+        appMessageRules: AppMessageRuleGroup[]
         appMessageRulesShowProcessName: boolean
         appFilterMode: 'blacklist' | 'whitelist'
         appBlacklist: string[]
@@ -224,7 +222,7 @@ export function parseAppRulesJson(
     return { ok: false, error: translateError?.('topLevelMustBeObject') ?? 'The JSON top level must be an object' }
   }
   const o = json as Record<string, unknown>
-  if (typeof o.version === 'number' && o.version !== 1) {
+  if (typeof o.version === 'number' && o.version !== 1 && o.version !== 2) {
     return { ok: false, error: translateError?.('unsupportedVersion') ?? 'Unsupported version' }
   }
   const rules = o.rules

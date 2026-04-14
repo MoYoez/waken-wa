@@ -7,6 +7,11 @@ import {
 } from '@/lib/activity-api-constants'
 import { clearCachedActivityFeedData, getCachedActivityFeedData, setCachedActivityFeedData } from '@/lib/activity-feed-cache'
 import { redactGeneratedHashKeyForClient } from '@/lib/activity-store'
+import {
+  type AppMessageRuleGroup,
+  type AppMessageTitleRule,
+  renderAppMessageRuleText,
+} from '@/lib/app-message-rules'
 import { db } from '@/lib/db'
 import { devices, userActivities } from '@/lib/drizzle-schema'
 import { listRealtimeActivities } from '@/lib/realtime-activity-cache'
@@ -126,20 +131,42 @@ function getPushModeFromMetadata(metadata: unknown): 'realtime' | 'active' {
 
 function applyMessageRule(
   processName: string,
-  processTitle: string | null,
-  rules: Array<{ match: string; text: string }>,
+  processTitleForMatch: string | null,
+  processTitleForTemplate: string | null,
+  rules: AppMessageRuleGroup[],
 ): string | null {
   const processLower = processName.toLowerCase()
+
+  const matchesTitleRule = (
+    processTitle: string | null,
+    titleRule: AppMessageTitleRule,
+  ): boolean => {
+    const title = String(processTitle ?? '')
+    if (!title) return false
+    if (titleRule.mode === 'regex') {
+      try {
+        return new RegExp(titleRule.pattern, 'i').test(title)
+      } catch {
+        return false
+      }
+    }
+    return title.toLowerCase().includes(titleRule.pattern.toLowerCase())
+  }
+
   for (const rule of rules) {
-    const matcher = String(rule.match || '').trim().toLowerCase()
+    const matcher = String(rule.processMatch || '').trim().toLowerCase()
     if (!matcher) continue
     if (!processLower.includes(matcher)) continue
 
-    const template = String(rule.text || '').trim()
+    const titleRules = Array.isArray(rule.titleRules) ? rule.titleRules : []
+    for (const titleRule of titleRules) {
+      if (!matchesTitleRule(processTitleForMatch, titleRule)) continue
+      return renderAppMessageRuleText(titleRule.text, processName, processTitleForTemplate)
+    }
+
+    const template = String(rule.defaultText || '').trim()
     if (!template) continue
-    return template
-      .replaceAll('{process}', processName)
-      .replaceAll('{title}', processTitle || '')
+    return renderAppMessageRuleText(template, processName, processTitleForTemplate)
   }
   return null
 }
@@ -166,7 +193,7 @@ export async function getActivityFeedData(
 
   const historyWindowMinutes = parseHistoryWindowMinutes(config?.historyWindowMinutes)
   const defaultStaleSeconds = parseProcessStaleSeconds(config?.processStaleSeconds)
-  const appMessageRules: Array<{ match: string; text: string }> = Array.isArray(config?.appMessageRules)
+  const appMessageRules: AppMessageRuleGroup[] = Array.isArray(config?.appMessageRules)
     ? config.appMessageRules
     : []
   const appMessageRulesShowProcessName = (config as Record<string, unknown> | null)?.appMessageRulesShowProcessName !== false
@@ -297,7 +324,12 @@ export async function getActivityFeedData(
     const pushMode = getPushModeFromMetadata(item.metadata)
     const normalizedMeta = normalizeMetadata(item.metadata)
     const maskedTitle = nameOnlySet.has(processKey) ? null : item.processTitle
-    const ruleStatusText = applyMessageRule(item.processName, maskedTitle, appMessageRules)
+    const ruleStatusText = applyMessageRule(
+      item.processName,
+      item.processTitle,
+      maskedTitle,
+      appMessageRules,
+    )
     const processTitleForClient = ruleStatusText ? null : maskedTitle
     const row: Record<string, unknown> = {
       ...item,
@@ -386,7 +418,12 @@ export async function getActivityFeedData(
     seenProcess.add(key)
     const processKey = normalizeProcessName(item.processName)
     const maskedTitle = nameOnlySet.has(processKey) ? null : item.processTitle
-    const ruleStatusText = applyMessageRule(item.processName, maskedTitle ?? null, appMessageRules)
+    const ruleStatusText = applyMessageRule(
+      item.processName,
+      item.processTitle ?? null,
+      maskedTitle ?? null,
+      appMessageRules,
+    )
     if (ruleStatusText) {
       recentTopApps.push({
         ...item,

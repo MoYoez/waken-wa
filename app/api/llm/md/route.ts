@@ -407,7 +407,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
 
   pushSection(lines, '### Activity Filtering and Cute Message Rules')
   pushBullets(lines, [
-    '`appMessageRules`: Array of objects with `{ match, text }`. `match` is the process/app name, `text` is the display message, and `text` may use `{process}` and `{title}` placeholders. If `processName` includes `match`, the activity message becomes the rendered `text`',
+    '`appMessageRules`: Array of grouped app rules like `{ processMatch, defaultText?, titleRules }`. Top level matches `processName` by case-insensitive substring; `titleRules` match `processTitle` using `mode: "plain" | "regex"` with `{ pattern, text }`, first match wins, and `text` may use `{process}` / `{title}` placeholders',
     '`appMessageRulesShowProcessName`: If `true`, append the real process name after a matched cute rule; if `false`, show only the custom text',
     '`appFilterMode`: `blacklist` or `whitelist`',
     '`appBlacklist`: Hidden process names when filter mode is `blacklist`',

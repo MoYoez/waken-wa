@@ -1,4 +1,5 @@
 import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
+import type { AppMessageRuleGroup } from '@/lib/app-message-rules'
 import type { UserNoteHitokotoEncode } from '@/lib/hitokoto'
 import type { ScheduleCourse, SchedulePeriodTemplateItem } from '@/lib/schedule-courses'
 import type { ScheduleDayGrid } from '@/lib/schedule-grid-by-weekday'
@@ -69,7 +70,7 @@ export interface SiteConfig {
   aiToolMode: 'skills' | 'mcp'
   historyWindowMinutes: number
   processStaleSeconds: number
-  appMessageRules: Array<{ match: string; text: string }>
+  appMessageRules: AppMessageRuleGroup[]
   appMessageRulesShowProcessName: boolean
   appFilterMode: 'blacklist' | 'whitelist'
   appBlacklist: string[]

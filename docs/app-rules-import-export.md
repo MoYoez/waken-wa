@@ -6,7 +6,7 @@ This document describes the JSON import/export format and behavior for app rules
 
 The rules JSON contains only the following fields:
 
-- `appMessageRules`: app matching message rules, using `match` and `text`
+- `appMessageRules`: grouped app message rules using `processMatch`, optional `defaultText`, and `titleRules`
 - `appMessageRulesShowProcessName`: whether to show the process name when a rule matches
 - `appFilterMode`: `blacklist` / `whitelist`
 - `appBlacklist`: list of blocked app names
@@ -25,10 +25,19 @@ Clicking **Copy Rules JSON** copies the following structure to the clipboard:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "exportedAt": "2026-04-01T00:00:00.000Z",
   "rules": {
-    "appMessageRules": [{ "match": "code.exe", "text": "Coding: {title}" }],
+    "appMessageRules": [
+      {
+        "processMatch": "code.exe",
+        "defaultText": "Coding",
+        "titleRules": [
+          { "mode": "plain", "pattern": ".tsx", "text": "Writing frontend: {title}" },
+          { "mode": "regex", "pattern": "\\\\.md$", "text": "Writing docs: {title}" }
+        ]
+      }
+    ],
     "appMessageRulesShowProcessName": true,
     "appFilterMode": "blacklist",
     "appBlacklist": ["wechat.exe"],
@@ -47,7 +56,9 @@ Normalization rules during import:
 
 - **String lists**: remove empty values and duplicates, case-insensitively.
 - **`mediaPlaySourceBlocklist`**: values are converted to lowercase after import.
-- **`appMessageRules`**: only entries where both `match` and `text` are non-empty strings are kept.
+- **`appMessageRules`**:
+  - `version: 1` legacy `{ match, text }` entries are converted into grouped rules with `processMatch`, `defaultText`, and empty `titleRules`
+  - `version: 2` grouped rules keep only non-empty `processMatch` values and non-empty title subrules
 
 ## 4. FAQ
 

@@ -62,6 +62,7 @@ import {
   REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
 } from '@/lib/activity-api-constants'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
+import { normalizeAppMessageRules, prepareAppMessageRulesForSave } from '@/lib/app-message-rules'
 import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE } from '@/lib/default-page-title'
 import { normalizeHitokotoCategories, normalizeHitokotoEncode } from '@/lib/hitokoto'
@@ -194,7 +195,7 @@ export function useWebSettingsController() {
         const data = await fetchAdminSettings()
 
         if (data) {
-          const rules = Array.isArray(data.appMessageRules) ? data.appMessageRules : []
+          const rules = normalizeAppMessageRules(data.appMessageRules)
           const blacklist = Array.isArray(data.appBlacklist)
             ? data.appBlacklist
                 .map((item: unknown) => String(item ?? '').trim())
@@ -471,15 +472,21 @@ export function useWebSettingsController() {
         return output
       }
 
-      const normalizeRules = (rules: Array<{ match: string; text: string }>) =>
-        rules
-          .map((r) => ({
-            match: String(r?.match ?? '').trim(),
-            text: String(r?.text ?? '').trim(),
-          }))
-          .filter((r) => r.match.length > 0 && r.text.length > 0)
+      const parsedRulesResult = prepareAppMessageRulesForSave(form.appMessageRules)
+      if (parsedRulesResult.errors.length > 0) {
+        const firstError = parsedRulesResult.errors[0]
+        toast.error(
+          t('webSettingsRuleTools.appRules.invalidRegex', {
+            group: firstError.groupIndex + 1,
+            rule: firstError.titleRuleIndex + 1,
+            message: firstError.message,
+          }),
+        )
+        setSaving(false)
+        return
+      }
 
-      const parsedRules = normalizeRules(form.appMessageRules)
+      const parsedRules = parsedRulesResult.data
       const parsedBlacklist = normalizeStringList(form.appBlacklist)
       const parsedWhitelist = normalizeStringList(form.appWhitelist)
       const parsedNameOnlyList = normalizeStringList(form.appNameOnlyList)
