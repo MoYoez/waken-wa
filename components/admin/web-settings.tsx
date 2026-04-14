@@ -11,6 +11,7 @@ import {
   getAdminPanelTransition,
   getAdminSectionVariants,
 } from '@/components/admin/admin-motion'
+import { AdminThemeColorControl } from '@/components/admin/admin-theme-color-control'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
 import { useWebSettingsController } from '@/components/admin/use-web-settings-controller'
@@ -95,9 +96,9 @@ function WebSettingsContent() {
   return (
     <>
       <div className="space-y-4 sm:space-y-5 sm:rounded-xl sm:border sm:bg-card sm:p-6 [&_label[data-slot=label]]:leading-5">
-        <section className="hidden gap-3 lg:grid lg:grid-cols-2">
-          <div className="rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4">
-            <div className="flex items-center justify-between gap-4">
+        <section className="space-y-3">
+          <div className="rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4 sm:px-5">
+            <div className="space-y-4">
               <div className="max-w-2xl space-y-1">
                 <h3 className="text-sm font-semibold tracking-wide text-foreground">
                   {t('webSettings.adminAppearanceTitle')}
@@ -106,13 +107,22 @@ function WebSettingsContent() {
                   {t('webSettings.adminAppearanceDescription')}
                 </p>
               </div>
-              <div className="shrink-0">
-                <ThemeModeToggle />
+              <div className="hidden items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/70 px-4 py-3 lg:flex">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {t('webSettings.adminThemeModeLabel')}
+                  </p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {t('webSettings.adminThemeModeHint')}
+                  </p>
+                </div>
+                <ThemeModeToggle className="shrink-0" />
               </div>
+              <AdminThemeColorControl />
             </div>
           </div>
-          <div className="rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4">
-            <div className="flex items-center justify-between gap-4">
+          <div className="hidden rounded-2xl border border-border/60 bg-muted/[0.06] px-5 py-5 lg:block">
+            <div className="space-y-4">
               <div className="max-w-2xl space-y-1">
                 <h3 className="text-sm font-semibold tracking-wide text-foreground">
                   {tCommon('admin.language.title')}
@@ -121,7 +131,7 @@ function WebSettingsContent() {
                   {tCommon('admin.language.description')}
                 </p>
               </div>
-              <div className="shrink-0">
+              <div className="rounded-xl border border-border/60 bg-background/70 p-4">
                 <AdminLanguageToggle />
               </div>
             </div>
