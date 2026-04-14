@@ -34,6 +34,8 @@ export const WEB_SETTINGS_INITIAL_FORM: SiteConfig = {
   userNote: '',
   userNoteHitokotoEnabled: false,
   userNoteTypewriterEnabled: false,
+  userNoteSignatureFontEnabled: false,
+  userNoteSignatureFontFamily: '',
   pageLoadingEnabled: true,
   searchEngineIndexingEnabled: true,
   userNoteHitokotoCategories: [],

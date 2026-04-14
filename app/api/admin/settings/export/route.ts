@@ -80,10 +80,17 @@ export async function GET(request: Request) {
         profileOnlinePulseEnabled: cfg.profileOnlinePulseEnabled !== false,
         userNote: cfg.userNote,
         userNoteHitokotoEnabled: Boolean(cfg.userNoteHitokotoEnabled),
+        userNoteTypewriterEnabled: Boolean(cfg.userNoteTypewriterEnabled),
+        userNoteSignatureFontEnabled: Boolean(cfg.userNoteSignatureFontEnabled),
+        userNoteSignatureFontFamily:
+          typeof cfg.userNoteSignatureFontFamily === 'string'
+            ? cfg.userNoteSignatureFontFamily.trim()
+            : '',
         userNoteHitokotoCategories: normalizeHitokotoCategories(
           cfg.userNoteHitokotoCategories,
         ),
         userNoteHitokotoEncode: normalizeHitokotoEncode(cfg.userNoteHitokotoEncode),
+        userNoteHitokotoFallbackToNote: Boolean(cfg.userNoteHitokotoFallbackToNote),
         themePreset: cfg.themePreset,
         themeCustomSurface: cfg.themeCustomSurface,
         customCss: cfg.customCss,

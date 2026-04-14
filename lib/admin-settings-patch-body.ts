@@ -48,10 +48,17 @@ export function buildAdminSettingsPatchBody(
       (data as Record<string, unknown>).profileOnlinePulseEnabled !== false,
     userNote: data.userNote ?? '',
     userNoteHitokotoEnabled: Boolean(data.userNoteHitokotoEnabled),
+    userNoteTypewriterEnabled: Boolean(data.userNoteTypewriterEnabled),
+    userNoteSignatureFontEnabled: Boolean(data.userNoteSignatureFontEnabled),
+    userNoteSignatureFontFamily:
+      typeof data.userNoteSignatureFontFamily === 'string'
+        ? data.userNoteSignatureFontFamily.trim().slice(0, 160)
+        : '',
     userNoteHitokotoCategories: normalizeHitokotoCategories(
       data.userNoteHitokotoCategories ?? [],
     ),
     userNoteHitokotoEncode: normalizeHitokotoEncode(data.userNoteHitokotoEncode),
+    userNoteHitokotoFallbackToNote: Boolean(data.userNoteHitokotoFallbackToNote),
     themePreset: data.themePreset ?? 'basic',
     themeCustomSurface: data.themeCustomSurface,
     customCss: data.customCss ?? '',

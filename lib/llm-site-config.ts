@@ -354,6 +354,20 @@ export async function updateSiteConfigFromPayload(
   if (body.userNoteTypewriterEnabled !== undefined && body.userNoteTypewriterEnabled !== null) {
     userNoteTypewriterEnabled = Boolean(body.userNoteTypewriterEnabled)
   }
+  let userNoteSignatureFontEnabled = Boolean(existing?.userNoteSignatureFontEnabled)
+  if (
+    body.userNoteSignatureFontEnabled !== undefined &&
+    body.userNoteSignatureFontEnabled !== null
+  ) {
+    userNoteSignatureFontEnabled = Boolean(body.userNoteSignatureFontEnabled)
+  }
+  let userNoteSignatureFontFamily =
+    typeof existing?.userNoteSignatureFontFamily === 'string'
+      ? existing.userNoteSignatureFontFamily.trim().slice(0, 160)
+      : ''
+  if (body.userNoteSignatureFontFamily !== undefined && body.userNoteSignatureFontFamily !== null) {
+    userNoteSignatureFontFamily = String(body.userNoteSignatureFontFamily).trim().slice(0, 160)
+  }
   let pageLoadingEnabled = existing?.pageLoadingEnabled !== false
   if (body.pageLoadingEnabled !== undefined && body.pageLoadingEnabled !== null) {
     pageLoadingEnabled = Boolean(body.pageLoadingEnabled)
@@ -525,6 +539,8 @@ export async function updateSiteConfigFromPayload(
     userNote,
     userNoteHitokotoEnabled,
     userNoteTypewriterEnabled,
+    userNoteSignatureFontEnabled,
+    userNoteSignatureFontFamily,
     pageLoadingEnabled,
     searchEngineIndexingEnabled,
     userNoteHitokotoCategories,

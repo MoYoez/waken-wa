@@ -57,6 +57,8 @@ export interface SiteConfig {
   userNote: string
   userNoteHitokotoEnabled: boolean
   userNoteTypewriterEnabled: boolean
+  userNoteSignatureFontEnabled: boolean
+  userNoteSignatureFontFamily: string
   pageLoadingEnabled: boolean
   searchEngineIndexingEnabled: boolean
   userNoteHitokotoCategories: string[]

@@ -230,6 +230,11 @@ export function useWebSettingsController() {
             userNote: data.userNote ?? '',
             userNoteHitokotoEnabled: Boolean(data.userNoteHitokotoEnabled),
             userNoteTypewriterEnabled: Boolean(data.userNoteTypewriterEnabled),
+            userNoteSignatureFontEnabled: Boolean(data.userNoteSignatureFontEnabled),
+            userNoteSignatureFontFamily:
+              typeof data.userNoteSignatureFontFamily === 'string'
+                ? data.userNoteSignatureFontFamily.trim()
+                : '',
             pageLoadingEnabled: data.pageLoadingEnabled !== false,
             searchEngineIndexingEnabled: data.searchEngineIndexingEnabled !== false,
             userNoteHitokotoCategories: normalizeHitokotoCategories(

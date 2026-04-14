@@ -97,6 +97,10 @@ export const siteConfig = sqliteTable('site_config', {
     .notNull()
     .default(false),
   userNoteTypewriterEnabled: integer('user_note_typewriter_enabled', { mode: 'boolean' }).default(false),
+  userNoteSignatureFontEnabled: integer('user_note_signature_font_enabled', {
+    mode: 'boolean',
+  }).default(false),
+  userNoteSignatureFontFamily: text('user_note_signature_font_family'),
   pageLoadingEnabled: integer('page_loading_enabled', { mode: 'boolean' }).default(true),
   searchEngineIndexingEnabled: integer('search_engine_indexing_enabled', { mode: 'boolean' }).default(true),
   userNoteHitokotoCategories: text('user_note_hitokoto_categories', {

@@ -93,7 +93,7 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://gstatic.loli.net" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
-          href="https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@300;400;500&family=Ubuntu:wght@300;400;500;700&display=swap"
+          href="https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@300;400;500&family=Satisfy&family=Ubuntu:wght@300;400;500;700&display=swap"
         />
       </head>
       <body className="antialiased">

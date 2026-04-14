@@ -22,35 +22,53 @@ import type { HitokotoJsonBody, UserNoteHitokotoEncode } from '@/types/hitokoto'
 /** One step smaller than name (`text-base`); same weight/color as name. */
 const NOTE_BOX_CLASS =
   'block w-full min-w-0 max-w-full break-words text-sm font-semibold text-foreground leading-snug border-l-2 border-primary pl-4 pr-0'
+const NOTE_SIGNATURE_CLASS = 'text-[1.1rem] font-normal leading-[1.8]'
+const NOTE_SIGNATURE_FONT_STACK = 'Satisfy, var(--font-sans)'
 
 const TYPEWRITER_BASE_DELAY_MS = 54
 const TYPEWRITER_JITTER_MS = 28
 const TYPEWRITER_SPACE_BONUS_MS = 18
 const TYPEWRITER_PUNCTUATION_BONUS_MS = 72
 
-function getTypewriterDelayMs(char: string) {
+function getTypewriterDelayMs(char: string, speedMultiplier = 1) {
   const jitter = Math.floor(Math.random() * (TYPEWRITER_JITTER_MS * 2 + 1)) - TYPEWRITER_JITTER_MS
 
   if (/\s/.test(char)) {
-    return TYPEWRITER_BASE_DELAY_MS + TYPEWRITER_SPACE_BONUS_MS + jitter
+    return Math.max(
+      18,
+      Math.round((TYPEWRITER_BASE_DELAY_MS + TYPEWRITER_SPACE_BONUS_MS + jitter) * speedMultiplier),
+    )
   }
 
   if (/[，。！？；：、,.!?;:~]/.test(char)) {
-    return TYPEWRITER_BASE_DELAY_MS + TYPEWRITER_PUNCTUATION_BONUS_MS + jitter
+    return Math.max(
+      18,
+      Math.round(
+        (TYPEWRITER_BASE_DELAY_MS + TYPEWRITER_PUNCTUATION_BONUS_MS + jitter) * speedMultiplier,
+      ),
+    )
   }
 
-  return TYPEWRITER_BASE_DELAY_MS + jitter
+  return Math.max(18, Math.round((TYPEWRITER_BASE_DELAY_MS + jitter) * speedMultiplier))
+}
+
+function resolveNoteFontFamily(enabled: boolean, overrideFontFamily?: string) {
+  if (!enabled) return undefined
+  const override = String(overrideFontFamily ?? '').trim()
+  return override || NOTE_SIGNATURE_FONT_STACK
 }
 
 function TypewriterNoteText({
   text,
   enabled,
   startDelayMs = 0,
+  speedMultiplier = 1,
   children,
 }: {
   text: string
   enabled: boolean
   startDelayMs?: number
+  speedMultiplier?: number
   children: (displayText: string) => ReactNode
 }) {
   const [displayText, setDisplayText] = useState('')
@@ -79,7 +97,10 @@ function TypewriterNoteText({
         if (index >= text.length) {
           return
         }
-        typingTimer = window.setTimeout(step, getTypewriterDelayMs(text[index] ?? ''))
+        typingTimer = window.setTimeout(
+          step,
+          getTypewriterDelayMs(text[index] ?? '', speedMultiplier),
+        )
       }
 
       step()
@@ -89,7 +110,7 @@ function TypewriterNoteText({
       window.clearTimeout(startTimer)
       if (typingTimer) window.clearTimeout(typingTimer)
     }
-  }, [shouldAnimate, startDelayMs, text])
+  }, [shouldAnimate, speedMultiplier, startDelayMs, text])
 
   return <>{children(shouldAnimate ? displayText : text)}</>
 }
@@ -99,12 +120,16 @@ function ProfileHitokotoNote({
   encode,
   fallbackNote,
   fallbackToNote,
+  signatureFontEnabled,
+  signatureFontFamily,
   typewriterEnabled,
 }: {
   categories: string[]
   encode: UserNoteHitokotoEncode
   fallbackNote: string
   fallbackToNote: boolean
+  signatureFontEnabled: boolean
+  signatureFontFamily?: string
   typewriterEnabled: boolean
 }) {
   const { t } = useT('common')
@@ -118,6 +143,9 @@ function ProfileHitokotoNote({
     exitY: 6,
     scale: 0.998,
   })
+  const noteFontFamily = resolveNoteFontFamily(signatureFontEnabled, signatureFontFamily)
+  const noteClassName = cn(NOTE_BOX_CLASS, signatureFontEnabled && NOTE_SIGNATURE_CLASS)
+  const noteStyle = noteFontFamily ? ({ fontFamily: noteFontFamily } as CSSProperties) : undefined
 
   const categoriesKey = useMemo(() => JSON.stringify([...categories].sort()), [categories])
 
@@ -163,7 +191,8 @@ function ProfileHitokotoNote({
   if (phase === 'loading') {
     return (
       <motion.p
-        className={`${NOTE_BOX_CLASS} animate-pulse`}
+        className={cn(noteClassName, 'animate-pulse')}
+        style={noteStyle}
         variants={sectionVariants}
         initial="initial"
         animate="animate"
@@ -178,19 +207,32 @@ function ProfileHitokotoNote({
   if (phase === 'error') {
     if (fallbackToNote && fallbackNote.trim()) {
       return (
-        <TypewriterNoteText text={fallbackNote} enabled={typewriterEnabled} startDelayMs={100}>
-          {(displayText) => <p className={NOTE_BOX_CLASS}>{displayText}</p>}
+        <TypewriterNoteText text={fallbackNote} enabled={typewriterEnabled} startDelayMs={220}>
+          {(displayText) => (
+            <p className={noteClassName} style={noteStyle}>
+              {displayText}
+            </p>
+          )}
         </TypewriterNoteText>
       )
     }
-    return <p className={NOTE_BOX_CLASS}>{t('site.note.hitokotoUnavailable')}</p>
+    return (
+      <p className={noteClassName} style={noteStyle}>
+        {t('site.note.hitokotoUnavailable')}
+      </p>
+    )
   }
 
   if (uuid) {
     return (
-      <TypewriterNoteText text={text} enabled={typewriterEnabled} startDelayMs={100}>
+      <TypewriterNoteText
+        text={text}
+        enabled={typewriterEnabled}
+        startDelayMs={220}
+        speedMultiplier={1.7}
+      >
         {(displayText) => (
-          <p className={NOTE_BOX_CLASS}>
+          <p className={noteClassName} style={noteStyle}>
             <a
               href={`https://hitokoto.cn/?uuid=${encodeURIComponent(uuid)}`}
               target="_blank"
@@ -213,8 +255,17 @@ function ProfileHitokotoNote({
   }
 
   return (
-    <TypewriterNoteText text={text} enabled={typewriterEnabled} startDelayMs={100}>
-      {(displayText) => <p className={NOTE_BOX_CLASS}>{displayText}</p>}
+    <TypewriterNoteText
+      text={text}
+      enabled={typewriterEnabled}
+      startDelayMs={220}
+      speedMultiplier={1.7}
+    >
+      {(displayText) => (
+        <p className={noteClassName} style={noteStyle}>
+          {displayText}
+        </p>
+      )}
     </TypewriterNoteText>
   )
 }
@@ -226,6 +277,8 @@ export function UserProfileNoteSection({
   note = '',
   noteHitokotoEnabled = false,
   noteTypewriterEnabled = false,
+  noteSignatureFontEnabled = false,
+  noteSignatureFontFamily = '',
   noteHitokotoCategories = [],
   noteHitokotoEncode = 'json',
   noteHitokotoFallbackToNote = false,
@@ -233,6 +286,12 @@ export function UserProfileNoteSection({
   const prefersReducedMotion = Boolean(useReducedMotion())
   const showNoteBlock = Boolean(note.trim()) || noteHitokotoEnabled
   if (!showNoteBlock) return null
+  const noteFontFamily = resolveNoteFontFamily(
+    noteSignatureFontEnabled,
+    noteSignatureFontFamily,
+  )
+  const noteClassName = cn(NOTE_BOX_CLASS, noteSignatureFontEnabled && NOTE_SIGNATURE_CLASS)
+  const noteStyle = noteFontFamily ? ({ fontFamily: noteFontFamily } as CSSProperties) : undefined
 
   const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
   const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
@@ -258,11 +317,17 @@ export function UserProfileNoteSection({
             encode={noteHitokotoEncode}
             fallbackNote={note}
             fallbackToNote={noteHitokotoFallbackToNote}
+            signatureFontEnabled={noteSignatureFontEnabled}
+            signatureFontFamily={noteSignatureFontFamily}
             typewriterEnabled={noteTypewriterEnabled}
           />
         ) : (
           <TypewriterNoteText text={note} enabled={noteTypewriterEnabled}>
-            {(displayText) => <p className={NOTE_BOX_CLASS}>{displayText}</p>}
+            {(displayText) => (
+              <p className={noteClassName} style={noteStyle}>
+                {displayText}
+              </p>
+            )}
           </TypewriterNoteText>
         )}
       </motion.div>

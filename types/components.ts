@@ -19,6 +19,8 @@ export interface UserProfileNoteSectionProps {
   note?: string
   noteHitokotoEnabled?: boolean
   noteTypewriterEnabled?: boolean
+  noteSignatureFontEnabled?: boolean
+  noteSignatureFontFamily?: string
   noteHitokotoCategories?: string[]
   noteHitokotoEncode?: UserNoteHitokotoEncode
   noteHitokotoFallbackToNote?: boolean

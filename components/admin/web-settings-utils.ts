@@ -287,6 +287,15 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
   if ('userNoteHitokotoEnabled' in web && typeof web.userNoteHitokotoEnabled === 'boolean') {
     patch.userNoteHitokotoEnabled = web.userNoteHitokotoEnabled
   }
+  if ('userNoteTypewriterEnabled' in web && typeof web.userNoteTypewriterEnabled === 'boolean') {
+    patch.userNoteTypewriterEnabled = web.userNoteTypewriterEnabled
+  }
+  if ('userNoteSignatureFontEnabled' in web && typeof web.userNoteSignatureFontEnabled === 'boolean') {
+    patch.userNoteSignatureFontEnabled = web.userNoteSignatureFontEnabled
+  }
+  if ('userNoteSignatureFontFamily' in web && typeof web.userNoteSignatureFontFamily === 'string') {
+    patch.userNoteSignatureFontFamily = web.userNoteSignatureFontFamily.trim().slice(0, 160)
+  }
   if ('userNoteHitokotoCategories' in web) {
     patch.userNoteHitokotoCategories = normalizeHitokotoCategories(web.userNoteHitokotoCategories)
   }

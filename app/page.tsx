@@ -123,6 +123,11 @@ export default async function Home() {
   const pageLoadingEnabled = cfg.pageLoadingEnabled !== false
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteTypewriterEnabled = Boolean(cfg.userNoteTypewriterEnabled)
+  const noteSignatureFontEnabled = Boolean(cfg.userNoteSignatureFontEnabled)
+  const noteSignatureFontFamily =
+    typeof cfg.userNoteSignatureFontFamily === 'string'
+      ? cfg.userNoteSignatureFontFamily.trim()
+      : ''
   const noteHitokotoCategories = normalizeHitokotoCategories(cfg.userNoteHitokotoCategories)
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
   const noteHitokotoFallbackToNote = Boolean(cfg.userNoteHitokotoFallbackToNote)
@@ -197,6 +202,8 @@ export default async function Home() {
                       note={userNote}
                       noteHitokotoEnabled={noteHitokotoEnabled}
                       noteTypewriterEnabled={noteTypewriterEnabled}
+                      noteSignatureFontEnabled={noteSignatureFontEnabled}
+                      noteSignatureFontFamily={noteSignatureFontFamily}
                       noteHitokotoCategories={noteHitokotoCategories}
                       noteHitokotoEncode={noteHitokotoEncode}
                       noteHitokotoFallbackToNote={noteHitokotoFallbackToNote}

@@ -15,6 +15,7 @@ import {
 } from '@/components/admin/web-settings-layout'
 import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -98,6 +99,52 @@ export function WebSettingsHitokotoPanel() {
           }
         />
       </WebSettingsRows>
+
+      <WebSettingsInset className="space-y-4">
+        <WebSettingsRows className="rounded-lg">
+          <WebSettingsRow
+            htmlFor="user-note-signature-font-toggle"
+            title={t('webSettingsBasic.userNoteSignatureFontTitle')}
+            description={t('webSettingsBasic.userNoteSignatureFontDescription')}
+            action={
+              <Switch
+                id="user-note-signature-font-toggle"
+                checked={form.userNoteSignatureFontEnabled}
+                onCheckedChange={(value) => patch('userNoteSignatureFontEnabled', value)}
+              />
+            }
+          />
+        </WebSettingsRows>
+
+        <AnimatePresence initial={false}>
+          {form.userNoteSignatureFontEnabled ? (
+            <motion.div
+              className="space-y-2"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              <Label htmlFor="user-note-signature-font-family">
+                {t('webSettingsBasic.userNoteSignatureFontFamilyLabel')}
+              </Label>
+              <Input
+                id="user-note-signature-font-family"
+                value={form.userNoteSignatureFontFamily}
+                onChange={(event) =>
+                  patch('userNoteSignatureFontFamily', event.target.value.slice(0, 160))
+                }
+                placeholder={t('webSettingsBasic.userNoteSignatureFontFamilyPlaceholder')}
+              />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {t('webSettingsBasic.userNoteSignatureFontFamilyHint')}
+              </p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </WebSettingsInset>
 
       <AnimatePresence initial={false}>
         {form.userNoteHitokotoEnabled ? (
