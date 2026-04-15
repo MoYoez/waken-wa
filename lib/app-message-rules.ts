@@ -1,3 +1,5 @@
+import { parseJsonString } from '@/lib/json-parse'
+
 export type AppTitleRuleMode = 'plain' | 'regex'
 
 export type AppMessageTitleRule = {
@@ -29,17 +31,6 @@ export type AppMessageRuleValidationError = {
   titleRuleIndex: number
   pattern: string
   message: string
-}
-
-function parseJsonString(raw: unknown): unknown {
-  if (typeof raw !== 'string') return raw
-  const trimmed = raw.trim()
-  if (!trimmed) return raw
-  try {
-    return JSON.parse(trimmed)
-  } catch {
-    return raw
-  }
 }
 
 function normalizeTitleRule(raw: unknown): AppMessageTitleRule | null {

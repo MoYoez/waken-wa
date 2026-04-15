@@ -1,18 +1,8 @@
 import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import { normalizeAppMessageRules } from '@/lib/app-message-rules'
+import { parseJsonString } from '@/lib/json-parse'
 import { normalizePublicPageFontOptions } from '@/lib/public-page-font'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
-
-function parseJsonString(raw: unknown): unknown {
-  if (typeof raw !== 'string') return raw
-  const trimmed = raw.trim()
-  if (!trimmed) return raw
-  try {
-    return JSON.parse(trimmed)
-  } catch {
-    return raw
-  }
-}
 
 function normalizeStringArrayField(raw: unknown): string[] {
   const parsed = parseJsonString(raw)

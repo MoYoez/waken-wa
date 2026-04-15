@@ -118,12 +118,6 @@
       "targetLabel": "目标地址",
       "continue": "继续前往",
       "back": "返回上一页"
-    },
-    "activityTimeline": {
-      "loadFailed": "加载最近活动失败",
-      "empty": "最近还没有活动记录",
-      "durationMinutes": "{{value}} 分钟",
-      "durationHoursMinutes": "{{hours}} 小时 {{minutes}} 分钟"
     }
   },
   "ui": {

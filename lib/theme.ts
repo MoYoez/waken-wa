@@ -9,10 +9,6 @@ export function isThemeMode(value: unknown): value is ThemeMode {
   return value === 'light' || value === 'dark' || value === 'system'
 }
 
-export function isResolvedTheme(value: unknown): value is ResolvedTheme {
-  return value === 'light' || value === 'dark'
-}
-
 export function normalizeThemeMode(
   value: unknown,
   fallback: ThemeMode = DEFAULT_THEME,

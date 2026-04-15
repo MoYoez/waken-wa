@@ -27,30 +27,3 @@ export function getMediaDisplay(metadata: unknown): MediaDisplay | null {
   }
   return { title, singer }
 }
-
-/**
- * Shallow-merge patch into existing metadata; `media` is merged one level deep when both are plain objects.
- */
-export function mergeActivityMetadata(
-  existing: Record<string, unknown> | null | undefined,
-  patch: Record<string, unknown>,
-): Record<string, unknown> {
-  const base = existing && typeof existing === 'object' && !Array.isArray(existing) ? { ...existing } : {}
-  const merged: Record<string, unknown> = { ...base, ...patch }
-  const baseMedia = base.media
-  const patchMedia = patch.media
-  if (
-    baseMedia &&
-    typeof baseMedia === 'object' &&
-    !Array.isArray(baseMedia) &&
-    patchMedia &&
-    typeof patchMedia === 'object' &&
-    !Array.isArray(patchMedia)
-  ) {
-    merged.media = {
-      ...(baseMedia as Record<string, unknown>),
-      ...(patchMedia as Record<string, unknown>),
-    }
-  }
-  return merged
-}

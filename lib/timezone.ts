@@ -206,33 +206,3 @@ export function toWallClockDate(
   )
 }
 
-/**
- * 在指定时区格式化日期
- */
-export function formatInTimezone(
-  date: Date | string | number,
-  timezone: string,
-  options?: Intl.DateTimeFormatOptions
-): string {
-  const d = parseInstantForDisplay(date)
-  const tz = isValidTimezone(timezone) ? timezone : DEFAULT_TIMEZONE
-  
-  const defaultOptions: Intl.DateTimeFormatOptions = {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }
-  
-  return new Intl.DateTimeFormat('zh-CN', { ...defaultOptions, ...options }).format(d)
-}
-
-/**
- * 获取简短的日期时间格式 (yyyy-MM-dd HH:mm)
- */
-export function formatDateTimeShort(date: Date | string | number, timezone: string): string {
-  return formatDisplayPattern(date, 'yyyy-MM-dd HH:mm', timezone)
-}

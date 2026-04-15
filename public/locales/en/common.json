@@ -118,12 +118,6 @@
       "targetLabel": "Target address",
       "continue": "Continue",
       "back": "Go back"
-    },
-    "activityTimeline": {
-      "loadFailed": "Failed to load recent activity",
-      "empty": "No recent activity yet",
-      "durationMinutes": "{{value}} min",
-      "durationHoursMinutes": "{{hours}}h {{minutes}}m"
     }
   },
   "ui": {

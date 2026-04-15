@@ -38,7 +38,6 @@ import {
   parseThemeCustomSurface,
   THEME_CUSTOM_SURFACE_DEFAULTS,
 } from '@/lib/theme-custom-surface'
-import { formatDisplayPattern } from '@/lib/timezone'
 
 export function emptyThemeCustomSurfaceForm(): ThemeCustomSurfaceForm {
   return {
@@ -513,13 +512,6 @@ export function normalizeSkillsAiAuthorizations(raw: unknown): SkillsAiAuthoriza
       } satisfies SkillsAiAuthorizationItem
     })
     .filter((item): item is SkillsAiAuthorizationItem => item !== null)
-}
-
-export function formatIsoDatetime(value: string | null): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return formatDisplayPattern(date, 'yyyy-MM-dd HH:mm:ss') || '—'
 }
 
 export function normalizeSkillsEditableConfig(raw: Partial<SkillsEditableConfig>): SkillsEditableConfig {

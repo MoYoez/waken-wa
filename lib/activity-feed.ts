@@ -171,11 +171,6 @@ function applyMessageRule(
   return null
 }
 
-export async function getHistoryWindowMinutes(): Promise<number> {
-  const config = await getSiteConfigMemoryFirst()
-  return parseHistoryWindowMinutes(config?.historyWindowMinutes)
-}
-
 export async function getActivityFeedData(
   limit = ACTIVITY_FEED_DEFAULT_LIMIT,
   options?: GetActivityFeedOptions,

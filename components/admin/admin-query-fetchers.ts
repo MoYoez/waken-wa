@@ -8,7 +8,7 @@ import {
   type SuccessResponse,
 } from '@/components/admin/admin-query-shared'
 import { tAdminClient } from '@/lib/i18n/admin-client'
-import type { ActivityFeedData, ActivityFeedItem } from '@/types/activity'
+import type { ActivityFeedData } from '@/types/activity'
 import type {
   AdminDeviceItem,
   AdminDeviceSummary,
@@ -184,14 +184,6 @@ export async function fetchPublicActivityFeed(): Promise<ActivityFeedData> {
     )
   }
   return data.data
-}
-
-export async function fetchRecentActivityUsage(
-  limit?: number,
-): Promise<ActivityFeedItem[]> {
-  const data = await fetchActivityFeed()
-  const recentActivities = Array.isArray(data.recentActivities) ? data.recentActivities : []
-  return typeof limit === 'number' ? recentActivities.slice(0, limit) : recentActivities
 }
 
 export async function fetchActivityHistoryApps(input?: {
