@@ -27,9 +27,9 @@ const PREVIEW_CHARS = 220
 
 /** Matches site Card primitive: solid surface, clear elevation (not just rounded corners). */
 const inspirationCardClassName = cn(
-  'home-glass-card gap-0 py-0 shadow-md ring-1 ring-border/60',
-  'transition-[box-shadow,border-color,ring-color] duration-200',
-  'hover:shadow-lg hover:ring-primary/20 hover:border-primary/25',
+  'home-glass-card gap-0 border-t-0 border-r-0 py-0 shadow-md',
+  'transition-[box-shadow,border-color] duration-200',
+  'hover:shadow-lg hover:border-primary/25',
 )
 
 function EntryBody({
@@ -152,9 +152,9 @@ export function InspirationHomeSection({
                       className={cn(
                         'group relative block shrink-0 self-start overflow-hidden rounded-lg',
                         'w-16 h-16 sm:w-[4.667rem] sm:h-[4.667rem]',
-                        'border border-border/70 bg-card shadow-sm ring-1 ring-[color:var(--home-card-overlay)] dark:ring-[color:var(--home-card-overlay-dark)]',
-                        'transition-[box-shadow,border-color,ring-color] duration-200',
-                        'hover:border-primary/25 hover:shadow-md hover:ring-primary/15',
+                        'border border-t-0 border-r-0 border-border/70 bg-card shadow-sm',
+                        'transition-[box-shadow,border-color] duration-200',
+                        'hover:border-primary/25 hover:shadow-md',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                       )}
                     >

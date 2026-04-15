@@ -48,14 +48,16 @@ export default async function AdminLayout({
         initialThemeColor={initialThemeColor}
         initialBackgroundColor={initialBackgroundColor}
       />
-      <div className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex justify-center sm:inset-x-6 sm:bottom-6 lg:hidden">
-        <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-[28px] border border-border/70 bg-background/78 px-2 py-2 shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-          <AdminLanguageToggle className="border-transparent bg-transparent shadow-none backdrop-blur-0" />
-          <div className="h-8 w-px bg-border/70" aria-hidden />
-          <ThemeModeToggle className="border-transparent bg-transparent shadow-none backdrop-blur-0" />
+      <div>{children}</div>
+      <div className="bg-background px-4 pb-5 pt-2 sm:px-6 sm:pb-6 lg:hidden">
+        <div className="flex justify-center">
+          <div className="inline-flex items-center gap-1.5 rounded-[28px] border border-border/70 bg-background/78 px-2 py-2 shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+            <AdminLanguageToggle className="border-transparent bg-transparent shadow-none backdrop-blur-0" />
+            <div className="h-8 w-px bg-border/70" aria-hidden />
+            <ThemeModeToggle className="border-transparent bg-transparent shadow-none backdrop-blur-0" />
+          </div>
         </div>
       </div>
-      <div className="pb-24 sm:pb-28 lg:pb-0">{children}</div>
       <AdminToaster />
     </>
   )

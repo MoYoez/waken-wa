@@ -390,7 +390,7 @@ function CurrentStatusCard({
   return (
     <motion.div
       className={cn(
-        'home-glass-card relative rounded-lg border border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:p-6',
+        'home-glass-card relative rounded-lg border border-t-0 border-r-0 border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:p-6',
       )}
       variants={sectionVariants}
       initial="initial"
@@ -403,7 +403,7 @@ function CurrentStatusCard({
         {flashKey === updateSignature ? (
           <motion.div
             key={updateSignature}
-            className="pointer-events-none absolute inset-0 rounded-[inherit] border border-primary/45"
+            className="pointer-events-none absolute inset-0 rounded-[inherit] border border-t-0 border-r-0 border-primary/45"
             initial={{ opacity: 0, boxShadow: '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)' }}
             animate={{
               opacity: [0, 1, 0],
@@ -419,7 +419,7 @@ function CurrentStatusCard({
         ) : null}
       </AnimatePresence>
       <div className="space-y-4">
-        <div className="home-glass-subcard rounded-md border border-border/50 bg-muted/55 px-3 py-2.5 space-y-2 shadow-[inset_0_1px_0_0_var(--home-card-inset-highlight)]">
+        <div className="home-glass-subcard rounded-md border border-t-0 border-r-0 border-border/50 bg-muted/55 px-3 py-2.5 space-y-2 shadow-[inset_0_1px_0_0_var(--home-card-inset-highlight)]">
           <div className="text-xs font-medium text-foreground/65 tracking-tight mb-0.5">
             {t('site.currentStatus.deviceLabel')}
           </div>
@@ -522,7 +522,7 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
   if (statuses.length === 0) {
     return (
       <motion.div
-        className="home-glass-card border border-border rounded-lg shadow-sm p-6 sm:p-8 bg-card"
+        className="home-glass-card border border-t-0 border-r-0 border-border rounded-lg shadow-sm p-6 sm:p-8 bg-card"
         variants={sectionVariants}
         initial="initial"
         animate="animate"
