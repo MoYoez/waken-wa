@@ -345,11 +345,44 @@ export async function redisHSet(
   }
 }
 
+export async function redisHSetMany(
+  key: string,
+  values: Record<string, string>,
+): Promise<boolean> {
+  const client = getRedisClient()
+  if (!client) return false
+  const entries = Object.entries(values)
+  if (entries.length === 0) return true
+  try {
+    const args: string[] = []
+    for (const [field, value] of entries) {
+      args.push(field, value)
+    }
+    await client.hset(key, ...args)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function redisHDel(key: string, field: string): Promise<boolean> {
   const client = getRedisClient()
   if (!client) return false
   try {
     await client.hdel(key, field)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function redisHDelMany(key: string, fields: string[]): Promise<boolean> {
+  const client = getRedisClient()
+  if (!client) return false
+  const uniqueFields = Array.from(new Set(fields.map((field) => field.trim()).filter(Boolean)))
+  if (uniqueFields.length === 0) return true
+  try {
+    await client.hdel(key, ...uniqueFields)
     return true
   } catch {
     return false
@@ -362,6 +395,17 @@ export async function redisExpire(key: string, ttlSeconds: number): Promise<bool
   try {
     const ttl = Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? Math.round(ttlSeconds) : 1
     await client.expire(key, ttl)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function redisPersist(key: string): Promise<boolean> {
+  const client = getRedisClient()
+  if (!client) return false
+  try {
+    await client.persist(key)
     return true
   } catch {
     return false
@@ -457,6 +501,22 @@ export async function redisZCard(key: string): Promise<number | null> {
   if (!client) return null
   try {
     const size = await client.zcard(key)
+    const count = Number(size)
+    return Number.isFinite(count) ? count : null
+  } catch {
+    return null
+  }
+}
+
+export async function redisZCountByScore(
+  key: string,
+  minScore: number | string,
+  maxScore: number | string,
+): Promise<number | null> {
+  const client = getRedisClient()
+  if (!client) return null
+  try {
+    const size = await client.zcount(key, String(minScore), String(maxScore))
     const count = Number(size)
     return Number.isFinite(count) ? count : null
   } catch {

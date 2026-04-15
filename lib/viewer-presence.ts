@@ -4,18 +4,21 @@ import { randomBytes } from 'node:crypto'
 
 import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
 import {
-  redisDel,
   redisZAdd,
-  redisZCard,
+  redisZCountByScore,
   redisZRemRangeByScore,
 } from '@/lib/redis-client'
-import { VIEWER_PRESENCE_TTL_MS } from '@/lib/viewer-presence-constants'
+import {
+  VIEWER_PRESENCE_REDIS_CLEANUP_INTERVAL_MS,
+  VIEWER_PRESENCE_TTL_MS,
+} from '@/lib/viewer-presence-constants'
 
 const VIEWER_PRESENCE_ZSET_KEY = 'waken:viewers:presence:v1'
 const VIEWER_PRESENCE_ID_RE = /^[A-Za-z0-9_-]{16,128}$/
 
 declare global {
   var __wakenViewerPresenceMemory: Map<string, number> | undefined
+  var __wakenViewerPresenceLastRedisCleanupAt: number | undefined
 }
 
 function getViewerPresenceMemory(): Map<string, number> {
@@ -36,13 +39,20 @@ function cleanupExpiredMemory(nowMs: number): number {
 }
 
 async function cleanupExpiredRedis(nowMs: number): Promise<number> {
-  await redisZRemRangeByScore(VIEWER_PRESENCE_ZSET_KEY, 0, nowMs)
-  const count = await redisZCard(VIEWER_PRESENCE_ZSET_KEY)
-  if (!count) {
-    await redisDel(VIEWER_PRESENCE_ZSET_KEY)
-    return 0
+  const lastCleanupAt = globalThis.__wakenViewerPresenceLastRedisCleanupAt ?? 0
+  if (nowMs - lastCleanupAt < VIEWER_PRESENCE_REDIS_CLEANUP_INTERVAL_MS) {
+    return countActiveRedis(nowMs)
   }
-  return count
+
+  // Cleanup is throttled because active counts now come from score filtering.
+  globalThis.__wakenViewerPresenceLastRedisCleanupAt = nowMs
+  await redisZRemRangeByScore(VIEWER_PRESENCE_ZSET_KEY, 0, nowMs)
+  return countActiveRedis(nowMs)
+}
+
+async function countActiveRedis(nowMs: number): Promise<number> {
+  const count = await redisZCountByScore(VIEWER_PRESENCE_ZSET_KEY, `(${Math.round(nowMs)}`, '+inf')
+  return Math.max(0, count ?? 0)
 }
 
 export function normalizeViewerPresenceId(value: string | null | undefined): string | null {
@@ -79,4 +89,3 @@ export async function getViewerPresenceCount(nowMs = Date.now()): Promise<number
   }
   return cleanupExpiredMemory(nowMs)
 }
-

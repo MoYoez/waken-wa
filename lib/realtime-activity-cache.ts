@@ -2,13 +2,15 @@ import 'server-only'
 
 import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
 import {
-  redisExpire,
   redisHDel,
+  redisHDelMany,
   redisHGetAll,
   redisHSet,
+  redisPersist,
 } from '@/lib/redis-client'
 
 const REALTIME_ACTIVITY_CACHE_KEY = 'waken:activity:realtime:v2'
+const REALTIME_ACTIVITY_REDIS_CLEANUP_INTERVAL_MS = 60 * 60 * 1000
 
 export type RealtimeActivityRow = {
   id: string
@@ -29,6 +31,7 @@ let memoryState: RealtimeActivityState = {}
 let memoryLoaded = false
 let memoryLoadedAt = 0
 const REDIS_REFRESH_INTERVAL_MS = 1000
+let lastRedisCleanupAt = 0
 
 function cacheKey(generatedHashKey: string, processName: string): string {
   return `${generatedHashKey}:${processName}`.toLowerCase()
@@ -49,18 +52,35 @@ function prune(state: RealtimeActivityState): RealtimeActivityState {
   return out
 }
 
-function parseHashState(raw: Record<string, string>): RealtimeActivityState {
+function parseHashState(raw: Record<string, string>): {
+  activeState: RealtimeActivityState
+  expiredFields: string[]
+} {
   const out: RealtimeActivityState = {}
+  const expiredFields: string[] = []
+  const now = nowMs()
   for (const [field, value] of Object.entries(raw)) {
     try {
       const parsed = JSON.parse(value) as RealtimeActivityRow
       if (!parsed || typeof parsed !== 'object') continue
+      const exp = Date.parse(parsed.expiresAt)
+      if (!Number.isFinite(exp) || exp <= now) {
+        expiredFields.push(field)
+        continue
+      }
       out[field] = parsed
     } catch {
       continue
     }
   }
-  return prune(out)
+  return { activeState: prune(out), expiredFields }
+}
+
+async function cleanupExpiredRedisFields(expiredFields: string[], now = nowMs()): Promise<void> {
+  if (now - lastRedisCleanupAt < REALTIME_ACTIVITY_REDIS_CLEANUP_INTERVAL_MS) return
+  lastRedisCleanupAt = now
+  if (expiredFields.length === 0) return
+  await redisHDelMany(REALTIME_ACTIVITY_CACHE_KEY, expiredFields)
 }
 
 async function loadState(): Promise<RealtimeActivityState> {
@@ -79,23 +99,29 @@ async function loadState(): Promise<RealtimeActivityState> {
   }
 
   const fromRedisHash = await redisHGetAll(REALTIME_ACTIVITY_CACHE_KEY)
-  memoryState = fromRedisHash ? parseHashState(fromRedisHash) : {}
+  if (fromRedisHash) {
+    await redisPersist(REALTIME_ACTIVITY_CACHE_KEY)
+    const parsed = parseHashState(fromRedisHash)
+    memoryState = parsed.activeState
+    await cleanupExpiredRedisFields(parsed.expiredFields)
+  } else {
+    memoryState = {}
+  }
   memoryLoaded = true
   memoryLoadedAt = nowMs()
   return memoryState
 }
 
-async function saveState(state: RealtimeActivityState, ttlSeconds: number): Promise<void> {
+async function saveState(state: RealtimeActivityState, _ttlSeconds: number): Promise<void> {
   memoryState = prune(state)
   memoryLoaded = true
   memoryLoadedAt = nowMs()
 
   if (await shouldUseRedisCache()) {
-    const safeTtl = Math.max(5, Math.round(ttlSeconds))
     for (const [field, row] of Object.entries(memoryState)) {
       await redisHSet(REALTIME_ACTIVITY_CACHE_KEY, field, JSON.stringify(row))
     }
-    await redisExpire(REALTIME_ACTIVITY_CACHE_KEY, safeTtl)
+    await redisPersist(REALTIME_ACTIVITY_CACHE_KEY)
   }
 }
 
@@ -123,7 +149,7 @@ export async function upsertRealtimeActivity(
   memoryLoadedAt = nowMs()
   if (await shouldUseRedisCache()) {
     await redisHSet(REALTIME_ACTIVITY_CACHE_KEY, key, JSON.stringify(nextRow))
-    await redisExpire(REALTIME_ACTIVITY_CACHE_KEY, Math.max(ttlSeconds, 5))
+    await redisPersist(REALTIME_ACTIVITY_CACHE_KEY)
     return
   }
   await saveState(prune(state), Math.max(ttlSeconds, 5))
@@ -141,7 +167,6 @@ export async function removeRealtimeActivity(
   memoryLoadedAt = nowMs()
   if (await shouldUseRedisCache()) {
     await redisHDel(REALTIME_ACTIVITY_CACHE_KEY, key)
-    await redisExpire(REALTIME_ACTIVITY_CACHE_KEY, 60)
     return
   }
   await saveState(prune(state), 60)
