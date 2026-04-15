@@ -8,10 +8,10 @@ import { LayoutFooter } from '@/components/layout-footer'
 import { getSiteSectionTransition, getSiteSectionVariants } from '@/components/site-motion'
 
 const PORTAL_ID = 'site-footer-portal'
-const FOOTER_ENTER_Y = 104
-const FOOTER_EXIT_Y = 36
-const FOOTER_INTERSECTION_ROOT_MARGIN = '0px 0px 18% 0px'
-const FOOTER_INTERSECTION_THRESHOLD = 0
+const FOOTER_ENTER_Y = 56
+const FOOTER_EXIT_Y = 24
+const FOOTER_INTERSECTION_ROOT_MARGIN = '0px 0px -8% 0px'
+const FOOTER_INTERSECTION_THRESHOLD = 0.02
 
 /** Renders footer into #site-footer-portal so tilt on main content does not skew the footer. */
 export function LayoutFooterPortal({ adminText }: { adminText: string }) {
@@ -22,7 +22,7 @@ export function LayoutFooterPortal({ adminText }: { adminText: string }) {
   const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition: Transition = prefersReducedMotion
     ? getSiteSectionTransition(true)
-    : { duration: 0.68, ease: [0.16, 1, 0.3, 1] as const }
+    : { duration: 0.58, ease: [0.16, 1, 0.3, 1] as const }
   const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
     enterY: FOOTER_ENTER_Y,
     exitY: FOOTER_EXIT_Y,

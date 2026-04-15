@@ -75,7 +75,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
   )
 
   return (
-    <footer className="layout-footer public-page-font-scope pb-5 sm:pb-8">
+    <footer className="layout-footer public-page-font-scope pb-10 sm:pb-14">
       <div className="mx-auto max-w-2xl px-4 sm:px-6">
         <div className="footer-surface overflow-hidden rounded-[20px] text-card-foreground sm:rounded-[24px]">
           <div className="flex flex-col items-center gap-1.5 px-4 py-4 text-xs text-muted-foreground sm:gap-2 sm:px-5 sm:py-4">

@@ -30,7 +30,7 @@ const DEFAULT_FONT_PREFERENCE_SNAPSHOT = serializePublicPageFontPreference()
 const publicPageFontPreferenceListeners = new Set<() => void>()
 const FONT_OPTION_ICONS = [Type, Pilcrow] as const
 const RAIL_BUTTON_CLASS =
-  'h-9 w-9 rounded-lg border border-border/60 bg-card/95 text-card-foreground shadow-[0_12px_28px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors hover:bg-card sm:h-10 sm:w-10'
+  'h-9 w-9 rounded-lg border border-border/65 bg-background text-muted-foreground shadow-[0_12px_28px_rgba(15,23,42,0.12)] transition-colors hover:bg-accent/70 hover:text-foreground sm:h-10 sm:w-10'
 const PANEL_BUTTON_CLASS =
   'h-9 w-9 rounded-lg border transition-colors'
 const THEME_BUTTONS: Array<{ icon: typeof Sun; labelKey: string; mode: ThemeMode }> = [
@@ -251,7 +251,7 @@ export function PublicPageActionRail({
       <Button
         type="button"
         size="icon-sm"
-        variant="outline"
+        variant="ghost"
         onClick={scrollToTop}
         aria-label={t('site.actionRail.goTop')}
         title={t('site.actionRail.goTop')}
@@ -265,12 +265,12 @@ export function PublicPageActionRail({
           <Button
             type="button"
             size="icon-sm"
-            variant="outline"
+            variant="ghost"
             aria-label={t('site.actionRail.openPanel')}
             aria-pressed={panelOpen}
             title={t('site.actionRail.openPanel')}
             className={`${RAIL_BUTTON_CLASS} ${
-              panelOpen ? 'border-primary/40 bg-accent/70' : ''
+              panelOpen ? 'border-primary/40 bg-accent text-foreground' : ''
             }`.trim()}
           >
             <Settings2 className="h-4 w-4" />
@@ -281,7 +281,7 @@ export function PublicPageActionRail({
           side="left"
           align="end"
           sideOffset={10}
-          className="z-40 w-[9.25rem] rounded-lg border border-border/60 bg-background/78 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.14)] backdrop-blur-2xl"
+          className="z-40 w-[9.25rem] rounded-lg border border-border/65 bg-popover p-2 shadow-[0_18px_40px_rgba(15,23,42,0.14)]"
         >
           <div className="grid gap-2">
             <div className="grid grid-cols-3 gap-2">
