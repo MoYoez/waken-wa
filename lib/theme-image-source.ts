@@ -8,6 +8,11 @@ export type ThemeSurfaceActiveImageTarget = {
   resolver: ThemeImageProxyResolver | null
 }
 
+export type ThemeSurfaceResolvedImageTarget = {
+  url: string
+  resolver: 'direct' | null
+}
+
 export type ThemeSurfaceLoadedImageAsset = {
   displayUrl: string
   seedUrl: string
@@ -22,6 +27,15 @@ export function pickRandomThemeImage(items: string[]): string {
 
 function isRemoteHttpUrl(raw: string): boolean {
   return /^https?:\/\//i.test(raw.trim())
+}
+
+function toResolvedThemeImageTarget(input: string): ThemeSurfaceResolvedImageTarget | null {
+  const url = String(input ?? '').trim()
+  if (!url) return null
+  return {
+    url,
+    resolver: isRemoteHttpUrl(url) ? 'direct' : null,
+  }
 }
 
 export function buildThemeImageProxyUrl(
@@ -57,35 +71,42 @@ function readImageUrlFromJson(value: unknown): string {
   return ''
 }
 
-export async function resolveRandomApiImage(apiUrl: string): Promise<string> {
+async function tryResolveRandomApiImage(
+  apiUrl: string,
+  options?: { signal?: AbortSignal },
+): Promise<string> {
   const clean = String(apiUrl ?? '').trim()
   if (!clean) return ''
 
   try {
     const response = await fetch(`/api/theme/random?url=${encodeURIComponent(clean)}`, {
       cache: 'no-store',
+      signal: options?.signal,
     })
-    if (!response.ok) return clean
+    if (!response.ok) return ''
     const json = await response.json().catch(() => null)
     const imageUrl = String(json?.data?.imageUrl ?? '').trim()
-    return imageUrl || clean
+    return imageUrl
   } catch {
-    return clean
+    return ''
   }
+}
+
+export async function resolveRandomApiImage(
+  apiUrl: string,
+  options?: { signal?: AbortSignal },
+): Promise<string> {
+  const clean = String(apiUrl ?? '').trim()
+  if (!clean) return ''
+  return (await tryResolveRandomApiImage(clean, options)) || clean
 }
 
 export async function resolveThemeSurfaceActiveImage(
   rawThemeCustomSurface: ThemeCustomSurfaceFields | unknown,
 ): Promise<string> {
-  const parsed = parseThemeCustomSurface(rawThemeCustomSurface)
-  const mode = resolveThemeBackgroundImageMode(parsed)
-  if (mode === 'manual') {
-    return String(parsed.backgroundImageUrl ?? '').trim()
-  }
-  if (mode === 'randomPool') {
-    return pickRandomThemeImage(resolveThemeImagePool(parsed))
-  }
-  return resolveRandomApiImage(String(parsed.backgroundRandomApiUrl ?? ''))
+  const fixedTarget = await resolveThemeSurfaceFixedImageTarget(rawThemeCustomSurface)
+  if (fixedTarget?.url) return fixedTarget.url
+  return resolveThemeSurfaceActiveImageTarget(rawThemeCustomSurface).url
 }
 
 export function resolveThemeSurfaceActiveImageTarget(
@@ -116,35 +137,52 @@ export function resolveThemeSurfaceActiveImageTarget(
   }
 }
 
+export async function resolveThemeSurfaceFixedImageTarget(
+  rawThemeCustomSurface: ThemeCustomSurfaceFields | unknown,
+  options?: { signal?: AbortSignal },
+): Promise<ThemeSurfaceResolvedImageTarget | null> {
+  const parsed = parseThemeCustomSurface(rawThemeCustomSurface)
+  const mode = resolveThemeBackgroundImageMode(parsed)
+
+  if (mode === 'manual') {
+    return toResolvedThemeImageTarget(String(parsed.backgroundImageUrl ?? ''))
+  }
+
+  if (mode === 'randomPool') {
+    return toResolvedThemeImageTarget(pickRandomThemeImage(resolveThemeImagePool(parsed)))
+  }
+
+  const apiUrl = String(parsed.backgroundRandomApiUrl ?? '').trim()
+  if (!apiUrl) return null
+
+  const resolvedUrl = await tryResolveRandomApiImage(apiUrl, options)
+  return toResolvedThemeImageTarget(resolvedUrl)
+}
+
+export function buildThemeSurfaceResolvedImageDisplayUrl(
+  target: ThemeSurfaceResolvedImageTarget,
+): string {
+  if (!target.url) return ''
+  return target.resolver ? buildThemeImageProxyUrl(target.url, 'direct') : target.url
+}
+
 export async function loadThemeSurfaceActiveImageAsset(
   rawThemeCustomSurface: ThemeCustomSurfaceFields | unknown,
   options?: { signal?: AbortSignal },
 ): Promise<ThemeSurfaceLoadedImageAsset | null> {
-  const target = resolveThemeSurfaceActiveImageTarget(rawThemeCustomSurface)
-  if (!target.url) return null
-
-  if (!target.resolver) {
+  const fixedTarget = await resolveThemeSurfaceFixedImageTarget(rawThemeCustomSurface, options)
+  if (fixedTarget?.url) {
     return {
-      displayUrl: target.url,
-      seedUrl: target.url,
+      displayUrl: buildThemeSurfaceResolvedImageDisplayUrl(fixedTarget),
+      seedUrl: fixedTarget.url,
     }
   }
 
-  const response = await fetch(buildThemeImageProxyUrl(target.url, target.resolver), {
-    cache: 'no-store',
-    signal: options?.signal,
-  })
-  if (!response.ok) {
-    throw new Error(`Theme image request failed (${response.status})`)
-  }
-
-  const blob = await response.blob()
-  const displayUrl = URL.createObjectURL(blob)
-  const seedUrl = String(response.headers.get('x-waken-theme-source-url') ?? '').trim() || target.url
+  const target = resolveThemeSurfaceActiveImageTarget(rawThemeCustomSurface)
+  if (!target.url) return null
 
   return {
-    displayUrl,
-    seedUrl,
-    revoke: () => URL.revokeObjectURL(displayUrl),
+    displayUrl: target.resolver ? buildThemeImageProxyUrl(target.url, target.resolver) : target.url,
+    seedUrl: target.url,
   }
 }
