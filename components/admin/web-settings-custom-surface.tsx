@@ -3,7 +3,7 @@
 import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useT } from 'next-i18next/client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -27,8 +27,23 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { THEME_CUSTOM_SURFACE_DEFAULTS } from '@/lib/theme-custom-surface'
-import { extractThemeSurfaceFromImage } from '@/lib/theme-image-palette'
-import { resolveThemeSurfaceActiveImage } from '@/lib/theme-image-source'
+import { extractThemeSurfaceFromLoadedImage, loadPaletteImage } from '@/lib/theme-image-palette'
+import { loadThemeSurfaceActiveImageAsset } from '@/lib/theme-image-source'
+
+type ThemePreviewAssetState = {
+  displayUrl: string
+  seedUrl: string
+  image: HTMLImageElement | null
+  revoke?: () => void
+}
+
+function createEmptyThemePreviewAsset(): ThemePreviewAssetState {
+  return {
+    displayUrl: '',
+    seedUrl: '',
+    image: null,
+  }
+}
 
 export function WebSettingsCustomSurface() {
   const { t } = useT('admin')
@@ -38,6 +53,7 @@ export function WebSettingsCustomSurface() {
   const [themePreviewImageUrl, setThemePreviewImageUrl] = useState('')
   const [themePreviewLoading, setThemePreviewLoading] = useState(false)
   const [themePaletteApplying, setThemePaletteApplying] = useState(false)
+  const themePreviewAssetRef = useRef<ThemePreviewAssetState>(createEmptyThemePreviewAsset())
   const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
   const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
@@ -86,7 +102,13 @@ export function WebSettingsCustomSurface() {
     value.backgroundRandomApiUrl,
   ])
 
+  function clearThemePreviewAsset() {
+    themePreviewAssetRef.current.revoke?.()
+    themePreviewAssetRef.current = createEmptyThemePreviewAsset()
+  }
+
   useEffect(() => {
+    clearThemePreviewAsset()
     setThemePreviewImageUrl('')
     setThemePreviewLoading(false)
   }, [
@@ -95,6 +117,8 @@ export function WebSettingsCustomSurface() {
     value.backgroundImagePool,
     value.backgroundRandomApiUrl,
   ])
+
+  useEffect(() => () => clearThemePreviewAsset(), [])
 
   useEffect(() => {
     if (value.backgroundImageMode === 'manual') {
@@ -115,12 +139,21 @@ export function WebSettingsCustomSurface() {
   const resolveThemePreviewImage = async () => {
     setThemePreviewLoading(true)
     try {
-      const url = await resolveThemeSurfaceActiveImage(value)
-      setThemePreviewImageUrl(url)
-      if (!url) {
+      const asset = await loadThemeSurfaceActiveImageAsset(value)
+      clearThemePreviewAsset()
+      if (!asset) {
+        setThemePreviewImageUrl('')
         toast.error(t('webSettingsCustomSurface.toasts.noPreviewImage'))
+        return ''
       }
-      return url
+      themePreviewAssetRef.current = {
+        displayUrl: asset.displayUrl,
+        seedUrl: asset.seedUrl,
+        image: null,
+        revoke: asset.revoke,
+      }
+      setThemePreviewImageUrl(asset.displayUrl)
+      return asset.displayUrl
     } catch {
       toast.error(t('webSettingsCustomSurface.toasts.resolvePreviewFailed'))
       return ''
@@ -132,16 +165,26 @@ export function WebSettingsCustomSurface() {
   const applyPaletteFromCurrentThemeImage = async () => {
     setThemePaletteApplying(true)
     try {
-      const imageUrl = themePreviewImageUrl || (await resolveThemePreviewImage())
-      if (!imageUrl) return
-      const nextTheme = await extractThemeSurfaceFromImage(imageUrl)
+      if (!themePreviewAssetRef.current.image) {
+        if (!themePreviewAssetRef.current.displayUrl) {
+          await resolveThemePreviewImage()
+        }
+        if (themePreviewAssetRef.current.displayUrl) {
+          themePreviewAssetRef.current.image = await loadPaletteImage(
+            themePreviewAssetRef.current.displayUrl,
+          )
+        }
+      }
+      const asset = themePreviewAssetRef.current
+      if (!asset.displayUrl || !asset.image) return
+      const nextTheme = extractThemeSurfaceFromLoadedImage(asset.image, asset.seedUrl)
       setThemeCustomSurface({
         ...value,
         ...nextTheme,
         paletteLiveScope: value.paletteLiveScope,
         paletteLiveEnabled: value.paletteLiveEnabled,
       })
-      setThemePreviewImageUrl(imageUrl)
+      setThemePreviewImageUrl(asset.displayUrl)
       toast.success(t('webSettingsCustomSurface.toasts.paletteApplied'))
     } catch {
       toast.error(t('webSettingsCustomSurface.toasts.paletteFailed'))
@@ -188,6 +231,7 @@ export function WebSettingsCustomSurface() {
         patchThemeSurfaceImageAware({ backgroundImageUrl: result })
       }
       setBackgroundImageInput('')
+      clearThemePreviewAsset()
       setThemePreviewImageUrl(result)
     }
     reader.onerror = () => {

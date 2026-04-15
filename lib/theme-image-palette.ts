@@ -133,6 +133,10 @@ function ensureContrast(foreground: Rgb, background: Rgb, minRatio: number): Rgb
 }
 
 export function normalizeThemePaletteImageSource(input: string): string {
+  const direct = String(input ?? '').trim()
+  if (/^blob:/i.test(direct)) {
+    return direct
+  }
   return resolveThemeImageRuntimeUrl(input)
 }
 
@@ -144,7 +148,9 @@ export async function loadPaletteImage(src: string): Promise<HTMLImageElement> {
 
   const image = new Image()
   image.decoding = 'async'
-  image.crossOrigin = 'anonymous'
+  if (/^(https?:)?\/\//i.test(clean)) {
+    image.crossOrigin = 'anonymous'
+  }
 
   await new Promise<void>((resolve, reject) => {
     image.onload = () => resolve()
