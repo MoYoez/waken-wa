@@ -20,6 +20,7 @@ type Props = {
 
 const MIN_LOADING_MS = 380
 const THEME_WAIT_TIMEOUT_MS = 2200
+const THEME_WAIT_IMAGE_TIMEOUT_MS = 5000
 
 export function PublicPageTransitionShell({
   children,
@@ -48,6 +49,10 @@ export function PublicPageTransitionShell({
     let done = false
     let minDelayDone = false
     let themeReadyDone = root.dataset.themeReady === 'true'
+    const themeWaitTimeoutMs =
+      root.dataset.themeReadyImageGate === 'true'
+        ? THEME_WAIT_IMAGE_TIMEOUT_MS
+        : THEME_WAIT_TIMEOUT_MS
 
     const finish = () => {
       if (done || !minDelayDone || !themeReadyDone) return
@@ -66,7 +71,7 @@ export function PublicPageTransitionShell({
     const timeoutTimer = window.setTimeout(() => {
       themeReadyDone = true
       finish()
-    }, THEME_WAIT_TIMEOUT_MS)
+    }, themeWaitTimeoutMs)
 
     const onThemeReady = () => {
       themeReadyDone = true

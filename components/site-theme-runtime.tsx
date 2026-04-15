@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 
 import {
   buildCustomSurfaceCss,
@@ -28,6 +28,10 @@ type ThemeRuntimeImageAsset = {
   seedUrl: string
 }
 
+type ThemeRuntimePreparedImageAsset = ThemeRuntimeImageAsset & {
+  image: HTMLImageElement
+}
+
 type ThemeRuntimeCacheValue = {
   css: string
   fixedImageUrl: string
@@ -44,10 +48,22 @@ type ThemeRuntimeCacheRecord =
       value: ThemeRuntimeCacheValue
     }
 
+type ThemeRuntimeImageCacheRecord =
+  | {
+      status: 'pending'
+      promise: Promise<HTMLImageElement>
+    }
+  | {
+      status: 'ready'
+      image: HTMLImageElement
+    }
+
 const THEME_RUNTIME_CACHE_MAX_ITEMS = 8
+const THEME_RUNTIME_IMAGE_CACHE_MAX_ITEMS = 12
 
 declare global {
   var __wakenThemeRuntimeCache: Map<string, ThemeRuntimeCacheRecord> | undefined
+  var __wakenThemeRuntimeImageCache: Map<string, ThemeRuntimeImageCacheRecord> | undefined
 }
 
 function getThemeRuntimeCache(): Map<string, ThemeRuntimeCacheRecord> {
@@ -57,16 +73,45 @@ function getThemeRuntimeCache(): Map<string, ThemeRuntimeCacheRecord> {
   return globalThis.__wakenThemeRuntimeCache
 }
 
-function rememberThemeRuntimeCacheValue(key: string, value: ThemeRuntimeCacheValue) {
-  const cache = getThemeRuntimeCache()
-  cache.delete(key)
-  cache.set(key, { status: 'ready', value })
+function getThemeRuntimeImageCache(): Map<string, ThemeRuntimeImageCacheRecord> {
+  if (!globalThis.__wakenThemeRuntimeImageCache) {
+    globalThis.__wakenThemeRuntimeImageCache = new Map<string, ThemeRuntimeImageCacheRecord>()
+  }
+  return globalThis.__wakenThemeRuntimeImageCache
+}
 
-  while (cache.size > THEME_RUNTIME_CACHE_MAX_ITEMS) {
+function rememberLruCacheValue<TRecord>(
+  cache: Map<string, TRecord>,
+  key: string,
+  value: TRecord,
+  maxItems: number,
+) {
+  cache.delete(key)
+  cache.set(key, value)
+
+  while (cache.size > maxItems) {
     const oldestKey = cache.keys().next().value as string | undefined
     if (!oldestKey) break
     cache.delete(oldestKey)
   }
+}
+
+function rememberThemeRuntimeCacheValue(key: string, value: ThemeRuntimeCacheValue) {
+  rememberLruCacheValue(
+    getThemeRuntimeCache(),
+    key,
+    { status: 'ready', value },
+    THEME_RUNTIME_CACHE_MAX_ITEMS,
+  )
+}
+
+function rememberThemeRuntimeImageCacheValue(key: string, image: HTMLImageElement) {
+  rememberLruCacheValue(
+    getThemeRuntimeImageCache(),
+    key,
+    { status: 'ready', image },
+    THEME_RUNTIME_IMAGE_CACHE_MAX_ITEMS,
+  )
 }
 
 function getOrCreateThemeRuntimeCachePromise(
@@ -90,6 +135,35 @@ function getOrCreateThemeRuntimeCachePromise(
         cache.delete(key)
       }
       return value
+    })
+    .catch((error) => {
+      if (cache.get(key)?.status === 'pending') {
+        cache.delete(key)
+      }
+      throw error
+    })
+
+  cache.set(key, { status: 'pending', promise })
+  return promise
+}
+
+function getOrCreateThemeRuntimeImagePromise(
+  key: string,
+  factory: () => Promise<HTMLImageElement>,
+): Promise<HTMLImageElement> {
+  const cache = getThemeRuntimeImageCache()
+  const existing = cache.get(key)
+  if (existing?.status === 'ready') {
+    return Promise.resolve(existing.image)
+  }
+  if (existing?.status === 'pending') {
+    return existing.promise
+  }
+
+  const promise = factory()
+    .then((image) => {
+      rememberThemeRuntimeImageCacheValue(key, image)
+      return image
     })
     .catch((error) => {
       if (cache.get(key)?.status === 'pending') {
@@ -126,6 +200,22 @@ function shouldApplyLivePalette(parsed: ThemeCustomSurfaceFields): boolean {
   )
 }
 
+function shouldGateThemeReadyOnImage(
+  themePreset: string | null | undefined,
+  parsed: ThemeCustomSurfaceFields,
+): boolean {
+  if (themePreset !== 'customSurface') return false
+
+  const mode = resolveThemeBackgroundImageMode(parsed)
+  if (mode === 'manual') {
+    return Boolean(String(parsed.backgroundImageUrl ?? '').trim())
+  }
+  if (mode === 'randomPool') {
+    return Array.isArray(parsed.backgroundImagePool) && parsed.backgroundImagePool.length > 0
+  }
+  return Boolean(String(parsed.backgroundRandomApiUrl ?? '').trim())
+}
+
 function buildThemeRuntimeCacheSignature(
   themePreset: string | null | undefined,
   parsed: ThemeCustomSurfaceFields,
@@ -148,16 +238,21 @@ function buildThemeRuntimeCacheSignature(
   })
 }
 
+function preloadThemeRuntimeImage(renderUrl: string): Promise<HTMLImageElement> {
+  return getOrCreateThemeRuntimeImagePromise(renderUrl, () => loadPaletteImage(renderUrl))
+}
+
 async function buildThemeRuntimeCss(
   parsed: ThemeCustomSurfaceFields,
   asset: ThemeRuntimeImageAsset,
+  loadedImage?: HTMLImageElement,
 ): Promise<string> {
   const bodyCss = buildThemeRuntimeBackgroundCss(asset.displayUrl)
   if (!bodyCss) return ''
   if (!shouldApplyLivePalette(parsed)) return bodyCss
 
   try {
-    const image = await loadPaletteImage(asset.displayUrl)
+    const image = loadedImage ?? (await loadPaletteImage(asset.displayUrl))
     const paletteTheme = extractThemeSurfaceFromLoadedImage(image, asset.seedUrl)
     const css = buildCustomSurfaceCss({
       ...parsed,
@@ -178,11 +273,12 @@ async function buildThemeRuntimeCacheValue(
 
   const renderUrl = buildThemeSurfaceResolvedImageDisplayUrl(fixedTarget)
   if (!renderUrl) return null
+  const image = await preloadThemeRuntimeImage(renderUrl)
 
   const css = await buildThemeRuntimeCss(parsed, {
     displayUrl: renderUrl,
     seedUrl: fixedTarget.url,
-  })
+  }, image)
 
   return {
     css,
@@ -197,13 +293,21 @@ async function loadThemeRuntimeCssFromActiveSource(
 ): Promise<string> {
   const asset = await loadThemeSurfaceActiveImageAsset(parsed, options)
   if (!asset) return ''
-  return buildThemeRuntimeCss(parsed, asset)
+  const preparedAsset: ThemeRuntimePreparedImageAsset = {
+    ...asset,
+    image: await preloadThemeRuntimeImage(asset.displayUrl),
+  }
+  return buildThemeRuntimeCss(parsed, preparedAsset, preparedAsset.image)
 }
 
 export function SiteThemeRuntime({ themePreset, themeCustomSurface }: Props) {
   const parsed = useMemo(() => parseThemeCustomSurface(themeCustomSurface), [themeCustomSurface])
   const cacheKey = useMemo(
     () => buildThemeRuntimeCacheSignature(themePreset, parsed),
+    [parsed, themePreset],
+  )
+  const imageGateEnabled = useMemo(
+    () => shouldGateThemeReadyOnImage(themePreset, parsed),
     [parsed, themePreset],
   )
   const readyTicketRef = useRef(0)
@@ -226,10 +330,16 @@ export function SiteThemeRuntime({ themePreset, themeCustomSurface }: Props) {
     })
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof document === 'undefined') return
-    document.documentElement.dataset.themeReady = 'false'
-  }, [themeCustomSurface, themePreset])
+    const root = document.documentElement
+    root.dataset.themeReady = 'false'
+    root.dataset.themeReadyImageGate = imageGateEnabled ? 'true' : 'false'
+
+    return () => {
+      delete root.dataset.themeReadyImageGate
+    }
+  }, [imageGateEnabled, themeCustomSurface, themePreset])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -255,8 +365,14 @@ export function SiteThemeRuntime({ themePreset, themeCustomSurface }: Props) {
       if (cacheKey) {
         const existing = getThemeRuntimeCache().get(cacheKey)
         if (existing?.status === 'ready') {
-          applyCss(existing.value.css)
-          return
+          try {
+            await preloadThemeRuntimeImage(existing.value.renderUrl)
+            applyCss(existing.value.css)
+            return
+          } catch {
+            // Fall through to the uncached path so broken image cache entries
+            // do not release the page before the background is actually ready.
+          }
         }
 
         try {
@@ -264,6 +380,7 @@ export function SiteThemeRuntime({ themePreset, themeCustomSurface }: Props) {
             buildThemeRuntimeCacheValue(parsed),
           )
           if (cachedValue) {
+            await preloadThemeRuntimeImage(cachedValue.renderUrl)
             applyCss(cachedValue.css)
             return
           }

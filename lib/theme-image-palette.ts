@@ -11,6 +11,10 @@ type PaletteStats = {
 }
 
 type Hsl = { h: number; s: number; l: number }
+type LoadPaletteImageOptions = {
+  signal?: AbortSignal
+  waitForDecode?: boolean
+}
 
 function clamp8(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)))
@@ -140,10 +144,25 @@ export function normalizeThemePaletteImageSource(input: string): string {
   return resolveThemeImageRuntimeUrl(input)
 }
 
-export async function loadPaletteImage(src: string): Promise<HTMLImageElement> {
+function createAbortError(): Error {
+  if (typeof DOMException !== 'undefined') {
+    return new DOMException('The operation was aborted.', 'AbortError')
+  }
+  const error = new Error('The operation was aborted.') as Error & { name: string }
+  error.name = 'AbortError'
+  return error
+}
+
+export async function loadPaletteImage(
+  src: string,
+  options?: LoadPaletteImageOptions,
+): Promise<HTMLImageElement> {
   const clean = normalizeThemePaletteImageSource(src)
   if (!clean) {
     throw new Error('Missing image source')
+  }
+  if (options?.signal?.aborted) {
+    throw createAbortError()
   }
 
   const image = new Image()
@@ -153,9 +172,50 @@ export async function loadPaletteImage(src: string): Promise<HTMLImageElement> {
   }
 
   await new Promise<void>((resolve, reject) => {
-    image.onload = () => resolve()
-    image.onerror = () => reject(new Error('Image load failed'))
+    let settled = false
+
+    const cleanup = () => {
+      image.onload = null
+      image.onerror = null
+      options?.signal?.removeEventListener('abort', onAbort)
+    }
+
+    const finish = (cb: () => void) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      cb()
+    }
+
+    const onAbort = () => {
+      try {
+        image.src = ''
+      } catch {
+        // no-op
+      }
+      finish(() => reject(createAbortError()))
+    }
+
+    const onLoad = () => {
+      if (options?.waitForDecode === false || typeof image.decode !== 'function') {
+        finish(resolve)
+        return
+      }
+
+      void image
+        .decode()
+        .catch(() => undefined)
+        .finally(() => finish(resolve))
+    }
+
+    image.onload = onLoad
+    image.onerror = () => finish(() => reject(new Error('Image load failed')))
+    options?.signal?.addEventListener('abort', onAbort, { once: true })
     image.src = clean
+
+    if (image.complete && image.naturalWidth > 0) {
+      onLoad()
+    }
   })
 
   return image
