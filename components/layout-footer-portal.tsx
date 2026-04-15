@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, type Transition, useReducedMotion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { LayoutFooter } from '@/components/layout-footer'
@@ -13,6 +13,8 @@ const PORTAL_ID = 'site-footer-portal'
 export function LayoutFooterPortal({ adminText }: { adminText: string }) {
   const [el, setEl] = useState<HTMLElement | null>(null)
   const [ready, setReady] = useState(false)
+  const [footerInView, setFooterInView] = useState(false)
+  const footerRef = useRef<HTMLDivElement | null>(null)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition: Transition = prefersReducedMotion
     ? getSiteSectionTransition(true)
@@ -47,21 +49,47 @@ export function LayoutFooterPortal({ adminText }: { adminText: string }) {
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    const node = footerRef.current
+    if (!node) return
+    if (typeof IntersectionObserver === 'undefined') {
+      const frame = window.requestAnimationFrame(() => {
+        setFooterInView(true)
+      })
+      return () => window.cancelAnimationFrame(frame)
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setFooterInView(entry?.isIntersecting === true)
+      },
+      {
+        rootMargin: '0px 0px -8% 0px',
+        threshold: 0.02,
+      },
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [el])
+
   if (!el) return null
-  const visible = ready
+  const visible = ready && footerInView
   return createPortal(
-    <motion.div
-      variants={sectionVariants}
-      initial="initial"
-      animate={visible ? 'animate' : 'initial'}
-      transition={sectionTransition}
-      style={{
-        filter: visible ? 'blur(0px)' : prefersReducedMotion ? 'none' : 'blur(10px)',
-        pointerEvents: visible ? 'auto' : 'none',
-      }}
-    >
-      <LayoutFooter adminText={adminText} />
-    </motion.div>,
+    <div ref={footerRef}>
+      <motion.div
+        variants={sectionVariants}
+        initial="initial"
+        animate={visible ? 'animate' : 'initial'}
+        transition={sectionTransition}
+        style={{
+          filter: visible ? 'blur(0px)' : prefersReducedMotion ? 'none' : 'blur(10px)',
+          pointerEvents: visible ? 'auto' : 'none',
+        }}
+      >
+        <LayoutFooter adminText={adminText} />
+      </motion.div>
+    </div>,
     el,
   )
 }
