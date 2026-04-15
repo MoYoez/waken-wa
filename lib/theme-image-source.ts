@@ -1,4 +1,5 @@
 import { parseThemeCustomSurface, resolveThemeBackgroundImageMode, resolveThemeImagePool } from '@/lib/theme-custom-surface'
+import { readThemeImageUrlFromJson } from '@/lib/theme-image-url'
 import type { ThemeCustomSurfaceFields } from '@/types/theme'
 
 export type ThemeImageProxyResolver = 'direct' | 'randomApi'
@@ -51,26 +52,6 @@ export function buildThemeImageProxyUrl(
   return `/api/theme/image?${params.toString()}`
 }
 
-function readImageUrlFromJson(value: unknown): string {
-  if (!value || typeof value !== 'object') return ''
-  const row = value as Record<string, unknown>
-  for (const key of ['url', 'image', 'imageUrl', 'src', 'download_url']) {
-    const candidate = String(row[key] ?? '').trim()
-    if (candidate) return candidate
-  }
-  const urls = row.urls
-  if (urls && typeof urls === 'object') {
-    const nested = urls as Record<string, unknown>
-    for (const key of ['regular', 'full', 'raw', 'small']) {
-      const candidate = String(nested[key] ?? '').trim()
-      if (candidate) return candidate
-    }
-  }
-  const data = row.data
-  if (data && typeof data === 'object') return readImageUrlFromJson(data)
-  return ''
-}
-
 async function tryResolveRandomApiImage(
   apiUrl: string,
   options?: { signal?: AbortSignal },
@@ -85,28 +66,11 @@ async function tryResolveRandomApiImage(
     })
     if (!response.ok) return ''
     const json = await response.json().catch(() => null)
-    const imageUrl = String(json?.data?.imageUrl ?? '').trim()
+    const imageUrl = String(readThemeImageUrlFromJson(json?.data) ?? '').trim()
     return imageUrl
   } catch {
     return ''
   }
-}
-
-export async function resolveRandomApiImage(
-  apiUrl: string,
-  options?: { signal?: AbortSignal },
-): Promise<string> {
-  const clean = String(apiUrl ?? '').trim()
-  if (!clean) return ''
-  return (await tryResolveRandomApiImage(clean, options)) || clean
-}
-
-export async function resolveThemeSurfaceActiveImage(
-  rawThemeCustomSurface: ThemeCustomSurfaceFields | unknown,
-): Promise<string> {
-  const fixedTarget = await resolveThemeSurfaceFixedImageTarget(rawThemeCustomSurface)
-  if (fixedTarget?.url) return fixedTarget.url
-  return resolveThemeSurfaceActiveImageTarget(rawThemeCustomSurface).url
 }
 
 export function resolveThemeSurfaceActiveImageTarget(

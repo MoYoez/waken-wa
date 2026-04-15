@@ -335,14 +335,6 @@ export function buildThemeSurfaceFromPalette(
   }
 }
 
-export async function extractThemeSurfaceFromImage(
-  src: string,
-): Promise<Partial<ThemeCustomSurfaceFields>> {
-  const clean = normalizeThemePaletteImageSource(src)
-  const palette = await extractImagePalette(clean)
-  return buildThemeSurfaceFromPalette(palette, clean)
-}
-
 export function extractThemeSurfaceFromLoadedImage(
   image: HTMLImageElement,
   seedImageUrl: string,
