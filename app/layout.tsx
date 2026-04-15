@@ -6,7 +6,6 @@ import { cookies, headers } from 'next/headers'
 import { I18nProvider } from 'next-i18next/client'
 
 import { GlobalMouseTilt } from '@/components/global-mouse-tilt'
-import { LenisSmoothScroll } from '@/components/lenis-smooth-scroll'
 import { SiteTimezoneProvider } from '@/components/site-timezone-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import i18nConfig, { type AppLanguage } from '@/i18n.config'
@@ -17,6 +16,15 @@ import {
   normalizeRequestLanguage,
 } from '@/lib/i18n/request-locale'
 import { getLayoutResources } from '@/lib/i18n/server'
+import {
+  buildPublicPageFontRuntime,
+  coercePublicPageFontPreferenceToOptions,
+  parsePublicPageFontCookie,
+  PUBLIC_PAGE_FONT_COOKIE_NAME,
+  PUBLIC_PAGE_FONT_STYLE_ELEMENT_ID,
+  PUBLIC_PAGE_FONT_STYLESHEET_ELEMENT_ID,
+  resolvePublicPageControlFontOptions,
+} from '@/lib/public-page-font'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { normalizeThemeMode, THEME_COOKIE_NAME } from '@/lib/theme'
 import { DEFAULT_TIMEZONE, normalizeTimezone } from '@/lib/timezone'
@@ -75,26 +83,29 @@ export default async function RootLayout({
 
   let globalMouseTiltEnabled = false
   let globalMouseTiltGyroEnabled = false
-  let smoothScrollEnabled = false
   let displayTimezone = DEFAULT_TIMEZONE
   let forceDisplayTimezone = false
+  let publicFontOptions = resolvePublicPageControlFontOptions(false, null)
   try {
     const row = await getSiteConfigMemoryFirst()
     globalMouseTiltEnabled = row?.globalMouseTiltEnabled === true
     globalMouseTiltGyroEnabled = row?.globalMouseTiltGyroEnabled === true
-    smoothScrollEnabled = row?.smoothScrollEnabled === true
     displayTimezone = normalizeTimezone(row?.displayTimezone)
     forceDisplayTimezone = row?.forceDisplayTimezone === true
+    publicFontOptions = resolvePublicPageControlFontOptions(
+      row?.publicFontOptionsEnabled,
+      row?.publicFontOptions,
+    )
   } catch {
     // DB not ready during build or first boot
   }
-  const htmlClassName =
-    [
-      persistedTheme === 'dark' ? 'dark' : '',
-      smoothScrollEnabled ? 'smooth-scroll-enabled' : '',
-    ]
-      .filter(Boolean)
-      .join(' ') || undefined
+  const publicPageFontRuntime = buildPublicPageFontRuntime(
+    coercePublicPageFontPreferenceToOptions(
+      parsePublicPageFontCookie(cookieStore.get(PUBLIC_PAGE_FONT_COOKIE_NAME)?.value),
+      publicFontOptions,
+    ),
+  )
+  const htmlClassName = persistedTheme === 'dark' ? 'dark' : undefined
 
   return (
     <html lang={lng} suppressHydrationWarning className={htmlClassName} style={htmlStyle}>
@@ -105,6 +116,14 @@ export default async function RootLayout({
           rel="stylesheet"
           href="https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@300;400;500&family=Satisfy&family=Ubuntu:wght@300;400;500;700&display=swap"
         />
+        {publicPageFontRuntime.stylesheetHref ? (
+          <link
+            id={PUBLIC_PAGE_FONT_STYLESHEET_ELEMENT_ID}
+            rel="stylesheet"
+            href={publicPageFontRuntime.stylesheetHref}
+          />
+        ) : null}
+        <style id={PUBLIC_PAGE_FONT_STYLE_ELEMENT_ID}>{publicPageFontRuntime.cssText}</style>
       </head>
       <body className="antialiased">
         <I18nProvider
@@ -120,7 +139,6 @@ export default async function RootLayout({
             forceDisplayTimezone={forceDisplayTimezone}
           >
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-              <LenisSmoothScroll enabled={smoothScrollEnabled} />
               <GlobalMouseTilt enabled={globalMouseTiltEnabled} gyroEnabled={globalMouseTiltGyroEnabled}>
                 {children}
               </GlobalMouseTilt>

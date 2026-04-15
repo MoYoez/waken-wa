@@ -118,6 +118,8 @@ export const siteConfig = sqliteTable('site_config', {
   }).default(false),
   themePreset: text('theme_preset').notNull().default('basic'),
   themeCustomSurface: text('theme_custom_surface', { mode: 'json' }),
+  publicFontOptionsEnabled: integer('public_font_options_enabled', { mode: 'boolean' }).default(false),
+  publicFontOptions: text('public_font_options', { mode: 'json' }),
   customCss: text('custom_css'),
   // Nullable on purpose: safe db:push on existing rows; tools treat null as disabled. // @DEPRECATED
   mcpThemeToolsEnabled: integer('mcp_theme_tools_enabled', { mode: 'boolean' }).default(false),

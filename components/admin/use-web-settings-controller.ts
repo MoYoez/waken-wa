@@ -54,6 +54,7 @@ import {
   normalizeSkillsAiAuthorizations,
   normalizeSkillsEditableConfig,
   parseExportPayload,
+  publicPageFontOptionsFromApi,
   themeCustomSurfaceFromApi,
   webPayloadToFormPatch,
 } from '@/components/admin/web-settings-utils'
@@ -262,6 +263,8 @@ export function useWebSettingsController() {
             userNoteHitokotoFallbackToNote: Boolean(data.userNoteHitokotoFallbackToNote),
             themePreset: data.themePreset ?? 'basic',
             themeCustomSurface: themeCustomSurfaceFromApi(data.themeCustomSurface),
+            publicFontOptionsEnabled: data.publicFontOptionsEnabled === true,
+            publicFontOptions: publicPageFontOptionsFromApi(data.publicFontOptions),
             customCss: data.customCss ?? '',
             mcpThemeToolsEnabled: data.mcpThemeToolsEnabled === true,
             openApiDocsEnabled: data.openApiDocsEnabled !== false,

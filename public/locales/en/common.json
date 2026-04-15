@@ -65,6 +65,40 @@
       "presenceConnected": "Connected",
       "forkProject": "Fork this Project"
     },
+    "actionRail": {
+      "goTop": "Back to top",
+      "openPanel": "Control panel"
+    },
+    "preferences": {
+      "title": "Control panel",
+      "description": "Adjust public-page display preferences for this browser.",
+      "themeTitle": "Appearance mode",
+      "themeDescription": "Light, dark, and system mode update immediately and stay on this browser.",
+      "fontTitle": "Font selection",
+      "currentFontLabel": "Current font:",
+      "defaultFont": "Default font",
+      "presetLabel": "Preset font",
+      "presetPlaceholder": "Choose a preset font",
+      "applyPreset": "Apply preset",
+      "googleFamilyLabel": "Google Fonts family",
+      "googleFamilyPlaceholder": "For example Noto Serif SC",
+      "applyGoogle": "Apply Google Fonts",
+      "customFamilyLabel": "Custom font family",
+      "customFamilyPlaceholder": "For example My Custom Font",
+      "customUrlLabel": "Font file path",
+      "customUrlPlaceholder": "For example /fonts/my-font.woff2",
+      "applyCustom": "Apply custom font",
+      "restoreDefault": "Restore default",
+      "saveSuccess": "Font preference updated.",
+      "invalidGoogleFamily": "Enter a valid Google Fonts family name.",
+      "invalidCustomFamily": "Enter a valid custom font family name.",
+      "invalidCustomUrl": "Enter a valid font file URL or path.",
+      "presets": {
+        "notoSansSc": "Noto Sans SC",
+        "notoSerifSc": "Noto Serif SC",
+        "ubuntu": "Ubuntu"
+      }
+    },
     "inspiration": {
       "untitled": "(Untitled)",
       "viewFull": "View full entry",

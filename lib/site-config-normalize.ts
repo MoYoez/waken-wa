@@ -1,5 +1,6 @@
 import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import { normalizeAppMessageRules } from '@/lib/app-message-rules'
+import { normalizePublicPageFontOptions } from '@/lib/public-page-font'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 
 function parseJsonString(raw: unknown): unknown {
@@ -28,6 +29,8 @@ export function normalizeSiteConfigShape(config: Record<string, any>): Record<st
     smoothScrollEnabled: config.smoothScrollEnabled === true,
     forceDisplayTimezone: config.forceDisplayTimezone === true,
     themeCustomSurface: parseThemeCustomSurface(config.themeCustomSurface),
+    publicFontOptionsEnabled: config.publicFontOptionsEnabled === true,
+    publicFontOptions: normalizePublicPageFontOptions(config.publicFontOptions),
     userNoteHitokotoCategories: normalizeStringArrayField(config.userNoteHitokotoCategories),
     inspirationAllowedDeviceHashes:
       config.inspirationAllowedDeviceHashes === null

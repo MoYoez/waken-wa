@@ -6,12 +6,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 
 import { useTheme } from '@/components/theme-provider'
 import type { ThemeMode } from '@/lib/theme'
-type ViewTransitionDocument = Document & {
-  startViewTransition?: (update: () => void | Promise<void>) => {
-    ready: Promise<void>
-    finished: Promise<void>
-  }
-}
+import { applyThemeModeWithTransition } from '@/lib/theme-mode-transition'
 
 const OPTIONS: Array<{
   labelKey: string
@@ -31,26 +26,6 @@ export function ThemeModeToggle({ className = '' }: { className?: string }) {
     () => true,
     () => false,
   )
-
-  const applyThemeMode = (mode: ThemeMode) => {
-    setTheme(mode)
-    if (typeof document === 'undefined') return
-
-    const root = document.documentElement
-    if (mode === 'dark') {
-      root.classList.add('dark')
-      return
-    }
-    if (mode === 'light') {
-      root.classList.remove('dark')
-      return
-    }
-
-    const prefersDark =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-    root.classList.toggle('dark', prefersDark)
-  }
 
   useEffect(() => {
     if (!mounted || typeof document === 'undefined') return
@@ -86,42 +61,7 @@ export function ThemeModeToggle({ className = '' }: { className?: string }) {
                 return
               }
 
-              const reduceMotion =
-                typeof window !== 'undefined' &&
-                window.matchMedia('(prefers-reduced-motion: reduce)').matches
-              const doc = document as ViewTransitionDocument
-              const transitionApi = doc.startViewTransition
-
-              if (!transitionApi || reduceMotion) {
-                applyThemeMode(option.value)
-                return
-              }
-
-              const root = document.documentElement
-
-              const transition = transitionApi.call(doc, () => {
-                applyThemeMode(option.value)
-              })
-
-              await transition.ready
-              root.dataset.themeSwitch = 'active'
-
-              const animation = root.animate(
-                {
-                  clipPath: [
-                    'inset(0 0 100% 0)',
-                    'inset(0 0 0 0)',
-                  ],
-                },
-                {
-                  duration: 1400,
-                  easing: 'cubic-bezier(0.22, 0.72, 0.18, 1)',
-                  pseudoElement: '::view-transition-new(root)',
-                },
-              )
-
-              await animation.finished.catch(() => undefined)
-              delete root.dataset.themeSwitch
+              await applyThemeModeWithTransition(option.value, setTheme)
             }}
             className={`inline-flex h-8 w-8 items-center justify-center rounded-full border-0 transition-colors ${
               active

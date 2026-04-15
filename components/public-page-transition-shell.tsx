@@ -4,13 +4,16 @@ import { motion, useReducedMotion } from 'motion/react'
 import { useT } from 'next-i18next/client'
 import { useEffect, useState } from 'react'
 
+import { PublicPageActionRail } from '@/components/public-page-action-rail'
 import {
   getSiteSectionTransition,
   getSiteSectionVariants,
 } from '@/components/site-motion'
+import type { PublicPageFontOption } from '@/lib/public-page-font'
 
 type Props = {
   children: React.ReactNode
+  fontOptions: PublicPageFontOption[]
   scope: 'home' | 'inspiration'
   enabled?: boolean
 }
@@ -18,9 +21,14 @@ type Props = {
 const MIN_LOADING_MS = 380
 const THEME_WAIT_TIMEOUT_MS = 2200
 
-export function PublicPageTransitionShell({ children, scope, enabled = true }: Props) {
+export function PublicPageTransitionShell({
+  children,
+  fontOptions,
+  scope,
+  enabled = true,
+}: Props) {
   const { t } = useT('common')
-  const [contentReady, setContentReady] = useState(false)
+  const [contentReady, setContentReady] = useState(!enabled)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const contentTransition = getSiteSectionTransition(prefersReducedMotion)
   const contentVariants = getSiteSectionVariants(prefersReducedMotion, {
@@ -80,46 +88,45 @@ export function PublicPageTransitionShell({ children, scope, enabled = true }: P
     }
   }, [enabled, scope])
 
-  if (!enabled) {
-    return <>{children}</>
-  }
-
   return (
     <>
-      <div
-        aria-hidden={contentReady}
-        className={`public-page-loader ${contentReady ? 'is-hidden' : 'is-visible'}`}
-      >
-        <div className="public-page-loader__stack">
-          <div className="public-page-loader__scene">
-            <div className="public-page-loader__moon" />
-            <div className="public-page-loader__spark public-page-loader__spark--a" />
-            <div className="public-page-loader__spark public-page-loader__spark--b" />
-            <div className="public-page-loader__spark public-page-loader__spark--c" />
-            <div className="public-page-loader__shadow" />
-            <div className="public-page-loader__dino" aria-hidden="true">
-              <div className="public-page-loader__dino-body" />
-              <div className="public-page-loader__dino-tail" />
-              <div className="public-page-loader__dino-head">
-                <span className="public-page-loader__dino-eye" />
-                <span className="public-page-loader__dino-mouth" />
+      {enabled ? (
+        <div
+          aria-hidden={contentReady}
+          className={`public-page-loader ${contentReady ? 'is-hidden' : 'is-visible'}`}
+        >
+          <div className="public-page-loader__stack">
+            <div className="public-page-loader__scene">
+              <div className="public-page-loader__moon" />
+              <div className="public-page-loader__spark public-page-loader__spark--a" />
+              <div className="public-page-loader__spark public-page-loader__spark--b" />
+              <div className="public-page-loader__spark public-page-loader__spark--c" />
+              <div className="public-page-loader__shadow" />
+              <div className="public-page-loader__dino" aria-hidden="true">
+                <div className="public-page-loader__dino-body" />
+                <div className="public-page-loader__dino-tail" />
+                <div className="public-page-loader__dino-head">
+                  <span className="public-page-loader__dino-eye" />
+                  <span className="public-page-loader__dino-mouth" />
+                </div>
+                <div className="public-page-loader__dino-arm public-page-loader__dino-arm--front" />
+                <div className="public-page-loader__dino-arm public-page-loader__dino-arm--back" />
+                <div className="public-page-loader__dino-leg public-page-loader__dino-leg--front" />
+                <div className="public-page-loader__dino-leg public-page-loader__dino-leg--back" />
               </div>
-              <div className="public-page-loader__dino-arm public-page-loader__dino-arm--front" />
-              <div className="public-page-loader__dino-arm public-page-loader__dino-arm--back" />
-              <div className="public-page-loader__dino-leg public-page-loader__dino-leg--front" />
-              <div className="public-page-loader__dino-leg public-page-loader__dino-leg--back" />
+              <div className="public-page-loader__ground" />
             </div>
-            <div className="public-page-loader__ground" />
+            <p className="public-page-loader__label">
+              {scope === 'home'
+                ? t('site.loading.page.home')
+                : t('site.loading.page.inspiration')}
+            </p>
           </div>
-          <p className="public-page-loader__label">
-            {scope === 'home'
-              ? t('site.loading.page.home')
-              : t('site.loading.page.inspiration')}
-          </p>
         </div>
-      </div>
+      ) : null}
 
       <motion.div
+        className="public-page-font-scope"
         data-public-page-shell="content"
         variants={contentVariants}
         initial="initial"
@@ -132,6 +139,8 @@ export function PublicPageTransitionShell({ children, scope, enabled = true }: P
       >
         {children}
       </motion.div>
+
+      <PublicPageActionRail fontOptions={fontOptions} visible={contentReady} />
     </>
   )
 }

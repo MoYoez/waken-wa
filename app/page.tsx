@@ -8,6 +8,7 @@ import { CurrentStatus } from '@/components/current-status'
 import { HomeScrollbarHider } from '@/components/home-scrollbar-hider'
 import { InspirationHomeSection } from '@/components/inspiration-home-section'
 import { LayoutFooterPortal } from '@/components/layout-footer-portal'
+import { LenisSmoothScroll } from '@/components/lenis-smooth-scroll'
 import { PublicPageTransitionShell } from '@/components/public-page-transition-shell'
 import { ScheduleHomeInClassBanner } from '@/components/schedule-home-in-class-banner'
 import { SiteLockForm } from '@/components/site-lock-form'
@@ -25,6 +26,7 @@ import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
+import { resolvePublicPageControlFontOptions } from '@/lib/public-page-font'
 import {
   parseScheduleCoursesJson,
   resolveSchedulePeriodTemplate,
@@ -122,6 +124,7 @@ export default async function Home() {
   const hideActivityMedia = Boolean(cfg.hideActivityMedia)
   const hideInspirationOnHome = cfg.hideInspirationOnHome === true
   const pageLoadingEnabled = cfg.pageLoadingEnabled !== false
+  const smoothScrollEnabled = cfg.smoothScrollEnabled === true
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteTypewriterEnabled = Boolean(cfg.userNoteTypewriterEnabled)
   const noteSignatureFontEnabled = Boolean(cfg.userNoteSignatureFontEnabled)
@@ -133,10 +136,15 @@ export default async function Home() {
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
   const noteHitokotoFallbackToNote = Boolean(cfg.userNoteHitokotoFallbackToNote)
   const activityUpdateMode = normalizeActivityUpdateMode(cfg.activityUpdateMode)
+  const publicFontOptions = resolvePublicPageControlFontOptions(
+    cfg.publicFontOptionsEnabled,
+    cfg.publicFontOptions,
+  )
 
   return (
     <>
       {shouldPrefetchAvatar && avatarSrc ? <link rel="prefetch" href={avatarSrc} as="image" /> : null}
+      <LenisSmoothScroll enabled={smoothScrollEnabled} />
       <HomeScrollbarHider />
       {themeCss && (
         <style
@@ -154,7 +162,11 @@ export default async function Home() {
         <div className="floating-orb floating-orb-2" />
         <div className="floating-orb floating-orb-3" />
       </div>
-      <PublicPageTransitionShell scope="home" enabled={pageLoadingEnabled}>
+      <PublicPageTransitionShell
+        scope="home"
+        enabled={pageLoadingEnabled}
+        fontOptions={publicFontOptions}
+      >
         <main className="min-h-screen relative">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-40">
             <div data-global-mouse-tilt-target className="[transform-style:preserve-3d]">

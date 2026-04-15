@@ -1,4 +1,5 @@
 import type {
+  PublicPageFontOptionForm,
   SiteConfig,
   SkillsAiAuthorizationItem,
   SkillsEditableConfig,
@@ -19,6 +20,7 @@ import {
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
 import { normalizeProfileOnlineAccentColor } from '@/lib/profile-online-accent-color'
+import { normalizePublicPageFontOptions } from '@/lib/public-page-font'
 import {
   isAllowedSlotMinutes,
   resolveSchedulePeriodTemplate,
@@ -73,6 +75,28 @@ export function emptyThemeCustomSurfaceForm(): ThemeCustomSurfaceForm {
     paletteLiveScope: THEME_CUSTOM_SURFACE_DEFAULTS.paletteLiveScope,
     paletteSeedImageUrl: '',
   }
+}
+
+export function emptyPublicPageFontOptionsForm(): PublicPageFontOptionForm[] {
+  return [
+    { label: '', family: '', mode: 'default', url: '' },
+    { label: '', family: '', mode: 'google', url: '' },
+  ]
+}
+
+export function publicPageFontOptionsFromApi(raw: unknown): PublicPageFontOptionForm[] {
+  const defaults = emptyPublicPageFontOptionsForm()
+  const parsed = normalizePublicPageFontOptions(raw)
+  return defaults.map((fallback, index) => {
+    const item = parsed[index]
+    if (!item) return fallback
+    return {
+      label: item.label,
+      family: item.family,
+      mode: item.mode,
+      url: item.url ?? '',
+    }
+  })
 }
 
 export function themeCustomSurfaceFromApi(raw: unknown): ThemeCustomSurfaceForm {
@@ -323,6 +347,12 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
   }
   if ('themeCustomSurface' in web) {
     patch.themeCustomSurface = themeCustomSurfaceFromApi(web.themeCustomSurface)
+  }
+  if ('publicFontOptionsEnabled' in web && typeof web.publicFontOptionsEnabled === 'boolean') {
+    patch.publicFontOptionsEnabled = web.publicFontOptionsEnabled
+  }
+  if ('publicFontOptions' in web) {
+    patch.publicFontOptions = publicPageFontOptionsFromApi(web.publicFontOptions)
   }
   if ('customCss' in web && typeof web.customCss === 'string') patch.customCss = web.customCss
   if ('historyWindowMinutes' in web) {

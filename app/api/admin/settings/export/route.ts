@@ -8,6 +8,7 @@ import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
+import { normalizePublicPageFontOptions } from '@/lib/public-page-font'
 import {
   backfillCoursePeriodIdsFromTemplate,
   resolveSchedulePeriodTemplate,
@@ -95,6 +96,8 @@ export async function GET(request: Request) {
         userNoteHitokotoFallbackToNote: Boolean(cfg.userNoteHitokotoFallbackToNote),
         themePreset: cfg.themePreset,
         themeCustomSurface: cfg.themeCustomSurface,
+        publicFontOptionsEnabled: cfg.publicFontOptionsEnabled === true,
+        publicFontOptions: normalizePublicPageFontOptions(cfg.publicFontOptions),
         customCss: cfg.customCss,
         historyWindowMinutes: cfg.historyWindowMinutes,
         processStaleSeconds: cfg.processStaleSeconds ?? SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,

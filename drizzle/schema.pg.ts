@@ -118,6 +118,8 @@ export const siteConfig = pgTable('site_config', {
   userNoteHitokotoFallbackToNote: boolean('user_note_hitokoto_fallback_to_note').default(false),
   themePreset: varchar('theme_preset', { length: 50 }).notNull().default('basic'),
   themeCustomSurface: jsonb('theme_custom_surface'),
+  publicFontOptionsEnabled: boolean('public_font_options_enabled').default(false),
+  publicFontOptions: jsonb('public_font_options'),
   customCss: text('custom_css'),
   // Nullable on purpose: safe db:push on existing rows; tools treat null as disabled.
   mcpThemeToolsEnabled: boolean('mcp_theme_tools_enabled').default(false), // @DEPRECATED

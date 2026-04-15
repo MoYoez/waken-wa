@@ -5,7 +5,10 @@ import type {
   SkillsAiAuthorizationItem,
   SkillsEditableConfig,
 } from '@/components/admin/web-settings-types'
-import { emptyThemeCustomSurfaceForm } from '@/components/admin/web-settings-utils'
+import {
+  emptyPublicPageFontOptionsForm,
+  emptyThemeCustomSurfaceForm,
+} from '@/components/admin/web-settings-utils'
 import {
   REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS,
 } from '@/lib/activity-api-constants'
@@ -45,6 +48,8 @@ export const WEB_SETTINGS_INITIAL_FORM: SiteConfig = {
   userNoteHitokotoFallbackToNote: false,
   themePreset: 'basic',
   themeCustomSurface: emptyThemeCustomSurfaceForm(),
+  publicFontOptionsEnabled: false,
+  publicFontOptions: emptyPublicPageFontOptionsForm(),
   customCss: '',
   mcpThemeToolsEnabled: false,
   openApiDocsEnabled: true,

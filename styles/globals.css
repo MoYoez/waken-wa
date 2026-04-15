@@ -6,6 +6,8 @@
 :root {
   --font-noto-sans-sc: "Noto Sans SC";
   --font-ubuntu: "Ubuntu";
+  --font-sans-default: var(--font-ubuntu), var(--font-noto-sans-sc), sans-serif;
+  --public-page-font-family: var(--font-sans-default);
   --background: oklch(0.978 0.006 80);
   --foreground: oklch(0.22 0.01 60);
   --card: oklch(0.99 0.004 80);
@@ -93,7 +95,7 @@ body::-webkit-scrollbar {
 }
 
 @theme inline {
-  --font-sans: var(--font-ubuntu), var(--font-noto-sans-sc), sans-serif;
+  --font-sans: var(--font-sans-default);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -144,10 +146,15 @@ body::-webkit-scrollbar {
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-noto-sans-sc), var(--font-ubuntu), sans-serif;
+    font-family: var(--font-sans-default);
     font-feature-settings: "cv02", "cv03", "cv04", "cv05", "cv06", "cv07", "cv08", "cv09", "cv10";
     overflow-x: hidden;
   }
+}
+
+.public-page-font-scope,
+.public-page-font-scope :where(button, input, select, textarea) {
+  font-family: var(--public-page-font-family, var(--font-sans-default));
 }
 
 /*
@@ -899,56 +906,6 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
   }
 }
 
-@keyframes footer-surface-drift {
-  0%, 100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(0, -2px, 0);
-  }
-}
-
-@keyframes footer-sheen {
-  0% {
-    transform: translate3d(-125%, 0, 0) rotate(8deg);
-    opacity: 0;
-  }
-  18% {
-    opacity: 0.14;
-  }
-  52% {
-    opacity: 0.24;
-  }
-  100% {
-    transform: translate3d(145%, 0, 0) rotate(8deg);
-    opacity: 0;
-  }
-}
-
-@keyframes footer-chip-breathe {
-  0%, 100% {
-    transform: translate3d(0, 0, 0);
-    box-shadow: 0 8px 18px color-mix(in srgb, var(--foreground) 4%, transparent);
-  }
-  50% {
-    transform: translate3d(0, -1px, 0);
-    box-shadow: 0 14px 24px color-mix(in srgb, var(--foreground) 7%, transparent);
-  }
-}
-
-@keyframes footer-action-glow {
-  0%, 100% {
-    box-shadow:
-      0 12px 26px color-mix(in srgb, var(--primary) 16%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  }
-  50% {
-    box-shadow:
-      0 16px 34px color-mix(in srgb, var(--primary) 22%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  }
-}
-
 .admin-shell {
   position: relative;
   isolation: isolate;
@@ -1154,16 +1111,15 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--card) 74%, transparent),
-      color-mix(in srgb, var(--background) 62%, transparent)
+      color-mix(in srgb, var(--card) 68%, transparent),
+      color-mix(in srgb, var(--background) 56%, transparent)
     );
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--foreground) 6%, transparent),
-    0 20px 46px color-mix(in srgb, var(--foreground) 7%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--home-glass-highlight) 58%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--home-glass-highlight) 16%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--foreground) 5%, transparent),
+    0 16px 34px color-mix(in srgb, var(--foreground) 6%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--home-glass-highlight) 48%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--home-glass-highlight) 12%, transparent);
   backdrop-filter: blur(20px) saturate(1.08);
-  animation: footer-surface-drift 7.2s ease-in-out infinite;
 }
 
 .footer-surface::before {
@@ -1185,55 +1141,23 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
   opacity: 0.9;
 }
 
-.footer-surface::after {
-  content: '';
-  position: absolute;
-  inset: -35% auto -35% -10%;
-  width: 38%;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, white 72%, transparent),
-    transparent
-  );
-  filter: blur(10px);
-  opacity: 0;
-  animation: footer-sheen 8.6s linear infinite;
-}
-
 .footer-surface > * {
   position: relative;
   z-index: 1;
 }
 
 .footer-presence-chip {
-  border-color: color-mix(in srgb, var(--foreground) 5%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 4%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--background) 50%, transparent),
+      color-mix(in srgb, var(--card) 38%, transparent)
+    );
 }
 
 .footer-actions-row {
   position: relative;
-}
-
-.footer-primary-action {
-  position: relative;
-  overflow: hidden;
-  animation: footer-action-glow 4.6s ease-in-out infinite;
-}
-
-.footer-primary-action::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    115deg,
-    transparent 12%,
-    rgba(255, 255, 255, 0.18) 36%,
-    transparent 62%
-  );
-  transform: translate3d(-140%, 0, 0);
-  animation: footer-sheen 7.4s linear infinite;
 }
 
 @media (max-width: 639px) {
@@ -1263,13 +1187,6 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
     animation: none;
   }
 
-  .footer-surface,
-  .footer-surface::after,
-  .footer-presence-chip,
-  .footer-primary-action,
-  .footer-primary-action::after {
-    animation: none;
-  }
 }
 
 @media (min-width: 640px) {

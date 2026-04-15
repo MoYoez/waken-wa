@@ -26,6 +26,7 @@ import {
   WebSettingsSection,
 } from '@/components/admin/web-settings-layout'
 import { WebSettingsOpenApiPanel } from '@/components/admin/web-settings-openapi-panel'
+import { WebSettingsPublicFontsPanel } from '@/components/admin/web-settings-public-fonts-panel'
 import { WebSettingsRuleTools } from '@/components/admin/web-settings-rule-tools'
 import { WebSettingsSecurityPanel } from '@/components/admin/web-settings-security-panel'
 import { WebSettingsSkillsPanel } from '@/components/admin/web-settings-skills-panel'
@@ -208,6 +209,7 @@ function WebSettingsContent() {
               description={t('webSettings.sections.frontend.description')}
             >
               <WebSettingsHitokotoPanel />
+              <WebSettingsPublicFontsPanel />
 
               <AnimatePresence initial={false}>
                 {form.themePreset === 'customSurface' ? (

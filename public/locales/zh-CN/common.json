@@ -65,6 +65,40 @@
       "presenceConnected": "已连接",
       "forkProject": "Fork this Project"
     },
+    "actionRail": {
+      "goTop": "回到顶部",
+      "openPanel": "控制面板"
+    },
+    "preferences": {
+      "title": "控制面板",
+      "description": "调整当前浏览器中的公开页显示偏好。",
+      "themeTitle": "显示模式",
+      "themeDescription": "浅色、深色和跟随系统会立即生效，并保留在当前浏览器。",
+      "fontTitle": "字体选择",
+      "currentFontLabel": "当前字体：",
+      "defaultFont": "默认字体",
+      "presetLabel": "预设字体",
+      "presetPlaceholder": "选择一个预设字体",
+      "applyPreset": "应用预设",
+      "googleFamilyLabel": "Google Fonts 字体名称",
+      "googleFamilyPlaceholder": "例如 Noto Serif SC",
+      "applyGoogle": "应用 Google Fonts",
+      "customFamilyLabel": "自定义字体名称",
+      "customFamilyPlaceholder": "例如 My Custom Font",
+      "customUrlLabel": "字体文件路径",
+      "customUrlPlaceholder": "例如 /fonts/my-font.woff2",
+      "applyCustom": "应用自定义字体",
+      "restoreDefault": "恢复默认",
+      "saveSuccess": "字体设置已更新。",
+      "invalidGoogleFamily": "请输入有效的 Google Fonts 字体名称。",
+      "invalidCustomFamily": "请输入有效的字体名称。",
+      "invalidCustomUrl": "请输入有效的字体文件地址或路径。",
+      "presets": {
+        "notoSansSc": "Noto Sans SC",
+        "notoSerifSc": "Noto Serif SC",
+        "ubuntu": "Ubuntu"
+      }
+    },
     "inspiration": {
       "untitled": "（无标题）",
       "viewFull": "查看全文",

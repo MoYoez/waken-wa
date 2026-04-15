@@ -4,7 +4,6 @@ import { ArrowUpRight, CircleHelp } from 'lucide-react'
 import Link from 'next/link'
 import { useT } from 'next-i18next/client'
 
-import { ThemeModeToggle } from '@/components/theme-mode-toggle'
 import {
   Popover,
   PopoverContent,
@@ -69,13 +68,13 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
   )
 
   return (
-    <footer className="layout-footer pb-5 sm:pb-8">
+    <footer className="layout-footer public-page-font-scope pb-5 sm:pb-8">
       <div className="mx-auto max-w-2xl px-4 sm:px-6">
         <div className="footer-surface overflow-hidden rounded-[20px] text-card-foreground sm:rounded-[24px]">
           <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div
-                className="footer-presence-chip inline-flex w-full max-w-full items-center justify-center gap-2 rounded-2xl border border-border/25 bg-background/30 px-2.5 py-1.5 text-xs text-muted-foreground/80 shadow-none sm:w-auto sm:justify-start sm:rounded-full sm:py-1"
+                className="footer-presence-chip inline-flex w-full max-w-full items-center justify-center gap-2 rounded-2xl border border-border/30 bg-background/18 px-2.5 py-1.5 text-[11px] text-muted-foreground/75 shadow-none sm:w-auto sm:justify-start sm:rounded-full sm:py-1"
                 aria-live="polite"
               >
                 <span className="relative flex h-2 w-2 shrink-0 items-center justify-center" aria-hidden>
@@ -85,7 +84,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                 </span>
                 <span className="min-w-0 flex-1 cursor-default truncate">
                   {t('site.footer.watchingPrefix')}{' '}
-                  <span className="tabular-nums font-medium text-foreground">{viewerCount}</span>
+                  <span className="tabular-nums font-medium text-foreground/88">{viewerCount}</span>
                   {watchingSuffix ? ` ${watchingSuffix}` : null}
                 </span>
                 {isMobile ? (
@@ -128,7 +127,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
               <div className="hidden items-center justify-end sm:flex">
                 <Link
                   href="/admin"
-                  className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-border/60 bg-background/80 px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent/60 hover:text-foreground sm:min-h-0 sm:rounded-full sm:py-1.5"
+                  className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-border/50 bg-background/56 px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent/45 hover:text-foreground sm:min-h-0 sm:rounded-full sm:py-1.5"
                 >
                   {adminText}
                 </Link>
@@ -137,12 +136,12 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
 
             <div className="h-px bg-[linear-gradient(90deg,color-mix(in_srgb,var(--border)_0%,transparent),var(--border),color-mix(in_srgb,var(--border)_0%,transparent))]" />
 
-            <div className="footer-actions-row grid gap-3 text-xs text-muted-foreground sm:flex sm:items-center sm:justify-between">
-              <div className="flex items-center justify-stretch sm:justify-start">
+            <div className="footer-actions-row flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <div className="flex min-w-0 items-center justify-stretch sm:justify-start">
                 <a
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="footer-primary-action inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-2xl border border-primary/30 bg-primary px-3 py-2 font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:min-h-0 sm:w-auto sm:rounded-full sm:py-1.5"
+                  className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-2xl border border-border/55 bg-background/44 px-3 py-2 font-medium text-muted-foreground transition-colors hover:bg-accent/38 hover:text-foreground sm:min-h-0 sm:w-auto sm:rounded-full sm:py-1.5"
                   href={TEMPLATE_REPO_HREF}
                 >
                   <GitHubMark />
@@ -151,14 +150,13 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                 </a>
               </div>
 
-              <div className="flex items-center gap-3 sm:justify-end">
+              <div className="flex items-center justify-end">
                 <Link
                   href="/admin"
                   className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-2xl border border-border/60 bg-background/80 px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent/60 hover:text-foreground sm:hidden"
                 >
                   {adminText}
                 </Link>
-                <ThemeModeToggle className="min-w-0 flex-1 justify-center sm:w-auto sm:flex-none" />
               </div>
             </div>
           </div>

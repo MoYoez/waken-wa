@@ -13,6 +13,7 @@ type SiteConfigUpsertArgs = {
 const SITE_CONFIG_JSON_FIELDS = [
   'userNoteHitokotoCategories',
   'themeCustomSurface',
+  'publicFontOptions',
   'appMessageRules',
   'appBlacklist',
   'appWhitelist',

@@ -1,6 +1,7 @@
 import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
 import type { AppMessageRuleGroup } from '@/lib/app-message-rules'
 import type { UserNoteHitokotoEncode } from '@/lib/hitokoto'
+import type { PublicPageFontOptionMode } from '@/lib/public-page-font'
 import type { ScheduleCourse, SchedulePeriodTemplateItem } from '@/lib/schedule-courses'
 import type { ScheduleDayGrid } from '@/lib/schedule-grid-by-weekday'
 import type {
@@ -44,6 +45,13 @@ export type ThemeCustomSurfaceForm = {
   paletteSeedImageUrl: string
 }
 
+export type PublicPageFontOptionForm = {
+  family: string
+  label: string
+  mode: PublicPageFontOptionMode
+  url: string
+}
+
 export interface SiteConfig {
   /** Empty = use default admin accent tokens. */
   adminThemeColor: string
@@ -70,6 +78,8 @@ export interface SiteConfig {
   userNoteHitokotoFallbackToNote: boolean
   themePreset: string
   themeCustomSurface: ThemeCustomSurfaceForm
+  publicFontOptionsEnabled: boolean
+  publicFontOptions: PublicPageFontOptionForm[]
   customCss: string
   mcpThemeToolsEnabled: boolean
   openApiDocsEnabled: boolean

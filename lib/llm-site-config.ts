@@ -14,6 +14,7 @@ import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title
 import { normalizeHitokotoCategories, normalizeHitokotoEncode } from '@/lib/hitokoto'
 import { normalizeInspirationAllowedHashes } from '@/lib/inspiration-device-allowlist'
 import { normalizeProfileOnlineAccentColor } from '@/lib/profile-online-accent-color'
+import { normalizePublicPageFontOptions } from '@/lib/public-page-font'
 import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import {
   backfillCoursePeriodIdsFromTemplate,
@@ -157,6 +158,12 @@ export async function updateSiteConfigFromPayload(
   const themePreset = strField('themePreset', 'basic')
   const themeCustomSurface = parseThemeCustomSurface(
     has('themeCustomSurface') ? body.themeCustomSurface : existing?.themeCustomSurface,
+  )
+  const publicFontOptionsEnabled = has('publicFontOptionsEnabled')
+    ? Boolean(body.publicFontOptionsEnabled)
+    : existing?.publicFontOptionsEnabled === true
+  const publicFontOptions = normalizePublicPageFontOptions(
+    has('publicFontOptions') ? body.publicFontOptions : existing?.publicFontOptions,
   )
   const customCss = normalizeCustomCss(has('customCss') ? body.customCss : existing?.customCss)
   const aiToolMode = normalizeAiToolMode(has('aiToolMode') ? body.aiToolMode : existing?.aiToolMode)
@@ -595,6 +602,8 @@ export async function updateSiteConfigFromPayload(
     userNoteHitokotoFallbackToNote,
     themePreset,
     themeCustomSurface,
+    publicFontOptionsEnabled,
+    publicFontOptions,
     customCss,
     mcpThemeToolsEnabled,
     openApiDocsEnabled,
