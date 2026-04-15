@@ -3,13 +3,11 @@
 import { motion, useReducedMotion } from 'motion/react'
 import { useT } from 'next-i18next/client'
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 
 import {
   getSiteSectionTransition,
   getSiteSectionVariants,
 } from '@/components/site-motion'
-import { useIsClient } from '@/hooks/use-is-client'
 
 type Props = {
   children: React.ReactNode
@@ -23,7 +21,6 @@ const THEME_WAIT_TIMEOUT_MS = 2200
 export function PublicPageTransitionShell({ children, scope, enabled = true }: Props) {
   const { t } = useT('common')
   const [contentReady, setContentReady] = useState(false)
-  const portalReady = useIsClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
   const contentTransition = getSiteSectionTransition(prefersReducedMotion)
   const contentVariants = getSiteSectionVariants(prefersReducedMotion, {
@@ -89,44 +86,38 @@ export function PublicPageTransitionShell({ children, scope, enabled = true }: P
 
   return (
     <>
-      {portalReady
-        ? createPortal(
-            <div
-              aria-hidden={contentReady}
-              className={`public-page-loader ${contentReady ? 'is-hidden' : 'is-visible'}`}
-            >
-              <div className="public-page-loader__stack">
-                <div className="public-page-loader__scene">
-                  <div className="public-page-loader__moon" />
-                  <div className="public-page-loader__spark public-page-loader__spark--a" />
-                  <div className="public-page-loader__spark public-page-loader__spark--b" />
-                  <div className="public-page-loader__spark public-page-loader__spark--c" />
-                  <div className="public-page-loader__shadow" />
-                  <div className="public-page-loader__dino" aria-hidden="true">
-                    <div className="public-page-loader__dino-body" />
-                    <div className="public-page-loader__dino-tail" />
-                    <div className="public-page-loader__dino-head">
-                      <span className="public-page-loader__dino-eye" />
-                      <span className="public-page-loader__dino-mouth" />
-                    </div>
-                    <div className="public-page-loader__dino-arm public-page-loader__dino-arm--front" />
-                    <div className="public-page-loader__dino-arm public-page-loader__dino-arm--back" />
-                    <div className="public-page-loader__dino-leg public-page-loader__dino-leg--front" />
-                    <div className="public-page-loader__dino-leg public-page-loader__dino-leg--back" />
-                  </div>
-                  <div className="public-page-loader__ground" />
-                </div>
-                <p className="public-page-loader__label">
-                  {scope === 'home'
-                    ? t('site.loading.page.home')
-                    : t('site.loading.page.inspiration')}
-                </p>
+      <div
+        aria-hidden={contentReady}
+        className={`public-page-loader ${contentReady ? 'is-hidden' : 'is-visible'}`}
+      >
+        <div className="public-page-loader__stack">
+          <div className="public-page-loader__scene">
+            <div className="public-page-loader__moon" />
+            <div className="public-page-loader__spark public-page-loader__spark--a" />
+            <div className="public-page-loader__spark public-page-loader__spark--b" />
+            <div className="public-page-loader__spark public-page-loader__spark--c" />
+            <div className="public-page-loader__shadow" />
+            <div className="public-page-loader__dino" aria-hidden="true">
+              <div className="public-page-loader__dino-body" />
+              <div className="public-page-loader__dino-tail" />
+              <div className="public-page-loader__dino-head">
+                <span className="public-page-loader__dino-eye" />
+                <span className="public-page-loader__dino-mouth" />
               </div>
+              <div className="public-page-loader__dino-arm public-page-loader__dino-arm--front" />
+              <div className="public-page-loader__dino-arm public-page-loader__dino-arm--back" />
+              <div className="public-page-loader__dino-leg public-page-loader__dino-leg--front" />
+              <div className="public-page-loader__dino-leg public-page-loader__dino-leg--back" />
             </div>
-          ,
-          document.body,
-        )
-        : null}
+            <div className="public-page-loader__ground" />
+          </div>
+          <p className="public-page-loader__label">
+            {scope === 'home'
+              ? t('site.loading.page.home')
+              : t('site.loading.page.inspiration')}
+          </p>
+        </div>
+      </div>
 
       <motion.div
         data-public-page-shell="content"
