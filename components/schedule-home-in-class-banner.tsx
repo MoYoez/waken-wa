@@ -103,7 +103,7 @@ export function ScheduleHomeInClassBanner({
   const wholeCardMeta = cardState.kind === 'in_class' && (hasLocation || hasTeacher)
 
   const cardShellClass = cn(
-    'rounded-lg border border-primary/25 bg-primary/10 px-2 py-2 sm:px-2.5 sm:py-2 text-left shadow-sm box-border min-w-0',
+    'home-glass-chip rounded-lg border border-primary/25 bg-primary/10 px-2 py-2 sm:px-2.5 sm:py-2 text-left shadow-sm box-border min-w-0',
     'flex flex-col max-h-[6.75rem] sm:max-h-[7rem] overflow-hidden outline-none',
     wholeCardMeta &&
       'cursor-default focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',

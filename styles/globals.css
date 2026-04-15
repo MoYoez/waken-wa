@@ -621,7 +621,7 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
 .animated-bg {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   background: 
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.1), transparent),
     radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255, 200, 150, 0.08), transparent),
@@ -691,6 +691,134 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
   }
   75% {
     transform: translate(20px, 10px) scale(1.02);
+  }
+}
+
+:root {
+  --home-glass-border: color-mix(in srgb, white 54%, var(--border) 46%);
+  --home-glass-highlight: color-mix(in srgb, white 84%, transparent);
+  --home-glass-shadow:
+    0 24px 64px color-mix(in srgb, var(--foreground) 8%, transparent),
+    0 6px 18px color-mix(in srgb, var(--foreground) 5%, transparent);
+  --home-glass-surface-top: color-mix(in srgb, var(--card) 82%, white 18%);
+  --home-glass-surface-bottom: color-mix(in srgb, var(--background) 70%, transparent);
+  --home-glass-card-top: color-mix(in srgb, var(--card) 76%, transparent);
+  --home-glass-card-bottom: color-mix(in srgb, var(--background) 54%, transparent);
+  --home-glass-chip-top: color-mix(in srgb, var(--background) 72%, transparent);
+  --home-glass-chip-bottom: color-mix(in srgb, var(--card) 58%, transparent);
+}
+
+.dark {
+  --home-glass-border: color-mix(in srgb, white 16%, var(--border) 84%);
+  --home-glass-highlight: color-mix(in srgb, white 22%, transparent);
+  --home-glass-shadow:
+    0 28px 80px color-mix(in srgb, black 44%, transparent),
+    0 8px 22px color-mix(in srgb, black 28%, transparent);
+  --home-glass-surface-top: color-mix(in srgb, var(--card) 80%, white 8%);
+  --home-glass-surface-bottom: color-mix(in srgb, var(--background) 68%, black 14%);
+  --home-glass-card-top: color-mix(in srgb, var(--card) 78%, white 6%);
+  --home-glass-card-bottom: color-mix(in srgb, var(--background) 64%, black 12%);
+  --home-glass-chip-top: color-mix(in srgb, var(--background) 72%, white 5%);
+  --home-glass-chip-bottom: color-mix(in srgb, var(--card) 66%, black 10%);
+}
+
+.home-frost-shell,
+.home-glass-card,
+.home-glass-subcard,
+.home-glass-chip {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.home-frost-shell {
+  border-color: var(--home-glass-border);
+  background:
+    linear-gradient(180deg, var(--home-glass-surface-top), var(--home-glass-surface-bottom));
+  box-shadow:
+    var(--home-glass-shadow),
+    inset 0 1px 0 color-mix(in srgb, var(--home-glass-highlight) 78%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.18);
+  backdrop-filter: blur(22px) saturate(1.18);
+}
+
+.home-frost-shell::before,
+.home-glass-card::before,
+.home-glass-chip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 11%, transparent), transparent 36%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--primary) 9%, transparent), transparent 34%);
+  opacity: 0.92;
+}
+
+.home-frost-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, white 44%, transparent) 0%,
+      transparent 28%,
+      transparent 72%,
+      color-mix(in srgb, white 24%, transparent) 100%
+    );
+  opacity: 0.78;
+}
+
+.home-glass-card {
+  border-color: color-mix(in srgb, var(--home-glass-border) 82%, transparent);
+  background:
+    linear-gradient(180deg, var(--home-glass-card-top), var(--home-glass-card-bottom));
+  box-shadow:
+    0 16px 38px color-mix(in srgb, var(--foreground) 8%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--home-glass-highlight) 72%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.12);
+  backdrop-filter: blur(16px) saturate(1.12);
+}
+
+.home-glass-subcard {
+  border-color: color-mix(in srgb, var(--home-glass-border) 76%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 74%, transparent), color-mix(in srgb, var(--card) 60%, transparent));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--home-glass-highlight) 58%, transparent),
+    0 10px 24px color-mix(in srgb, var(--foreground) 5%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.08);
+  backdrop-filter: blur(12px) saturate(1.08);
+}
+
+.home-glass-chip {
+  border-color: color-mix(in srgb, var(--home-glass-border) 78%, transparent);
+  background:
+    linear-gradient(180deg, var(--home-glass-chip-top), var(--home-glass-chip-bottom));
+  box-shadow:
+    0 12px 28px color-mix(in srgb, var(--foreground) 7%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--home-glass-highlight) 62%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.12);
+  backdrop-filter: blur(14px) saturate(1.12);
+}
+
+.home-frost-shell > *,
+.home-glass-card > *,
+.home-glass-subcard > *,
+.home-glass-chip > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-frost-shell,
+  .home-glass-card,
+  .home-glass-subcard,
+  .home-glass-chip {
+    -webkit-backdrop-filter: blur(10px) saturate(1.06);
+    backdrop-filter: blur(10px) saturate(1.06);
   }
 }
 

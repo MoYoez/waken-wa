@@ -34,6 +34,7 @@ export function GlobalMouseTilt({
 }) {
   const pathname = usePathname()
   const wrapRef = useRef<HTMLDivElement>(null)
+  const targetsRef = useRef<HTMLElement[]>([])
   const targetRef = useRef({ rx: 0, ry: 0 })
   const currentRef = useRef({ rx: 0, ry: 0 })
   const rafRef = useRef(0)
@@ -69,12 +70,39 @@ export function GlobalMouseTilt({
   }, [])
 
   useEffect(() => {
-    const el = wrapRef.current
-    if (!el) return
+    const root = wrapRef.current
+    if (!root) return
+
+    const resetTargets = () => {
+      for (const target of targetsRef.current) {
+        target.style.transform = ''
+        target.style.willChange = 'auto'
+      }
+      targetsRef.current = []
+    }
+
+    const syncTargets = () => {
+      const nextTargets = Array.from(
+        root.querySelectorAll<HTMLElement>('[data-global-mouse-tilt-target]'),
+      )
+      const nextSet = new Set(nextTargets)
+
+      for (const target of targetsRef.current) {
+        if (!nextSet.has(target)) {
+          target.style.transform = ''
+          target.style.willChange = 'auto'
+        }
+      }
+
+      for (const target of nextTargets) {
+        target.style.willChange = 'transform'
+      }
+
+      targetsRef.current = nextTargets
+    }
 
     if (skipAdmin || !enabled || loadingActive) {
-      el.style.transform = ''
-      el.style.willChange = 'auto'
+      resetTargets()
       currentRef.current = { rx: 0, ry: 0 }
       targetRef.current = { rx: 0, ry: 0 }
       return
@@ -82,12 +110,12 @@ export function GlobalMouseTilt({
 
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
     if (mq.matches) {
-      el.style.transform = ''
-      el.style.willChange = 'auto'
+      resetTargets()
       return
     }
 
-    el.style.willChange = 'transform'
+    syncTargets()
+    if (targetsRef.current.length === 0) return
 
     const onMove = (e: MouseEvent) => {
       // If gyro is actually producing data, prefer it.
@@ -127,7 +155,10 @@ export function GlobalMouseTilt({
       const tgt = targetRef.current
       cur.rx += (tgt.rx - cur.rx) * LERP
       cur.ry += (tgt.ry - cur.ry) * LERP
-      el.style.transform = `perspective(${PERSPECTIVE_PX}px) rotateX(${cur.rx}deg) rotateY(${cur.ry}deg) translateZ(0)`
+      const transform = `perspective(${PERSPECTIVE_PX}px) rotateX(${cur.rx}deg) rotateY(${cur.ry}deg) translateZ(0)`
+      for (const target of targetsRef.current) {
+        target.style.transform = transform
+      }
       rafRef.current = requestAnimationFrame(tick)
     }
 
@@ -217,8 +248,7 @@ export function GlobalMouseTilt({
       window.removeEventListener('click', onFirstGesture)
       document.documentElement.removeEventListener('mouseleave', resetTarget)
       cancelAnimationFrame(rafRef.current)
-      el.style.transform = ''
-      el.style.willChange = 'auto'
+      resetTargets()
       currentRef.current = { rx: 0, ry: 0 }
       targetRef.current = { rx: 0, ry: 0 }
       lastOrientationAtRef.current = 0

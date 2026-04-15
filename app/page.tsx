@@ -156,91 +156,93 @@ export default async function Home() {
       <PublicPageTransitionShell scope="home" enabled={pageLoadingEnabled}>
         <main className="min-h-screen relative">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-40">
-            <ContentReadingPanel className="p-5 sm:p-6">
-              {/* Profile + current: one activity feed subscription (polling/SSE) for both */}
-              <ActivityFeedProvider initialFeed={activityInitialFeed} mode={activityUpdateMode}>
-                <div className="flex flex-col gap-4">
-                  <SiteReveal delay={0.04}>
-                    <div
-                      className={
-                        showScheduleHomeColumn
-                          ? 'flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-start sm:gap-4'
-                          : 'flex flex-col gap-4'
-                      }
-                    >
+            <div data-global-mouse-tilt-target className="[transform-style:preserve-3d]">
+              <ContentReadingPanel className="home-frost-shell p-5 sm:p-6">
+                {/* Profile + current: one activity feed subscription (polling/SSE) for both */}
+                <ActivityFeedProvider initialFeed={activityInitialFeed} mode={activityUpdateMode}>
+                  <div className="flex flex-col gap-4">
+                    <SiteReveal delay={0.04}>
                       <div
                         className={
                           showScheduleHomeColumn
-                            ? 'min-w-0 w-full sm:flex-1 sm:basis-0 sm:overflow-hidden'
-                            : 'min-w-0 w-full'
+                            ? 'flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-start sm:gap-4'
+                            : 'flex flex-col gap-4'
                         }
                       >
-                        <UserProfile
-                          name={userName}
-                          bio={userBio}
-                          avatarUrl={avatarSrc}
-                          profileOnlineAccentColor={config.profileOnlineAccentColor ?? null}
-                          profileOnlinePulseEnabled={config.profileOnlinePulseEnabled ?? null}
-                        />
+                        <div
+                          className={
+                            showScheduleHomeColumn
+                              ? 'min-w-0 w-full sm:flex-1 sm:basis-0 sm:overflow-hidden'
+                              : 'min-w-0 w-full'
+                          }
+                        >
+                          <UserProfile
+                            name={userName}
+                            bio={userBio}
+                            avatarUrl={avatarSrc}
+                            profileOnlineAccentColor={config.profileOnlineAccentColor ?? null}
+                            profileOnlinePulseEnabled={config.profileOnlinePulseEnabled ?? null}
+                          />
+                        </div>
+                        {showScheduleHomeColumn ? (
+                          <ScheduleHomeInClassBanner
+                            courses={scheduleCoursesForHome}
+                            showLocation={scheduleHomeShowLocation}
+                            showTeacher={scheduleHomeShowTeacher}
+                            periodTemplate={schedulePeriodTemplate}
+                            showNextUpcoming={scheduleHomeShowNextUpcoming}
+                            afterClassesLabel={scheduleHomeAfterClassesLabel}
+                            className="w-full sm:w-1/3 sm:min-w-0 sm:shrink-0 sm:basis-1/3"
+                          />
+                        ) : null}
                       </div>
-                      {showScheduleHomeColumn ? (
-                        <ScheduleHomeInClassBanner
-                          courses={scheduleCoursesForHome}
-                          showLocation={scheduleHomeShowLocation}
-                          showTeacher={scheduleHomeShowTeacher}
-                          periodTemplate={schedulePeriodTemplate}
-                          showNextUpcoming={scheduleHomeShowNextUpcoming}
-                          afterClassesLabel={scheduleHomeAfterClassesLabel}
-                          className="w-full sm:w-1/3 sm:min-w-0 sm:shrink-0 sm:basis-1/3"
-                        />
-                      ) : null}
-                    </div>
-                  </SiteReveal>
+                    </SiteReveal>
 
-                  <SiteReveal delay={0.08}>
-                    <UserProfileNoteSection
-                      note={userNote}
-                      avatarUrl={avatarSrc}
-                      noteHitokotoEnabled={noteHitokotoEnabled}
-                      noteTypewriterEnabled={noteTypewriterEnabled}
-                      noteSignatureFontEnabled={noteSignatureFontEnabled}
-                      noteSignatureFontFamily={noteSignatureFontFamily}
-                      noteHitokotoCategories={noteHitokotoCategories}
-                      noteHitokotoEncode={noteHitokotoEncode}
-                      noteHitokotoFallbackToNote={noteHitokotoFallbackToNote}
+                    <SiteReveal delay={0.08}>
+                      <UserProfileNoteSection
+                        note={userNote}
+                        avatarUrl={avatarSrc}
+                        noteHitokotoEnabled={noteHitokotoEnabled}
+                        noteTypewriterEnabled={noteTypewriterEnabled}
+                        noteSignatureFontEnabled={noteSignatureFontEnabled}
+                        noteSignatureFontFamily={noteSignatureFontFamily}
+                        noteHitokotoCategories={noteHitokotoCategories}
+                        noteHitokotoEncode={noteHitokotoEncode}
+                        noteHitokotoFallbackToNote={noteHitokotoFallbackToNote}
+                      />
+                    </SiteReveal>
+
+                    <SiteReveal delay={0.12}>
+                      <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                    </SiteReveal>
+
+                    <SiteReveal delay={0.16}>
+                      <section>
+                        <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
+                          {currentlyText}
+                        </h2>
+                        <div className="space-y-3">
+                          <CurrentStatus hideActivityMedia={hideActivityMedia} />
+                        </div>
+                      </section>
+                    </SiteReveal>
+                  </div>
+                </ActivityFeedProvider>
+
+                {/* Timeline */}
+                <SiteReveal delay={0.2}>
+                  <section className="mt-8">
+                    <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
+                      {earlierText}
+                    </h2>
+                    <InspirationHomeSection
+                      entries={inspirationHomeEntries}
+                      showArchiveLink={inspirationTotal > 3}
                     />
-                  </SiteReveal>
-
-                  <SiteReveal delay={0.12}>
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                  </SiteReveal>
-
-                  <SiteReveal delay={0.16}>
-                    <section>
-                      <h2 className="text-sm font-semibold text-foreground tracking-tight mb-4">
-                        {currentlyText}
-                      </h2>
-                      <div className="space-y-3">
-                        <CurrentStatus hideActivityMedia={hideActivityMedia} />
-                      </div>
-                    </section>
-                  </SiteReveal>
-                </div>
-              </ActivityFeedProvider>
-
-              {/* Timeline */}
-              <SiteReveal delay={0.2}>
-                <section className="mt-8">
-                  <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
-                    {earlierText}
-                  </h2>
-                  <InspirationHomeSection
-                    entries={inspirationHomeEntries}
-                    showArchiveLink={inspirationTotal > 3}
-                  />
-                </section>
-              </SiteReveal>
-            </ContentReadingPanel>
+                  </section>
+                </SiteReveal>
+              </ContentReadingPanel>
+            </div>
           </div>
         </main>
 

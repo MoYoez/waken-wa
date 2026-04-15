@@ -32,3 +32,4 @@ data/*.db-wal
 .env*.local
 .vercel
 tsconfig.tsbuildinfo
+.playwright-cli/

@@ -27,7 +27,7 @@ const PREVIEW_CHARS = 220
 
 /** Matches site Card primitive: solid surface, clear elevation (not just rounded corners). */
 const inspirationCardClassName = cn(
-  'gap-0 py-0 shadow-md ring-1 ring-border/60',
+  'home-glass-card gap-0 py-0 shadow-md ring-1 ring-border/60',
   'transition-[box-shadow,border-color,ring-color] duration-200',
   'hover:shadow-lg hover:ring-primary/20 hover:border-primary/25',
 )
