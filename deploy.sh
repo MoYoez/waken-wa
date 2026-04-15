@@ -2,7 +2,7 @@
 # Local: ./deploy.sh
 #   curl -fsSL https://raw.githubusercontent.com/MoYoez/waken-wa/main/deploy.sh | bash
 #
-# Optional env: WAKEN_DEPLOY_DIR, WAKEN_WORKSPACE, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL, WAKEN_IMAGE, WAKEN_DOCKERHUB_IMAGE, USE_LASTEST_VERSION
+# Optional env: WAKEN_DEPLOY_DIR, WAKEN_WORKSPACE, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL, WAKEN_IMAGE, WAKEN_DOCKERHUB_IMAGE, USE_LATEST_VERSION, USE_LASTEST_VERSION (deprecated)
 # Default clone path: $WAKEN_WORKSPACE/$WAKEN_DIR (WAKEN_WORKSPACE defaults to ~/waken-wa-deploy).
 # After a fresh clone, registry deploy keeps only docker-compose.yml (no build: .) and .env at WAKEN_WORKSPACE.
 set -euo pipefail
@@ -47,11 +47,19 @@ latest_stable_tag() {
 }
 
 resolve_waken_version() {
-  if [ -n "${USE_LASTEST_VERSION:-}" ]; then
+  if [ -n "${USE_LATEST_VERSION:-}" ]; then
     WAKEN_REF="${WAKEN_BRANCH:-main}"
     WAKEN_REF_KIND="branch"
     WAKEN_IMAGE="${WAKEN_IMAGE:-ghcr.io/moyoez/waken-wa:main}"
-    echo "USE_LASTEST_VERSION is set; using latest main." >&2
+    echo "USE_LATEST_VERSION is set; using latest main." >&2
+    return
+  fi
+
+  if [ -n "${USE_LASTEST_VERSION:-}" ]; then
+    echo "USE_LASTEST_VERSION is deprecated; use USE_LATEST_VERSION instead." >&2
+    WAKEN_REF="${WAKEN_BRANCH:-main}"
+    WAKEN_REF_KIND="branch"
+    WAKEN_IMAGE="${WAKEN_IMAGE:-ghcr.io/moyoez/waken-wa:main}"
     return
   fi
 
@@ -61,7 +69,7 @@ resolve_waken_version() {
   else
     WAKEN_REF="$(latest_stable_tag || true)"
     if [ -z "$WAKEN_REF" ]; then
-      echo "错误：无法从 $WAKEN_REPO_URL 获取稳定版本 tag。可设置 USE_LASTEST_VERSION=1 使用 main。" >&2
+      echo "错误：无法从 $WAKEN_REPO_URL 获取稳定版本 tag。可设置 USE_LATEST_VERSION=1 使用 main。" >&2
       exit 1
     fi
     WAKEN_REF_KIND="tag"
