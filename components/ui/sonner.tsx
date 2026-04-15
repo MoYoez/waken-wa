@@ -13,6 +13,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       style={
         {
+          fontFamily: 'var(--font-noto-sans-sc), var(--font-ubuntu), sans-serif',
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
