@@ -434,6 +434,9 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
   if ('hideActivityMedia' in web && typeof web.hideActivityMedia === 'boolean') {
     patch.hideActivityMedia = web.hideActivityMedia
   }
+  if ('hideInspirationOnHome' in web && typeof web.hideInspirationOnHome === 'boolean') {
+    patch.hideInspirationOnHome = web.hideInspirationOnHome
+  }
   if ('activityRejectLockappSleep' in web && typeof web.activityRejectLockappSleep === 'boolean') {
     patch.activityRejectLockappSleep = web.activityRejectLockappSleep
   }

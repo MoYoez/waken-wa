@@ -876,6 +876,8 @@
     "profileOnlinePulseDescription": "Adds a pulse animation to the online accent when the profile is currently online.",
     "hideActivityMediaTitle": "Hide media details in activity cards",
     "hideActivityMediaDescription": "Removes title/artist style media information from public activity cards.",
+    "hideInspirationOnHomeTitle": "Hide inspiration on home",
+    "hideInspirationOnHomeDescription": "When enabled, the home page hides the inspiration section while keeping the archive and admin content intact.",
     "activityRejectLockappSleepTitle": "Ignore LockApp / sleep-like activities",
     "activityRejectLockappSleepDescription": "Filters out Windows lock-screen or similar sleep-state activity reports from the public feed.",
     "forceDisplayTimezoneTitle": "Force displayed timezone",

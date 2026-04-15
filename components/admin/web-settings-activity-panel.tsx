@@ -144,6 +144,14 @@ export function WebSettingsActivityPanel() {
         />
 
         <ToggleRow
+          id="hide-inspiration-on-home"
+          title={t('webSettingsActivity.hideInspirationOnHomeTitle')}
+          description={t('webSettingsActivity.hideInspirationOnHomeDescription')}
+          checked={form.hideInspirationOnHome}
+          onCheckedChange={(value) => patch('hideInspirationOnHome', value)}
+        />
+
+        <ToggleRow
           id="activity-reject-lockapp-sleep"
           title={t('webSettingsActivity.activityRejectLockappSleepTitle')}
           description={t('webSettingsActivity.activityRejectLockappSleepDescription')}

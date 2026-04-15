@@ -120,6 +120,7 @@ export default async function Home() {
   const showScheduleHomeColumn = scheduleInClassOnHome && scheduleCoursesForHome.length > 0
 
   const hideActivityMedia = Boolean(cfg.hideActivityMedia)
+  const hideInspirationOnHome = cfg.hideInspirationOnHome === true
   const pageLoadingEnabled = cfg.pageLoadingEnabled !== false
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteTypewriterEnabled = Boolean(cfg.userNoteTypewriterEnabled)
@@ -229,18 +230,19 @@ export default async function Home() {
                   </div>
                 </ActivityFeedProvider>
 
-                {/* Timeline */}
-                <SiteReveal delay={0.2}>
-                  <section className="mt-8">
-                    <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
-                      {earlierText}
-                    </h2>
-                    <InspirationHomeSection
-                      entries={inspirationHomeEntries}
-                      showArchiveLink={inspirationTotal > 3}
-                    />
-                  </section>
-                </SiteReveal>
+                {hideInspirationOnHome ? null : (
+                  <SiteReveal delay={0.2}>
+                    <section className="mt-8">
+                      <h2 className="text-sm font-semibold text-foreground tracking-tight mb-6">
+                        {earlierText}
+                      </h2>
+                      <InspirationHomeSection
+                        entries={inspirationHomeEntries}
+                        showArchiveLink={inspirationTotal > 3}
+                      />
+                    </section>
+                  </SiteReveal>
+                )}
               </ContentReadingPanel>
             </div>
           </div>

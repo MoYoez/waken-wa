@@ -139,6 +139,7 @@ export async function GET(request: Request) {
         globalMouseTiltEnabled: cfg.globalMouseTiltEnabled === true,
         globalMouseTiltGyroEnabled: cfg.globalMouseTiltGyroEnabled === true,
         hideActivityMedia: cfg.hideActivityMedia === true,
+        hideInspirationOnHome: cfg.hideInspirationOnHome === true,
         activityRejectLockappSleep: cfg.activityRejectLockappSleep === true,
       },
       token: {

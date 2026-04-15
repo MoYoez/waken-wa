@@ -118,6 +118,7 @@ function buildComponents(baseUrl: string) {
       themeCustomSurface: { type: ['object', 'null'], additionalProperties: true },
       captureReportedAppsEnabled: { type: 'boolean' },
       mediaPlaySourceBlocklist: { type: 'array', items: { type: 'string' } },
+      hideInspirationOnHome: { type: 'boolean' },
       displayTimezone: { type: 'string' },
       forceDisplayTimezone: { type: 'boolean' },
     },

@@ -203,6 +203,8 @@ export const siteConfig = sqliteTable('site_config', {
   hideActivityMedia: integer('hide_activity_media', { mode: 'boolean' })
     .notNull()
     .default(false),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  hideInspirationOnHome: integer('hide_inspiration_on_home', { mode: 'boolean' }).default(false),
   hcaptchaEnabled: integer('hcaptcha_enabled', { mode: 'boolean' })
     .notNull()
     .default(false),

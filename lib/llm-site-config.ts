@@ -460,6 +460,11 @@ export async function updateSiteConfigFromPayload(
     hideActivityMedia = Boolean(body.hideActivityMedia)
   }
 
+  let hideInspirationOnHome = existing?.hideInspirationOnHome === true
+  if (body.hideInspirationOnHome !== undefined && body.hideInspirationOnHome !== null) {
+    hideInspirationOnHome = Boolean(body.hideInspirationOnHome)
+  }
+
   let displayTimezone = existing?.displayTimezone ?? 'Asia/Shanghai'
   if (body.displayTimezone !== undefined && body.displayTimezone !== null) {
     displayTimezone = normalizeTimezone(body.displayTimezone)
@@ -619,6 +624,7 @@ export async function updateSiteConfigFromPayload(
     globalMouseTiltEnabled,
     globalMouseTiltGyroEnabled,
     hideActivityMedia,
+    hideInspirationOnHome,
     hcaptchaEnabled,
     hcaptchaSiteKey,
     hcaptchaSecretKey,

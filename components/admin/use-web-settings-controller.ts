@@ -339,6 +339,7 @@ export function useWebSettingsController() {
             globalMouseTiltEnabled: data.globalMouseTiltEnabled === true,
             globalMouseTiltGyroEnabled: data.globalMouseTiltGyroEnabled === true,
             hideActivityMedia: data.hideActivityMedia === true,
+            hideInspirationOnHome: data.hideInspirationOnHome === true,
             activityRejectLockappSleep: data.activityRejectLockappSleep === true,
             displayTimezone: normalizeTimezone(data.displayTimezone),
             forceDisplayTimezone: data.forceDisplayTimezone === true,

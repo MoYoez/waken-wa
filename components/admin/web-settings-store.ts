@@ -86,6 +86,7 @@ export const WEB_SETTINGS_INITIAL_FORM: SiteConfig = {
   globalMouseTiltEnabled: false,
   globalMouseTiltGyroEnabled: false,
   hideActivityMedia: false,
+  hideInspirationOnHome: false,
   activityRejectLockappSleep: false,
   displayTimezone: DEFAULT_TIMEZONE,
   forceDisplayTimezone: false,

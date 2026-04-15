@@ -173,6 +173,8 @@ export const siteConfig = pgTable('site_config', {
   // Nullable on purpose: safe db:push on existing rows; app treats null as false.
   globalMouseTiltGyroEnabled: boolean('global_mouse_tilt_gyro_enabled').default(false),
   hideActivityMedia: boolean('hide_activity_media').notNull().default(false),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  hideInspirationOnHome: boolean('hide_inspiration_on_home').default(false),
   hcaptchaEnabled: boolean('hcaptcha_enabled').notNull().default(false),
   hcaptchaSiteKey: varchar('hcaptcha_site_key', { length: 200 }),
   hcaptchaSecretKey: varchar('hcaptcha_secret_key', { length: 200 }),
