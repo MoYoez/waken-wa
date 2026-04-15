@@ -25,6 +25,7 @@ export function normalizeSiteConfigShape(config: Record<string, any>): Record<st
     adminThemeColor: normalizeAdminThemeColor(config.adminThemeColor ?? '') ?? null,
     adminBackgroundColor: normalizeAdminThemeColor(config.adminBackgroundColor ?? '') ?? null,
     hideInspirationOnHome: config.hideInspirationOnHome === true,
+    smoothScrollEnabled: config.smoothScrollEnabled === true,
     forceDisplayTimezone: config.forceDisplayTimezone === true,
     themeCustomSurface: parseThemeCustomSurface(config.themeCustomSurface),
     userNoteHitokotoCategories: normalizeStringArrayField(config.userNoteHitokotoCategories),

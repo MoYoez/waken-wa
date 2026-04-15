@@ -6,24 +6,21 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useT } from 'next-i18next/client'
 
-import { MarkdownContent } from '@/components/admin/markdown-content'
 import { FormattedTime } from '@/components/formatted-time'
-import { LexicalContent } from '@/components/lexical-content'
 import {
   getSiteSectionTransition,
   getSiteSectionVariants,
 } from '@/components/site-motion'
 import { Card } from '@/components/ui/card'
 import {
-  inspirationLooksLikeMarkdown,
-  inspirationNeedsFullPageAny,
+  extractInspirationLeadImage,
+  inspirationPlainPreview,
+  inspirationPlainPreviewAny,
 } from '@/lib/inspiration-preview'
 import { cn } from '@/lib/utils'
 import type { InspirationHomeItem } from '@/types/components'
 
 export type { InspirationHomeItem } from '@/types/components'
-
-const PREVIEW_CHARS = 220
 
 /** Matches site Card primitive: solid surface, clear elevation (not just rounded corners). */
 const inspirationCardClassName = cn(
@@ -33,72 +30,60 @@ const inspirationCardClassName = cn(
 )
 
 function EntryBody({
-  entry,
   detailHref,
-  needFull,
+  previewText,
+  statusText,
+  title,
+  createdAt,
+  displayTimezone,
 }: {
-  entry: InspirationHomeItem
   detailHref: string
-  needFull: boolean
+  previewText: string
+  statusText: string
+  title: string | null
+  createdAt: string
+  displayTimezone?: string
 }) {
   const { t } = useT('common')
-  const renderedContent = entry.contentLexical ? (
-    inspirationLooksLikeMarkdown(entry.content) ? (
-      <MarkdownContent
-        markdown={entry.content}
-        className="text-xs text-muted-foreground"
-        imageClassName="max-h-44 w-auto rounded-md border border-border/60 my-2"
-      />
-    ) : (
-      <LexicalContent content={entry.contentLexical} className="text-xs text-muted-foreground" />
-    )
-  ) : (
-    <MarkdownContent
-      markdown={entry.content}
-      className="text-xs text-muted-foreground"
-      imageClassName="max-h-44 w-auto rounded-md border border-border/60 my-2"
-    />
-  )
 
   return (
-    <div className="min-w-0 flex-1 flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-1.5">
+    <div className="flex h-full min-w-0 flex-1 flex-col gap-2">
+      <div className="flex min-h-4 items-baseline justify-between gap-1.5">
         <Link
           href={detailHref}
-          className="text-xs font-semibold text-foreground hover:text-primary transition-colors"
+          className="min-w-0 truncate text-xs font-semibold text-foreground transition-colors hover:text-primary"
         >
-          {entry.title?.trim() ? entry.title : t('site.inspiration.untitled')}
+          {title?.trim() ? title : t('site.inspiration.untitled')}
         </Link>
-        <FormattedTime 
-          date={entry.createdAt} 
-          timezone={entry.displayTimezone}
+        <FormattedTime
+          date={createdAt}
+          timezone={displayTimezone}
           className="text-[0.65rem] text-muted-foreground tabular-nums shrink-0 leading-none"
         />
       </div>
 
-      {entry.statusSnapshot ? (
-        <div className="rounded-md border border-dashed border-border/80 bg-muted/20 px-2 py-1.5 text-[0.65rem] text-muted-foreground whitespace-pre-wrap max-h-[4.5rem] overflow-y-auto leading-snug">
-          {entry.statusSnapshot}
-        </div>
-      ) : null}
-
-      {needFull ? (
-        <div className="space-y-1.5">
-          <div className="relative max-h-24 overflow-hidden">
-            {renderedContent}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent" />
+      <div className="space-y-1">
+        {statusText ? (
+          <div className="rounded-md border border-dashed border-border/80 bg-muted/20 px-2 py-1 text-[0.65rem] leading-snug text-muted-foreground line-clamp-1">
+            {statusText}
           </div>
-          <Link
-            href={detailHref}
-            className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
-          >
-            {t('site.inspiration.viewFull')}
-            <ChevronRight className="h-3 w-3" aria-hidden />
-          </Link>
-        </div>
-      ) : (
-        renderedContent
-      )}
+        ) : null}
+        <p
+          className={cn(
+            'text-xs leading-relaxed text-muted-foreground',
+            statusText ? 'min-h-5 line-clamp-1' : 'min-h-10 line-clamp-2',
+          )}
+        >
+          {previewText || t('site.inspiration.viewFull')}
+        </p>
+        <Link
+          href={detailHref}
+          className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
+        >
+          {t('site.inspiration.viewFull')}
+          <ChevronRight className="h-3 w-3" aria-hidden />
+        </Link>
+      </div>
     </div>
   )
 }
@@ -131,10 +116,14 @@ export function InspirationHomeSection({
       <motion.div className="space-y-3" layout>
         <AnimatePresence initial={false}>
           {entries.map((entry) => {
-          const detailHref = `/inspiration/${entry.id}`
-          const needFull = inspirationNeedsFullPageAny(entry.content, entry.contentLexical, PREVIEW_CHARS)
+            const detailHref = `/inspiration/${entry.id}`
+            const inlineLead = !entry.imageDataUrl ? extractInspirationLeadImage(entry.content) : null
+            const cardImageSrc = entry.imageDataUrl ?? inlineLead?.imageSrc ?? null
+            const preview = inlineLead?.imageSrc
+              ? inspirationPlainPreview(inlineLead.contentWithoutImage, 96).text
+              : inspirationPlainPreviewAny(entry.content, entry.contentLexical, 96).text
+            const statusText = String(entry.statusSnapshot ?? '').trim()
 
-          if (entry.imageDataUrl) {
             return (
               <motion.article
                 key={entry.id}
@@ -145,58 +134,47 @@ export function InspirationHomeSection({
                 transition={sectionTransition}
                 layout
               >
-                <Card className={cn(inspirationCardClassName, 'p-2.5 sm:p-3')}>
-                  <div className="flex flex-row gap-2 sm:gap-3 items-stretch">
-                    <Link
-                      href={detailHref}
-                      className={cn(
-                        'group relative block shrink-0 self-start overflow-hidden rounded-lg',
-                        'w-16 h-16 sm:w-[4.667rem] sm:h-[4.667rem]',
-                        'border border-t-0 border-r-0 border-border/70 bg-card shadow-sm',
-                        'transition-[box-shadow,border-color] duration-200',
-                        'hover:border-primary/25 hover:shadow-md',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                      )}
-                    >
-                      <Image
-                        src={entry.imageDataUrl}
-                        alt=""
-                        fill
-                        loading="eager"
-                        className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
-                        sizes="(max-width: 640px) 64px, 75px"
-                      />
-                    </Link>
+                <Card className={cn(inspirationCardClassName, 'h-[7.75rem] overflow-hidden p-2.5 sm:p-3')}>
+                  <div
+                    className={cn(
+                      'flex h-full items-stretch gap-2 sm:gap-3',
+                      cardImageSrc ? 'flex-row' : 'flex-col',
+                    )}
+                  >
+                    {cardImageSrc ? (
+                      <Link
+                        href={detailHref}
+                        className={cn(
+                          'group relative block shrink-0 self-start overflow-hidden rounded-lg',
+                          'w-16 h-16 sm:w-[4.667rem] sm:h-[4.667rem]',
+                          'border border-t-0 border-r-0 border-border/70 bg-card shadow-sm',
+                          'transition-[box-shadow,border-color] duration-200',
+                          'hover:border-primary/25 hover:shadow-md',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                        )}
+                      >
+                        <Image
+                          src={cardImageSrc}
+                          alt=""
+                          fill
+                          loading="eager"
+                          className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
+                          sizes="(max-width: 640px) 64px, 75px"
+                        />
+                      </Link>
+                    ) : null}
                     <EntryBody
-                      entry={entry}
                       detailHref={detailHref}
-                      needFull={needFull}
+                      previewText={preview}
+                      statusText={statusText}
+                      title={entry.title}
+                      createdAt={entry.createdAt}
+                      displayTimezone={entry.displayTimezone}
                     />
                   </div>
                 </Card>
               </motion.article>
             )
-          }
-
-          return (
-            <motion.article
-              key={entry.id}
-              variants={sectionVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={sectionTransition}
-              layout
-            >
-              <Card className={cn(inspirationCardClassName, 'p-2.5 sm:p-3')}>
-                <EntryBody
-                  entry={entry}
-                  detailHref={detailHref}
-                  needFull={needFull}
-                />
-              </Card>
-            </motion.article>
-          )
           })}
         </AnimatePresence>
       </motion.div>

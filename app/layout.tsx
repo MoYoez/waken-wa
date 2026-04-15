@@ -1,10 +1,12 @@
 import '../styles/globals.css'
+import 'lenis/dist/lenis.css'
 
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
 import { I18nProvider } from 'next-i18next/client'
 
 import { GlobalMouseTilt } from '@/components/global-mouse-tilt'
+import { LenisSmoothScroll } from '@/components/lenis-smooth-scroll'
 import { SiteTimezoneProvider } from '@/components/site-timezone-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import i18nConfig, { type AppLanguage } from '@/i18n.config'
@@ -66,7 +68,6 @@ export default async function RootLayout({
     fallbackLng
   const resources = await getLayoutResources(lng)
   const persistedTheme = normalizeThemeMode(cookieStore.get(THEME_COOKIE_NAME)?.value)
-  const htmlClassName = persistedTheme === 'dark' ? 'dark' : undefined
   const htmlStyle =
     persistedTheme === 'light' || persistedTheme === 'dark'
       ? { colorScheme: persistedTheme }
@@ -74,17 +75,26 @@ export default async function RootLayout({
 
   let globalMouseTiltEnabled = false
   let globalMouseTiltGyroEnabled = false
+  let smoothScrollEnabled = false
   let displayTimezone = DEFAULT_TIMEZONE
   let forceDisplayTimezone = false
   try {
     const row = await getSiteConfigMemoryFirst()
     globalMouseTiltEnabled = row?.globalMouseTiltEnabled === true
     globalMouseTiltGyroEnabled = row?.globalMouseTiltGyroEnabled === true
+    smoothScrollEnabled = row?.smoothScrollEnabled === true
     displayTimezone = normalizeTimezone(row?.displayTimezone)
     forceDisplayTimezone = row?.forceDisplayTimezone === true
   } catch {
     // DB not ready during build or first boot
   }
+  const htmlClassName =
+    [
+      persistedTheme === 'dark' ? 'dark' : '',
+      smoothScrollEnabled ? 'smooth-scroll-enabled' : '',
+    ]
+      .filter(Boolean)
+      .join(' ') || undefined
 
   return (
     <html lang={lng} suppressHydrationWarning className={htmlClassName} style={htmlStyle}>
@@ -110,6 +120,7 @@ export default async function RootLayout({
             forceDisplayTimezone={forceDisplayTimezone}
           >
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+              <LenisSmoothScroll enabled={smoothScrollEnabled} />
               <GlobalMouseTilt enabled={globalMouseTiltEnabled} gyroEnabled={globalMouseTiltGyroEnabled}>
                 {children}
               </GlobalMouseTilt>

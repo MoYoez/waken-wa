@@ -97,14 +97,7 @@ export function ThemeModeToggle({ className = '' }: { className?: string }) {
                 return
               }
 
-              const { clientX, clientY } = event
-              const maxX = Math.max(clientX, window.innerWidth - clientX)
-              const maxY = Math.max(clientY, window.innerHeight - clientY)
-              const endRadius = Math.hypot(maxX, maxY)
               const root = document.documentElement
-              root.style.setProperty('--theme-switch-x', `${clientX}px`)
-              root.style.setProperty('--theme-switch-y', `${clientY}px`)
-              root.style.setProperty('--theme-switch-end-radius', `${endRadius}px`)
 
               const transition = transitionApi.call(doc, () => {
                 applyThemeMode(option.value)
@@ -116,13 +109,13 @@ export function ThemeModeToggle({ className = '' }: { className?: string }) {
               const animation = root.animate(
                 {
                   clipPath: [
-                    `circle(0px at ${clientX}px ${clientY}px)`,
-                    `circle(${endRadius}px at ${clientX}px ${clientY}px)`,
+                    'inset(0 0 100% 0)',
+                    'inset(0 0 0 0)',
                   ],
                 },
                 {
-                  duration: 720,
-                  easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                  duration: 1400,
+                  easing: 'cubic-bezier(0.22, 0.72, 0.18, 1)',
                   pseudoElement: '::view-transition-new(root)',
                 },
               )

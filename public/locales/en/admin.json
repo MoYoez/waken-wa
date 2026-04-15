@@ -1042,6 +1042,8 @@
   "webSettingsHitokoto": {
     "pageLoadingTitle": "Enable public page transition loading",
     "pageLoadingDescription": "Shows the animated page transition shell between public routes.",
+    "smoothScrollTitle": "Use smooth scrolling",
+    "smoothScrollDescription": "When enabled, public pages use Lenis-powered smooth scrolling.",
     "searchEngineIndexingTitle": "Allow search-engine indexing",
     "searchEngineIndexingDescription": "Controls whether the site exposes index-friendly metadata to crawlers.",
     "noteTypewriterTitle": "Enable note typewriter effect",

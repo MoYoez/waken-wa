@@ -7,15 +7,17 @@ import Link from 'next/link'
 import { useT } from 'next-i18next/client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { MarkdownContent } from '@/components/admin/markdown-content'
 import { FormattedTime } from '@/components/formatted-time'
 import type { InspirationHomeItem } from '@/components/inspiration-home-section'
-import { LexicalContent } from '@/components/lexical-content'
 import {
   getSiteSectionTransition,
   getSiteSectionVariants,
 } from '@/components/site-motion'
-import { inspirationLooksLikeMarkdown } from '@/lib/inspiration-preview'
+import {
+  extractInspirationLeadImage,
+  inspirationPlainPreview,
+  inspirationPlainPreviewAny,
+} from '@/lib/inspiration-preview'
 import { normalizeTimezone } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
 
@@ -144,27 +146,17 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
         <AnimatePresence initial={false}>
           {items.map((entry) => {
             const href = `/inspiration/${entry.id}`
-            const renderedContent = entry.contentLexical ? (
-              inspirationLooksLikeMarkdown(entry.content) ? (
-                <MarkdownContent
-                  markdown={entry.content}
-                  className="text-xs text-muted-foreground"
-                  imageClassName="max-h-40 w-auto rounded-md border border-border/60 my-2"
-                />
-              ) : (
-                <LexicalContent content={entry.contentLexical} className="text-xs text-muted-foreground" />
-              )
-            ) : (
-              <MarkdownContent
-                markdown={entry.content}
-                className="text-xs text-muted-foreground"
-                imageClassName="max-h-40 w-auto rounded-md border border-border/60 my-2"
-              />
-            )
+            const inlineLead = !entry.imageDataUrl ? extractInspirationLeadImage(entry.content) : null
+            const cardImageSrc = entry.imageDataUrl ?? inlineLead?.imageSrc ?? null
+            const preview = inlineLead?.imageSrc
+              ? inspirationPlainPreview(inlineLead.contentWithoutImage, 120).text
+              : inspirationPlainPreviewAny(entry.content, entry.contentLexical, 120).text
+            const statusText = String(entry.statusSnapshot ?? '').trim()
+
             return (
               <motion.article
                 key={entry.id}
-                className={`${cardShell} p-2.5 sm:p-3`}
+                className={`${cardShell} h-[7.75rem] overflow-hidden p-2.5 sm:p-3`}
                 variants={sectionVariants}
                 initial="initial"
                 animate="animate"
@@ -172,8 +164,8 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                 transition={sectionTransition}
                 layout
               >
-                <div className="flex flex-row gap-2 sm:gap-3 items-stretch">
-                  {entry.imageDataUrl ? (
+                <div className={cn('flex h-full items-stretch gap-2 sm:gap-3', cardImageSrc ? 'flex-row' : 'flex-col')}>
+                  {cardImageSrc ? (
                     <Link
                       href={href}
                       className={cn(
@@ -186,7 +178,7 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                       )}
                     >
                       <Image
-                        src={entry.imageDataUrl}
+                        src={cardImageSrc}
                         alt=""
                         fill
                         loading="eager"
@@ -195,9 +187,9 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                       />
                     </Link>
                   ) : null}
-                  <div className="min-w-0 flex-1 flex flex-col gap-1.5">
-                    <div className="flex flex-wrap items-baseline justify-between gap-1.5">
-                      <Link href={href} className="text-xs font-semibold hover:text-primary transition-colors">
+                  <div className="flex h-full min-w-0 flex-1 flex-col gap-1.5">
+                    <div className="flex min-h-4 items-baseline justify-between gap-1.5">
+                      <Link href={href} className="min-w-0 truncate text-xs font-semibold transition-colors hover:text-primary">
                         {entry.title?.trim() ? entry.title : t('site.inspiration.untitled')}
                       </Link>
                       <FormattedTime
@@ -206,9 +198,20 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                         className="text-[0.65rem] text-muted-foreground tabular-nums shrink-0 leading-none"
                       />
                     </div>
-                    <div className="relative max-h-24 overflow-hidden">
-                      {renderedContent}
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent" />
+                    <div className="space-y-1">
+                      {statusText ? (
+                        <div className="rounded-md border border-dashed border-border/80 bg-muted/20 px-2 py-1 text-[0.65rem] leading-snug text-muted-foreground line-clamp-1">
+                          {statusText}
+                        </div>
+                      ) : null}
+                      <p
+                        className={cn(
+                          'text-xs leading-relaxed text-muted-foreground',
+                          statusText ? 'min-h-5 line-clamp-1' : 'min-h-10 line-clamp-2',
+                        )}
+                      >
+                        {preview || t('site.inspiration.openFull')}
+                      </p>
                     </div>
                     <Link href={href} className="text-xs font-medium text-primary hover:underline w-fit">
                       {t('site.inspiration.openFull')}

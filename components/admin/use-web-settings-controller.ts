@@ -338,6 +338,7 @@ export function useWebSettingsController() {
                 : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
             globalMouseTiltEnabled: data.globalMouseTiltEnabled === true,
             globalMouseTiltGyroEnabled: data.globalMouseTiltGyroEnabled === true,
+            smoothScrollEnabled: data.smoothScrollEnabled === true,
             hideActivityMedia: data.hideActivityMedia === true,
             hideInspirationOnHome: data.hideInspirationOnHome === true,
             activityRejectLockappSleep: data.activityRejectLockappSleep === true,

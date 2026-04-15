@@ -57,6 +57,18 @@ export function WebSettingsHitokotoPanel() {
           }
         />
         <WebSettingsRow
+          htmlFor="smooth-scroll-toggle"
+          title={t('webSettingsHitokoto.smoothScrollTitle')}
+          description={t('webSettingsHitokoto.smoothScrollDescription')}
+          action={
+            <Switch
+              id="smooth-scroll-toggle"
+              checked={form.smoothScrollEnabled}
+              onCheckedChange={(value) => patch('smoothScrollEnabled', value)}
+            />
+          }
+        />
+        <WebSettingsRow
           htmlFor="search-engine-indexing-toggle"
           title={t('webSettingsHitokoto.searchEngineIndexingTitle')}
           description={t('webSettingsHitokoto.searchEngineIndexingDescription')}

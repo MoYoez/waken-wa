@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowUpRight, CircleHelp, Users } from 'lucide-react'
+import { ArrowUpRight, CircleHelp } from 'lucide-react'
 import Link from 'next/link'
 import { useT } from 'next-i18next/client'
 
@@ -43,6 +43,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
   const { t } = useT('common')
   const isMobile = useIsMobile()
   const { count: viewerCount, error, loading } = useViewerCount({ mode: 'heartbeat' })
+  const watchingSuffix = t('site.footer.watchingSuffix')
   const presenceStatus = error
     ? t('site.footer.presenceFailed')
     : loading
@@ -74,32 +75,28 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
           <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div
-                className="footer-presence-chip inline-flex w-full max-w-full items-center gap-2 rounded-2xl border border-border/60 bg-background/80 px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm sm:w-auto sm:rounded-full sm:py-1.5"
+                className="footer-presence-chip inline-flex w-full max-w-full items-center justify-center gap-2 rounded-2xl border border-border/25 bg-background/30 px-2.5 py-1.5 text-xs text-muted-foreground/80 shadow-none sm:w-auto sm:justify-start sm:rounded-full sm:py-1"
                 aria-live="polite"
               >
-                <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center" aria-hidden>
+                <span className="relative flex h-2 w-2 shrink-0 items-center justify-center" aria-hidden>
                   <span
-                    className={`absolute inline-flex h-full w-full rounded-full opacity-70 ${error ? 'bg-amber-400' : 'bg-emerald-500'} ${loading ? 'animate-pulse' : 'animate-ping'}`}
-                  />
-                  <span
-                    className={`relative inline-flex h-2.5 w-2.5 rounded-full ${error ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                    className={`relative inline-flex h-2 w-2 rounded-full ${error ? 'bg-amber-400' : 'bg-emerald-500'} ${loading ? 'animate-pulse' : ''}`}
                   />
                 </span>
-                <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
-                <span className="min-w-0 flex-1 cursor-default text-foreground">
+                <span className="min-w-0 flex-1 cursor-default truncate">
                   {t('site.footer.watchingPrefix')}{' '}
-                  <span className="tabular-nums text-primary">{viewerCount}</span>{' '}
-                  {t('site.footer.watchingSuffix')}
+                  <span className="tabular-nums font-medium text-foreground">{viewerCount}</span>
+                  {watchingSuffix ? ` ${watchingSuffix}` : null}
                 </span>
                 {isMobile ? (
                   <Popover>
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-foreground"
                         aria-label={t('site.footer.helpAriaLabel')}
                       >
-                        <CircleHelp className="h-3.5 w-3.5" />
+                        <CircleHelp className="h-3 w-3" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent
@@ -115,10 +112,10 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                        className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-foreground"
                         aria-label={t('site.footer.helpAriaLabel')}
                       >
-                        <CircleHelp className="h-3.5 w-3.5" />
+                        <CircleHelp className="h-3 w-3" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" align="start" className="max-w-xs space-y-2 p-3 text-left">

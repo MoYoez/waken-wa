@@ -431,6 +431,9 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
   if ('globalMouseTiltGyroEnabled' in web && typeof web.globalMouseTiltGyroEnabled === 'boolean') {
     patch.globalMouseTiltGyroEnabled = web.globalMouseTiltGyroEnabled
   }
+  if ('smoothScrollEnabled' in web && typeof web.smoothScrollEnabled === 'boolean') {
+    patch.smoothScrollEnabled = web.smoothScrollEnabled
+  }
   if ('hideActivityMedia' in web && typeof web.hideActivityMedia === 'boolean') {
     patch.hideActivityMedia = web.hideActivityMedia
   }

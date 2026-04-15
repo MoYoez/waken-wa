@@ -1042,6 +1042,8 @@
   "webSettingsHitokoto": {
     "pageLoadingTitle": "启用前台页面过渡加载",
     "pageLoadingDescription": "在公开页面切换时显示带动画的过渡壳层。",
+    "smoothScrollTitle": "使用平滑滚动",
+    "smoothScrollDescription": "开启后，公开页面会使用 Lenis 驱动平滑滚动。",
     "searchEngineIndexingTitle": "允许搜索引擎收录",
     "searchEngineIndexingDescription": "控制站点是否向搜索引擎暴露可收录的元数据。",
     "noteTypewriterTitle": "启用备注打字机效果",

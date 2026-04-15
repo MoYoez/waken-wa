@@ -138,6 +138,7 @@ export async function GET(request: Request) {
             : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
         globalMouseTiltEnabled: cfg.globalMouseTiltEnabled === true,
         globalMouseTiltGyroEnabled: cfg.globalMouseTiltGyroEnabled === true,
+        smoothScrollEnabled: cfg.smoothScrollEnabled === true,
         hideActivityMedia: cfg.hideActivityMedia === true,
         hideInspirationOnHome: cfg.hideInspirationOnHome === true,
         activityRejectLockappSleep: cfg.activityRejectLockappSleep === true,

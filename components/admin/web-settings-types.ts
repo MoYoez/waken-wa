@@ -110,6 +110,8 @@ export interface SiteConfig {
   scheduleHomeAfterClassesLabel: string
   globalMouseTiltEnabled: boolean
   globalMouseTiltGyroEnabled: boolean
+  /** When true, the public site uses Lenis smooth scrolling globally. */
+  smoothScrollEnabled: boolean
   hideActivityMedia: boolean
   /** When true, hide the inspiration section from the home page. */
   hideInspirationOnHome: boolean

@@ -172,6 +172,8 @@ export const siteConfig = pgTable('site_config', {
   globalMouseTiltEnabled: boolean('global_mouse_tilt_enabled').notNull().default(false),
   // Nullable on purpose: safe db:push on existing rows; app treats null as false.
   globalMouseTiltGyroEnabled: boolean('global_mouse_tilt_gyro_enabled').default(false),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  smoothScrollEnabled: boolean('smooth_scroll_enabled').default(false),
   hideActivityMedia: boolean('hide_activity_media').notNull().default(false),
   // Nullable on purpose: safe db:push on existing rows; app treats null as false.
   hideInspirationOnHome: boolean('hide_inspiration_on_home').default(false),

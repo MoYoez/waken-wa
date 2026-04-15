@@ -200,6 +200,8 @@ export const siteConfig = sqliteTable('site_config', {
   globalMouseTiltGyroEnabled: integer('global_mouse_tilt_gyro_enabled', {
     mode: 'boolean',
   }).default(false),
+  // Nullable on purpose: safe db:push on existing rows; app treats null as false.
+  smoothScrollEnabled: integer('smooth_scroll_enabled', { mode: 'boolean' }).default(false),
   hideActivityMedia: integer('hide_activity_media', { mode: 'boolean' })
     .notNull()
     .default(false),

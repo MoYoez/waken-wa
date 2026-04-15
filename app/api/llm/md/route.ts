@@ -363,6 +363,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
     '`customCss`: Extra sanitized custom CSS. Use only for targeted overrides, advanced selectors, or remaining display details that are not exposed as dedicated theme fields',
     '`globalMouseTiltEnabled`: Enables desktop tilt motion effect',
     '`globalMouseTiltGyroEnabled`: Enables gyro tilt on supported mobile devices',
+    '`smoothScrollEnabled`: Enables Lenis-powered smooth scrolling for the public site',
     '`hideActivityMedia`: Hides media payload from public activity cards without deleting stored records',
   ])
   pushBullets(lines, [

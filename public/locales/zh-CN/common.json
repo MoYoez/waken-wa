@@ -52,13 +52,13 @@
       "defaultBio": "正在构建一些有意思的东西"
     },
     "footer": {
-      "watchingPrefix": "正在被",
-      "watchingSuffix": "人看爆",
+      "watchingPrefix": "当前在线",
+      "watchingSuffix": "人",
       "helpAriaLabel": "查看在线人数说明",
-      "helpTitle": "这是如何实现的？",
+      "helpTitle": "关于在线人数",
       "helpLine1Prefix": "当你打开这个页面时，浏览器会定时向",
       "helpLine1Suffix": "发送 heartbeat，请求当前浏览页面的人数。",
-      "helpLine2": "这个计数用于显示站点当前有多少访客正在查看页面；当前实现不是 WebSocket 推送，而是周期性同步。",
+      "helpLine2": "这个数字是根据当前页面的 heartbeat 粗略估算的，只用来表示此刻有人在附近逛逛。",
       "helpStatusLabel": "当前状态：",
       "presenceFailed": "读取失败",
       "presenceSyncing": "同步中",

@@ -85,6 +85,7 @@ export const WEB_SETTINGS_INITIAL_FORM: SiteConfig = {
   scheduleHomeAfterClassesLabel: SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
   globalMouseTiltEnabled: false,
   globalMouseTiltGyroEnabled: false,
+  smoothScrollEnabled: false,
   hideActivityMedia: false,
   hideInspirationOnHome: false,
   activityRejectLockappSleep: false,

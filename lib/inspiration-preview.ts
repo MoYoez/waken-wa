@@ -1,6 +1,7 @@
 import { lexicalTextContent } from '@/lib/inspiration-lexical'
 
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*\]\([^)]+\)/g
+const MARKDOWN_IMAGE_SRC_RE = /!\[[^\]]*\]\(([^)]+)\)/
 const LEXICAL_IMAGE_NODE_RE = /"type":"image"/
 
 function countNonEmptyLines(text: string): number {
@@ -62,6 +63,28 @@ export function inspirationPlainPreview(markdown: string, maxLen: number): { tex
   )
   if (text.length <= maxLen) return { text: text || '（附图或格式内容）', truncated: false }
   return { text: `${text.slice(0, maxLen).trim()}…`, truncated: true }
+}
+
+export function extractInspirationLeadImage(markdown: string): {
+  imageSrc: string | null
+  contentWithoutImage: string
+} {
+  const match = MARKDOWN_IMAGE_SRC_RE.exec(markdown)
+  MARKDOWN_IMAGE_SRC_RE.lastIndex = 0
+  if (!match) {
+    return {
+      imageSrc: null,
+      contentWithoutImage: markdown,
+    }
+  }
+
+  return {
+    imageSrc: String(match[1] ?? '').trim() || null,
+    contentWithoutImage: markdown
+      .replace(match[0], '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim(),
+  }
 }
 
 /** Whether home should offer “full article” instead of inline full markdown. */

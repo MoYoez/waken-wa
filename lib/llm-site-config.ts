@@ -455,6 +455,11 @@ export async function updateSiteConfigFromPayload(
     globalMouseTiltGyroEnabled = Boolean(body.globalMouseTiltGyroEnabled)
   }
 
+  let smoothScrollEnabled = existing?.smoothScrollEnabled === true
+  if (body.smoothScrollEnabled !== undefined && body.smoothScrollEnabled !== null) {
+    smoothScrollEnabled = Boolean(body.smoothScrollEnabled)
+  }
+
   let hideActivityMedia = existing?.hideActivityMedia === true
   if (body.hideActivityMedia !== undefined && body.hideActivityMedia !== null) {
     hideActivityMedia = Boolean(body.hideActivityMedia)
@@ -623,6 +628,7 @@ export async function updateSiteConfigFromPayload(
     scheduleHomeAfterClassesLabel,
     globalMouseTiltEnabled,
     globalMouseTiltGyroEnabled,
+    smoothScrollEnabled,
     hideActivityMedia,
     hideInspirationOnHome,
     hcaptchaEnabled,

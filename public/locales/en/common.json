@@ -52,13 +52,13 @@
       "defaultBio": "Building something awesome"
     },
     "footer": {
-      "watchingPrefix": "Blowing up with",
-      "watchingSuffix": "viewers right now",
+      "watchingPrefix": "Online now:",
+      "watchingSuffix": "",
       "helpAriaLabel": "View online-count details",
-      "helpTitle": "How does this work?",
+      "helpTitle": "About online presence",
       "helpLine1Prefix": "When you open this page, the browser periodically sends heartbeats to",
       "helpLine1Suffix": "to request the current number of viewers on this page.",
-      "helpLine2": "This count is used to show how many visitors are currently viewing the site. The current implementation uses periodic sync rather than WebSocket push.",
+      "helpLine2": "This is a lightweight estimate from page heartbeats, just enough to show that someone is around.",
       "helpStatusLabel": "Current status:",
       "presenceFailed": "Read failed",
       "presenceSyncing": "Syncing",

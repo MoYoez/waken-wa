@@ -102,6 +102,7 @@ export function buildAdminSettingsPatchBody(
         : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
     globalMouseTiltEnabled: Boolean(data.globalMouseTiltEnabled),
     globalMouseTiltGyroEnabled: Boolean((data as Record<string, unknown>).globalMouseTiltGyroEnabled),
+    smoothScrollEnabled: Boolean((data as Record<string, unknown>).smoothScrollEnabled),
     hideActivityMedia: Boolean(data.hideActivityMedia),
     activityRejectLockappSleep: Boolean(data.activityRejectLockappSleep),
     scheduleSlotMinutes,

@@ -174,7 +174,7 @@ html[data-theme-switch='active']::view-transition-old(root) {
 
 html[data-theme-switch='active']::view-transition-new(root) {
   z-index: 999;
-  transform-origin: var(--theme-switch-x, 50%) var(--theme-switch-y, 50%);
+  transform-origin: top center;
   will-change: clip-path;
 }
 
@@ -1208,8 +1208,7 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
 }
 
 .footer-presence-chip {
-  border-color: color-mix(in srgb, var(--foreground) 11%, var(--border) 89%);
-  animation: footer-chip-breathe 4.8s ease-in-out infinite;
+  border-color: color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 
 .footer-actions-row {
