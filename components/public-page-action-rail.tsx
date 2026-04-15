@@ -30,7 +30,7 @@ const DEFAULT_FONT_PREFERENCE_SNAPSHOT = serializePublicPageFontPreference()
 const publicPageFontPreferenceListeners = new Set<() => void>()
 const FONT_OPTION_ICONS = [Type, Pilcrow] as const
 const RAIL_BUTTON_CLASS =
-  'h-9 w-9 rounded-lg border border-border/60 bg-background/80 shadow-[0_12px_28px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors hover:bg-accent/60 sm:h-10 sm:w-10'
+  'h-9 w-9 rounded-lg border border-border/60 bg-card/95 text-card-foreground shadow-[0_12px_28px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors hover:bg-card sm:h-10 sm:w-10'
 const PANEL_BUTTON_CLASS =
   'h-9 w-9 rounded-lg border transition-colors'
 const THEME_BUTTONS: Array<{ icon: typeof Sun; labelKey: string; mode: ThemeMode }> = [
