@@ -87,7 +87,7 @@ export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: L
               placeholder="admin"
               required
               autoComplete="username"
-              className="w-full px-4 py-2 border border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground transition-colors text-sm"
+              className="w-full rounded-sm border border-border bg-background px-4 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
             />
           </div>
 
@@ -103,7 +103,7 @@ export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: L
               placeholder="••••••••"
               required
               autoComplete="current-password"
-              className="w-full px-4 py-2 border border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground transition-colors text-sm"
+              className="w-full rounded-sm border border-border bg-background px-4 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
             />
           </div>
 
@@ -118,7 +118,7 @@ export function LoginForm({ hcaptchaEnabled = false, hcaptchaSiteKey = null }: L
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-2 border border-border rounded-sm bg-foreground text-background hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-light text-sm"
+            className="w-full rounded-sm border border-primary/15 bg-primary px-4 py-2 text-sm font-light text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? t('login.signingIn') : t('login.signIn')}
           </button>

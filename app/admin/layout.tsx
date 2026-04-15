@@ -1,5 +1,4 @@
 import { cookies } from 'next/headers'
-import type { CSSProperties } from 'react'
 
 import { AdminLanguageToggle } from '@/components/admin/admin-language-toggle'
 import { AdminThemeRuntime } from '@/components/admin/admin-theme-runtime'
@@ -35,10 +34,16 @@ export default async function AdminLayout({
     resolvedTheme,
     themeColor: initialThemeColor,
     backgroundColor: initialBackgroundColor,
-  }) as CSSProperties
+  })
+  const adminThemeCssText = Object.entries(adminThemeStyle)
+    .map(([key, value]) => `  ${key}: ${value};`)
+    .join('\n')
 
   return (
-    <div id="admin-theme-root" style={adminThemeStyle}>
+    <>
+      {adminThemeCssText ? (
+        <style id="admin-theme-vars">{`:root {\n${adminThemeCssText}\n}`}</style>
+      ) : null}
       <AdminThemeRuntime
         initialThemeColor={initialThemeColor}
         initialBackgroundColor={initialBackgroundColor}
@@ -52,6 +57,6 @@ export default async function AdminLayout({
       </div>
       <div className="pb-24 sm:pb-28 lg:pb-0">{children}</div>
       <AdminToaster />
-    </div>
+    </>
   )
 }

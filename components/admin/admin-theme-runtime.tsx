@@ -42,7 +42,7 @@ function resolveAppearanceValue(
 
 function getAdminThemeTarget(): HTMLElement {
   if (typeof document === 'undefined') return {} as HTMLElement
-  return document.getElementById('admin-theme-root') ?? document.documentElement
+  return document.documentElement
 }
 
 export function AdminThemeRuntime({
