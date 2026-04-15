@@ -41,6 +41,7 @@ function GitHubMark({ className }: { className?: string }) {
 export function LayoutFooter({ adminText }: { adminText: string }) {
   const { t } = useT('common')
   const isMobile = useIsMobile()
+  const nowYear = new Date().getFullYear()
   const { count: viewerCount, error, loading } = useViewerCount({ mode: 'heartbeat' })
   const watchingSuffix = t('site.footer.watchingSuffix')
   const presenceStatus = error
@@ -59,8 +60,14 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
       <p>{t('site.footer.helpLine2')}</p>
       <p>
         {t('site.footer.helpStatusLabel')}
-        <span className={`ml-1 font-medium ${error ? 'text-amber-300' : 'text-emerald-300'}`}>
-          {presenceStatus}
+        <span className="ml-1 inline-flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className={`inline-flex h-1.5 w-1.5 shrink-0 rounded-full ${error ? 'bg-amber-300' : 'bg-emerald-400'} ${loading ? 'animate-pulse' : ''}`}
+          />
+          <span className={`font-medium ${error ? 'text-amber-300' : 'text-emerald-300'}`}>
+            {presenceStatus}
+          </span>
         </span>
       </p>
       {error ? <p>{error}</p> : null}
@@ -71,21 +78,29 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
     <footer className="layout-footer public-page-font-scope pb-5 sm:pb-8">
       <div className="mx-auto max-w-2xl px-4 sm:px-6">
         <div className="footer-surface overflow-hidden rounded-[20px] text-card-foreground sm:rounded-[24px]">
-          <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 sm:py-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col items-center gap-1.5 px-4 py-4 text-xs text-muted-foreground sm:gap-2 sm:px-5 sm:py-4">
+            <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:gap-x-4">
+              <Link
+                href="/admin"
+                className="inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 text-sm font-medium text-muted-foreground/62 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+              >
+                {adminText}
+              </Link>
+
+              <span aria-hidden className="hidden h-1 w-1 rounded-full bg-border/75 sm:inline-block" />
+
               <div
-                className="footer-presence-chip inline-flex w-full max-w-full items-center justify-center gap-2 rounded-2xl border border-border/30 bg-background/18 px-2.5 py-1.5 text-[11px] text-muted-foreground/75 shadow-none sm:w-auto sm:justify-start sm:rounded-full sm:py-1"
+                className="footer-presence-chip inline-flex max-w-full items-center gap-2 rounded-2xl border border-border/30 bg-background/18 px-2.5 py-1.5 text-[11px] text-muted-foreground/75 shadow-none sm:rounded-full sm:py-1"
                 aria-live="polite"
               >
-                <span className="relative flex h-2 w-2 shrink-0 items-center justify-center" aria-hidden>
-                  <span
-                    className={`relative inline-flex h-2 w-2 rounded-full ${error ? 'bg-amber-400' : 'bg-emerald-500'} ${loading ? 'animate-pulse' : ''}`}
-                  />
-                </span>
-                <span className="min-w-0 flex-1 cursor-default truncate">
-                  {t('site.footer.watchingPrefix')}{' '}
-                  <span className="tabular-nums font-medium text-foreground/88">{viewerCount}</span>
-                  {watchingSuffix ? ` ${watchingSuffix}` : null}
+                <span className="min-w-0 flex-1 cursor-default">
+                  <span className="inline-flex max-w-full items-center gap-1.5 truncate">
+                    <span className="truncate">{t('site.footer.watchingPrefix')}</span>
+                    <span className="shrink-0 tabular-nums font-medium text-foreground/88">
+                      {viewerCount}
+                    </span>
+                    {watchingSuffix ? <span className="shrink-0">{watchingSuffix}</span> : null}
+                  </span>
                 </span>
                 {isMobile ? (
                   <Popover>
@@ -123,41 +138,28 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                   </Tooltip>
                 )}
               </div>
-
-              <div className="hidden items-center justify-end sm:flex">
-                <Link
-                  href="/admin"
-                  className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-border/50 bg-background/56 px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent/45 hover:text-foreground sm:min-h-0 sm:rounded-full sm:py-1.5"
-                >
-                  {adminText}
-                </Link>
-              </div>
             </div>
 
-            <div className="h-px bg-[linear-gradient(90deg,color-mix(in_srgb,var(--border)_0%,transparent),var(--border),color-mix(in_srgb,var(--border)_0%,transparent))]" />
+            <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:gap-x-4">
+              <p className="text-[11px] text-muted-foreground/58 sm:text-xs sm:whitespace-nowrap">
+                © 2025{nowYear > 2025 ? ` - ` : ' '}
+                <span suppressHydrationWarning>{nowYear > 2025 ? nowYear : ''}</span>
+                {nowYear > 2025 ? ' ' : ''}
+                Powered By Waken-Wa
+              </p>
 
-            <div className="footer-actions-row flex items-center justify-between gap-3 text-xs text-muted-foreground">
-              <div className="flex min-w-0 items-center justify-stretch sm:justify-start">
-                <a
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-2xl border border-border/55 bg-background/44 px-3 py-2 font-medium text-muted-foreground transition-colors hover:bg-accent/38 hover:text-foreground sm:min-h-0 sm:w-auto sm:rounded-full sm:py-1.5"
-                  href={TEMPLATE_REPO_HREF}
-                >
-                  <GitHubMark />
-                  <span>{t('site.footer.forkProject')}</span>
-                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-                </a>
-              </div>
+              <span aria-hidden className="hidden h-1 w-1 rounded-full bg-border/75 sm:inline-block" />
 
-              <div className="flex items-center justify-end">
-                <Link
-                  href="/admin"
-                  className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-2xl border border-border/60 bg-background/80 px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent/60 hover:text-foreground sm:hidden"
-                >
-                  {adminText}
-                </Link>
-              </div>
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-1 py-2 font-medium text-muted-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+                href={TEMPLATE_REPO_HREF}
+              >
+                <GitHubMark />
+                <span>{t('site.footer.forkProject')}</span>
+                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+              </a>
             </div>
           </div>
         </div>

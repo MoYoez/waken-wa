@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, type Transition, useReducedMotion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { LayoutFooter } from '@/components/layout-footer'
@@ -13,8 +13,6 @@ const PORTAL_ID = 'site-footer-portal'
 export function LayoutFooterPortal({ adminText }: { adminText: string }) {
   const [el, setEl] = useState<HTMLElement | null>(null)
   const [ready, setReady] = useState(false)
-  const [footerInView, setFooterInView] = useState(false)
-  const footerRef = useRef<HTMLDivElement | null>(null)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition: Transition = prefersReducedMotion
     ? getSiteSectionTransition(true)
@@ -49,29 +47,10 @@ export function LayoutFooterPortal({ adminText }: { adminText: string }) {
     return () => observer.disconnect()
   }, [])
 
-  useEffect(() => {
-    const node = footerRef.current
-    if (!node) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setFooterInView(entry?.isIntersecting === true)
-      },
-      {
-        rootMargin: '0px 0px -8% 0px',
-        threshold: 0.18,
-      },
-    )
-
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [el])
-
   if (!el) return null
-  const visible = ready && footerInView
+  const visible = ready
   return createPortal(
     <motion.div
-      ref={footerRef}
       variants={sectionVariants}
       initial="initial"
       animate={visible ? 'animate' : 'initial'}
