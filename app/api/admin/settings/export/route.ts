@@ -71,6 +71,8 @@ export async function GET(request: Request) {
       version: 1,
       exportedAt: new Date().toISOString(),
       web: {
+        adminThemeColor: cfg.adminThemeColor ?? null,
+        adminBackgroundColor: cfg.adminBackgroundColor ?? null,
         pageTitle: cfg.pageTitle,
         userName: cfg.userName,
         userBio: cfg.userBio,

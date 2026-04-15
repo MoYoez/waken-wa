@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS } from '@/lib/activity-api-constants'
 import { clearActivityFeedDataCache } from '@/lib/activity-feed'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
+import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import {
   isRedisCacheForcedOnServerless,
@@ -42,6 +43,8 @@ import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
 
 export const LLM_DENIED_SITE_CONFIG_KEYS = [
+  'adminThemeColor',
+  'adminBackgroundColor',
   'userNoteTypewriterEnabled',
   'pageLoadingEnabled',
   'searchEngineIndexingEnabled',
@@ -528,7 +531,41 @@ export async function updateSiteConfigFromPayload(
     profileOnlinePulseEnabled = Boolean(body.profileOnlinePulseEnabled)
   }
 
+  let adminThemeColor: string | null =
+    normalizeAdminThemeColor(existing?.adminThemeColor ?? '') ?? null
+  if ('adminThemeColor' in body) {
+    if (body.adminThemeColor === null || body.adminThemeColor === '') {
+      adminThemeColor = null
+    } else if (typeof body.adminThemeColor === 'string') {
+      const normalized = normalizeAdminThemeColor(body.adminThemeColor)
+      if (!normalized) {
+        const error = new Error('后台主题色无效（需 #RRGGBB）')
+        ;(error as any).status = 400
+        throw error
+      }
+      adminThemeColor = normalized
+    }
+  }
+
+  let adminBackgroundColor: string | null =
+    normalizeAdminThemeColor(existing?.adminBackgroundColor ?? '') ?? null
+  if ('adminBackgroundColor' in body) {
+    if (body.adminBackgroundColor === null || body.adminBackgroundColor === '') {
+      adminBackgroundColor = null
+    } else if (typeof body.adminBackgroundColor === 'string') {
+      const normalized = normalizeAdminThemeColor(body.adminBackgroundColor)
+      if (!normalized) {
+        const error = new Error('后台背景色无效（需 #RRGGBB）')
+        ;(error as any).status = 400
+        throw error
+      }
+      adminBackgroundColor = normalized
+    }
+  }
+
   const siteConfigValues = {
+    adminThemeColor,
+    adminBackgroundColor,
     pageTitle,
     userName,
     userBio,

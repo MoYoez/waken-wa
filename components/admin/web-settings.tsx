@@ -118,7 +118,16 @@ function WebSettingsContent() {
                 </div>
                 <ThemeModeToggle className="shrink-0" />
               </div>
-              <AdminThemeColorControl />
+              <AdminThemeColorControl
+                themeColor={form.adminThemeColor}
+                backgroundColor={form.adminBackgroundColor}
+                onThemeColorChange={(value) =>
+                  setForm((prev) => ({ ...prev, adminThemeColor: value }))
+                }
+                onBackgroundColorChange={(value) =>
+                  setForm((prev) => ({ ...prev, adminBackgroundColor: value }))
+                }
+              />
             </div>
           </div>
           <div className="hidden rounded-2xl border border-border/60 bg-muted/[0.06] px-5 py-5 lg:block">

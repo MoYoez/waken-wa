@@ -2,25 +2,29 @@
 
 import { useT } from 'next-i18next/client'
 
-import {
-  useAdminBackgroundColor,
-  useAdminThemeColor,
-} from '@/components/admin/admin-theme-runtime'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
   ADMIN_BACKGROUND_COLOR_FALLBACK,
   ADMIN_THEME_COLOR_FALLBACK,
-  writeAdminBackgroundColor,
-  writeAdminThemeColor,
 } from '@/lib/admin-theme-color'
 
-export function AdminThemeColorControl() {
+type AdminThemeColorControlProps = {
+  themeColor: string
+  backgroundColor: string
+  onThemeColorChange: (value: string) => void
+  onBackgroundColorChange: (value: string) => void
+}
+
+export function AdminThemeColorControl({
+  themeColor,
+  backgroundColor,
+  onThemeColorChange,
+  onBackgroundColorChange,
+}: AdminThemeColorControlProps) {
   const { t } = useT('admin')
-  const color = useAdminThemeColor()
-  const backgroundColor = useAdminBackgroundColor()
-  const previewColor = color ?? ADMIN_THEME_COLOR_FALLBACK
-  const previewBackgroundColor = backgroundColor ?? ADMIN_BACKGROUND_COLOR_FALLBACK
+  const previewColor = themeColor || ADMIN_THEME_COLOR_FALLBACK
+  const previewBackgroundColor = backgroundColor || ADMIN_BACKGROUND_COLOR_FALLBACK
 
   return (
     <div className="grid gap-3 xl:grid-cols-2">
@@ -36,7 +40,7 @@ export function AdminThemeColorControl() {
               type="color"
               className="h-10 w-16 cursor-pointer rounded-lg border border-input bg-background p-1 shadow-xs"
               value={previewColor}
-              onChange={(event) => writeAdminThemeColor(event.target.value.toUpperCase())}
+              onChange={(event) => onThemeColorChange(event.target.value.toUpperCase())}
               aria-label={t('webSettings.adminThemeColorAriaLabel')}
             />
             <div className="min-w-0 space-y-1">
@@ -47,7 +51,7 @@ export function AdminThemeColorControl() {
                   aria-hidden
                 />
                 <span>
-                  {color
+                  {themeColor
                     ? t('webSettings.adminThemeColorCustom')
                     : t('webSettings.adminThemeColorDefault')}
                 </span>
@@ -55,15 +59,15 @@ export function AdminThemeColorControl() {
               <p className="font-mono text-xs text-foreground">{previewColor}</p>
             </div>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => writeAdminThemeColor(null)}
-            disabled={!color}
-          >
-            {t('webSettings.adminThemeColorReset')}
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onThemeColorChange('')}
+              disabled={!themeColor}
+            >
+              {t('webSettings.adminThemeColorReset')}
+            </Button>
         </div>
       </div>
 
@@ -79,7 +83,7 @@ export function AdminThemeColorControl() {
               type="color"
               className="h-10 w-16 cursor-pointer rounded-lg border border-input bg-background p-1 shadow-xs"
               value={previewBackgroundColor}
-              onChange={(event) => writeAdminBackgroundColor(event.target.value.toUpperCase())}
+              onChange={(event) => onBackgroundColorChange(event.target.value.toUpperCase())}
               aria-label={t('webSettings.adminBackgroundColorAriaLabel')}
             />
             <div className="min-w-0 space-y-1">
@@ -98,14 +102,14 @@ export function AdminThemeColorControl() {
               <p className="font-mono text-xs text-foreground">{previewBackgroundColor}</p>
             </div>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => writeAdminBackgroundColor(null)}
-            disabled={!backgroundColor}
-          >
-            {t('webSettings.adminBackgroundColorReset')}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onBackgroundColorChange('')}
+              disabled={!backgroundColor}
+            >
+              {t('webSettings.adminBackgroundColorReset')}
           </Button>
         </div>
       </div>

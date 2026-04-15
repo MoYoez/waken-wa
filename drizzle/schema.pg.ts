@@ -88,6 +88,10 @@ export const userActivities = pgTable(
 
 export const siteConfig = pgTable('site_config', {
   id: integer('id').primaryKey().default(1),
+  /** Hex #RRGGBB for admin shell accent; null = use built-in admin theme */
+  adminThemeColor: varchar('admin_theme_color', { length: 7 }),
+  /** Hex #RRGGBB for admin shell surfaces; null = use built-in admin surfaces */
+  adminBackgroundColor: varchar('admin_background_color', { length: 7 }),
   pageTitle: varchar('page_title', { length: 120 })
     .notNull()
     .default('别睡了啦！看看你在做什么'),

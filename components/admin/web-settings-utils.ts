@@ -7,6 +7,7 @@ import type {
 import {
   REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
 } from '@/lib/activity-api-constants'
+import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import {
   type AppMessageRuleGroup,
   normalizeAppMessageRules,
@@ -260,6 +261,18 @@ export function parseAppRulesJson(
 /** Maps export `web` object into form fields (same shape as GET /api/admin/settings). */
 export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig> {
   const patch: Partial<SiteConfig> = {}
+  if ('adminThemeColor' in web) {
+    patch.adminThemeColor =
+      typeof web.adminThemeColor === 'string'
+        ? (normalizeAdminThemeColor(web.adminThemeColor) ?? '')
+        : ''
+  }
+  if ('adminBackgroundColor' in web) {
+    patch.adminBackgroundColor =
+      typeof web.adminBackgroundColor === 'string'
+        ? (normalizeAdminThemeColor(web.adminBackgroundColor) ?? '')
+        : ''
+  }
   if ('pageTitle' in web && typeof web.pageTitle === 'string') {
     const t = web.pageTitle.trim()
     patch.pageTitle = t ? t.slice(0, PAGE_TITLE_MAX_LEN) : DEFAULT_PAGE_TITLE

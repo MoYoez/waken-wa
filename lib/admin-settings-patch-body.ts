@@ -1,3 +1,4 @@
+import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
@@ -35,6 +36,12 @@ export function buildAdminSettingsPatchBody(
   ).courses
 
   return {
+    adminThemeColor:
+      normalizeAdminThemeColor((data as Record<string, unknown>).adminThemeColor ?? '') ?? null,
+    adminBackgroundColor:
+      normalizeAdminThemeColor(
+        (data as Record<string, unknown>).adminBackgroundColor ?? '',
+      ) ?? null,
     pageTitle: data.pageTitle,
     userName: data.userName,
     userBio: data.userBio,

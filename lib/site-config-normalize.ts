@@ -1,3 +1,4 @@
+import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import { normalizeAppMessageRules } from '@/lib/app-message-rules'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 
@@ -21,6 +22,8 @@ function normalizeStringArrayField(raw: unknown): string[] {
 export function normalizeSiteConfigShape(config: Record<string, any>): Record<string, any> {
   return {
     ...config,
+    adminThemeColor: normalizeAdminThemeColor(config.adminThemeColor ?? '') ?? null,
+    adminBackgroundColor: normalizeAdminThemeColor(config.adminBackgroundColor ?? '') ?? null,
     forceDisplayTimezone: config.forceDisplayTimezone === true,
     themeCustomSurface: parseThemeCustomSurface(config.themeCustomSurface),
     userNoteHitokotoCategories: normalizeStringArrayField(config.userNoteHitokotoCategories),

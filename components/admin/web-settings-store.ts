@@ -24,6 +24,8 @@ import {
 import { DEFAULT_TIMEZONE } from '@/lib/timezone'
 
 export const WEB_SETTINGS_INITIAL_FORM: SiteConfig = {
+  adminThemeColor: '',
+  adminBackgroundColor: '',
   pageTitle: DEFAULT_PAGE_TITLE,
   userName: '',
   userBio: '',

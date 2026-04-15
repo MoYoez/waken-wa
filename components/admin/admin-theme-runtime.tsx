@@ -4,9 +4,8 @@ import { useEffect, useSyncExternalStore } from 'react'
 
 import { useTheme } from '@/components/theme-provider'
 import {
-  ADMIN_BACKGROUND_COLOR_STORAGE_KEY,
   ADMIN_THEME_APPEARANCE_EVENT,
-  ADMIN_THEME_COLOR_STORAGE_KEY,
+  type AdminThemeAppearanceValue,
   buildAdminBackgroundVars,
   buildAdminThemeVars,
   clearAdminBackgroundVars,
@@ -18,41 +17,49 @@ import {
 function subscribe(onStoreChange: () => void) {
   if (typeof window === 'undefined') return () => undefined
 
-  const handleStorage = (event: StorageEvent) => {
-    if (
-      event.key &&
-      event.key !== ADMIN_THEME_COLOR_STORAGE_KEY &&
-      event.key !== ADMIN_BACKGROUND_COLOR_STORAGE_KEY
-    ) {
-      return
-    }
-    onStoreChange()
-  }
   const handleCustomChange = () => onStoreChange()
 
-  window.addEventListener('storage', handleStorage)
   window.addEventListener(ADMIN_THEME_APPEARANCE_EVENT, handleCustomChange)
   return () => {
-    window.removeEventListener('storage', handleStorage)
     window.removeEventListener(ADMIN_THEME_APPEARANCE_EVENT, handleCustomChange)
   }
 }
 
 export function useAdminThemeColor() {
-  return useSyncExternalStore(subscribe, readAdminThemeColor, () => null)
+  return useSyncExternalStore(subscribe, readAdminThemeColor, () => undefined)
 }
 
 export function useAdminBackgroundColor() {
-  return useSyncExternalStore(subscribe, readAdminBackgroundColor, () => null)
+  return useSyncExternalStore(subscribe, readAdminBackgroundColor, () => undefined)
 }
 
-export function AdminThemeRuntime() {
-  const color = useAdminThemeColor()
-  const backgroundColor = useAdminBackgroundColor()
+function resolveAppearanceValue(
+  preview: AdminThemeAppearanceValue,
+  initial: string | null,
+): string | null {
+  return preview === undefined ? initial : preview
+}
+
+function getAdminThemeTarget(): HTMLElement {
+  if (typeof document === 'undefined') return {} as HTMLElement
+  return document.getElementById('admin-theme-root') ?? document.documentElement
+}
+
+export function AdminThemeRuntime({
+  initialThemeColor = null,
+  initialBackgroundColor = null,
+}: {
+  initialThemeColor?: string | null
+  initialBackgroundColor?: string | null
+}) {
+  const previewColor = useAdminThemeColor()
+  const previewBackgroundColor = useAdminBackgroundColor()
   const { resolvedTheme } = useTheme()
+  const color = resolveAppearanceValue(previewColor, initialThemeColor)
+  const backgroundColor = resolveAppearanceValue(previewBackgroundColor, initialBackgroundColor)
 
   useEffect(() => {
-    const target = document.documentElement
+    const target = getAdminThemeTarget()
     clearAdminBackgroundVars(target)
     clearAdminThemeVars(target)
 

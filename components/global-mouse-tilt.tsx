@@ -258,7 +258,7 @@ export function GlobalMouseTilt({
   return (
     <div
       ref={wrapRef}
-      className="min-h-dvh w-full [transform-style:preserve-3d]"
+      className="min-h-dvh w-full"
     >
       {children}
     </div>

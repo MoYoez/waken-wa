@@ -2,8 +2,6 @@ import type { ResolvedTheme } from '@/lib/theme'
 
 const HEX6 = /^#[0-9A-Fa-f]{6}$/
 
-export const ADMIN_THEME_COLOR_STORAGE_KEY = 'admin-theme-color'
-export const ADMIN_BACKGROUND_COLOR_STORAGE_KEY = 'admin-background-color'
 export const ADMIN_THEME_APPEARANCE_EVENT = 'admin-theme-appearance-change'
 export const ADMIN_THEME_COLOR_FALLBACK = '#8C6246'
 export const ADMIN_BACKGROUND_COLOR_FALLBACK = '#F4EEE6'
@@ -38,6 +36,13 @@ export const ADMIN_BACKGROUND_VAR_NAMES = [
   '--sidebar-foreground',
   '--sidebar-border',
 ] as const
+
+export type AdminThemeAppearanceValue = string | null | undefined
+
+export type AdminThemeAppearance = {
+  themeColor: AdminThemeAppearanceValue
+  backgroundColor: AdminThemeAppearanceValue
+}
 
 type Rgb = {
   r: number
@@ -145,45 +150,69 @@ export function normalizeAdminThemeColor(raw: unknown): string | null {
   return value.toUpperCase()
 }
 
-export function readAdminThemeColor(): string | null {
-  return readStoredAdminHexColor(ADMIN_THEME_COLOR_STORAGE_KEY)
+function normalizeAppearanceValue(raw: unknown): AdminThemeAppearanceValue {
+  if (raw === undefined) return undefined
+  if (raw === null || raw === '') return null
+  return normalizeAdminThemeColor(raw)
 }
 
-export function readAdminBackgroundColor(): string | null {
-  return readStoredAdminHexColor(ADMIN_BACKGROUND_COLOR_STORAGE_KEY)
-}
-
-function readStoredAdminHexColor(storageKey: string): string | null {
+function getClientAppearance(): AdminThemeAppearance | null {
   if (typeof window === 'undefined') return null
-  try {
-    return normalizeAdminThemeColor(window.localStorage.getItem(storageKey))
-  } catch {
-    return null
+
+  type WindowWithAdminThemeAppearance = Window & {
+    __wakenAdminThemeAppearance?: AdminThemeAppearance
   }
-}
 
-export function writeAdminThemeColor(color: string | null) {
-  writeStoredAdminHexColor(ADMIN_THEME_COLOR_STORAGE_KEY, color)
-}
-
-export function writeAdminBackgroundColor(color: string | null) {
-  writeStoredAdminHexColor(ADMIN_BACKGROUND_COLOR_STORAGE_KEY, color)
-}
-
-function writeStoredAdminHexColor(storageKey: string, color: string | null) {
-  if (typeof window === 'undefined') return
-
-  const normalized = normalizeAdminThemeColor(color)
-  try {
-    if (normalized) {
-      window.localStorage.setItem(storageKey, normalized)
-    } else {
-      window.localStorage.removeItem(storageKey)
+  const win = window as WindowWithAdminThemeAppearance
+  if (!win.__wakenAdminThemeAppearance) {
+    win.__wakenAdminThemeAppearance = {
+      themeColor: undefined,
+      backgroundColor: undefined,
     }
-  } catch {
-    // Ignore storage failures in restricted contexts.
+  }
+  return win.__wakenAdminThemeAppearance
+}
+
+export function readAdminThemeColor(): AdminThemeAppearanceValue {
+  return getClientAppearance()?.themeColor
+}
+
+export function readAdminBackgroundColor(): AdminThemeAppearanceValue {
+  return getClientAppearance()?.backgroundColor
+}
+
+export function writeAdminThemeColor(color: AdminThemeAppearanceValue) {
+  writeAdminThemeAppearance({ themeColor: color })
+}
+
+export function writeAdminBackgroundColor(color: AdminThemeAppearanceValue) {
+  writeAdminThemeAppearance({ backgroundColor: color })
+}
+
+export function writeAdminThemeAppearance(
+  patch: Partial<AdminThemeAppearance>,
+): void {
+  const state = getClientAppearance()
+  if (!state) return
+
+  const nextThemeColor =
+    'themeColor' in patch ? normalizeAppearanceValue(patch.themeColor) : state.themeColor
+  const nextBackgroundColor =
+    'backgroundColor' in patch
+      ? normalizeAppearanceValue(patch.backgroundColor)
+      : state.backgroundColor
+
+  if (
+    nextThemeColor === state.themeColor &&
+    nextBackgroundColor === state.backgroundColor
+  ) {
+    return
   }
 
+  state.themeColor = nextThemeColor
+  state.backgroundColor = nextBackgroundColor
+
+  if (typeof window === 'undefined') return
   window.dispatchEvent(new Event(ADMIN_THEME_APPEARANCE_EVENT))
 }
 
@@ -316,6 +345,24 @@ export function buildAdminBackgroundVars(
     '--sidebar-foreground': isLightBackground ? 'oklch(0.22 0.01 60)' : 'oklch(0.985 0 0)',
     '--sidebar-border': toHslAlphaCss(border, isLightBackground ? 0.52 : 0.38),
   }
+}
+
+export function buildAdminAppearanceVars(input: {
+  resolvedTheme: ResolvedTheme
+  themeColor?: string | null
+  backgroundColor?: string | null
+}): Record<string, string> {
+  const vars: Record<string, string> = {}
+
+  if (input.backgroundColor) {
+    Object.assign(vars, buildAdminBackgroundVars(input.backgroundColor))
+  }
+
+  if (input.themeColor) {
+    Object.assign(vars, buildAdminThemeVars(input.themeColor, input.resolvedTheme))
+  }
+
+  return vars
 }
 
 export function clearAdminThemeVars(target: HTMLElement = document.documentElement) {

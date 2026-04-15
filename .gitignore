@@ -33,3 +33,4 @@ data/*.db-wal
 .vercel
 tsconfig.tsbuildinfo
 .playwright-cli/
+output/*

@@ -45,6 +45,10 @@ export type ThemeCustomSurfaceForm = {
 }
 
 export interface SiteConfig {
+  /** Empty = use default admin accent tokens. */
+  adminThemeColor: string
+  /** Empty = use default admin surface tokens. */
+  adminBackgroundColor: string
   pageTitle: string
   userName: string
   userBio: string

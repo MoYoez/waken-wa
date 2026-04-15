@@ -78,6 +78,10 @@ export const userActivities = sqliteTable(
 
 export const siteConfig = sqliteTable('site_config', {
   id: integer('id').primaryKey().default(1),
+  /** Hex #RRGGBB for admin shell accent; null = use built-in admin theme */
+  adminThemeColor: text('admin_theme_color'),
+  /** Hex #RRGGBB for admin shell surfaces; null = use built-in admin surfaces */
+  adminBackgroundColor: text('admin_background_color'),
   pageTitle: text('page_title')
     .notNull()
     .default('别睡了啦！看看你在做什么'),

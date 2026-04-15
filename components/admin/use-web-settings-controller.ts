@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAtom } from 'jotai'
 import { useT } from 'next-i18next/client'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -62,6 +62,11 @@ import {
   REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
 } from '@/lib/activity-api-constants'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
+import {
+  normalizeAdminThemeColor,
+  writeAdminBackgroundColor,
+  writeAdminThemeColor,
+} from '@/lib/admin-theme-color'
 import { normalizeAppMessageRules, prepareAppMessageRulesForSave } from '@/lib/app-message-rules'
 import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE } from '@/lib/default-page-title'
@@ -112,6 +117,11 @@ export function useWebSettingsController() {
   )
   const [, setRedisCacheServerlessForced] = useAtom(webSettingsRedisCacheServerlessForcedAtom)
   const [form, setForm] = useAtom(webSettingsFormAtom)
+  const baselineAppearanceRef = useRef({
+    adminThemeColor: '',
+    adminBackgroundColor: '',
+  })
+  const webSettingsDirtyRef = useRef(false)
 
   const historyAppsQuery = useQuery({
     queryKey: adminQueryKeys.activity.historyApps({ limit: 200 }),
@@ -214,6 +224,14 @@ export function useWebSettingsController() {
                 .filter((item: string) => item.length > 0)
             : []
           const loaded: SiteConfig = {
+            adminThemeColor:
+              typeof data.adminThemeColor === 'string'
+                ? (normalizeAdminThemeColor(data.adminThemeColor) ?? '')
+                : '',
+            adminBackgroundColor:
+              typeof data.adminBackgroundColor === 'string'
+                ? (normalizeAdminThemeColor(data.adminBackgroundColor) ?? '')
+                : '',
             pageTitle: data.pageTitle ?? DEFAULT_PAGE_TITLE,
             userName: data.userName ?? '',
             userBio: data.userBio ?? '',
@@ -352,6 +370,31 @@ export function useWebSettingsController() {
     setRedisCacheServerlessForced,
     t,
   ])
+
+  useEffect(() => {
+    baselineAppearanceRef.current = {
+      adminThemeColor: baselineForm?.adminThemeColor ?? '',
+      adminBackgroundColor: baselineForm?.adminBackgroundColor ?? '',
+    }
+  }, [baselineForm])
+
+  useEffect(() => {
+    if (!baselineForm) return
+    writeAdminThemeColor(form.adminThemeColor || null)
+    writeAdminBackgroundColor(form.adminBackgroundColor || null)
+  }, [
+    baselineForm,
+    form.adminBackgroundColor,
+    form.adminThemeColor,
+  ])
+
+  useEffect(() => {
+    return () => {
+      if (!webSettingsDirtyRef.current) return
+      writeAdminThemeColor(baselineAppearanceRef.current.adminThemeColor || null)
+      writeAdminBackgroundColor(baselineAppearanceRef.current.adminBackgroundColor || null)
+    }
+  }, [])
 
   useEffect(() => {
     if (!skillsQuery.data) return
@@ -506,7 +549,12 @@ export function useWebSettingsController() {
         return
       }
 
+      const adminThemeColor = normalizeAdminThemeColor(form.adminThemeColor)
+      const adminBackgroundColor = normalizeAdminThemeColor(form.adminBackgroundColor)
+
       const {
+        adminThemeColor: _formAdminThemeColor,
+        adminBackgroundColor: _formAdminBackgroundColor,
         inspirationDeviceRestrictionEnabled,
         inspirationAllowedDeviceHashes: inspirationHashSelection,
         hcaptchaSecretKey: hcaptchaSecretKeyForm,
@@ -536,6 +584,8 @@ export function useWebSettingsController() {
 
       const data = await patchAdminSettings({
           ...formRest,
+          adminThemeColor,
+          adminBackgroundColor,
           avatarFetchByServerEnabled:
             isRemoteAvatarUrl(formRest.avatarUrl) && formRest.avatarFetchByServerEnabled === true,
           mcpThemeToolsEnabled: form.mcpThemeToolsEnabled,
@@ -587,6 +637,22 @@ export function useWebSettingsController() {
       setRedisCacheServerlessForced(data?.redisCacheServerlessForced === true)
       const nextForm = {
         ...form,
+        ...(typeof data.adminThemeColor === 'string' || data.adminThemeColor === null
+          ? {
+              adminThemeColor:
+                typeof data.adminThemeColor === 'string'
+                  ? (normalizeAdminThemeColor(data.adminThemeColor) ?? '')
+                  : '',
+            }
+          : {}),
+        ...(typeof data.adminBackgroundColor === 'string' || data.adminBackgroundColor === null
+          ? {
+              adminBackgroundColor:
+                typeof data.adminBackgroundColor === 'string'
+                  ? (normalizeAdminThemeColor(data.adminBackgroundColor) ?? '')
+                  : '',
+            }
+          : {}),
         ...(typeof data.useNoSqlAsCacheRedis === 'boolean'
           ? { useNoSqlAsCacheRedis: data.useNoSqlAsCacheRedis === true }
           : {}),
@@ -691,6 +757,10 @@ export function useWebSettingsController() {
     skillsAuthMode,
     skillsOauthTokenTtlMinutes,
   ])
+
+  useEffect(() => {
+    webSettingsDirtyRef.current = webSettingsDirty
+  }, [webSettingsDirty])
 
   return {
     baselineForm,
