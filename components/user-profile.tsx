@@ -24,6 +24,9 @@ const NOTE_BOX_CLASS =
   'block w-full min-w-0 max-w-full break-words text-sm font-semibold text-foreground leading-snug border-l-2 border-primary pl-4 pr-0'
 const NOTE_SIGNATURE_CLASS = 'text-[1.1rem] font-normal leading-[1.8]'
 const NOTE_SIGNATURE_FONT_STACK = 'Satisfy, var(--font-sans)'
+const HITOKOTO_TYPEWRITER_START_DELAY_MS = 420
+const NOTE_ANIMATION_GATE_TIMEOUT_MS = 2200
+const NOTE_ANIMATION_GATE_SETTLE_MS = 160
 
 const TYPEWRITER_BASE_DELAY_MS = 54
 const TYPEWRITER_JITTER_MS = 28
@@ -61,19 +64,26 @@ function resolveNoteFontFamily(enabled: boolean, overrideFontFamily?: string) {
 function TypewriterNoteText({
   text,
   enabled,
+  readyToStart = true,
   startDelayMs = 0,
   speedMultiplier = 1,
+  pendingPlaceholder,
   children,
 }: {
   text: string
   enabled: boolean
+  readyToStart?: boolean
   startDelayMs?: number
   speedMultiplier?: number
+  pendingPlaceholder?: ReactNode
   children: (displayText: string) => ReactNode
 }) {
-  const [displayText, setDisplayText] = useState('')
+  const [typingState, setTypingState] = useState({ key: '', displayText: '' })
   const [reduceMotion, setReduceMotion] = useState(false)
-  const shouldAnimate = enabled && !reduceMotion && text.length > 1
+  const shouldAnimate = enabled && readyToStart && !reduceMotion && text.length > 1
+  const shouldHold = enabled && !readyToStart && !reduceMotion && text.length > 1
+  const typingKey = shouldAnimate ? `${startDelayMs}:${speedMultiplier}:${text}` : ''
+  const displayText = typingState.key === typingKey ? typingState.displayText : ''
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
@@ -90,10 +100,12 @@ function TypewriterNoteText({
     let index = 0
     let typingTimer = 0
     const startTimer = window.setTimeout(() => {
-      setDisplayText('')
       const step = () => {
         index += 1
-        setDisplayText(text.slice(0, index))
+        setTypingState({
+          key: typingKey,
+          displayText: text.slice(0, index),
+        })
         if (index >= text.length) {
           return
         }
@@ -110,9 +122,110 @@ function TypewriterNoteText({
       window.clearTimeout(startTimer)
       if (typingTimer) window.clearTimeout(typingTimer)
     }
-  }, [shouldAnimate, speedMultiplier, startDelayMs, text])
+  }, [shouldAnimate, speedMultiplier, startDelayMs, text, typingKey])
+
+  if (shouldHold) {
+    return <>{pendingPlaceholder ?? children('')}</>
+  }
 
   return <>{children(shouldAnimate ? displayText : text)}</>
+}
+
+function useProfileNoteAnimationReady({
+  enabled,
+  imageSrc,
+  waitForFonts,
+}: {
+  enabled: boolean
+  imageSrc?: string
+  waitForFonts?: boolean
+}) {
+  const gateKey = enabled ? `${String(imageSrc ?? '').trim()}::${waitForFonts ? 'fonts' : 'plain'}` : ''
+  const [readyGateKey, setReadyGateKey] = useState('')
+  const ready = !enabled || readyGateKey === gateKey
+
+  useEffect(() => {
+    if (!enabled) return
+
+    if (typeof window === 'undefined') return
+
+    const src = String(imageSrc ?? '').trim()
+    let cancelled = false
+    let settled = false
+    let settleTimer = 0
+    let timeoutTimer = 0
+    const cleanups: Array<() => void> = []
+    let pendingCount = 0
+
+    const settle = () => {
+      if (cancelled || settled) return
+      settled = true
+      settleTimer = window.setTimeout(() => {
+        if (!cancelled) setReadyGateKey(gateKey)
+      }, NOTE_ANIMATION_GATE_SETTLE_MS)
+    }
+
+    const track = (promise: Promise<unknown>, cleanup?: () => void) => {
+      pendingCount += 1
+      if (cleanup) cleanups.push(cleanup)
+      void promise.finally(() => {
+        pendingCount -= 1
+        if (pendingCount <= 0) {
+          settle()
+        }
+      })
+    }
+
+    if (src) {
+      const imageReady = new Promise<void>((resolve) => {
+        const probe = new window.Image()
+
+        const finish = () => {
+          probe.onload = null
+          probe.onerror = null
+          resolve()
+        }
+
+        const finalize = () => {
+          if (typeof probe.decode === 'function') {
+            void probe.decode().catch(() => undefined).finally(finish)
+            return
+          }
+          finish()
+        }
+
+        probe.onload = finalize
+        probe.onerror = finish
+        probe.src = src
+
+        if (probe.complete && probe.naturalWidth > 0) {
+          finalize()
+        }
+      })
+
+      track(imageReady)
+    }
+
+    if (waitForFonts && typeof document !== 'undefined' && 'fonts' in document) {
+      const fontSet = document.fonts
+      track(fontSet.ready)
+    }
+
+    if (pendingCount === 0) {
+      settle()
+    } else {
+      timeoutTimer = window.setTimeout(settle, NOTE_ANIMATION_GATE_TIMEOUT_MS)
+    }
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(settleTimer)
+      window.clearTimeout(timeoutTimer)
+      for (const cleanup of cleanups) cleanup()
+    }
+  }, [enabled, gateKey, imageSrc, waitForFonts])
+
+  return ready
 }
 
 function ProfileHitokotoNote({
@@ -120,6 +233,7 @@ function ProfileHitokotoNote({
   encode,
   fallbackNote,
   fallbackToNote,
+  animationReady,
   signatureFontEnabled,
   signatureFontFamily,
   typewriterEnabled,
@@ -128,6 +242,7 @@ function ProfileHitokotoNote({
   encode: UserNoteHitokotoEncode
   fallbackNote: string
   fallbackToNote: boolean
+  animationReady: boolean
   signatureFontEnabled: boolean
   signatureFontFamily?: string
   typewriterEnabled: boolean
@@ -148,6 +263,11 @@ function ProfileHitokotoNote({
   const noteStyle = noteFontFamily ? ({ fontFamily: noteFontFamily } as CSSProperties) : undefined
 
   const categoriesKey = useMemo(() => JSON.stringify([...categories].sort()), [categories])
+  const loadingPlaceholder = (
+    <p className={cn(noteClassName, 'animate-pulse')} style={noteStyle}>
+      {t('site.note.loadingHitokoto')}
+    </p>
+  )
 
   useEffect(() => {
     const ac = new AbortController()
@@ -207,7 +327,13 @@ function ProfileHitokotoNote({
   if (phase === 'error') {
     if (fallbackToNote && fallbackNote.trim()) {
       return (
-        <TypewriterNoteText text={fallbackNote} enabled={typewriterEnabled} startDelayMs={220}>
+        <TypewriterNoteText
+          text={fallbackNote}
+          enabled={typewriterEnabled}
+          readyToStart={animationReady}
+          startDelayMs={HITOKOTO_TYPEWRITER_START_DELAY_MS}
+          pendingPlaceholder={loadingPlaceholder}
+        >
           {(displayText) => (
             <p className={noteClassName} style={noteStyle}>
               {displayText}
@@ -228,8 +354,10 @@ function ProfileHitokotoNote({
       <TypewriterNoteText
         text={text}
         enabled={typewriterEnabled}
-        startDelayMs={220}
+        readyToStart={animationReady}
+        startDelayMs={HITOKOTO_TYPEWRITER_START_DELAY_MS}
         speedMultiplier={1.7}
+        pendingPlaceholder={loadingPlaceholder}
       >
         {(displayText) => (
           <p className={noteClassName} style={noteStyle}>
@@ -258,8 +386,10 @@ function ProfileHitokotoNote({
     <TypewriterNoteText
       text={text}
       enabled={typewriterEnabled}
-      startDelayMs={220}
+      readyToStart={animationReady}
+      startDelayMs={HITOKOTO_TYPEWRITER_START_DELAY_MS}
       speedMultiplier={1.7}
+      pendingPlaceholder={loadingPlaceholder}
     >
       {(displayText) => (
         <p className={noteClassName} style={noteStyle}>
@@ -275,6 +405,7 @@ export type { UserProfileNoteSectionProps } from '@/types/components'
 /** Full-width note block under the profile row so text can reach the card's right inner edge. */
 export function UserProfileNoteSection({
   note = '',
+  avatarUrl = '',
   noteHitokotoEnabled = false,
   noteTypewriterEnabled = false,
   noteSignatureFontEnabled = false,
@@ -285,6 +416,11 @@ export function UserProfileNoteSection({
 }: UserProfileNoteSectionProps) {
   const prefersReducedMotion = Boolean(useReducedMotion())
   const showNoteBlock = Boolean(note.trim()) || noteHitokotoEnabled
+  const hitokotoAnimationReady = useProfileNoteAnimationReady({
+    enabled: noteHitokotoEnabled && noteTypewriterEnabled,
+    imageSrc: avatarUrl,
+    waitForFonts: noteSignatureFontEnabled,
+  })
   if (!showNoteBlock) return null
   const noteFontFamily = resolveNoteFontFamily(
     noteSignatureFontEnabled,
@@ -317,6 +453,7 @@ export function UserProfileNoteSection({
             encode={noteHitokotoEncode}
             fallbackNote={note}
             fallbackToNote={noteHitokotoFallbackToNote}
+            animationReady={hitokotoAnimationReady}
             signatureFontEnabled={noteSignatureFontEnabled}
             signatureFontFamily={noteSignatureFontFamily}
             typewriterEnabled={noteTypewriterEnabled}

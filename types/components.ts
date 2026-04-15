@@ -17,6 +17,7 @@ export interface SetupInitialConfig {
 
 export interface UserProfileNoteSectionProps {
   note?: string
+  avatarUrl?: string
   noteHitokotoEnabled?: boolean
   noteTypewriterEnabled?: boolean
   noteSignatureFontEnabled?: boolean

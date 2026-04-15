@@ -200,6 +200,7 @@ export default async function Home() {
                   <SiteReveal delay={0.08}>
                     <UserProfileNoteSection
                       note={userNote}
+                      avatarUrl={avatarSrc}
                       noteHitokotoEnabled={noteHitokotoEnabled}
                       noteTypewriterEnabled={noteTypewriterEnabled}
                       noteSignatureFontEnabled={noteSignatureFontEnabled}
