@@ -1164,20 +1164,20 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
 .footer-surface {
   position: relative;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, var(--border) 88%);
+  border: 1px solid var(--home-glass-card-border);
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--card) 68%, transparent),
-      color-mix(in srgb, var(--background) 56%, transparent)
+      var(--home-glass-card-top),
+      var(--home-glass-card-bottom)
     );
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--foreground) 5%, transparent),
-    0 16px 34px color-mix(in srgb, var(--foreground) 6%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--home-glass-highlight) 48%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--home-glass-highlight) 12%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(1.08);
-  backdrop-filter: blur(20px) saturate(1.08);
+    0 0 0 1px var(--home-glass-card-edge),
+    0 18px 42px color-mix(in srgb, var(--foreground) 9%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--home-glass-highlight) 78%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--home-glass-highlight) 24%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.12);
+  backdrop-filter: blur(16px) saturate(1.12);
 }
 
 .footer-surface::before {
@@ -1188,15 +1188,15 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
   background:
     radial-gradient(
       circle at top left,
-      color-mix(in srgb, var(--accent) 10%, transparent),
-      transparent 42%
+      color-mix(in srgb, var(--accent) 11%, transparent),
+      transparent 36%
     ),
     radial-gradient(
       circle at bottom right,
-      color-mix(in srgb, var(--primary) 8%, transparent),
-      transparent 38%
+      color-mix(in srgb, var(--primary) 9%, transparent),
+      transparent 34%
     );
-  opacity: 0.9;
+  opacity: 0.92;
 }
 
 .footer-surface > * {
