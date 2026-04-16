@@ -3,6 +3,7 @@
 import { CircleHelp } from 'lucide-react'
 import Link from 'next/link'
 import { useT } from 'next-i18next/client'
+import { useState } from 'react'
 
 import {
   Popover,
@@ -29,13 +30,18 @@ export function LayoutFooter({
   const { t } = useT('common')
   const isMobile = useIsMobile()
   const currentYear = new Date().getFullYear()
+  const [poweredWaveTick, setPoweredWaveTick] = useState(0)
   const { count: viewerCount, error, loading } = useViewerCount({ mode: 'heartbeat' })
+  const isPresenceConnected = !error && !loading
   const watchingSuffix = t('site.footer.watchingSuffix')
   const presenceStatus = error
     ? t('site.footer.presenceFailed')
     : loading
       ? t('site.footer.presenceSyncing')
       : t('site.footer.presenceConnected')
+  const triggerPoweredWave = () => {
+    setPoweredWaveTick((current) => current + 1)
+  }
   const helpBody = (
     <div className="space-y-2 text-left">
       <p className="font-medium">{t('site.footer.helpTitle')}</p>
@@ -50,9 +56,9 @@ export function LayoutFooter({
         <span className="ml-1 inline-flex items-center gap-1.5">
           <span
             aria-hidden
-            className={`inline-flex h-1.5 w-1.5 shrink-0 rounded-full ${error ? 'bg-amber-300' : 'bg-emerald-400'} ${loading ? 'animate-pulse' : ''}`}
+            className={`footer-presence-indicator ${isPresenceConnected ? 'is-connected' : 'is-disconnected'} inline-flex h-1.5 w-1.5 shrink-0 rounded-full`}
           />
-          <span className={`font-medium ${error ? 'text-amber-300' : 'text-emerald-300'}`}>
+          <span className={`font-medium ${isPresenceConnected ? 'text-emerald-300' : 'text-rose-300'}`}>
             {presenceStatus}
           </span>
         </span>
@@ -62,6 +68,10 @@ export function LayoutFooter({
   )
   const renderViewerPresence = () => (
     <>
+      <span
+        aria-hidden
+        className={`footer-presence-indicator ${isPresenceConnected ? 'is-connected' : 'is-disconnected'}`}
+      />
       <span className="min-w-0 flex-1 cursor-default leading-none">
         <span className="inline-flex max-w-full items-center gap-1 truncate">
           <span className="truncate">{t('site.footer.watchingPrefix')}</span>
@@ -117,7 +127,7 @@ export function LayoutFooter({
                 <div className="flex min-w-0 items-center justify-self-start gap-2">
                   <Link
                     href="/admin"
-                    className="inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium text-foreground/65 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+                    className="footer-admin-link inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium text-foreground/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
                   >
                     {adminText}
                   </Link>
@@ -135,19 +145,39 @@ export function LayoutFooter({
 
               <div className="footer-actions-row grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 text-[11px] sm:text-xs">
                 <p className="justify-self-start whitespace-nowrap text-foreground/65">
-                  © 2025-{currentYear}
+                  © 2025 - {currentYear} Seeker
                 </p>
                 <p className="justify-self-end whitespace-nowrap text-right text-foreground/65">
-                  Powered By ^
-                  <a
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium text-foreground/65 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
-                    href={TEMPLATE_REPO_HREF}
+                  <span
+                    className="footer-powered-signature inline-flex items-center gap-0.5 align-middle"
+                    onMouseEnter={triggerPoweredWave}
+                    onTouchStart={triggerPoweredWave}
+                    onFocusCapture={triggerPoweredWave}
                   >
-                    Waken-Wa
-                  </a>
-                  ^
+                    <span>Powered By</span>
+                    <span
+                      aria-hidden
+                      key={`footer-caret-left-${poweredWaveTick}`}
+                      className={`footer-powered-caret footer-powered-caret-left${poweredWaveTick > 0 ? ' is-waving' : ''}`}
+                    >
+                      ^
+                    </span>
+                    <a
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium text-foreground/65 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+                      href={TEMPLATE_REPO_HREF}
+                    >
+                      Waken-Wa
+                    </a>
+                    <span
+                      aria-hidden
+                      key={`footer-caret-right-${poweredWaveTick}`}
+                      className={`footer-powered-caret footer-powered-caret-right${poweredWaveTick > 0 ? ' is-waving' : ''}`}
+                    >
+                      ^
+                    </span>
+                  </span>
                 </p>
               </div>
             </div>
