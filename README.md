@@ -40,7 +40,7 @@
 
 <table>
   <tr>
-    <td><img src=".github/assets/Preview/preview_main.png" alt="Waken Wa 首页" width="100%"></td>
+    <td><img src=".github/assets/Preview/preview.png" alt="Waken Wa 首页" width="100%"></td>
     <td><img src=".github/assets/Preview/preview_inspiration.png" alt="Waken Wa 灵感页面" width="100%"></td>
   </tr>
   <tr>
@@ -48,12 +48,12 @@
     <td align="center"><strong>灵感与随想记录</strong></td>
   </tr>
   <tr>
-    <td><img src=".github/assets/Preview/preview_setting0.png" alt="Waken Wa 站点设置" width="100%"></td>
-    <td><img src=".github/assets/Preview/preview_setting1.png" alt="Waken Wa 后台配置" width="100%"></td>
+    <td><img src=".github/assets/Preview/preview_setting.png" alt="Waken Wa 站点设置" width="100%"></td>
+    <td><img src=".github/assets/Preview/preview_background_main.png" alt="Waken Wa 背景与主题效果" width="100%"></td>
   </tr>
   <tr>
-    <td align="center"><strong>站点外观配置</strong></td>
-    <td align="center"><strong>后台管理面板</strong></td>
+    <td align="center"><strong>后台站点设置</strong></td>
+    <td align="center"><strong>背景与主题展示</strong></td>
   </tr>
 </table>
 

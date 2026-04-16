@@ -31,7 +31,7 @@ import {
 import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { useIsMobile } from '@/components/ui/use-mobile'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { isDeviceBatteryCharging } from '@/lib/activity-battery-metadata'
 import { getMediaDisplay, type MediaDisplay } from '@/lib/activity-media'
 import { cn } from '@/lib/utils'

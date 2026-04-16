@@ -1,15 +1,9 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 
 import { Toaster } from '@/components/ui/sonner'
-
-const emptySubscribe = () => () => {}
-
-function useIsClient() {
-  return useSyncExternalStore(emptySubscribe, () => true, () => false)
-}
+import { useIsClient } from '@/hooks/use-is-client'
 
 /**
  * Renders Sonner at document.body so toasts stay viewport-fixed (not affected by

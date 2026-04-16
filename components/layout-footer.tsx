@@ -16,7 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useIsMobile } from '@/components/ui/use-mobile'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useViewerCount } from '@/hooks/use-viewer-count'
 
 const TEMPLATE_REPO_HREF = 'https://github.com/MoYoez/waken-wa'

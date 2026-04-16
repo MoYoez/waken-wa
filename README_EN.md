@@ -38,22 +38,24 @@
 
 ## Gallery
 
+> Note: these screenshots were captured in a Chinese-language setup. Any visible Chinese copy is just sample content and can be replaced or localized in actual deployments.
+
 <table>
   <tr>
-    <td><img src=".github/assets/Preview/preview_main.png" alt="Waken Wa home page" width="100%"></td>
-    <td><img src=".github/assets/Preview/preview_inspiration.png" alt="Waken Wa inspiration page" width="100%"></td>
+    <td><img src=".github/assets/Preview/preview_en.png" alt="Waken Wa home page" width="100%"></td>
+    <td><img src=".github/assets/Preview/preview_inspiration_en.png" alt="Waken Wa inspiration page" width="100%"></td>
   </tr>
   <tr>
     <td align="center"><strong>Personal Status Home</strong></td>
     <td align="center"><strong>Inspiration and Notes</strong></td>
   </tr>
   <tr>
-    <td><img src=".github/assets/Preview/preview_setting0.png" alt="Waken Wa site settings" width="100%"></td>
-    <td><img src=".github/assets/Preview/preview_setting1.png" alt="Waken Wa admin configuration" width="100%"></td>
+    <td><img src=".github/assets/Preview/preview_setting_en.png" alt="Waken Wa site settings" width="100%"></td>
+    <td><img src=".github/assets/Preview/preview_background_main_en.png" alt="Waken Wa background and theme preview" width="100%"></td>
   </tr>
   <tr>
-    <td align="center"><strong>Site Appearance Settings</strong></td>
-    <td align="center"><strong>Admin Dashboard</strong></td>
+    <td align="center"><strong>Site Settings Panel</strong></td>
+    <td align="center"><strong>Background and Theme Preview</strong></td>
   </tr>
 </table>
 
