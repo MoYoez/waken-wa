@@ -80,101 +80,120 @@ export function LayoutFooter({
       {error ? <p>{error}</p> : null}
     </div>
   )
+  const renderViewerPresence = () => (
+    <>
+      <span className="min-w-0 flex-1 cursor-default leading-none">
+        <span className="inline-flex max-w-full items-center gap-1 truncate">
+          <span className="truncate">{t('site.footer.watchingPrefix')}</span>
+          <span className="shrink-0 tabular-nums font-medium text-foreground/88">{viewerCount}</span>
+          {watchingSuffix ? <span className="shrink-0">{watchingSuffix}</span> : null}
+        </span>
+      </span>
+      {isMobile ? (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/62 transition-colors hover:text-foreground"
+              aria-label={t('site.footer.helpAriaLabel')}
+            >
+              <CircleHelp className="h-3 w-3" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="top"
+            align="start"
+            className="w-[min(20rem,calc(100vw-2rem))] p-3 text-xs text-muted-foreground"
+          >
+            {helpBody}
+          </PopoverContent>
+        </Popover>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-md text-muted-foreground/62 transition-colors hover:text-foreground"
+              aria-label={t('site.footer.helpAriaLabel')}
+            >
+              <CircleHelp className="h-3 w-3" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="start" className="max-w-xs space-y-2 p-3 text-left">
+            {helpBody}
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </>
+  )
 
   return (
     <footer className="layout-footer public-page-font-scope pointer-events-none pb-4 sm:pb-6">
       <div className="pointer-events-auto mx-auto max-w-2xl px-4 sm:px-6">
         <div className="footer-surface overflow-hidden rounded-[20px] text-card-foreground sm:rounded-[24px]">
-          <div className="flex flex-col items-center gap-2 px-4 py-4 text-xs text-muted-foreground sm:px-5 sm:py-4">
-            <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[11px] leading-5 sm:text-xs">
-              <p className="text-muted-foreground/62">
-                © 「2025-<span suppressHydrationWarning>{nowYear}</span>」
-              </p>
-              <p className="max-w-full break-words font-medium text-foreground/84">
-                {displayUserName}
-              </p>
-              <span aria-hidden className="text-border/90">
-                ｜
-              </span>
-              <Link
-                href="/admin"
-                className="inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium text-muted-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
-              >
-                {adminText}
-              </Link>
-
-              <span aria-hidden className="text-border/90">
-                |
-              </span>
-
-              <div
-                className="inline-flex max-w-full items-center gap-1.5 text-muted-foreground/62"
-                aria-live="polite"
-              >
-                <span className="min-w-0 flex-1 cursor-default leading-none">
-                  <span className="inline-flex max-w-full items-center gap-1 truncate">
-                    <span className="truncate">{t('site.footer.watchingPrefix')}</span>
-                    <span className="shrink-0 tabular-nums font-medium text-foreground/88">
-                      {viewerCount}
-                    </span>
-                    {watchingSuffix ? <span className="shrink-0">{watchingSuffix}</span> : null}
+          <div className="flex flex-col items-center gap-2 px-4 py-4 text-center text-xs text-muted-foreground sm:px-5 sm:py-4">
+            <div className="sm:inline-grid sm:justify-items-center sm:gap-2">
+              <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] leading-5 sm:w-full sm:text-xs">
+                <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+                  <p className="text-muted-foreground/62">
+                    © 「2025-<span suppressHydrationWarning>{nowYear}</span>」
+                  </p>
+                  <p className="max-w-full break-words font-medium text-foreground/84">
+                    {displayUserName}
+                  </p>
+                  <span aria-hidden className="text-border/90">
+                    ｜
                   </span>
+                  <Link
+                    href="/admin"
+                    className="inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium text-muted-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+                  >
+                    {adminText}
+                  </Link>
+                </div>
+
+                <span aria-hidden className="hidden text-border/90 sm:inline">
+                  |
                 </span>
-                {isMobile ? (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/62 transition-colors hover:text-foreground"
-                        aria-label={t('site.footer.helpAriaLabel')}
-                      >
-                        <CircleHelp className="h-3 w-3" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      side="top"
-                      align="start"
-                      className="w-[min(20rem,calc(100vw-2rem))] p-3 text-xs text-muted-foreground"
-                    >
-                      {helpBody}
-                    </PopoverContent>
-                  </Popover>
-                ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-md text-muted-foreground/62 transition-colors hover:text-foreground"
-                        aria-label={t('site.footer.helpAriaLabel')}
-                      >
-                        <CircleHelp className="h-3 w-3" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" align="start" className="max-w-xs space-y-2 p-3 text-left">
-                      {helpBody}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
+
+                {!isMobile ? (
+                  <div
+                    className="inline-flex max-w-full items-center gap-1.5 text-muted-foreground/62"
+                    aria-live="polite"
+                  >
+                    {renderViewerPresence()}
+                  </div>
+                ) : null}
               </div>
-            </div>
 
-            <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] sm:text-xs">
-              <p className="text-muted-foreground/58">Powered By Waken-wa</p>
+              <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] sm:w-full sm:text-xs">
+                <p className="text-muted-foreground/58">Powered By ^ Waken-Wa ^</p>
 
-              <span aria-hidden className="text-border/90">
-                |
-              </span>
+                <span aria-hidden className="text-border/90">
+                  |
+                </span>
 
-              <a
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-1 py-2 font-medium text-muted-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
-                href={TEMPLATE_REPO_HREF}
-              >
-                <GitHubMark />
-                <span>Fork</span>
-                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-              </a>
+                <a
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-1 py-2 font-medium text-muted-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+                  href={TEMPLATE_REPO_HREF}
+                >
+                  <GitHubMark />
+                  <span className="sm:hidden">Fork</span>
+                  <span className="hidden sm:inline">Fork on GitHub</span>
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                </a>
+              </div>
+
+              {isMobile ? (
+                <div
+                  className="footer-actions-row inline-flex max-w-full items-center gap-1.5 text-[11px] text-muted-foreground/62 sm:hidden"
+                  aria-live="polite"
+                >
+                  {renderViewerPresence()}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
