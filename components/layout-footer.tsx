@@ -47,8 +47,6 @@ export function LayoutFooter({
 }) {
   const { t } = useT('common')
   const isMobile = useIsMobile()
-  const nowYear = Math.max(new Date().getFullYear(), 2025)
-  const displayUserName = userName.trim() || 'User'
   const { count: viewerCount, error, loading } = useViewerCount({ mode: 'heartbeat' })
   const watchingSuffix = t('site.footer.watchingSuffix')
   const presenceStatus = error
@@ -135,14 +133,7 @@ export function LayoutFooter({
             <div className="sm:inline-grid sm:justify-items-center sm:gap-2">
               <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] leading-5 sm:w-full sm:text-xs">
                 <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-                  <p className="text-muted-foreground/62">
-                    © 「2025-<span suppressHydrationWarning>{nowYear}</span>」
-                  </p>
-                  <p className="max-w-full break-words font-medium text-foreground/84">
-                    {displayUserName}
-                  </p>
                   <span aria-hidden className="text-border/90">
-                    ｜
                   </span>
                   <Link
                     href="/admin"
@@ -150,9 +141,15 @@ export function LayoutFooter({
                   >
                     {adminText}
                   </Link>
+                  {isMobile ? (<div
+                    className="inline-flex max-w-full items-center gap-1.5 text-muted-foreground/62"
+                    aria-live="polite"
+                  >
+                    {renderViewerPresence()}
+                  </div>) : null}
                 </div>
 
-                <span aria-hidden className="hidden text-border/90 sm:inline">
+                <span aria-hidden className=" text-border/80 sm:inline">
                   |
                 </span>
 
@@ -167,33 +164,16 @@ export function LayoutFooter({
               </div>
 
               <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] sm:w-full sm:text-xs">
-                <p className="text-muted-foreground/58">Powered By ^ Waken-Wa ^</p>
-
-                <span aria-hidden className="text-border/90">
-                  |
-                </span>
-
+                <p className="text-muted-foreground/58">Powered By ^                 
                 <a
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-1 py-2 font-medium text-muted-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
                   href={TEMPLATE_REPO_HREF}
-                >
-                  <GitHubMark />
-                  <span className="sm:hidden">Fork</span>
-                  <span className="hidden sm:inline">Fork on GitHub</span>
-                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-                </a>
+                  >Waken-Wa</a>
+                ^</p>
+                
               </div>
-
-              {isMobile ? (
-                <div
-                  className="footer-actions-row inline-flex max-w-full items-center gap-1.5 text-[11px] text-muted-foreground/62 sm:hidden"
-                  aria-live="polite"
-                >
-                  {renderViewerPresence()}
-                </div>
-              ) : null}
             </div>
           </div>
         </div>
