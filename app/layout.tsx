@@ -26,7 +26,7 @@ import {
   resolvePublicPageControlFontOptions,
 } from '@/lib/public-page-font'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
-import { normalizeThemeMode, THEME_COOKIE_NAME } from '@/lib/theme'
+import { normalizeThemeMode, THEME_COOKIE_NAME, THEME_STORAGE_KEY } from '@/lib/theme'
 import { DEFAULT_TIMEZONE, normalizeTimezone } from '@/lib/timezone'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -106,10 +106,46 @@ export default async function RootLayout({
     ),
   )
   const htmlClassName = persistedTheme === 'dark' ? 'dark' : undefined
+  const themeBootstrapScript = `
+;(() => {
+  const root = document.documentElement
+  const storageKey = ${JSON.stringify(THEME_STORAGE_KEY)}
+  const cookieName = ${JSON.stringify(THEME_COOKIE_NAME)}
+  const fallbackTheme = 'system'
+
+  const readCookieTheme = () => {
+    const cookieItem = document.cookie
+      .split(';')
+      .map((item) => item.trim())
+      .find((item) => item.startsWith(cookieName + '='))
+    return cookieItem ? cookieItem.slice(cookieName.length + 1) : ''
+  }
+
+  let theme = fallbackTheme
+  try {
+    theme = localStorage.getItem(storageKey) || readCookieTheme() || fallbackTheme
+  } catch {
+    theme = readCookieTheme() || fallbackTheme
+  }
+
+  const resolvedTheme =
+    theme === 'dark'
+      ? 'dark'
+      : theme === 'light'
+        ? 'light'
+        : window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+
+  root.classList.toggle('dark', resolvedTheme === 'dark')
+  root.style.colorScheme = resolvedTheme
+})()
+`.trim()
 
   return (
     <html lang={lng} suppressHydrationWarning className={htmlClassName} style={htmlStyle}>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
         <link rel="preconnect" href="https://fonts.loli.net" />
         <link rel="preconnect" href="https://gstatic.loli.net" crossOrigin="anonymous" />
         <link
@@ -126,6 +162,7 @@ export default async function RootLayout({
         <style id={PUBLIC_PAGE_FONT_STYLE_ELEMENT_ID}>{publicPageFontRuntime.cssText}</style>
       </head>
       <body className="antialiased">
+        <div id="site-theme-image-layer" aria-hidden />
         <I18nProvider
           key={lng}
           language={lng}

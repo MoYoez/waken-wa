@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 
 import {
   buildCustomSurfaceCss,
+  buildThemeBackgroundLayerCss,
   isThemePaletteLiveEnabled,
   parseThemeCustomSurface,
   resolveThemeBackgroundImageMode,
@@ -182,9 +183,7 @@ function buildResolvedBackgroundCss(url: string) {
 
 function buildThemeRuntimeBackgroundCss(url: string): string {
   const background = buildResolvedBackgroundCss(url)
-  return background
-    ? `body { background: ${background}; background-position: 50% 50%; background-size: cover; background-repeat: no-repeat; }`
-    : ''
+  return background ? buildThemeBackgroundLayerCss(background) : ''
 }
 
 function shouldApplyLivePalette(parsed: ThemeCustomSurfaceFields): boolean {
@@ -344,7 +343,7 @@ export function SiteThemeRuntime({ themePreset, themeCustomSurface }: Props) {
   useEffect(() => {
     if (typeof document === 'undefined') return
     if (themePreset !== 'customSurface') {
-      emitThemeReadyAfterPaint('')
+      emitThemeReadyAfterPaint(buildThemeBackgroundLayerCss(''))
     }
   }, [themePreset])
 

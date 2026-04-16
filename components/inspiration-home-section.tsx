@@ -64,14 +64,14 @@ function EntryBody({
 
       <div className="space-y-1">
         {statusText ? (
-          <div className="rounded-md border border-dashed border-border/80 bg-muted/20 px-2 py-1 text-[0.65rem] leading-snug text-muted-foreground line-clamp-1">
+          <div className="truncate rounded-md border border-dashed border-border/80 bg-muted/20 px-2 py-1 text-[0.65rem] leading-snug text-muted-foreground">
             {statusText}
           </div>
         ) : null}
         <p
           className={cn(
             'text-xs leading-relaxed text-muted-foreground',
-            statusText ? 'min-h-5 line-clamp-1' : 'min-h-10 line-clamp-2',
+            statusText ? 'min-h-5 truncate' : 'min-h-10 line-clamp-2',
           )}
         >
           {previewText || t('site.inspiration.viewFull')}

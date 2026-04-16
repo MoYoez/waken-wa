@@ -242,7 +242,7 @@ export function PublicPageActionRail({
 
   return (
     <div
-      className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] right-[calc(env(safe-area-inset-right,0px)+0.875rem)] z-30 flex flex-col gap-2 transition-all duration-300 sm:bottom-8 sm:right-4 ${
+      className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+var(--site-footer-overlay-offset,0px)+1rem)] right-[calc(env(safe-area-inset-right,0px)+0.875rem)] z-30 flex flex-col gap-2 transition-all duration-300 sm:bottom-8 sm:right-4 ${
         railVisible
           ? 'pointer-events-auto translate-y-0 opacity-100'
           : 'pointer-events-none translate-y-3 opacity-0'

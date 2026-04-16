@@ -339,6 +339,11 @@ export function buildThemeImageBackgroundCss(url: string): string {
   return `url(${JSON.stringify(runtimeUrl)}) center / cover no-repeat`
 }
 
+export function buildThemeBackgroundLayerCss(background: string): string {
+  const trimmed = String(background ?? '').trim()
+  return `#site-theme-image-layer {\n  background: ${trimmed || 'none'};\n  background-position: 50% 50%;\n  background-size: cover;\n  background-repeat: no-repeat;\n}\n`
+}
+
 function mixColorCss(base: string, target: 'black' | 'white', percent: number): string {
   const safePercent = Math.max(0, Math.min(100, Math.round(percent)))
   const rest = 100 - safePercent
@@ -396,10 +401,9 @@ export function buildCustomSurfaceCss(themeCustomSurface: unknown): string {
     : ''
 
   const bodyBackgroundTrimmed = bodyBackground.trim()
-  // After `background` shorthand, set longhands so images scale like object-fit: cover (fill viewport, crop if aspect mismatch).
-  const bodyBackgroundCss = bodyBackgroundTrimmed
-    ? `body {\n  background: ${bodyBackgroundTrimmed};\n  background-position: 50% 50%;\n  background-size: cover;\n  background-repeat: no-repeat;\n}\n`
-    : ''
+  // Paint the theme background on a dedicated fixed layer so Safari/iOS keeps the
+  // image stable while the page content and footer re-composite during scrolling.
+  const bodyBackgroundCss = buildThemeBackgroundLayerCss(bodyBackgroundTrimmed)
 
   return `
 /* customSurface: ensure these rules win over globals.css :root (same specificity, later in DOM) */

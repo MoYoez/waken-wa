@@ -75,8 +75,8 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
   )
 
   return (
-    <footer className="layout-footer public-page-font-scope pb-10 sm:pb-14">
-      <div className="mx-auto max-w-2xl px-4 sm:px-6">
+    <footer className="layout-footer public-page-font-scope pointer-events-none pb-4 sm:pb-6">
+      <div className="pointer-events-auto mx-auto max-w-2xl px-4 sm:px-6">
         <div className="footer-surface overflow-hidden rounded-[20px] text-card-foreground sm:rounded-[24px]">
           <div className="flex flex-col items-center gap-1.5 px-4 py-4 text-xs text-muted-foreground sm:gap-2 sm:px-5 sm:py-4">
             <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:gap-x-4">
@@ -90,11 +90,11 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
               <span aria-hidden className="hidden h-1 w-1 rounded-full bg-border/75 sm:inline-block" />
 
               <div
-                className="footer-presence-chip inline-flex max-w-full items-center gap-2 rounded-2xl border border-border/30 bg-background/18 px-2.5 py-1.5 text-[11px] text-muted-foreground/75 shadow-none sm:rounded-full sm:py-1"
+                className="inline-flex max-w-full items-center gap-1.5 text-xs text-muted-foreground/62"
                 aria-live="polite"
               >
-                <span className="min-w-0 flex-1 cursor-default">
-                  <span className="inline-flex max-w-full items-center gap-1.5 truncate">
+                <span className="min-w-0 flex-1 cursor-default leading-none">
+                  <span className="inline-flex max-w-full items-center gap-1 truncate">
                     <span className="truncate">{t('site.footer.watchingPrefix')}</span>
                     <span className="shrink-0 tabular-nums font-medium text-foreground/88">
                       {viewerCount}
@@ -107,7 +107,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-foreground"
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/62 transition-colors hover:text-foreground"
                         aria-label={t('site.footer.helpAriaLabel')}
                       >
                         <CircleHelp className="h-3 w-3" />
@@ -126,7 +126,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-foreground"
+                        className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-md text-muted-foreground/62 transition-colors hover:text-foreground"
                         aria-label={t('site.footer.helpAriaLabel')}
                       >
                         <CircleHelp className="h-3 w-3" />
