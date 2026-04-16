@@ -11,7 +11,7 @@ import {
   resolveThemePaletteLiveScope,
   resolveThemePaletteMode,
 } from '@/lib/theme-custom-surface'
-import { extractThemeSurfaceFromLoadedImage, loadPaletteImage } from '@/lib/theme-image-palette'
+import { extractThemeSurfaceFromImageAsset, loadPaletteImage } from '@/lib/theme-image-palette'
 import {
   buildThemeSurfaceResolvedImageDisplayUrl,
   loadThemeSurfaceActiveImageAsset,
@@ -251,8 +251,10 @@ async function buildThemeRuntimeCss(
   if (!shouldApplyLivePalette(parsed)) return bodyCss
 
   try {
-    const image = loadedImage ?? (await loadPaletteImage(asset.displayUrl))
-    const paletteTheme = extractThemeSurfaceFromLoadedImage(image, asset.seedUrl)
+    const paletteTheme = await extractThemeSurfaceFromImageAsset({
+      ...asset,
+      image: loadedImage,
+    })
     const css = buildCustomSurfaceCss({
       ...parsed,
       ...paletteTheme,

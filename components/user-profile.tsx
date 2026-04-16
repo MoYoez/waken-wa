@@ -33,6 +33,12 @@ const TYPEWRITER_JITTER_MS = 28
 const TYPEWRITER_SPACE_BONUS_MS = 18
 const TYPEWRITER_PUNCTUATION_BONUS_MS = 72
 
+function isPublicPageLoadingActive(): boolean {
+  if (typeof document === 'undefined') return false
+  if (document.documentElement.dataset.publicPageLoading === 'true') return true
+  return document.querySelector('.public-page-loader.is-visible') !== null
+}
+
 function getTypewriterDelayMs(char: string, speedMultiplier = 1) {
   const jitter = Math.floor(Math.random() * (TYPEWRITER_JITTER_MS * 2 + 1)) - TYPEWRITER_JITTER_MS
 
@@ -228,6 +234,41 @@ function useProfileNoteAnimationReady({
   return ready
 }
 
+function usePublicPageNoteAnimationReady(enabled: boolean) {
+  const [ready, setReady] = useState(() => !enabled || !isPublicPageLoadingActive())
+
+  useEffect(() => {
+    if (!enabled || typeof document === 'undefined') return
+
+    const sync = () => {
+      setReady(!isPublicPageLoadingActive())
+    }
+
+    sync()
+
+    const rootObserver = new MutationObserver(sync)
+    rootObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-public-page-loading'],
+    })
+
+    const bodyObserver = new MutationObserver(sync)
+    bodyObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+    })
+
+    return () => {
+      rootObserver.disconnect()
+      bodyObserver.disconnect()
+    }
+  }, [enabled])
+
+  return !enabled || ready
+}
+
 function ProfileHitokotoNote({
   categories,
   encode,
@@ -421,6 +462,7 @@ export function UserProfileNoteSection({
     imageSrc: avatarUrl,
     waitForFonts: noteSignatureFontEnabled,
   })
+  const publicPageAnimationReady = usePublicPageNoteAnimationReady(noteTypewriterEnabled)
   if (!showNoteBlock) return null
   const noteFontFamily = resolveNoteFontFamily(
     noteSignatureFontEnabled,
@@ -448,18 +490,22 @@ export function UserProfileNoteSection({
         transition={sectionTransition}
       >
         {noteHitokotoEnabled ? (
-          <ProfileHitokotoNote
-            categories={noteHitokotoCategories}
-            encode={noteHitokotoEncode}
-            fallbackNote={note}
-            fallbackToNote={noteHitokotoFallbackToNote}
-            animationReady={hitokotoAnimationReady}
-            signatureFontEnabled={noteSignatureFontEnabled}
-            signatureFontFamily={noteSignatureFontFamily}
-            typewriterEnabled={noteTypewriterEnabled}
-          />
-        ) : (
-          <TypewriterNoteText text={note} enabled={noteTypewriterEnabled}>
+            <ProfileHitokotoNote
+              categories={noteHitokotoCategories}
+              encode={noteHitokotoEncode}
+              fallbackNote={note}
+              fallbackToNote={noteHitokotoFallbackToNote}
+              animationReady={hitokotoAnimationReady && publicPageAnimationReady}
+              signatureFontEnabled={noteSignatureFontEnabled}
+              signatureFontFamily={noteSignatureFontFamily}
+              typewriterEnabled={noteTypewriterEnabled}
+            />
+          ) : (
+          <TypewriterNoteText
+            text={note}
+            enabled={noteTypewriterEnabled}
+            readyToStart={publicPageAnimationReady}
+          >
             {(displayText) => (
               <p className={noteClassName} style={noteStyle}>
                 {displayText}

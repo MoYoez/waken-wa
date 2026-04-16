@@ -110,6 +110,9 @@ importers:
       cmdk:
         specifier: 1.1.1
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      colorlip:
+        specifier: ^1.0.0
+        version: 1.0.0(sharp@0.34.5)
       date-fns:
         specifier: 4.1.0
         version: 4.1.0
@@ -2351,6 +2354,14 @@ packages:
 
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
+
+  colorlip@1.0.0:
+    resolution: {integrity: sha512-mr3ghFyAdp3s4JGE108orDguvVsbQ7ukIjJs6z9YR9SDOx73YRjuToVV9uaeY89KSd2LVk5G7CF2T564zQFJhQ==}
+    peerDependencies:
+      sharp: '>=0.33.0'
+    peerDependenciesMeta:
+      sharp:
+        optional: true
 
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
@@ -6464,6 +6475,10 @@ snapshots:
       color-name: 1.1.4
 
   color-name@1.1.4: {}
+
+  colorlip@1.0.0(sharp@0.34.5):
+    optionalDependencies:
+      sharp: 0.34.5
 
   comma-separated-tokens@2.0.3: {}
 

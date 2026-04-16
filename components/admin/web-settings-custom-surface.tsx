@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { THEME_CUSTOM_SURFACE_DEFAULTS } from '@/lib/theme-custom-surface'
-import { extractThemeSurfaceFromLoadedImage, loadPaletteImage } from '@/lib/theme-image-palette'
+import { extractThemeSurfaceFromImageAsset, loadPaletteImage } from '@/lib/theme-image-palette'
 import { loadThemeSurfaceActiveImageAsset } from '@/lib/theme-image-source'
 
 type ThemePreviewAssetState = {
@@ -177,7 +177,11 @@ export function WebSettingsCustomSurface() {
       }
       const asset = themePreviewAssetRef.current
       if (!asset.displayUrl || !asset.image) return
-      const nextTheme = extractThemeSurfaceFromLoadedImage(asset.image, asset.seedUrl)
+      const nextTheme = await extractThemeSurfaceFromImageAsset({
+        displayUrl: asset.displayUrl,
+        seedUrl: asset.seedUrl,
+        image: asset.image,
+      })
       setThemeCustomSurface({
         ...value,
         ...nextTheme,

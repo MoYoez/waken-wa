@@ -2,16 +2,12 @@ import { parseThemeCustomSurface, resolveThemeBackgroundImageMode, resolveThemeI
 import { readThemeImageUrlFromJson } from '@/lib/theme-image-url'
 import type { ThemeCustomSurfaceFields } from '@/types/theme'
 
-export type ThemeImageProxyResolver = 'direct' | 'randomApi'
-
 export type ThemeSurfaceActiveImageTarget = {
   url: string
-  resolver: ThemeImageProxyResolver | null
 }
 
 export type ThemeSurfaceResolvedImageTarget = {
   url: string
-  resolver: 'direct' | null
 }
 
 export type ThemeSurfaceLoadedImageAsset = {
@@ -26,30 +22,10 @@ export function pickRandomThemeImage(items: string[]): string {
   return items[index] ?? ''
 }
 
-function isRemoteHttpUrl(raw: string): boolean {
-  return /^https?:\/\//i.test(raw.trim())
-}
-
 function toResolvedThemeImageTarget(input: string): ThemeSurfaceResolvedImageTarget | null {
   const url = String(input ?? '').trim()
   if (!url) return null
-  return {
-    url,
-    resolver: isRemoteHttpUrl(url) ? 'direct' : null,
-  }
-}
-
-export function buildThemeImageProxyUrl(
-  input: string,
-  resolver: ThemeImageProxyResolver = 'direct',
-): string {
-  const clean = String(input ?? '').trim()
-  if (!clean) return ''
-  const params = new URLSearchParams({ url: clean })
-  if (resolver === 'randomApi') {
-    params.set('resolver', 'randomApi')
-  }
-  return `/api/theme/image?${params.toString()}`
+  return { url }
 }
 
 async function tryResolveRandomApiImage(
@@ -60,7 +36,7 @@ async function tryResolveRandomApiImage(
   if (!clean) return ''
 
   try {
-    const response = await fetch(`/api/theme/random?url=${encodeURIComponent(clean)}`, {
+    const response = await fetch('/api/theme/random', {
       cache: 'no-store',
       signal: options?.signal,
     })
@@ -79,25 +55,19 @@ export function resolveThemeSurfaceActiveImageTarget(
   const parsed = parseThemeCustomSurface(rawThemeCustomSurface)
   const mode = resolveThemeBackgroundImageMode(parsed)
   if (mode === 'manual') {
-    const url = String(parsed.backgroundImageUrl ?? '').trim()
     return {
-      url,
-      resolver: isRemoteHttpUrl(url) ? 'direct' : null,
+      url: String(parsed.backgroundImageUrl ?? '').trim(),
     }
   }
 
   if (mode === 'randomPool') {
-    const url = pickRandomThemeImage(resolveThemeImagePool(parsed))
     return {
-      url,
-      resolver: isRemoteHttpUrl(url) ? 'direct' : null,
+      url: pickRandomThemeImage(resolveThemeImagePool(parsed)),
     }
   }
 
-  const url = String(parsed.backgroundRandomApiUrl ?? '').trim()
   return {
-    url,
-    resolver: url ? 'randomApi' : null,
+    url: '',
   }
 }
 
@@ -126,8 +96,7 @@ export async function resolveThemeSurfaceFixedImageTarget(
 export function buildThemeSurfaceResolvedImageDisplayUrl(
   target: ThemeSurfaceResolvedImageTarget,
 ): string {
-  if (!target.url) return ''
-  return target.resolver ? buildThemeImageProxyUrl(target.url, 'direct') : target.url
+  return String(target.url ?? '').trim()
 }
 
 export async function loadThemeSurfaceActiveImageAsset(
@@ -146,7 +115,7 @@ export async function loadThemeSurfaceActiveImageAsset(
   if (!target.url) return null
 
   return {
-    displayUrl: target.resolver ? buildThemeImageProxyUrl(target.url, target.resolver) : target.url,
+    displayUrl: target.url,
     seedUrl: target.url,
   }
 }

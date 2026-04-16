@@ -55,9 +55,6 @@ function sanitizeThemeImagePool(input: unknown): string[] | undefined {
 export function resolveThemeImageRuntimeUrl(input: unknown): string {
   const clean = sanitizeThemeImageSource(input)
   if (!clean) return ''
-  if (/^https?:\/\//i.test(clean)) {
-    return `/api/theme/image?url=${encodeURIComponent(clean)}`
-  }
   return clean
 }
 
