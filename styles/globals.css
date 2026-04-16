@@ -1162,14 +1162,17 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
 }
 
 .footer-surface {
+  --footer-fg-soft: color-mix(in srgb, var(--foreground) 82%, var(--background) 18%);
+  --footer-fg-strong: color-mix(in srgb, var(--foreground) 90%, var(--background) 10%);
+  --footer-divider-color: color-mix(in srgb, var(--border) 74%, var(--foreground) 26%);
   position: relative;
   overflow: hidden;
   border: 1px solid var(--home-glass-card-border);
   background:
     linear-gradient(
       180deg,
-      var(--home-glass-card-top),
-      var(--home-glass-card-bottom)
+      color-mix(in srgb, var(--card) 88%, var(--background) 12%),
+      color-mix(in srgb, var(--background) 76%, var(--card) 24%)
     );
   box-shadow:
     0 0 0 1px var(--home-glass-card-edge),
@@ -1178,6 +1181,12 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
     inset 0 0 0 1px color-mix(in srgb, var(--home-glass-highlight) 24%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(1.12);
   backdrop-filter: blur(16px) saturate(1.12);
+}
+
+.dark .footer-surface {
+  --footer-fg-soft: color-mix(in srgb, var(--foreground) 90%, var(--background) 10%);
+  --footer-fg-strong: color-mix(in srgb, var(--foreground) 96%, var(--background) 4%);
+  --footer-divider-color: color-mix(in srgb, var(--border) 82%, white 18%);
 }
 
 .footer-surface::before {
@@ -1208,41 +1217,16 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
   position: relative;
 }
 
-.footer-admin-link {
-  border: 1px solid color-mix(in srgb, var(--home-glass-subcard-border) 90%, transparent);
-  border-top-color: transparent;
-  border-right-color: transparent;
-  background: color-mix(in srgb, var(--muted) 55%, transparent);
-  box-shadow: inset 0 1px 0 0 var(--home-card-inset-highlight);
-  -webkit-backdrop-filter: blur(12px) saturate(1.06);
-  backdrop-filter: blur(12px) saturate(1.06);
-  transition:
-    color 180ms ease,
-    border-color 180ms ease,
-    background-color 180ms ease,
-    box-shadow 220ms ease,
-    transform 180ms ease;
+.footer-text-soft {
+  color: var(--footer-fg-soft);
 }
 
-.footer-admin-link:hover,
-.footer-admin-link:focus-visible {
-  border-left-color: var(--home-glass-subcard-border);
-  border-bottom-color: var(--home-glass-subcard-border);
-  border-top-color: transparent;
-  border-right-color: transparent;
-  background: color-mix(in srgb, var(--muted) 62%, transparent);
-  box-shadow:
-    inset 0 1px 0 0 var(--home-card-inset-highlight),
-    0 8px 18px color-mix(in srgb, var(--foreground) 4%, transparent);
-  transform: translateY(-1px);
+.footer-text-strong {
+  color: var(--footer-fg-strong);
 }
 
-.footer-admin-link:active {
-  transform: translateY(0);
-  background: color-mix(in srgb, var(--muted) 58%, transparent);
-  box-shadow:
-    inset 0 1px 0 0 var(--home-card-inset-highlight),
-    0 4px 10px color-mix(in srgb, var(--foreground) 3%, transparent);
+.footer-divider-line {
+  background: var(--footer-divider-color);
 }
 
 @keyframes footer-presence-breathe {
@@ -1314,16 +1298,6 @@ html.home-scrollbar-hidden body::-webkit-scrollbar {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .footer-admin-link {
-    transition-duration: 120ms;
-  }
-
-  .footer-admin-link:hover,
-  .footer-admin-link:focus-visible,
-  .footer-admin-link:active {
-    transform: none;
-  }
-
   .footer-presence-indicator,
   .footer-powered-caret-left.is-waving,
   .footer-powered-caret-right.is-waving {

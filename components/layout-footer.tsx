@@ -4,6 +4,7 @@ import { CircleHelp } from 'lucide-react'
 import Link from 'next/link'
 import { useT } from 'next-i18next/client'
 import { useState } from 'react'
+import { TiWeatherCloudy } from 'react-icons/ti'
 
 import {
   Popover,
@@ -121,33 +122,34 @@ export function LayoutFooter({
     <footer className="layout-footer public-page-font-scope pointer-events-none pb-4 sm:pb-6">
       <div className="pointer-events-auto mx-auto max-w-2xl px-4 sm:px-6">
         <div className="footer-surface overflow-hidden rounded-[20px] text-card-foreground sm:rounded-[24px]">
-          <div className="flex flex-col items-center gap-2 px-4 py-4 text-xs text-foreground/65 sm:px-5 sm:py-4">
+          <div className="footer-text-soft flex flex-col items-center gap-2 px-4 py-4 text-xs sm:px-5 sm:py-4">
             <div className="w-full space-y-2">
               <div className="footer-actions-row grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-[11px] leading-5 sm:text-xs">
                 <div className="flex min-w-0 items-center justify-self-start gap-2">
                   <Link
                     href="/admin"
-                    className="footer-admin-link inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium text-foreground/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+                    className="footer-text-soft inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-1 py-2 font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
                   >
-                    {adminText}
+                    <TiWeatherCloudy className="h-[15px] w-[15px] shrink-0 opacity-75" aria-hidden />
+                    <span>{adminText}</span>
                   </Link>
                 </div>
 
                 <div
-                  className="inline-flex max-w-full items-center justify-self-end gap-1.5 text-foreground/65"
+                  className="footer-text-soft inline-flex max-w-full items-center justify-self-end gap-1.5"
                   aria-live="polite"
                 >
                   {renderViewerPresence()}
                 </div>
               </div>
 
-              <div aria-hidden className="h-px w-full bg-border/45" />
+              <div aria-hidden className="footer-divider-line h-px w-full" />
 
               <div className="footer-actions-row grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 text-[11px] sm:text-xs">
-                <p className="justify-self-start whitespace-nowrap text-foreground/65">
-                  © 2025 - {currentYear} Seeker
+                <p className="footer-text-soft justify-self-start whitespace-nowrap">
+                  © 2025 - {currentYear} {userName ? `${userName}` : ''}
                 </p>
-                <p className="justify-self-end whitespace-nowrap text-right text-foreground/65">
+                <p className="footer-text-soft justify-self-end whitespace-nowrap text-right">
                   <span
                     className="footer-powered-signature inline-flex items-center gap-0.5 align-middle"
                     onMouseEnter={triggerPoweredWave}
@@ -165,7 +167,7 @@ export function LayoutFooter({
                     <a
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium text-foreground/65 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+                      className="footer-text-soft inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
                       href={TEMPLATE_REPO_HREF}
                     >
                       Waken-Wa
