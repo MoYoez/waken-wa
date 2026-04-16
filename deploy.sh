@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Local: ./deploy.sh
-#   curl -fsSL https://raw.githubusercontent.com/MoYoez/waken-wa/main/deploy.sh | bash
+#  curl -fsSL https://raw.githubusercontent.com/MoYoez/waken-wa/main/deploy.sh | bash
 #
 # Optional env: WAKEN_DEPLOY_DIR, WAKEN_WORKSPACE, WAKEN_DIR, WAKEN_BRANCH, WAKEN_REPO_URL, WAKEN_IMAGE, WAKEN_DOCKERHUB_IMAGE, USE_LATEST_VERSION, USE_LASTEST_VERSION (deprecated)
 # Default clone path: $WAKEN_WORKSPACE/$WAKEN_DIR (WAKEN_WORKSPACE defaults to ~/waken-wa-deploy).
