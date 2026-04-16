@@ -23,7 +23,7 @@ import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
 import { devices, userActivities } from '@/lib/drizzle-schema'
-import { isLockAppReporterProcessName } from '@/lib/lockapp-reporter'
+import { isLockScreenReporterProcessName } from '@/lib/lockapp-reporter'
 import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
 import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
@@ -272,12 +272,12 @@ export async function POST(request: NextRequest) {
 
     if (
       siteCfg?.activityRejectLockappSleep === true &&
-      isLockAppReporterProcessName(process_name)
+      isLockScreenReporterProcessName(process_name)
     ) {
       return NextResponse.json(
         {
           success: false,
-          error: '站点已开启「休眠视作离线」，已拒绝 LockApp 进程上报',
+          error: '站点已开启「休眠视作离线」，已拒绝 LockApp / loginwindow 等锁屏活动上报',
         },
         { status: 403 },
       )

@@ -126,7 +126,8 @@ export interface SiteConfig {
   /** When true, hide the inspiration section from the home page. */
   hideInspirationOnHome: boolean
   /**
-   * When true, POST /api/activity rejects reports whose process_name is the LockApp reporter (basename lockapp / lockapp.exe).
+   * When true, POST /api/activity rejects reports whose process_name matches lock-screen / sleep-like reporters
+   * such as LockApp or macOS loginwindow.
    * English UI help only; behavior is server-side.
    */
   activityRejectLockappSleep: boolean

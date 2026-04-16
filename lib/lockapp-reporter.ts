@@ -1,18 +1,26 @@
 /**
- * LockApp reporter: when the system is sleeping, reports may still POST with
- * process_name pointing at the reporter executable itself. Site config can
- * reject those to treat the device as offline.
+ * Lock-screen / sleep-like reporters: when the system is locked or sleeping,
+ * some clients may still POST with the foreground process pointing at the
+ * platform lock UI itself. Site config can reject those to treat the device as
+ * offline.
  */
 
-/** Basenames that identify the LockApp reporter foreground process (case-insensitive). */
-const LOCKAPP_REPORTER_BASENAMES = new Set(['lockapp', 'lockapp.exe'])
+/** Basenames or bundle ids that identify lock-screen foreground processes. */
+const LOCK_SCREEN_REPORTER_NAMES = new Set([
+  'lockapp',
+  'lockapp.exe',
+  'loginwindow',
+  'com.apple.loginwindow',
+])
 
 /**
- * Returns true if processName is the LockApp reporter (basename match after trim).
+ * Returns true if processName matches a known lock-screen / sleep-like process.
  */
-export function isLockAppReporterProcessName(processName: string): boolean {
+export function isLockScreenReporterProcessName(processName: string): boolean {
   const t = processName.trim()
   if (!t) return false
   const base = t.replace(/^.*[/\\]/, '').toLowerCase()
-  return LOCKAPP_REPORTER_BASENAMES.has(base)
+  return LOCK_SCREEN_REPORTER_NAMES.has(base)
 }
+
+export const isLockAppReporterProcessName = isLockScreenReporterProcessName

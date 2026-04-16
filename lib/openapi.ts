@@ -673,7 +673,7 @@ export function getOpenApiDocument(baseUrl: string): OpenApiDocument {
             '401': response('Missing, invalid, or disabled bearer API token.', {
               $ref: '#/components/schemas/ErrorEnvelope',
             }),
-            '403': response('Device disabled, token mismatch, or LockApp/sleep reporting rejected.', {
+            '403': response('Device disabled, token mismatch, or LockApp/loginwindow/sleep reporting rejected.', {
               $ref: '#/components/schemas/ErrorEnvelope',
             }),
             '500': response('Unexpected server error.', {
