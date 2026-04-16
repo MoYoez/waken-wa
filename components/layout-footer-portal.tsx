@@ -47,7 +47,13 @@ function computeFooterFollowMaxPx(viewportHeight: number, rootFontSizePx: number
 }
 
 /** Renders the footer into #site-footer-portal so tilt on main content does not skew the footer. */
-export function LayoutFooterPortal({ adminText }: { adminText: string }) {
+export function LayoutFooterPortal({
+  adminText,
+  userName,
+}: {
+  adminText: string
+  userName: string
+}) {
   const [el, setEl] = useState<HTMLElement | null>(null)
   const [ready, setReady] = useState(false)
   const [mobilePinned, setMobilePinned] = useState(false)
@@ -288,7 +294,7 @@ export function LayoutFooterPortal({ adminText }: { adminText: string }) {
   if (mobilePinned) {
     return (
       <div ref={shellRef} className="site-footer-inline-shell">
-        <LayoutFooter adminText={adminText} />
+        <LayoutFooter adminText={adminText} userName={userName} />
       </div>
     )
   }
@@ -309,7 +315,7 @@ export function LayoutFooterPortal({ adminText }: { adminText: string }) {
           className={`site-footer-portal-shell ${mobilePinned ? 'is-mobile-pinned' : ''} ${ready && visible ? 'is-visible' : ''}`}
           style={shellStyle}
         >
-          <LayoutFooter adminText={adminText} />
+          <LayoutFooter adminText={adminText} userName={userName} />
         </div>,
         el,
       )}

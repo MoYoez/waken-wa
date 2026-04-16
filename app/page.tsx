@@ -260,7 +260,7 @@ export default async function Home() {
           </div>
         </main>
 
-        <LayoutFooterPortal adminText={adminText} />
+        <LayoutFooterPortal adminText={adminText} userName={userName} />
       </PublicPageTransitionShell>
     </>
   )
