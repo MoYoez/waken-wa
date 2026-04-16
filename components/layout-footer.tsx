@@ -38,10 +38,17 @@ function GitHubMark({ className }: { className?: string }) {
   )
 }
 
-export function LayoutFooter({ adminText }: { adminText: string }) {
+export function LayoutFooter({
+  adminText,
+  userName,
+}: {
+  adminText: string
+  userName: string
+}) {
   const { t } = useT('common')
   const isMobile = useIsMobile()
-  const nowYear = new Date().getFullYear()
+  const nowYear = Math.max(new Date().getFullYear(), 2025)
+  const displayUserName = userName.trim() || 'User'
   const { count: viewerCount, error, loading } = useViewerCount({ mode: 'heartbeat' })
   const watchingSuffix = t('site.footer.watchingSuffix')
   const presenceStatus = error
@@ -78,19 +85,30 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
     <footer className="layout-footer public-page-font-scope pointer-events-none pb-4 sm:pb-6">
       <div className="pointer-events-auto mx-auto max-w-2xl px-4 sm:px-6">
         <div className="footer-surface overflow-hidden rounded-[20px] text-card-foreground sm:rounded-[24px]">
-          <div className="flex flex-col items-center gap-1.5 px-4 py-4 text-xs text-muted-foreground sm:gap-2 sm:px-5 sm:py-4">
-            <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:gap-x-4">
+          <div className="flex flex-col items-center gap-2 px-4 py-4 text-xs text-muted-foreground sm:px-5 sm:py-4">
+            <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[11px] leading-5 sm:text-xs">
+              <p className="text-muted-foreground/62">
+                © 「2025-<span suppressHydrationWarning>{nowYear}</span>」
+              </p>
+              <p className="max-w-full break-words font-medium text-foreground/84">
+                {displayUserName}
+              </p>
+              <span aria-hidden className="text-border/90">
+                ｜
+              </span>
               <Link
                 href="/admin"
-                className="inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 text-sm font-medium text-muted-foreground/62 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+                className="inline-flex min-h-10 items-center justify-center rounded-md px-1 py-2 font-medium text-muted-foreground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
               >
                 {adminText}
               </Link>
 
-              <span aria-hidden className="hidden h-1 w-1 rounded-full bg-border/75 sm:inline-block" />
+              <span aria-hidden className="text-border/90">
+                |
+              </span>
 
               <div
-                className="inline-flex max-w-full items-center gap-1.5 text-xs text-muted-foreground/62"
+                className="inline-flex max-w-full items-center gap-1.5 text-muted-foreground/62"
                 aria-live="polite"
               >
                 <span className="min-w-0 flex-1 cursor-default leading-none">
@@ -140,15 +158,12 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
               </div>
             </div>
 
-            <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:gap-x-4">
-              <p className="text-[11px] text-muted-foreground/58 sm:text-xs sm:whitespace-nowrap">
-                © 2025{nowYear > 2025 ? ` - ` : ' '}
-                <span suppressHydrationWarning>{nowYear > 2025 ? nowYear : ''}</span>
-                {nowYear > 2025 ? ' ' : ''}
-                Powered By Waken-Wa
-              </p>
+            <div className="footer-actions-row flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] sm:text-xs">
+              <p className="text-muted-foreground/58">Powered By Waken-wa</p>
 
-              <span aria-hidden className="hidden h-1 w-1 rounded-full bg-border/75 sm:inline-block" />
+              <span aria-hidden className="text-border/90">
+                |
+              </span>
 
               <a
                 target="_blank"
@@ -157,7 +172,7 @@ export function LayoutFooter({ adminText }: { adminText: string }) {
                 href={TEMPLATE_REPO_HREF}
               >
                 <GitHubMark />
-                <span>{t('site.footer.forkProject')}</span>
+                <span>Fork</span>
                 <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
               </a>
             </div>
