@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import {
   clearActivityFeedDataCache,
+  markActivityFeedDataCacheDirty,
 } from '@/lib/activity-feed'
 import { recordReportedActivityHistory } from '@/lib/activity-history-pending'
 import {
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(devices.id, deviceRecord.id))
 
-    await clearActivityFeedDataCache()
+    await markActivityFeedDataCacheDirty()
 
     return NextResponse.json(
       {
@@ -266,7 +267,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     await db.delete(userActivities).where(eq(userActivities.id, id))
-    await clearActivityFeedDataCache()
+    await markActivityFeedDataCacheDirty()
 
     return NextResponse.json({ success: true })
   } catch (error) {

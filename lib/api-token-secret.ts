@@ -12,6 +12,18 @@ import { apiTokens } from '@/lib/drizzle-schema'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 
 const STORED_HASH_PREFIX = 'h$'
+const API_TOKEN_LAST_USED_WRITE_THROTTLE_MS = 10 * 60 * 1000
+const tokenLastUsedWriteAt = new Map<number, number>()
+
+function parseTimestampMs(value: Date | string | null | undefined): number | null {
+  if (!value) return null
+  if (value instanceof Date) {
+    const ts = value.getTime()
+    return Number.isFinite(ts) ? ts : null
+  }
+  const ts = Date.parse(String(value))
+  return Number.isFinite(ts) ? ts : null
+}
 
 /** SHA-256 hex (64 chars) of UTF-8 secret — used for lookup only. */
 export function hashApiTokenSecret(plain: string): string {
@@ -57,11 +69,27 @@ export async function findActiveApiTokenBySecret(plainSecret: string) {
   return row ?? null
 }
 
-export async function touchApiTokenLastUsed(id: number) {
+export async function touchApiTokenLastUsed(
+  id: number,
+  lastUsedAt?: Date | string | null,
+) {
+  const nowMs = Date.now()
+  const memoryMs = tokenLastUsedWriteAt.get(id) ?? null
+  if (memoryMs !== null && nowMs - memoryMs < API_TOKEN_LAST_USED_WRITE_THROTTLE_MS) {
+    return
+  }
+
+  const persistedMs = parseTimestampMs(lastUsedAt)
+  if (persistedMs !== null && nowMs - persistedMs < API_TOKEN_LAST_USED_WRITE_THROTTLE_MS) {
+    tokenLastUsedWriteAt.set(id, persistedMs)
+    return
+  }
+
   await db
     .update(apiTokens)
     .set({ lastUsedAt: sqlTimestamp() })
     .where(eq(apiTokens.id, id))
+  tokenLastUsedWriteAt.set(id, nowMs)
 }
 
 /** Resolve Bearer secret to token id and bump lastUsedAt. */
@@ -70,7 +98,7 @@ export async function resolveActiveApiTokenFromPlainSecret(
 ): Promise<{ id: number } | null> {
   const row = await findActiveApiTokenBySecret(plainSecret)
   if (!row) return null
-  await touchApiTokenLastUsed(row.id)
+  await touchApiTokenLastUsed(row.id, row.lastUsedAt)
   return { id: row.id }
 }
 

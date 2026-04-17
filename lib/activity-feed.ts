@@ -5,7 +5,12 @@ import {
   ACTIVITY_FEED_QUERY_MAX_LIMIT,
   ACTIVITY_FEED_RECENT_TOP_APPS_MAX,
 } from '@/lib/activity-api-constants'
-import { clearCachedActivityFeedData, getCachedActivityFeedData, setCachedActivityFeedData } from '@/lib/activity-feed-cache'
+import {
+  clearCachedActivityFeedData,
+  getCachedActivityFeedData,
+  markCachedActivityFeedDataDirty,
+  setCachedActivityFeedData,
+} from '@/lib/activity-feed-cache'
 import { redactGeneratedHashKeyForClient } from '@/lib/activity-store'
 import {
   type AppMessageRuleGroup,
@@ -119,6 +124,8 @@ export type GetActivityFeedOptions = {
   forPublicFeed?: boolean
   /** Internal-only: keep generatedHashKey on activeStatuses for server-side filtering. */
   includeGeneratedHashKey?: boolean
+  /** Bypass feed cache and rebuild immediately. Used by proactive SSE refreshes. */
+  skipCache?: boolean
 }
 
 function getPushModeFromMetadata(metadata: unknown): 'realtime' | 'active' {
@@ -176,7 +183,7 @@ export async function getActivityFeedData(
   options?: GetActivityFeedOptions,
 ): Promise<ActivityFeedData> {
   const config = await getSiteConfigMemoryFirst()
-  const shouldUseCache = options?.includeGeneratedHashKey !== true
+  const shouldUseCache = options?.includeGeneratedHashKey !== true && options?.skipCache !== true
   const cached = shouldUseCache ? await getCachedActivityFeedData() : null
   if (cached) {
     const hideActivityMedia = config?.hideActivityMedia === true
@@ -467,4 +474,8 @@ export async function getActivityFeedData(
 
 export async function clearActivityFeedDataCache(): Promise<void> {
   await clearCachedActivityFeedData()
+}
+
+export async function markActivityFeedDataCacheDirty(): Promise<void> {
+  await markCachedActivityFeedDataDirty()
 }

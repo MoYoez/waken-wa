@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   ACTIVITY_FEED_DEFAULT_LIMIT,
 } from '@/lib/activity-api-constants'
-import { clearActivityFeedDataCache, getActivityFeedData } from '@/lib/activity-feed'
+import { getActivityFeedData, markActivityFeedDataCacheDirty } from '@/lib/activity-feed'
 import { recordReportedActivityHistory } from '@/lib/activity-history-pending'
 import { DEVICE_LAST_SEEN_WRITE_THROTTLE_MS } from '@/lib/activity-report-constants'
 import {
@@ -367,7 +367,7 @@ export async function POST(request: NextRequest) {
         ),
       )
 
-    await clearActivityFeedDataCache()
+    await markActivityFeedDataCacheDirty()
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 
+import { clearCacheRuntimeToggleMemoryCache } from '@/lib/cache-runtime-toggle'
 import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
 import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
@@ -28,6 +29,7 @@ function getCacheState(): SiteConfigCacheState {
 
 export function clearSiteConfigMemoryCache(): void {
   globalThis.__wakenSiteConfigCache = { loaded: false, value: null }
+  clearCacheRuntimeToggleMemoryCache()
 }
 
 export async function clearSiteConfigCaches(): Promise<void> {

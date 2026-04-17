@@ -53,7 +53,10 @@ export const devices = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index('devices_api_token_id_idx').on(t.apiTokenId)],
+  (t) => [
+    index('devices_api_token_id_idx').on(t.apiTokenId),
+    index('devices_api_token_last_seen_idx').on(t.apiTokenId, t.lastSeenAt, t.updatedAt),
+  ],
 )
 
 export const userActivities = pgTable(
@@ -83,6 +86,9 @@ export const userActivities = pgTable(
       t.deviceId,
       t.processName,
     ),
+    index('user_activities_expires_at_idx').on(t.expiresAt),
+    index('user_activities_updated_at_idx').on(t.updatedAt),
+    index('user_activities_started_at_idx').on(t.startedAt),
   ],
 )
 

@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import { and, count, desc, eq, isNull } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, isNull } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
@@ -32,16 +32,56 @@ export async function GET(request: NextRequest) {
     const rawLimit = searchParams.get('limit')
     const usePagination = rawLimit !== null && rawLimit !== ''
 
-    type DeviceRow = { displayName: string; generatedHashKey: string; lastSeenAt: Date | null }
+    type DeviceRow = {
+      apiTokenId: number | null
+      displayName: string
+      generatedHashKey: string
+      lastSeenAt: Date | null
+    }
+    type TokenRow = {
+      id: number
+      name: string
+      token: string
+      isActive: boolean
+      createdAt: Date
+      lastUsedAt: Date | null
+    }
+
+    const loadRecentDevicesByTokenIds = async (tokenIds: number[]): Promise<Map<number, DeviceRow[]>> => {
+      const grouped = new Map<number, DeviceRow[]>()
+      if (tokenIds.length === 0) return grouped
+
+      const rows = await db
+        .select({
+          apiTokenId: devices.apiTokenId,
+          displayName: devices.displayName,
+          generatedHashKey: devices.generatedHashKey,
+          lastSeenAt: devices.lastSeenAt,
+        })
+        .from(devices)
+        .where(inArray(devices.apiTokenId, tokenIds))
+        .orderBy(desc(devices.lastSeenAt), desc(devices.updatedAt))
+
+      for (const row of rows) {
+        const tokenId = row.apiTokenId
+        if (tokenId == null) continue
+        const bucket = grouped.get(tokenId) ?? []
+        if (bucket.length >= ADMIN_API_TOKENS_RECENT_DEVICES_LIMIT) continue
+        bucket.push(row)
+        grouped.set(tokenId, bucket)
+      }
+
+      return grouped
+    }
 
     const maskWithRecent = (
-      tokens: { id: number; name: string; token: string; isActive: boolean; createdAt: Date; lastUsedAt: Date | null }[],
-      recentByToken: DeviceRow[][],
+      tokens: TokenRow[],
+      recentByTokenId: Map<number, DeviceRow[]>,
     ) =>
-      tokens.map((t, i) => ({
+      tokens.map((t) => ({
         ...t,
         token: t.token.startsWith('h$') ? '••••••••' : t.token.slice(0, 8) + '...',
-        recentDevices: (recentByToken[i] as DeviceRow[]).map((d) => ({
+        recentDevices: (recentByTokenId.get(t.id) ?? []).map((d) => ({
           displayName: d.displayName,
           generatedHashKey: d.generatedHashKey,
           lastSeenAt: d.lastSeenAt,
@@ -65,22 +105,9 @@ export async function GET(request: NextRequest) {
       ])
       const total = Number(totalRow?.c ?? 0)
 
-      const recentByToken = await Promise.all(
-        tokens.map((t: { id: number }) =>
-          db
-            .select({
-              displayName: devices.displayName,
-              generatedHashKey: devices.generatedHashKey,
-              lastSeenAt: devices.lastSeenAt,
-            })
-            .from(devices)
-            .where(eq(devices.apiTokenId, t.id))
-            .orderBy(desc(devices.lastSeenAt), desc(devices.updatedAt))
-            .limit(ADMIN_API_TOKENS_RECENT_DEVICES_LIMIT),
-        ),
-      )
+      const recentByTokenId = await loadRecentDevicesByTokenIds(tokens.map((t: TokenRow) => t.id))
 
-      const maskedTokens = maskWithRecent(tokens, recentByToken)
+      const maskedTokens = maskWithRecent(tokens, recentByTokenId)
 
       return NextResponse.json({
         success: true,
@@ -92,22 +119,9 @@ export async function GET(request: NextRequest) {
     // Full list (no limit): used by device binding dropdown etc.
     const tokens = await db.select().from(apiTokens).orderBy(desc(apiTokens.createdAt))
 
-    const recentByToken = await Promise.all(
-      tokens.map((t: { id: number }) =>
-        db
-          .select({
-            displayName: devices.displayName,
-            generatedHashKey: devices.generatedHashKey,
-            lastSeenAt: devices.lastSeenAt,
-          })
-          .from(devices)
-          .where(eq(devices.apiTokenId, t.id))
-          .orderBy(desc(devices.lastSeenAt), desc(devices.updatedAt))
-          .limit(ADMIN_API_TOKENS_RECENT_DEVICES_LIMIT),
-      ),
-    )
+    const recentByTokenId = await loadRecentDevicesByTokenIds(tokens.map((t: TokenRow) => t.id))
 
-    const maskedTokens = maskWithRecent(tokens, recentByToken)
+    const maskedTokens = maskWithRecent(tokens, recentByTokenId)
 
     return NextResponse.json({ success: true, data: maskedTokens })
   } catch (error) {

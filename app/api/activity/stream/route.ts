@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { ACTIVITY_FEED_DEFAULT_LIMIT } from '@/lib/activity-api-constants'
 import { getActivityFeedData } from '@/lib/activity-feed'
-import { getCachedActivityFeedData } from '@/lib/activity-feed-cache'
+import { getCachedActivityFeedData, subscribeActivityFeedCacheDirty } from '@/lib/activity-feed-cache'
 import {
   ACTIVITY_STREAM_MAX_CONCURRENT_CONNECTIONS,
   ACTIVITY_STREAM_MAX_CONSECUTIVE_PUSH_FAILURES,
@@ -18,6 +18,7 @@ export const revalidate = 0
 
 const ACTIVITY_STREAM_OPEN_RATE_LIMIT_MAX = 30
 const ACTIVITY_STREAM_OPEN_RATE_LIMIT_WINDOW_MS = 60_000
+const ACTIVITY_STREAM_DIRTY_PUSH_DEBOUNCE_MS = 150
 
 let activeStreams = 0
 let nextClientId = 1
@@ -35,6 +36,9 @@ const encoder = new TextEncoder()
 let broadcasterTimer: ReturnType<typeof setInterval> | null = null
 let broadcasterPushInFlight = false
 let consecutivePushFailures = 0
+let dirtyPushTimer: ReturnType<typeof setTimeout> | null = null
+let pendingDirtyRefresh = false
+let removeDirtyListener: (() => void) | null = null
 
 function toSseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
@@ -46,8 +50,17 @@ function maybeStopBroadcaster() {
     clearInterval(broadcasterTimer)
     broadcasterTimer = null
   }
+  if (dirtyPushTimer) {
+    clearTimeout(dirtyPushTimer)
+    dirtyPushTimer = null
+  }
+  if (removeDirtyListener) {
+    removeDirtyListener()
+    removeDirtyListener = null
+  }
   consecutivePushFailures = 0
   broadcasterPushInFlight = false
+  pendingDirtyRefresh = false
 }
 
 function closeClient(client: StreamClient) {
@@ -102,12 +115,19 @@ async function pushCachedSnapshotToClient(client: StreamClient): Promise<boolean
   return safeEnqueue(client, encoder.encode(toSseEvent('activity', { success: true, data: cached })))
 }
 
-async function pushSharedActivity() {
-  if (broadcasterPushInFlight || clients.size === 0) return
+async function pushSharedActivity(options?: { skipCache?: boolean }) {
+  if (clients.size === 0) return
+  if (broadcasterPushInFlight) {
+    if (options?.skipCache) {
+      pendingDirtyRefresh = true
+    }
+    return
+  }
   broadcasterPushInFlight = true
   try {
     const payload = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT, {
       forPublicFeed: true,
+      skipCache: options?.skipCache === true,
     })
     consecutivePushFailures = 0
     broadcast('activity', { success: true, data: payload })
@@ -125,10 +145,27 @@ async function pushSharedActivity() {
     }
   } finally {
     broadcasterPushInFlight = false
+    if (pendingDirtyRefresh && clients.size > 0) {
+      pendingDirtyRefresh = false
+      void pushSharedActivity({ skipCache: true })
+    }
   }
 }
 
+function ensureDirtyListenerRegistered() {
+  if (removeDirtyListener) return
+  removeDirtyListener = subscribeActivityFeedCacheDirty(() => {
+    if (clients.size === 0) return
+    if (dirtyPushTimer) return
+    dirtyPushTimer = setTimeout(() => {
+      dirtyPushTimer = null
+      void pushSharedActivity({ skipCache: true })
+    }, ACTIVITY_STREAM_DIRTY_PUSH_DEBOUNCE_MS)
+  })
+}
+
 function ensureBroadcasterRunning(options?: { skipImmediatePush?: boolean }) {
+  ensureDirtyListenerRegistered()
   if (broadcasterTimer) return
   if (!options?.skipImmediatePush) {
     void pushSharedActivity()

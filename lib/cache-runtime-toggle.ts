@@ -10,6 +10,21 @@ import { db } from '@/lib/db'
 import { siteConfig } from '@/lib/drizzle-schema'
 import { hasRedisConfigured } from '@/lib/redis-client'
 
+const RUNTIME_TOGGLE_CACHE_TTL_MS = 30 * 1000
+
+type RuntimeToggleConfig = {
+  useNoSqlAsCacheRedis: boolean
+  redisCacheTtlSeconds: number
+}
+
+let runtimeToggleCache:
+  | {
+      expiresAt: number
+      value: RuntimeToggleConfig
+    }
+  | null = null
+let runtimeToggleInFlight: Promise<RuntimeToggleConfig> | null = null
+
 export function isVercelRuntime(): boolean {
   return String(process.env.VERCEL ?? '') === '1'
 }
@@ -30,16 +45,74 @@ export function mergeRedisCacheAdminFields(config: {
 }
 
 async function getUseNoSqlAsCacheRedisFromDb(): Promise<boolean> {
-  try {
-    const [row] = await db
-      .select({ useNoSqlAsCacheRedis: siteConfig.useNoSqlAsCacheRedis })
-      .from(siteConfig)
-      .where(eq(siteConfig.id, 1))
-      .limit(1)
-    return row?.useNoSqlAsCacheRedis === true
-  } catch {
-    return false
+  const config = await loadRuntimeToggleConfig()
+  return config.useNoSqlAsCacheRedis
+}
+
+function getCachedRuntimeToggleConfig(): RuntimeToggleConfig | null {
+  if (!runtimeToggleCache) return null
+  if (Date.now() > runtimeToggleCache.expiresAt) {
+    runtimeToggleCache = null
+    return null
   }
+  return runtimeToggleCache.value
+}
+
+async function loadRuntimeToggleConfig(): Promise<RuntimeToggleConfig> {
+  const cached = getCachedRuntimeToggleConfig()
+  if (cached) return cached
+
+  if (runtimeToggleInFlight) {
+    return runtimeToggleInFlight
+  }
+
+  runtimeToggleInFlight = (async () => {
+    try {
+      const [row] = await db
+        .select({
+          useNoSqlAsCacheRedis: siteConfig.useNoSqlAsCacheRedis,
+          redisCacheTtlSeconds: siteConfig.redisCacheTtlSeconds,
+        })
+        .from(siteConfig)
+        .where(eq(siteConfig.id, 1))
+        .limit(1)
+
+      const value = {
+        useNoSqlAsCacheRedis: row?.useNoSqlAsCacheRedis === true,
+        redisCacheTtlSeconds: parseRedisCacheTtlSeconds(
+          row?.redisCacheTtlSeconds ?? process.env.REDIS_CACHE_TTL_SECONDS,
+        ),
+      }
+      runtimeToggleCache = {
+        expiresAt: Date.now() + RUNTIME_TOGGLE_CACHE_TTL_MS,
+        value,
+      }
+      return value
+    } catch {
+      const fallback = {
+        useNoSqlAsCacheRedis: false,
+        redisCacheTtlSeconds: parseRedisCacheTtlSeconds(process.env.REDIS_CACHE_TTL_SECONDS),
+      }
+      runtimeToggleCache = {
+        expiresAt: Date.now() + RUNTIME_TOGGLE_CACHE_TTL_MS,
+        value: fallback,
+      }
+      return fallback
+    } finally {
+      runtimeToggleInFlight = null
+    }
+  })()
+
+  try {
+    return await runtimeToggleInFlight
+  } finally {
+    runtimeToggleInFlight = null
+  }
+}
+
+export function clearCacheRuntimeToggleMemoryCache(): void {
+  runtimeToggleCache = null
+  runtimeToggleInFlight = null
 }
 
 /**
@@ -63,15 +136,6 @@ export function parseRedisCacheTtlSeconds(value: unknown): number {
 }
 
 export async function getRedisActivityCacheTtlSeconds(): Promise<number> {
-  try {
-    const [row] = await db
-      .select({ redisCacheTtlSeconds: siteConfig.redisCacheTtlSeconds })
-      .from(siteConfig)
-      .where(eq(siteConfig.id, 1))
-      .limit(1)
-    return parseRedisCacheTtlSeconds(row?.redisCacheTtlSeconds ?? process.env.REDIS_CACHE_TTL_SECONDS)
-  } catch {
-    return parseRedisCacheTtlSeconds(process.env.REDIS_CACHE_TTL_SECONDS)
-  }
+  const config = await loadRuntimeToggleConfig()
+  return config.redisCacheTtlSeconds
 }
-
