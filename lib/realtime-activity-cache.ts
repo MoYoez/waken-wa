@@ -6,7 +6,6 @@ import {
   redisHDelMany,
   redisHGetAll,
   redisHSet,
-  redisPersist,
 } from '@/lib/redis-client'
 
 const REALTIME_ACTIVITY_CACHE_KEY = 'waken:activity:realtime:v2'
@@ -100,7 +99,6 @@ async function loadState(): Promise<RealtimeActivityState> {
 
   const fromRedisHash = await redisHGetAll(REALTIME_ACTIVITY_CACHE_KEY)
   if (fromRedisHash) {
-    await redisPersist(REALTIME_ACTIVITY_CACHE_KEY)
     const parsed = parseHashState(fromRedisHash)
     memoryState = parsed.activeState
     await cleanupExpiredRedisFields(parsed.expiredFields)
@@ -121,7 +119,6 @@ async function saveState(state: RealtimeActivityState, _ttlSeconds: number): Pro
     for (const [field, row] of Object.entries(memoryState)) {
       await redisHSet(REALTIME_ACTIVITY_CACHE_KEY, field, JSON.stringify(row))
     }
-    await redisPersist(REALTIME_ACTIVITY_CACHE_KEY)
   }
 }
 
@@ -149,7 +146,6 @@ export async function upsertRealtimeActivity(
   memoryLoadedAt = nowMs()
   if (await shouldUseRedisCache()) {
     await redisHSet(REALTIME_ACTIVITY_CACHE_KEY, key, JSON.stringify(nextRow))
-    await redisPersist(REALTIME_ACTIVITY_CACHE_KEY)
     return
   }
   await saveState(prune(state), Math.max(ttlSeconds, 5))

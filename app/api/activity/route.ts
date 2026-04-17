@@ -17,7 +17,6 @@ import {
   USER_ACTIVITY_DB_SYNCED_METADATA_KEY,
   USER_PERSIST_EXPIRES_AT_METADATA_KEY,
 } from '@/lib/activity-store'
-import { enforceApiRateLimit } from '@/lib/api-rate-limit'
 import { resolveActiveApiTokenFromPlainSecret } from '@/lib/api-token-secret'
 import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -33,9 +32,6 @@ import { toDbJsonValue } from '@/lib/sqlite-json'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-const ACTIVITY_REPORT_RATE_LIMIT_MAX = 120
-const ACTIVITY_REPORT_RATE_LIMIT_WINDOW_MS = 60_000
 
 async function validateToken(request: NextRequest): Promise<{ id: number } | null> {
   const authHeader = request.headers.get('authorization')
@@ -97,14 +93,6 @@ export async function POST(request: NextRequest) {
         { status: 401 },
       )
     }
-
-    const limitedResponse = await enforceApiRateLimit(request, {
-      bucket: 'activity-report',
-      maxRequests: ACTIVITY_REPORT_RATE_LIMIT_MAX,
-      windowMs: ACTIVITY_REPORT_RATE_LIMIT_WINDOW_MS,
-      tokenKey: tokenInfo.id,
-    })
-    if (limitedResponse) return limitedResponse
 
     const body = await request.json()
     if (!body || typeof body !== 'object' || Array.isArray(body)) {

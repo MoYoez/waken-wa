@@ -10,8 +10,7 @@ import { activityAppHistory, activityPlaySourceHistory } from '@/lib/drizzle-sch
 import {
   redisHDelMany,
   redisHGetAll,
-  redisHSetMany,
-  redisIncrWithExpire,
+  redisHSetManyAndIncrWithExpire,
 } from '@/lib/redis-client'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
@@ -516,9 +515,12 @@ export async function recordReportedActivityHistory(input: {
 
   if (!(await shouldUseRedisCache())) return
 
-  await redisHSetMany(PENDING_HASH_KEY, redisUpdates)
-
-  const lock = await redisIncrWithExpire(FLUSH_LOCK_KEY, REMOTE_FLUSH_LOCK_TTL_SECONDS)
+  const lock = await redisHSetManyAndIncrWithExpire(
+    PENDING_HASH_KEY,
+    redisUpdates,
+    FLUSH_LOCK_KEY,
+    REMOTE_FLUSH_LOCK_TTL_SECONDS,
+  )
   if (lock === 1) {
     await flushPendingReportedActivityHistory({ maxEntries: 300 })
   }

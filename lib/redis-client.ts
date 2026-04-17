@@ -85,8 +85,32 @@ end
 return c
 `
 
+/**
+ * Atomically mirror pending hash fields and bump the remote flush lock in one round trip.
+ * ARGV layout: ttlSeconds, field1, value1, field2, value2, ...
+ */
+const LUA_HSET_MANY_AND_FIXED_WINDOW_INCR = `
+if ((#ARGV - 1) % 2) ~= 0 then
+  return redis.error_reply('field/value pairs expected')
+end
+if #ARGV > 1 then
+  redis.call('HSET', KEYS[1], unpack(ARGV, 2))
+end
+local c = redis.call('INCR', KEYS[2])
+if c == 1 then
+  redis.call('EXPIRE', KEYS[2], ARGV[1])
+end
+return c
+`
+
 type RedisWithFixedWindowIncr = Redis & {
   fixedWindowIncr(key: string, ttlSeconds: string): Promise<number>
+  hsetManyAndFixedWindowIncr(
+    hashKey: string,
+    lockKey: string,
+    ttlSeconds: string,
+    ...fieldValues: string[]
+  ): Promise<number>
 }
 
 function ensureFixedWindowIncrCommand(client: Redis): void {
@@ -96,6 +120,16 @@ function ensureFixedWindowIncrCommand(client: Redis): void {
   client.defineCommand('fixedWindowIncr', {
     numberOfKeys: 1,
     lua: LUA_FIXED_WINDOW_INCR.trim(),
+  })
+}
+
+function ensureHSetManyAndFixedWindowIncrCommand(client: Redis): void {
+  const marked = client as Redis & { __wakenHSetManyAndFixedWindowIncr?: boolean }
+  if (marked.__wakenHSetManyAndFixedWindowIncr) return
+  marked.__wakenHSetManyAndFixedWindowIncr = true
+  client.defineCommand('hsetManyAndFixedWindowIncr', {
+    numberOfKeys: 2,
+    lua: LUA_HSET_MANY_AND_FIXED_WINDOW_INCR.trim(),
   })
 }
 
@@ -242,6 +276,7 @@ function getRedisClient(): Redis | null {
       }
     })
     ensureFixedWindowIncrCommand(redisClient)
+    ensureHSetManyAndFixedWindowIncrCommand(redisClient)
     return redisClient
   } catch {
     redisClient = null
@@ -345,26 +380,6 @@ export async function redisHSet(
   }
 }
 
-export async function redisHSetMany(
-  key: string,
-  values: Record<string, string>,
-): Promise<boolean> {
-  const client = getRedisClient()
-  if (!client) return false
-  const entries = Object.entries(values)
-  if (entries.length === 0) return true
-  try {
-    const args: string[] = []
-    for (const [field, value] of entries) {
-      args.push(field, value)
-    }
-    await client.hset(key, ...args)
-    return true
-  } catch {
-    return false
-  }
-}
-
 export async function redisHDel(key: string, field: string): Promise<boolean> {
   const client = getRedisClient()
   if (!client) return false
@@ -395,17 +410,6 @@ export async function redisExpire(key: string, ttlSeconds: number): Promise<bool
   try {
     const ttl = Number.isFinite(ttlSeconds) && ttlSeconds > 0 ? Math.round(ttlSeconds) : 1
     await client.expire(key, ttl)
-    return true
-  } catch {
-    return false
-  }
-}
-
-export async function redisPersist(key: string): Promise<boolean> {
-  const client = getRedisClient()
-  if (!client) return false
-  try {
-    await client.persist(key)
     return true
   } catch {
     return false
@@ -462,6 +466,34 @@ export async function redisIncrWithExpire(
   try {
     const ttl = Number.isFinite(windowSeconds) && windowSeconds > 0 ? Math.round(windowSeconds) : 1
     const out = await (client as RedisWithFixedWindowIncr).fixedWindowIncr(key, String(ttl))
+    const n = Number(out)
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
+export async function redisHSetManyAndIncrWithExpire(
+  hashKey: string,
+  values: Record<string, string>,
+  lockKey: string,
+  windowSeconds: number,
+): Promise<number | null> {
+  const client = getRedisClient()
+  if (!client) return null
+  const entries = Object.entries(values)
+  if (entries.length === 0) return redisIncrWithExpire(lockKey, windowSeconds)
+  try {
+    const ttl = Number.isFinite(windowSeconds) && windowSeconds > 0 ? Math.round(windowSeconds) : 1
+    const args: string[] = [String(ttl)]
+    for (const [field, value] of entries) {
+      args.push(field, value)
+    }
+    const out = await (client as RedisWithFixedWindowIncr).hsetManyAndFixedWindowIncr(
+      hashKey,
+      lockKey,
+      ...args,
+    )
     const n = Number(out)
     return Number.isFinite(n) ? n : null
   } catch {
