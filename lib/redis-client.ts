@@ -485,7 +485,7 @@ export async function redisHSetManyAndIncrWithExpire(
   if (entries.length === 0) return redisIncrWithExpire(lockKey, windowSeconds)
   try {
     const ttl = Number.isFinite(windowSeconds) && windowSeconds > 0 ? Math.round(windowSeconds) : 1
-    const args: string[] = [String(ttl)]
+    const args: [string, ...string[]] = [String(ttl)]
     for (const [field, value] of entries) {
       args.push(field, value)
     }
