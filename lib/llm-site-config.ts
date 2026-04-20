@@ -1,21 +1,27 @@
 import bcrypt from 'bcryptjs'
 
 import { REDIS_ACTIVITY_FEED_CACHE_TTL_DEFAULT_SECONDS } from '@/lib/activity-api-constants'
-import { clearActivityFeedDataCache } from '@/lib/activity-feed'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
-import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import {
   isRedisCacheForcedOnServerless,
-  mergeRedisCacheAdminFields,
   parseRedisCacheTtlSeconds,
 } from '@/lib/cache-runtime-toggle'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 import { normalizeHitokotoCategories, normalizeHitokotoEncode } from '@/lib/hitokoto'
 import { normalizeInspirationAllowedHashes } from '@/lib/inspiration-device-allowlist'
-import { normalizeProfileOnlineAccentColor } from '@/lib/profile-online-accent-color'
+import {
+  assertAllowedLlmFields,
+  createSiteConfigFieldReaders,
+  ensureJsonObject,
+  getNormalizedExistingSiteConfig,
+  LLM_DENIED_SITE_CONFIG_KEYS,
+  normalizeAiToolMode,
+  resolveColorSettings,
+  getSafeSiteConfig,
+} from '@/lib/llm-site-config-helpers'
+import { persistSiteConfigValues } from '@/lib/llm-site-config-persist'
 import { normalizePublicPageFontOptions } from '@/lib/public-page-font'
-import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import {
   backfillCoursePeriodIdsFromTemplate,
   defaultSchedulePeriodTemplate,
@@ -38,86 +44,11 @@ import {
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
-import { normalizeSiteConfigShape } from '@/lib/site-config-normalize'
 import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
 
-export const LLM_DENIED_SITE_CONFIG_KEYS = [
-  'adminThemeColor',
-  'adminBackgroundColor',
-  'userNoteTypewriterEnabled',
-  'pageLoadingEnabled',
-  'searchEngineIndexingEnabled',
-  'openApiDocsEnabled',
-  'useNoSqlAsCacheRedis',
-  'redisCacheTtlSeconds',
-  'activityUpdateMode',
-  'processStaleSeconds',
-  'historyWindowMinutes',
-  'steamApiKey',
-  'autoAcceptNewDevices',
-  'inspirationAllowedDeviceHashes',
-  'pageLockEnabled',
-  'pageLockPassword',
-  'hcaptchaEnabled',
-  'hcaptchaSiteKey',
-  'hcaptchaSecretKey',
-] as const
-
-type SiteConfigRecord = Record<string, any>
-
-function ensureJsonObject(body: Record<string, unknown>) {
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    const error = new Error('请求体必须为 JSON 对象')
-    ;(error as any).status = 400
-    throw error
-  }
-}
-
-function assertAllowedLlmFields(
-  body: Record<string, unknown>,
-  options?: { allowRestrictedFields?: boolean },
-) {
-  if (options?.allowRestrictedFields) return
-
-  const denied = new Set<string>(LLM_DENIED_SITE_CONFIG_KEYS)
-  const presentDeniedKeys = Object.keys(body ?? {}).filter((k) => denied.has(k))
-  if (presentDeniedKeys.length > 0) {
-    const error = new Error(`该请求包含禁止由 AI Skills 修改的字段: ${presentDeniedKeys.join(', ')}`)
-    ;(error as any).status = 403
-    ;(error as any).deniedKeys = presentDeniedKeys
-    throw error
-  }
-}
-
-function normalizeAiToolMode(raw: unknown): 'skills' | 'mcp' {
-  return String(raw ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills'
-}
-
-function redactSiteConfigForClient(config: SiteConfigRecord) {
-  const normalized = normalizeSiteConfigShape(config) as SiteConfigRecord
-  const redisAdmin = mergeRedisCacheAdminFields(normalized)
-  return {
-    ...normalized,
-    pageLockPasswordHash: undefined,
-    hcaptchaSecretKey: normalized.hcaptchaSecretKey ? '••••••••' : null,
-    steamApiKey: normalized.steamApiKey ? '••••••••' : null,
-    useNoSqlAsCacheRedis: redisAdmin.useNoSqlAsCacheRedis,
-    redisCacheServerlessForced: redisAdmin.redisCacheServerlessForced,
-  }
-}
-
-export async function getSafeSiteConfig() {
-  const config = await getSiteConfigMemoryFirst()
-  if (!config) return null
-  return redactSiteConfigForClient(config as SiteConfigRecord)
-}
-
-async function getNormalizedExistingSiteConfig(): Promise<SiteConfigRecord | null> {
-  const existingRaw = await getSiteConfigMemoryFirst()
-  return existingRaw ? normalizeSiteConfigShape(existingRaw as SiteConfigRecord) : null
-}
+export { LLM_DENIED_SITE_CONFIG_KEYS, getSafeSiteConfig }
 
 export async function updateSiteConfigFromPayload(
   body: Record<string, unknown>,
@@ -128,21 +59,7 @@ export async function updateSiteConfigFromPayload(
 
   const existing = await getNormalizedExistingSiteConfig()
 
-  const has = (k: string) => k in body
-  const strField = (k: string, fallback: string) => {
-    const raw = has(k) ? body[k] : (existing as Record<string, unknown> | null)?.[k]
-    return String(raw ?? '').trim() || fallback
-  }
-  const trimStr = (k: string) => {
-    const raw = has(k) ? body[k] : (existing as Record<string, unknown> | null)?.[k]
-    return String(raw ?? '').trim()
-  }
-  const strArr = (k: string): string[] => {
-    const raw = has(k) ? body[k] : (existing as Record<string, unknown> | null)?.[k]
-    return Array.isArray(raw)
-      ? raw.map((item: unknown) => String(item ?? '').trim()).filter((s: string) => s.length > 0)
-      : []
-  }
+  const { has, strField, trimStr, strArr } = createSiteConfigFieldReaders(body, existing)
 
   const pageTitle = strField('pageTitle', DEFAULT_PAGE_TITLE).slice(0, PAGE_TITLE_MAX_LEN)
   const userName = trimStr('userName')
@@ -527,58 +444,12 @@ export async function updateSiteConfigFromPayload(
     activityRejectLockappSleep = Boolean(body.activityRejectLockappSleep)
   }
 
-  let profileOnlineAccentColor: string | null =
-    normalizeProfileOnlineAccentColor(existing?.profileOnlineAccentColor ?? '') ?? null
-  if ('profileOnlineAccentColor' in body) {
-    if (body.profileOnlineAccentColor === null || body.profileOnlineAccentColor === '') {
-      profileOnlineAccentColor = null
-    } else if (typeof body.profileOnlineAccentColor === 'string') {
-      const normalized = normalizeProfileOnlineAccentColor(body.profileOnlineAccentColor)
-      if (!normalized) {
-        const error = new Error('无效的头像在线色（需 #RRGGBB）')
-        ;(error as any).status = 400
-        throw error
-      }
-      profileOnlineAccentColor = normalized
-    }
-  }
-
-  let profileOnlinePulseEnabled = existing?.profileOnlinePulseEnabled !== false
-  if (body.profileOnlinePulseEnabled !== undefined && body.profileOnlinePulseEnabled !== null) {
-    profileOnlinePulseEnabled = Boolean(body.profileOnlinePulseEnabled)
-  }
-
-  let adminThemeColor: string | null =
-    normalizeAdminThemeColor(existing?.adminThemeColor ?? '') ?? null
-  if ('adminThemeColor' in body) {
-    if (body.adminThemeColor === null || body.adminThemeColor === '') {
-      adminThemeColor = null
-    } else if (typeof body.adminThemeColor === 'string') {
-      const normalized = normalizeAdminThemeColor(body.adminThemeColor)
-      if (!normalized) {
-        const error = new Error('后台主题色无效（需 #RRGGBB）')
-        ;(error as any).status = 400
-        throw error
-      }
-      adminThemeColor = normalized
-    }
-  }
-
-  let adminBackgroundColor: string | null =
-    normalizeAdminThemeColor(existing?.adminBackgroundColor ?? '') ?? null
-  if ('adminBackgroundColor' in body) {
-    if (body.adminBackgroundColor === null || body.adminBackgroundColor === '') {
-      adminBackgroundColor = null
-    } else if (typeof body.adminBackgroundColor === 'string') {
-      const normalized = normalizeAdminThemeColor(body.adminBackgroundColor)
-      if (!normalized) {
-        const error = new Error('后台背景色无效（需 #RRGGBB）')
-        ;(error as any).status = 400
-        throw error
-      }
-      adminBackgroundColor = normalized
-    }
-  }
+  const {
+    profileOnlineAccentColor,
+    profileOnlinePulseEnabled,
+    adminThemeColor,
+    adminBackgroundColor,
+  } = resolveColorSettings(body, existing)
 
   const siteConfigValues = {
     adminThemeColor,
@@ -654,36 +525,5 @@ export async function updateSiteConfigFromPayload(
     activityRejectLockappSleep,
   }
 
-  const upsertResult = await safeSiteConfigUpsert({
-    where: { id: 1 },
-    update: siteConfigValues,
-    create: {
-      id: 1,
-      ...siteConfigValues,
-    },
-  })
-  if (upsertResult.strippedColumns.length > 0) {
-    console.warn(
-      `[site-config] unknown DB columns stripped during upsert: ${upsertResult.strippedColumns.join(', ')}`,
-    )
-  }
-  await clearActivityFeedDataCache()
-
-  const config = await getSiteConfigMemoryFirst()
-  if (!config) {
-    const error = new Error('站点配置不存在')
-    ;(error as any).status = 500
-    throw error
-  }
-
-  const redacted = redactSiteConfigForClient(config as SiteConfigRecord)
-  if (upsertResult.strippedColumns.length === 0) {
-    return redacted
-  }
-  return {
-    ...redacted,
-    schemaWarnings: {
-      strippedColumns: upsertResult.strippedColumns,
-    },
-  }
+  return persistSiteConfigValues(siteConfigValues)
 }

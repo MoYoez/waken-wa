@@ -1,0 +1,82 @@
+/* Animated gradient background */
+.animated-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.1), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255, 200, 150, 0.08), transparent),
+    radial-gradient(ellipse 50% 30% at 0% 80%, rgba(150, 200, 255, 0.06), transparent);
+  animation: bgShift 20s ease-in-out infinite alternate;
+}
+
+@keyframes bgShift {
+  0% {
+    background-position: 0% 0%;
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    background-position: 100% 100%;
+    opacity: 0.8;
+  }
+}
+
+/* Floating particles effect */
+.floating-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  animation: float 15s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.floating-orb-1 {
+  width: 300px;
+  height: 300px;
+  background: rgba(180, 160, 200, 0.15);
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.floating-orb-2 {
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 200, 170, 0.12);
+  top: 60%;
+  right: 15%;
+  animation-delay: -5s;
+}
+
+.floating-orb-3 {
+  width: 150px;
+  height: 150px;
+  background: rgba(170, 200, 220, 0.1);
+  bottom: 20%;
+  left: 20%;
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  25% {
+    transform: translate(30px, -30px) scale(1.05);
+  }
+
+  50% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+
+  75% {
+    transform: translate(20px, 10px) scale(1.02);
+  }
+}
