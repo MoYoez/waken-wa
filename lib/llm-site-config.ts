@@ -15,10 +15,10 @@ import {
   createSiteConfigFieldReaders,
   ensureJsonObject,
   getNormalizedExistingSiteConfig,
+  getSafeSiteConfig,
   LLM_DENIED_SITE_CONFIG_KEYS,
   normalizeAiToolMode,
   resolveColorSettings,
-  getSafeSiteConfig,
 } from '@/lib/llm-site-config-helpers'
 import { persistSiteConfigValues } from '@/lib/llm-site-config-persist'
 import { normalizePublicPageFontOptions } from '@/lib/public-page-font'
@@ -48,7 +48,7 @@ import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
 
-export { LLM_DENIED_SITE_CONFIG_KEYS, getSafeSiteConfig }
+export { getSafeSiteConfig, LLM_DENIED_SITE_CONFIG_KEYS }
 
 export async function updateSiteConfigFromPayload(
   body: Record<string, unknown>,

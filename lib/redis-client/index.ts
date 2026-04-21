@@ -1,6 +1,5 @@
 import 'server-only'
 
-export { hasRedisConfigured } from '@/lib/redis-client/runtime'
 export {
   redisDel,
   redisDeleteByPrefix,
@@ -21,3 +20,4 @@ export {
   redisZCountByScore,
   redisZRemRangeByScore,
 } from '@/lib/redis-client/operations'
+export { hasRedisConfigured } from '@/lib/redis-client/runtime'

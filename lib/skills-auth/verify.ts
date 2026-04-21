@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
 import { skillsOauthTokens } from '@/lib/drizzle-schema'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   getEnvSecretValue,
   readSecretValue,
@@ -24,7 +25,6 @@ import type {
   SkillsVerifyFail,
   SkillsVerifyOk,
 } from '@/lib/skills-auth/types'
-import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { SKILLS_SECRET_KEYS } from '@/lib/skills-constants'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 

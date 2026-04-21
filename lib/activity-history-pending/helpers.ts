@@ -1,10 +1,10 @@
-import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
 import type {
   AppHistoryBuckets,
   PendingHistoryEntry,
   Platform,
   PlatformBucket,
 } from '@/lib/activity-history-pending/types'
+import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
 
 export function normalizeProcessName(raw: string): string {
   return raw.trim().toLowerCase()

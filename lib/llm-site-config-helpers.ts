@@ -1,8 +1,8 @@
 import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import { mergeRedisCacheAdminFields } from '@/lib/cache-runtime-toggle'
+import { normalizeProfileOnlineAccentColor } from '@/lib/profile-online-accent-color'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { normalizeSiteConfigShape } from '@/lib/site-config-normalize'
-import { normalizeProfileOnlineAccentColor } from '@/lib/profile-online-accent-color'
 
 export const LLM_DENIED_SITE_CONFIG_KEYS = [
   'adminThemeColor',
