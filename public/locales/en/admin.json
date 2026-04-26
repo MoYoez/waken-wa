@@ -7,6 +7,7 @@
     "refreshFailedRetry": "Refresh failed, please try again",
     "cancel": "Cancel",
     "delete": "Delete",
+    "edit": "Edit",
     "create": "Create",
     "refresh": "Refresh",
     "refreshing": "Refreshing...",
@@ -454,17 +455,20 @@
   },
   "webSettingsRuleTools": {
     "editInDialog": "Edit in dialog",
-    "appNameListEditor": {
-      "noMatchingHistory": "No matching history",
-      "historyDisabled": "History app capture is disabled",
-      "add": "Add",
-      "savedItemsPaged": "Saved items (paged)"
-    },
-    "toasts": {
-      "copiedRulesJson": "Rules JSON copied to the clipboard",
-      "exportedUsedAppsJson": "Exported used apps JSON",
-      "importedRulesIntoForm": "Rules have been loaded into the form. Remember to save."
-    },
+      "appNameListEditor": {
+        "noMatchingHistory": "No matching history",
+        "historyDisabled": "History app capture is disabled",
+        "add": "Add",
+        "savedItemsPaged": "Saved items (paged)",
+        "savedSearchPlaceholder": "Search saved items",
+        "noSavedResults": "No matching saved items",
+        "renamePlaceholder": "Enter the new item value"
+      },
+      "toasts": {
+        "copiedRulesJson": "Rules JSON copied to the clipboard",
+        "exportedUsedAppsJson": "Exported used apps JSON",
+        "importedRulesIntoForm": "Rules imported and applied immediately."
+      },
     "parseErrors": {
       "parseFailed": "Failed to parse JSON",
       "topLevelMustBeObject": "The JSON top level must be an object",
@@ -572,12 +576,12 @@
       "copyRulesJson": "Copy rules JSON",
       "importRulesJson": "Import rules JSON"
     },
-    "importDialog": {
-      "title": "Import rules JSON",
-      "description": "This overwrites the app rules and media-source rules currently in the form. Click Save Settings after importing.",
-      "label": "Rules JSON",
-      "placeholder": "Paste JSON containing version and rules",
-      "confirm": "Import and overwrite",
+      "importDialog": {
+        "title": "Import rules JSON",
+        "description": "This explicitly overwrites the saved rule-tools configuration and applies it immediately.",
+        "label": "Rules JSON",
+        "placeholder": "Paste JSON containing version and rules",
+        "confirm": "Import and overwrite",
       "pasteRulesJsonFirst": "Paste the rules JSON first"
     }
   },

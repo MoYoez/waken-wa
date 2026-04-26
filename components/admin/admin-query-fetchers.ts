@@ -18,6 +18,14 @@ import type {
 } from '@/types/admin'
 import type { AdminInspirationEntry } from '@/types/inspiration'
 import type { OrphanAssetRow } from '@/types/inspiration'
+import type {
+  RuleToolsConfigResponse,
+  RuleToolsExportPayload,
+  RuleToolsListKey,
+  RuleToolsListResponse,
+  RuleToolsRulesResponse,
+  RuleToolsSummary,
+} from '@/types/rule-tools'
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   const res = await fetch('/api/admin/users')
@@ -188,9 +196,13 @@ export async function fetchPublicActivityFeed(): Promise<ActivityFeedData> {
 
 export async function fetchActivityHistoryApps(input?: {
   limit?: number
+  q?: string
+  offset?: number
 }): Promise<string[]> {
   const params = new URLSearchParams()
   if (typeof input?.limit === 'number') params.set('limit', String(input.limit))
+  if (typeof input?.offset === 'number') params.set('offset', String(input.offset))
+  if (input?.q?.trim()) params.set('q', input.q.trim())
   const query = params.toString()
   const res = await fetch(
     query ? `/api/admin/activity/history/apps?${query}` : '/api/admin/activity/history/apps',
@@ -210,9 +222,13 @@ export async function fetchActivityHistoryApps(input?: {
 
 export async function fetchActivityHistoryPlaySources(input?: {
   limit?: number
+  q?: string
+  offset?: number
 }): Promise<string[]> {
   const params = new URLSearchParams()
   if (typeof input?.limit === 'number') params.set('limit', String(input.limit))
+  if (typeof input?.offset === 'number') params.set('offset', String(input.offset))
+  if (input?.q?.trim()) params.set('q', input.q.trim())
   const query = params.toString()
   const res = await fetch(
     query
@@ -238,6 +254,80 @@ export async function exportAdminActivityApps(): Promise<unknown> {
   if (!res.ok || !data?.success || typeof data.data === 'undefined') {
     throw new Error(
       typeof data?.error === 'string' ? data.error : tAdminClient('query.exportFailed'),
+    )
+  }
+  return data.data
+}
+
+export async function fetchAdminRuleToolsSummary(): Promise<RuleToolsSummary> {
+  const res = await fetch('/api/admin/rule-tools/summary')
+  const data = await readJson<SuccessResponse<RuleToolsSummary>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
+    )
+  }
+  return data.data
+}
+
+export async function fetchAdminRuleToolsConfig(): Promise<RuleToolsConfigResponse> {
+  const res = await fetch('/api/admin/rule-tools/config')
+  const data = await readJson<SuccessResponse<RuleToolsConfigResponse>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
+    )
+  }
+  return data.data
+}
+
+export async function fetchAdminRuleToolsRulesPage(input: {
+  page: number
+  q: string
+  pageSize: number
+}): Promise<RuleToolsRulesResponse> {
+  const params = new URLSearchParams({
+    limit: String(input.pageSize),
+    offset: String(input.page * input.pageSize),
+  })
+  if (input.q.trim()) params.set('q', input.q.trim())
+  const res = await fetch(`/api/admin/rule-tools/rules?${params}`)
+  const data = await readJson<SuccessResponse<RuleToolsRulesResponse>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
+    )
+  }
+  return data.data
+}
+
+export async function fetchAdminRuleToolsListPage(input: {
+  listKey: RuleToolsListKey
+  page: number
+  q: string
+  pageSize: number
+}): Promise<RuleToolsListResponse> {
+  const params = new URLSearchParams({
+    limit: String(input.pageSize),
+    offset: String(input.page * input.pageSize),
+  })
+  if (input.q.trim()) params.set('q', input.q.trim())
+  const res = await fetch(`/api/admin/rule-tools/lists/${input.listKey}?${params}`)
+  const data = await readJson<SuccessResponse<RuleToolsListResponse>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
+    )
+  }
+  return data.data
+}
+
+export async function exportAdminRuleTools(): Promise<RuleToolsExportPayload> {
+  const res = await fetch('/api/admin/rule-tools/export')
+  const data = await readJson<SuccessResponse<RuleToolsExportPayload>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('query.exportFailed'),
     )
   }
   return data.data

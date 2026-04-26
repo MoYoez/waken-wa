@@ -1,5 +1,4 @@
 import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
-import type { AppMessageRuleGroup } from '@/lib/app-message-rules'
 import type { UserNoteHitokotoEncode } from '@/lib/hitokoto'
 import type { PublicPageFontOptionMode } from '@/lib/public-page-font'
 import type { ScheduleCourse, SchedulePeriodTemplateItem } from '@/lib/schedule-courses'
@@ -88,16 +87,6 @@ export interface SiteConfig {
   aiToolMode: 'skills' | 'mcp'
   historyWindowMinutes: number
   processStaleSeconds: number
-  appMessageRules: AppMessageRuleGroup[]
-  appMessageRulesShowProcessName: boolean
-  appFilterMode: 'blacklist' | 'whitelist'
-  appBlacklist: string[]
-  appWhitelist: string[]
-  appNameOnlyList: string[]
-  /** When false, stop capturing app history (keeps existing records). */
-  captureReportedAppsEnabled: boolean
-  /** Lowercased play_source values that should hide metadata.media. */
-  mediaPlaySourceBlocklist: string[]
   pageLockEnabled: boolean
   pageLockPassword: string
   hcaptchaEnabled: boolean

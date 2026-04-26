@@ -8,20 +8,16 @@ import { toast } from 'sonner'
 
 import {
   exportAdminSettings,
-  fetchActivityHistoryApps,
-  fetchActivityHistoryPlaySources,
   fetchAdminDeviceSummaries,
   fetchAdminSettings,
   fetchAdminSkills,
 } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import {
+  importAdminRuleTools,
   patchAdminSettings,
   patchAdminSkills,
 } from '@/components/admin/admin-query-mutations'
-import {
-  readJson,
-} from '@/components/admin/admin-query-shared'
 import {
   webSettingsBaselineFormAtom,
   webSettingsBaselineSkillsConfigAtom,
@@ -29,8 +25,6 @@ import {
   webSettingsCropSourceUrlAtom,
   webSettingsCropTargetAtom,
   webSettingsFormAtom,
-  webSettingsHistoryAppsAtom,
-  webSettingsHistoryPlaySourcesAtom,
   webSettingsImportConfigDialogOpenAtom,
   webSettingsImportConfigInputAtom,
   webSettingsInspirationDevicesAtom,
@@ -52,6 +46,7 @@ import {
 } from '@/components/admin/web-settings-store'
 import type { SiteConfig, SkillsEditableConfig } from '@/components/admin/web-settings-types'
 import {
+  extractRuleToolsImportFromWebPayload,
   normalizeSkillsAiAuthorizations,
   normalizeSkillsEditableConfig,
   parseExportPayload,
@@ -69,7 +64,6 @@ import {
   writeAdminBackgroundColor,
   writeAdminThemeColor,
 } from '@/lib/admin-theme-color'
-import { normalizeAppMessageRules, prepareAppMessageRulesForSave } from '@/lib/app-message-rules'
 import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE } from '@/lib/default-page-title'
 import { normalizeHitokotoCategories, normalizeHitokotoEncode } from '@/lib/hitokoto'
@@ -109,8 +103,6 @@ export function useWebSettingsController() {
     webSettingsImportConfigDialogOpenAtom,
   )
   const [importConfigInput, setImportConfigInput] = useAtom(webSettingsImportConfigInputAtom)
-  const [, setHistoryApps] = useAtom(webSettingsHistoryAppsAtom)
-  const [, setHistoryPlaySources] = useAtom(webSettingsHistoryPlaySourcesAtom)
   const [cropSourceUrl, setCropSourceUrl] = useAtom(webSettingsCropSourceUrlAtom)
   const [cropDialogOpen, setCropDialogOpen] = useAtom(webSettingsCropDialogOpenAtom)
   const [cropTarget, setCropTarget] = useAtom(webSettingsCropTargetAtom)
@@ -126,18 +118,6 @@ export function useWebSettingsController() {
     adminBackgroundColor: '',
   })
   const webSettingsDirtyRef = useRef(false)
-
-  const historyAppsQuery = useQuery({
-    queryKey: adminQueryKeys.activity.historyApps({ limit: 200 }),
-    queryFn: () => fetchActivityHistoryApps({ limit: 200 }),
-    enabled: form.captureReportedAppsEnabled,
-  })
-
-  const historyPlaySourcesQuery = useQuery({
-    queryKey: adminQueryKeys.activity.historyPlaySources({ limit: 200 }),
-    queryFn: () => fetchActivityHistoryPlaySources({ limit: 200 }),
-    enabled: form.captureReportedAppsEnabled,
-  })
 
   const inspirationDevicesQuery = useQuery({
     queryKey: adminQueryKeys.devices.list({ limit: 200 }),
@@ -209,24 +189,6 @@ export function useWebSettingsController() {
         const data = await fetchAdminSettings()
 
         if (data) {
-          const rules = normalizeAppMessageRules(data.appMessageRules)
-          const blacklist = Array.isArray(data.appBlacklist)
-            ? data.appBlacklist
-                .map((item: unknown) => String(item ?? '').trim())
-                .filter((item: string) => item.length > 0)
-            : []
-          const whitelist = Array.isArray(data.appWhitelist)
-            ? data.appWhitelist
-                .map((item: unknown) => String(item ?? '').trim())
-                .filter((item: string) => item.length > 0)
-            : []
-          const filterModeRaw = String(data.appFilterMode ?? 'blacklist').toLowerCase()
-          const appFilterMode = filterModeRaw === 'whitelist' ? 'whitelist' : 'blacklist'
-          const nameOnlyList = Array.isArray(data.appNameOnlyList)
-            ? data.appNameOnlyList
-                .map((item: unknown) => String(item ?? '').trim())
-                .filter((item: string) => item.length > 0)
-            : []
           const loaded: SiteConfig = {
             adminThemeColor:
               typeof data.adminThemeColor === 'string'
@@ -285,18 +247,6 @@ export function useWebSettingsController() {
             processStaleSeconds: Number(
               data.processStaleSeconds ?? SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
             ),
-            appMessageRules: rules,
-            appMessageRulesShowProcessName: data.appMessageRulesShowProcessName !== false,
-            appFilterMode,
-            appBlacklist: blacklist,
-            appWhitelist: whitelist,
-            appNameOnlyList: nameOnlyList,
-            captureReportedAppsEnabled: data.captureReportedAppsEnabled !== false,
-            mediaPlaySourceBlocklist: Array.isArray(data.mediaPlaySourceBlocklist)
-              ? (data.mediaPlaySourceBlocklist as unknown[])
-                  .map((item) => String(item ?? '').trim().toLowerCase())
-                  .filter((item) => item.length > 0)
-              : [],
             pageLockEnabled: Boolean(data.pageLockEnabled),
             pageLockPassword: '',
             hcaptchaEnabled: Boolean(data.hcaptchaEnabled),
@@ -426,31 +376,6 @@ export function useWebSettingsController() {
   }, [skillsQuery.error, t])
 
   useEffect(() => {
-    if (!form.captureReportedAppsEnabled) {
-      setHistoryApps([])
-      setHistoryPlaySources([])
-      return
-    }
-    setHistoryApps(historyAppsQuery.data ?? [])
-  }, [
-    form.captureReportedAppsEnabled,
-    historyAppsQuery.data,
-    setHistoryApps,
-    setHistoryPlaySources,
-  ])
-
-  useEffect(() => {
-    if (!form.captureReportedAppsEnabled) {
-      return
-    }
-    setHistoryPlaySources(historyPlaySourcesQuery.data ?? [])
-  }, [
-    form.captureReportedAppsEnabled,
-    historyPlaySourcesQuery.data,
-    setHistoryPlaySources,
-  ])
-
-  useEffect(() => {
     setInspirationDevices(inspirationDevicesQuery.data ?? [])
   }, [inspirationDevicesQuery.data, setInspirationDevices])
 
@@ -532,28 +457,6 @@ export function useWebSettingsController() {
         return output
       }
 
-      const parsedRulesResult = prepareAppMessageRulesForSave(form.appMessageRules)
-      if (parsedRulesResult.errors.length > 0) {
-        const firstError = parsedRulesResult.errors[0]
-        toast.error(
-          t('webSettingsRuleTools.appRules.invalidRegex', {
-            group: firstError.groupIndex + 1,
-            rule: firstError.titleRuleIndex + 1,
-            message: firstError.message,
-          }),
-        )
-        setSaving(false)
-        return
-      }
-
-      const parsedRules = parsedRulesResult.data
-      const parsedBlacklist = normalizeStringList(form.appBlacklist)
-      const parsedWhitelist = normalizeStringList(form.appWhitelist)
-      const parsedNameOnlyList = normalizeStringList(form.appNameOnlyList)
-      const parsedMediaSourceBlocklist = normalizeStringList(form.mediaPlaySourceBlocklist).map((s) =>
-        s.toLowerCase(),
-      )
-
       const poTrim = form.profileOnlineAccentColor.trim()
       if (poTrim && !normalizeProfileOnlineAccentColor(poTrim)) {
         toast.error(t('webSettingsActivity.profileOnlineAccentInvalid'))
@@ -603,12 +506,6 @@ export function useWebSettingsController() {
           mcpThemeToolsEnabled: form.mcpThemeToolsEnabled,
           redisCacheTtlSeconds: normalizedRedisTtl,
           profileOnlineAccentColor: normalizeProfileOnlineAccentColor(poTrim || '') ?? null,
-          appMessageRules: parsedRules,
-          appBlacklist: parsedBlacklist,
-          appWhitelist: parsedWhitelist,
-          appNameOnlyList: parsedNameOnlyList,
-          captureReportedAppsEnabled: form.captureReportedAppsEnabled,
-          mediaPlaySourceBlocklist: parsedMediaSourceBlocklist,
           inspirationAllowedDeviceHashes: inspirationDeviceRestrictionEnabled
             ? normalizeStringList(inspirationHashSelection)
             : null,
@@ -724,7 +621,7 @@ export function useWebSettingsController() {
     setImportConfigDialogOpen(true)
   }
 
-  const confirmImportConfig = () => {
+  const confirmImportConfig = async () => {
     const raw = importConfigInput.trim()
     if (!raw) {
       toast.error(t('webSettings.importDialog.empty'))
@@ -737,11 +634,29 @@ export function useWebSettingsController() {
       return
     }
     const partial = webPayloadToFormPatch(parsed.web)
+    const ruleToolsPayload = extractRuleToolsImportFromWebPayload(parsed.web)
     setForm((prev) => ({
       ...prev,
       ...partial,
       pageLockPassword: '',
     }))
+    if (ruleToolsPayload) {
+      try {
+        await importAdminRuleTools(ruleToolsPayload)
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.summary() }),
+          queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.config() }),
+          queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.rulesPreview() }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'rule-tools', 'rules'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'rule-tools', 'list'] }),
+        ])
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : t('common.networkErrorRetry'),
+        )
+        return
+      }
+    }
     setImportConfigDialogOpen(false)
     toast.success(t('webSettings.importDialog.applied'))
   }

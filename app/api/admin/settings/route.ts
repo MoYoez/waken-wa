@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { getSafeSiteConfig, updateSiteConfigFromPayload } from '@/lib/llm-site-config'
 import { readJsonObject } from '@/lib/request-json'
+import { assertNoRuleToolsFields, omitRuleToolsFields } from '@/lib/rule-tools-config'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -14,9 +15,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const data = await getSafeSiteConfig()
     return NextResponse.json({
       success: true,
-      data: await getSafeSiteConfig(),
+      data: data ? omitRuleToolsFields(data as Record<string, unknown>) : null,
     })
   } catch (error) {
     console.error('读取站点配置失败:', error)
@@ -32,7 +34,8 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await readJsonObject(request)
-    const data = await updateSiteConfigFromPayload(body, {
+    assertNoRuleToolsFields(body)
+    const data = await updateSiteConfigFromPayload(omitRuleToolsFields(body), {
       allowRestrictedFields: true,
     })
     return NextResponse.json({ success: true, data })

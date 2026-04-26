@@ -7,6 +7,7 @@
     "refreshFailedRetry": "刷新失败，请重试",
     "cancel": "取消",
     "delete": "删除",
+    "edit": "编辑",
     "create": "创建",
     "refresh": "刷新",
     "refreshing": "刷新中...",
@@ -454,17 +455,20 @@
   },
   "webSettingsRuleTools": {
     "editInDialog": "在弹窗中编辑",
-    "appNameListEditor": {
-      "noMatchingHistory": "无匹配历史记录",
-      "historyDisabled": "未启用历史应用记录",
-      "add": "添加",
-      "savedItemsPaged": "已有条目（分页）"
-    },
-    "toasts": {
-      "copiedRulesJson": "已复制规则 JSON 到剪贴板",
-      "exportedUsedAppsJson": "已导出已使用应用 JSON",
-      "importedRulesIntoForm": "已写入规则到表单，请记得保存"
-    },
+      "appNameListEditor": {
+        "noMatchingHistory": "无匹配历史记录",
+        "historyDisabled": "未启用历史应用记录",
+        "add": "添加",
+        "savedItemsPaged": "已有条目（分页）",
+        "savedSearchPlaceholder": "搜索已保存条目",
+        "noSavedResults": "没有匹配到已保存条目",
+        "renamePlaceholder": "输入新的条目内容"
+      },
+      "toasts": {
+        "copiedRulesJson": "已复制规则 JSON 到剪贴板",
+        "exportedUsedAppsJson": "已导出已使用应用 JSON",
+        "importedRulesIntoForm": "规则已导入并立即生效"
+      },
     "parseErrors": {
       "parseFailed": "JSON 解析失败",
       "topLevelMustBeObject": "JSON 顶层必须是对象",
@@ -572,12 +576,12 @@
       "copyRulesJson": "复制规则 JSON",
       "importRulesJson": "导入规则 JSON"
     },
-    "importDialog": {
-      "title": "导入规则 JSON",
-      "description": "将覆盖当前表单中的应用规则与媒体来源规则。写入后请点击保存配置。",
-      "label": "规则 JSON",
-      "placeholder": "粘贴 JSON（包含 version 与 rules 字段）",
-      "confirm": "导入并覆盖规则",
+      "importDialog": {
+        "title": "导入规则 JSON",
+        "description": "将显式覆盖当前已保存的规则工具配置，并立即生效。",
+        "label": "规则 JSON",
+        "placeholder": "粘贴 JSON（包含 version 与 rules 字段）",
+        "confirm": "导入并覆盖规则",
       "pasteRulesJsonFirst": "请先粘贴规则 JSON"
     }
   },

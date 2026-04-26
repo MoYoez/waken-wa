@@ -57,14 +57,6 @@ export const WEB_SETTINGS_INITIAL_FORM: SiteConfig = {
   aiToolMode: 'skills',
   historyWindowMinutes: SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
   processStaleSeconds: SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
-  appMessageRules: [],
-  appMessageRulesShowProcessName: true,
-  appFilterMode: 'blacklist',
-  appBlacklist: [],
-  appWhitelist: [],
-  appNameOnlyList: [],
-  captureReportedAppsEnabled: true,
-  mediaPlaySourceBlocklist: [],
   pageLockEnabled: false,
   pageLockPassword: '',
   hcaptchaEnabled: false,
@@ -112,8 +104,6 @@ export const webSettingsBaselineFormAtom = atom<SiteConfig | null>(null)
 export const webSettingsPublicOriginAtom = atom('')
 export const webSettingsImportConfigDialogOpenAtom = atom(false)
 export const webSettingsImportConfigInputAtom = atom('')
-export const webSettingsHistoryAppsAtom = atom<string[]>([])
-export const webSettingsHistoryPlaySourcesAtom = atom<string[]>([])
 export const webSettingsCropSourceUrlAtom = atom<string | null>(null)
 export const webSettingsCropDialogOpenAtom = atom(false)
 export const webSettingsCropTargetAtom = atom<'avatar' | 'siteIcon'>('avatar')

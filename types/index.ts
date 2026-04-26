@@ -45,6 +45,22 @@ export type {
 } from './inspiration'
 export type { LlmEndpoints, SkillsMode } from './llm'
 export type {
+  AppMessageRuleGroup,
+  AppMessageTitleRule,
+  AppTitleRuleMode,
+  ExportableAppMessageRuleGroup,
+  ExportableAppMessageTitleRule,
+  RuleToolsConfigData,
+  RuleToolsConfigResponse,
+  RuleToolsExportPayload,
+  RuleToolsListItem,
+  RuleToolsListKey,
+  RuleToolsListResponse,
+  RuleToolsRuleItem,
+  RuleToolsRulesResponse,
+  RuleToolsSummary,
+} from './rule-tools'
+export type {
   ScheduleCourse,
   ScheduleDayGrid,
   ScheduleHomeCardState,

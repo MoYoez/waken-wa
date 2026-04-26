@@ -12,6 +12,7 @@ import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import {
   type AppMessageRuleGroup,
   normalizeAppMessageRules,
+  stripAppMessageRuleIds,
 } from '@/lib/app-message-rules'
 import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
@@ -39,6 +40,7 @@ import {
   parseThemeCustomSurface,
   THEME_CUSTOM_SURFACE_DEFAULTS,
 } from '@/lib/theme-custom-surface'
+import type { RuleToolsExportPayload } from '@/types/rule-tools'
 
 export function emptyThemeCustomSurfaceForm(): ThemeCustomSurfaceForm {
   return {
@@ -193,12 +195,13 @@ export function normalizeStringListImport(items: unknown): string[] {
 }
 
 export function exportAppRulesJson(cfg: {
-  appMessageRules: AppMessageRuleGroup[]
+  appMessageRules: unknown
   appMessageRulesShowProcessName: boolean
   appFilterMode: 'blacklist' | 'whitelist'
   appBlacklist: string[]
   appWhitelist: string[]
   appNameOnlyList: string[]
+  captureReportedAppsEnabled?: boolean
   mediaPlaySourceBlocklist: string[]
 }): string {
   return JSON.stringify(
@@ -206,12 +209,13 @@ export function exportAppRulesJson(cfg: {
       version: 2,
       exportedAt: new Date().toISOString(),
       rules: {
-        appMessageRules: cfg.appMessageRules,
+        appMessageRules: stripAppMessageRuleIds(normalizeAppMessageRules(cfg.appMessageRules)),
         appMessageRulesShowProcessName: cfg.appMessageRulesShowProcessName,
         appFilterMode: cfg.appFilterMode,
         appBlacklist: cfg.appBlacklist,
         appWhitelist: cfg.appWhitelist,
         appNameOnlyList: cfg.appNameOnlyList,
+        captureReportedAppsEnabled: cfg.captureReportedAppsEnabled !== false,
         mediaPlaySourceBlocklist: cfg.mediaPlaySourceBlocklist,
       },
     },
@@ -233,6 +237,7 @@ export function parseAppRulesJson(
         appBlacklist: string[]
         appWhitelist: string[]
         appNameOnlyList: string[]
+        captureReportedAppsEnabled: boolean
         mediaPlaySourceBlocklist: string[]
       }
     }
@@ -265,6 +270,10 @@ export function parseAppRulesJson(
   const appBlacklist = normalizeStringListImport(r.appBlacklist)
   const appWhitelist = normalizeStringListImport(r.appWhitelist)
   const appNameOnlyList = normalizeStringListImport(r.appNameOnlyList)
+  const captureReportedAppsEnabled =
+    typeof r.captureReportedAppsEnabled === 'boolean'
+      ? r.captureReportedAppsEnabled
+      : true
   const mediaPlaySourceBlocklist = normalizeStringListImport(r.mediaPlaySourceBlocklist).map((s) =>
     s.toLowerCase(),
   )
@@ -277,6 +286,7 @@ export function parseAppRulesJson(
       appBlacklist,
       appWhitelist,
       appNameOnlyList,
+      captureReportedAppsEnabled,
       mediaPlaySourceBlocklist,
     },
   }
@@ -370,25 +380,6 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
     if (Number.isFinite(st)) {
       patch.processStaleSeconds = clampSiteConfigProcessStaleSeconds(st)
     }
-  }
-  if ('appMessageRules' in web) patch.appMessageRules = normalizeRulesImport(web.appMessageRules)
-  if ('appMessageRulesShowProcessName' in web && typeof web.appMessageRulesShowProcessName === 'boolean') {
-    patch.appMessageRulesShowProcessName = web.appMessageRulesShowProcessName
-  }
-  if ('appBlacklist' in web) patch.appBlacklist = normalizeStringListImport(web.appBlacklist)
-  if ('appWhitelist' in web) patch.appWhitelist = normalizeStringListImport(web.appWhitelist)
-  if ('appFilterMode' in web) {
-    const mode = String(web.appFilterMode ?? '').toLowerCase()
-    patch.appFilterMode = mode === 'whitelist' ? 'whitelist' : 'blacklist'
-  }
-  if ('appNameOnlyList' in web) patch.appNameOnlyList = normalizeStringListImport(web.appNameOnlyList)
-  if ('captureReportedAppsEnabled' in web && typeof web.captureReportedAppsEnabled === 'boolean') {
-    patch.captureReportedAppsEnabled = web.captureReportedAppsEnabled
-  }
-  if ('mediaPlaySourceBlocklist' in web) {
-    patch.mediaPlaySourceBlocklist = normalizeStringListImport(web.mediaPlaySourceBlocklist).map((s) =>
-      s.toLowerCase(),
-    )
   }
   if ('pageLockEnabled' in web && typeof web.pageLockEnabled === 'boolean') {
     patch.pageLockEnabled = web.pageLockEnabled
@@ -490,6 +481,42 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
     }
   }
   return patch
+}
+
+export function extractRuleToolsImportFromWebPayload(
+  web: Record<string, unknown>,
+): RuleToolsExportPayload | null {
+  const hasAnyField = [
+    'appMessageRules',
+    'appMessageRulesShowProcessName',
+    'appFilterMode',
+    'appBlacklist',
+    'appWhitelist',
+    'appNameOnlyList',
+    'captureReportedAppsEnabled',
+    'mediaPlaySourceBlocklist',
+  ].some((key) => key in web)
+  if (!hasAnyField) return null
+
+  const modeRaw = String(web.appFilterMode ?? 'blacklist').toLowerCase()
+  return {
+    appMessageRules: stripAppMessageRuleIds(normalizeRulesImport(web.appMessageRules)),
+    appMessageRulesShowProcessName:
+      typeof web.appMessageRulesShowProcessName === 'boolean'
+        ? web.appMessageRulesShowProcessName
+        : true,
+    appFilterMode: modeRaw === 'whitelist' ? 'whitelist' : 'blacklist',
+    appBlacklist: normalizeStringListImport(web.appBlacklist),
+    appWhitelist: normalizeStringListImport(web.appWhitelist),
+    appNameOnlyList: normalizeStringListImport(web.appNameOnlyList),
+    captureReportedAppsEnabled:
+      typeof web.captureReportedAppsEnabled === 'boolean'
+        ? web.captureReportedAppsEnabled
+        : true,
+    mediaPlaySourceBlocklist: normalizeStringListImport(web.mediaPlaySourceBlocklist).map((s) =>
+      s.toLowerCase(),
+    ),
+  }
 }
 
 export function normalizeSkillsAiAuthorizations(raw: unknown): SkillsAiAuthorizationItem[] {

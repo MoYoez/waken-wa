@@ -26,6 +26,7 @@ type AutocompleteProps = {
   emptyText?: string
   showClear?: boolean
   openOnInputClick?: boolean
+  onBlur?: () => void
 }
 
 function Autocomplete({
@@ -41,6 +42,7 @@ function Autocomplete({
   emptyText,
   showClear = false,
   openOnInputClick = true,
+  onBlur,
 }: AutocompleteProps) {
   const dialogPortalContainer = useDialogPortalContainer()
   const { t } = useT('common')
@@ -59,6 +61,7 @@ function Autocomplete({
             id={id}
             placeholder={placeholder}
             disabled={disabled}
+            onBlur={onBlur}
             render={<InputGroupInput className={inputClassName} disabled={disabled} />}
           />
           <InputGroupAddon align="inline-end">

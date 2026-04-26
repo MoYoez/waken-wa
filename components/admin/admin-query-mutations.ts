@@ -4,6 +4,11 @@ import { type AdminSkillsData, readJson, type SuccessResponse } from '@/componen
 import { tAdminClient } from '@/lib/i18n/admin-client'
 import type { AdminUserRow } from '@/types/admin'
 import type { SetupInitialConfig } from '@/types/components'
+import type {
+  RuleToolsConfigResponse,
+  RuleToolsListKey,
+  RuleToolsSummary,
+} from '@/types/rule-tools'
 
 export async function createAdminUser(input: {
   username: string
@@ -326,6 +331,77 @@ export async function setupAdminSite(input: {
 
 export async function loginAdmin(username: string, password: string): Promise<void> {
   await loginAdminWithCaptcha({ username, password })
+}
+
+export async function patchAdminRuleToolsConfig(
+  body: Record<string, unknown>,
+): Promise<RuleToolsConfigResponse> {
+  const res = await fetch('/api/admin/rule-tools/config', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await readJson<SuccessResponse<RuleToolsConfigResponse>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
+    )
+  }
+  return data.data
+}
+
+export async function patchAdminRuleToolsRules(
+  body: Record<string, unknown>,
+): Promise<{ revision: string; total: number; groupId?: string; titleRuleId?: string }> {
+  const res = await fetch('/api/admin/rule-tools/rules', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await readJson<
+    SuccessResponse<{ revision: string; total: number; groupId?: string; titleRuleId?: string }>
+  >(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
+    )
+  }
+  return data.data
+}
+
+export async function patchAdminRuleToolsList(
+  listKey: RuleToolsListKey,
+  body: Record<string, unknown>,
+): Promise<{ revision: string; total: number }> {
+  const res = await fetch(`/api/admin/rule-tools/lists/${listKey}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await readJson<SuccessResponse<{ revision: string; total: number }>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
+    )
+  }
+  return data.data
+}
+
+export async function importAdminRuleTools(
+  body: Record<string, unknown>,
+): Promise<RuleToolsSummary> {
+  const res = await fetch('/api/admin/rule-tools/import', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await readJson<SuccessResponse<RuleToolsSummary>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
+    )
+  }
+  return data.data
 }
 
 export async function loginAdminWithCaptcha(input: {
