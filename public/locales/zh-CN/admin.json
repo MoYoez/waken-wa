@@ -299,8 +299,10 @@
     "saving": "保存中...",
     "createAdminAndSave": "创建管理员并保存配置",
     "saveConfig": "保存配置",
-    "cropAvatarTitle": "裁剪头像",
-    "cropAvatarDescription": "拖动选区或边角调整范围，确认后生成 128×128 头像。"
+      "cropAvatarTitle": "裁剪头像",
+      "cropAvatarDescription": "拖动选区或边角调整范围，确认后生成 128×128 头像。",
+      "cropSiteIconTitle": "裁剪网页图标",
+      "cropSiteIconDescription": "拖动选区或边角调整范围，确认后生成 128×128 网页图标。"
   },
   "dashboard": {
     "tabs": {
@@ -829,7 +831,7 @@
     "pageTitleLabel": "网页标题",
     "siteIconUrlLabel": "网页图标地址",
     "siteIconUrlPlaceholder": "留空时使用内置默认图标，或填写 URL / Data URL",
-    "siteIconUrlHint": "浏览器标签页和收藏夹图标会读取这里的图片。可直接填写图片 URL、Data URL，或选择本地图片转换成 Data URL。",
+      "siteIconUrlHint": "浏览器标签页和收藏夹图标会读取这里的图片。可直接填写图片 URL、Data URL，或选择本地图片后先裁剪再生成方形 Data URL。",
     "siteIconPreviewAlt": "网页图标预览",
     "siteIconPreview": "网页图标预览",
     "userNameLabel": "首页名称",

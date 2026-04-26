@@ -1,5 +1,5 @@
-import '../styles/globals.css'
 import 'lenis/dist/lenis.css'
+import '../styles/globals.css'
 
 import type { Metadata } from 'next'
 import { cookies, headers } from 'next/headers'
@@ -26,14 +26,14 @@ import {
   resolvePublicPageControlFontOptions,
 } from '@/lib/public-page-font'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
-import { normalizeSiteIconUrl } from '@/lib/site-icon'
+import { buildSiteIconHref } from '@/lib/site-icon'
 import { normalizeThemeMode, THEME_COOKIE_NAME, THEME_STORAGE_KEY } from '@/lib/theme'
 import { DEFAULT_TIMEZONE, normalizeTimezone } from '@/lib/timezone'
 
 export async function generateMetadata(): Promise<Metadata> {
   let title = DEFAULT_PAGE_TITLE
   let searchEngineIndexingEnabled = true
-  let siteIconUrl: string | null = null
+  let siteIconHref = buildSiteIconHref()
   try {
     const config = await getSiteConfigMemoryFirst()
     const raw = String(config?.pageTitle ?? '').trim()
@@ -41,19 +41,17 @@ export async function generateMetadata(): Promise<Metadata> {
       title = raw.slice(0, PAGE_TITLE_MAX_LEN)
     }
     searchEngineIndexingEnabled = config?.searchEngineIndexingEnabled !== false
-    siteIconUrl = normalizeSiteIconUrl(config?.siteIconUrl)
+    siteIconHref = buildSiteIconHref(config?.updatedAt)
   } catch {
     // e.g. DB not ready during build or first boot
   }
   return {
     title,
-    icons: siteIconUrl
-      ? {
-          icon: siteIconUrl,
-          shortcut: siteIconUrl,
-          apple: siteIconUrl,
-        }
-      : undefined,
+    icons: {
+      icon: siteIconHref,
+      shortcut: siteIconHref,
+      apple: siteIconHref,
+    },
     robots: searchEngineIndexingEnabled
       ? {
           index: true,

@@ -13,6 +13,7 @@ import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import {
   webSettingsCropDialogOpenAtom,
   webSettingsCropSourceUrlAtom,
+  webSettingsCropTargetAtom,
   webSettingsFormAtom,
 } from '@/components/admin/web-settings-store'
 import { Button } from '@/components/ui/button'
@@ -29,26 +30,12 @@ import { Switch } from '@/components/ui/switch'
 import { isRemoteAvatarUrl, resolveAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string' && reader.result.length > 0) {
-        resolve(reader.result)
-        return
-      }
-      reject(new Error('Failed to read file as data URL'))
-    }
-    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'))
-    reader.readAsDataURL(file)
-  })
-}
-
 export function WebSettingsBasicPanel() {
   const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [cropSourceUrl, setCropSourceUrl] = useAtom(webSettingsCropSourceUrlAtom)
   const [, setCropDialogOpen] = useAtom(webSettingsCropDialogOpenAtom)
+  const [, setCropTarget] = useAtom(webSettingsCropTargetAtom)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -67,19 +54,22 @@ export function WebSettingsBasicPanel() {
   )
   const siteIconPreviewUrl = form.siteIconUrl.trim()
 
-  const onFileSelected = (file?: File) => {
-    if (!file) return
+  const openCropDialogForFile = (file: File, target: 'avatar' | 'siteIcon') => {
     if (cropSourceUrl) URL.revokeObjectURL(cropSourceUrl)
     const objectUrl = URL.createObjectURL(file)
     setCropSourceUrl(objectUrl)
+    setCropTarget(target)
     setCropDialogOpen(true)
+  }
+
+  const onAvatarSelected = (file?: File) => {
+    if (!file) return
+    openCropDialogForFile(file, 'avatar')
   }
 
   const onSiteIconSelected = (file?: File) => {
     if (!file) return
-    void readFileAsDataUrl(file)
-      .then((dataUrl) => patch('siteIconUrl', dataUrl))
-      .catch(() => undefined)
+    openCropDialogForFile(file, 'siteIcon')
   }
 
   return (
@@ -200,7 +190,7 @@ export function WebSettingsBasicPanel() {
           accept="image/*"
           buttonLabel={t('common.selectFile')}
           emptyLabel={t('common.noFileSelected')}
-          onSelect={onFileSelected}
+          onSelect={onAvatarSelected}
         />
         <AnimatePresence initial={false}>
           {cropSourceUrl ? (

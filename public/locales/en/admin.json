@@ -299,8 +299,10 @@
     "saving": "Saving...",
     "createAdminAndSave": "Create admin and save settings",
     "saveConfig": "Save settings",
-    "cropAvatarTitle": "Crop avatar",
-    "cropAvatarDescription": "Drag the crop area or corners to adjust the frame, then generate a 128×128 avatar."
+      "cropAvatarTitle": "Crop avatar",
+      "cropAvatarDescription": "Drag the crop area or corners to adjust the frame, then generate a 128×128 avatar.",
+      "cropSiteIconTitle": "Crop site icon",
+      "cropSiteIconDescription": "Drag the crop area or corners to adjust the frame, then generate a 128×128 site icon."
   },
   "dashboard": {
     "tabs": {
@@ -829,7 +831,7 @@
     "pageTitleLabel": "Page title",
     "siteIconUrlLabel": "Site icon URL",
     "siteIconUrlPlaceholder": "Leave empty to use the built-in icon, or paste a URL / Data URL",
-    "siteIconUrlHint": "Used for the browser tab and bookmark icon. Paste an image URL, a Data URL, or choose a local image to convert it into a Data URL.",
+      "siteIconUrlHint": "Used for the browser tab and bookmark icon. Paste an image URL, a Data URL, or choose a local image and crop it into a square Data URL first.",
     "siteIconPreviewAlt": "Site icon preview",
     "siteIconPreview": "Site icon preview",
     "userNameLabel": "Homepage name",

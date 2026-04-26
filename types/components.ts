@@ -28,6 +28,7 @@ export interface UserProfileNoteSectionProps {
 }
 
 export type ImageCropAspectMode = 'square' | 'free'
+export type ImageCropOutputFormat = 'png' | 'webp' | 'jpeg'
 
 export interface ImageCropDialogProps {
   open: boolean
@@ -35,6 +36,8 @@ export interface ImageCropDialogProps {
   sourceUrl: string | null
   outputSize: number
   aspectMode?: ImageCropAspectMode
+  outputFormat?: ImageCropOutputFormat
+  outputQuality?: number
   title: string
   description?: string
   onComplete: (dataUrl: string) => void

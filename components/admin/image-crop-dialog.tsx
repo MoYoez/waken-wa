@@ -21,17 +21,40 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import type { ImageCropAspectMode, ImageCropDialogProps } from '@/types/components'
+import type {
+  ImageCropAspectMode,
+  ImageCropDialogProps,
+  ImageCropOutputFormat,
+} from '@/types/components'
 
 export type { ImageCropDialogProps } from '@/types/components'
 
 const MAX_VIEW = 320
 
-function toOutputPng(
+function toCanvasDataUrl(
+  canvas: HTMLCanvasElement,
+  outputFormat: ImageCropOutputFormat,
+  outputQuality?: number,
+): string {
+  if (outputFormat === 'png') {
+    return canvas.toDataURL('image/png')
+  }
+
+  const mimeType = outputFormat === 'jpeg' ? 'image/jpeg' : 'image/webp'
+  const quality = Number.isFinite(outputQuality)
+    ? Math.max(0.4, Math.min(1, Number(outputQuality)))
+    : 0.92
+  const dataUrl = canvas.toDataURL(mimeType, quality)
+  return dataUrl.startsWith(`data:${mimeType}`) ? dataUrl : canvas.toDataURL('image/png')
+}
+
+function toOutputDataUrl(
   image: HTMLImageElement,
   pixelCrop: PixelCrop,
   aspectMode: ImageCropAspectMode,
   outputSize: number,
+  outputFormat: ImageCropOutputFormat,
+  outputQuality?: number,
 ): string {
   const scaleX = image.naturalWidth / image.width
   const scaleY = image.naturalHeight / image.height
@@ -48,6 +71,8 @@ function toOutputPng(
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   if (!ctx) return ''
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
   if (aspectMode === 'square') {
     canvas.width = outputSize
@@ -62,7 +87,7 @@ function toOutputPng(
     ctx.drawImage(image, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
   }
 
-  return canvas.toDataURL('image/png')
+  return toCanvasDataUrl(canvas, outputFormat, outputQuality)
 }
 
 export function ImageCropDialog({
@@ -71,6 +96,8 @@ export function ImageCropDialog({
   sourceUrl,
   outputSize,
   aspectMode = 'square',
+  outputFormat = 'png',
+  outputQuality,
   title,
   description,
   onComplete,
@@ -146,7 +173,14 @@ export function ImageCropDialog({
     const img = imgRef.current
     if (!img || !crop || !natural.w) return
     const pixel = convertToPixelCrop(crop, img.width, img.height)
-    const dataUrl = toOutputPng(img, pixel, aspectMode, outputSize)
+    const dataUrl = toOutputDataUrl(
+      img,
+      pixel,
+      aspectMode,
+      outputSize,
+      outputFormat,
+      outputQuality,
+    )
     onComplete(dataUrl)
     handleOpenChange(false)
   }

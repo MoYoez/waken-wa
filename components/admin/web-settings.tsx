@@ -66,6 +66,7 @@ function WebSettingsContent() {
     copyPlainText,
     cropDialogOpen,
     cropSourceUrl,
+    cropTarget,
     form,
     importConfigDialogOpen,
     importConfigInput,
@@ -77,6 +78,7 @@ function WebSettingsContent() {
     saving,
     setCropDialogOpen,
     setCropSourceUrl,
+    setCropTarget,
     setForm,
     setImportConfigDialogOpen,
     setImportConfigInput,
@@ -276,6 +278,7 @@ function WebSettingsContent() {
           onOpenChange={(open) => {
             setCropDialogOpen(open)
             if (!open) {
+              setCropTarget('avatar')
               setCropSourceUrl((prev) => {
                 if (prev) URL.revokeObjectURL(prev)
                 return null
@@ -285,9 +288,25 @@ function WebSettingsContent() {
           sourceUrl={cropSourceUrl}
           aspectMode="square"
           outputSize={128}
-          title={t('setup.cropAvatarTitle')}
-          description={t('setup.cropAvatarDescription')}
-          onComplete={(dataUrl) => setForm((prev) => ({ ...prev, avatarUrl: dataUrl }))}
+          outputFormat="png"
+          title={
+            cropTarget === 'siteIcon'
+              ? t('setup.cropSiteIconTitle')
+              : t('setup.cropAvatarTitle')
+          }
+          description={
+            cropTarget === 'siteIcon'
+              ? t('setup.cropSiteIconDescription')
+              : t('setup.cropAvatarDescription')
+          }
+          onComplete={(dataUrl) =>
+            setForm((prev) => ({
+              ...prev,
+              ...(cropTarget === 'siteIcon'
+                ? { siteIconUrl: dataUrl }
+                : { avatarUrl: dataUrl }),
+            }))
+          }
         />
       </div>
 

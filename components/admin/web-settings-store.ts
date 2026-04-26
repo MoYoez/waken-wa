@@ -116,6 +116,7 @@ export const webSettingsHistoryAppsAtom = atom<string[]>([])
 export const webSettingsHistoryPlaySourcesAtom = atom<string[]>([])
 export const webSettingsCropSourceUrlAtom = atom<string | null>(null)
 export const webSettingsCropDialogOpenAtom = atom(false)
+export const webSettingsCropTargetAtom = atom<'avatar' | 'siteIcon'>('avatar')
 export const webSettingsInspirationDevicesAtom = atom<
   Array<{ id: number; displayName: string; generatedHashKey: string; status: string }>
 >([])

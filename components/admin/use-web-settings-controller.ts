@@ -27,6 +27,7 @@ import {
   webSettingsBaselineSkillsConfigAtom,
   webSettingsCropDialogOpenAtom,
   webSettingsCropSourceUrlAtom,
+  webSettingsCropTargetAtom,
   webSettingsFormAtom,
   webSettingsHistoryAppsAtom,
   webSettingsHistoryPlaySourcesAtom,
@@ -112,6 +113,7 @@ export function useWebSettingsController() {
   const [, setHistoryPlaySources] = useAtom(webSettingsHistoryPlaySourcesAtom)
   const [cropSourceUrl, setCropSourceUrl] = useAtom(webSettingsCropSourceUrlAtom)
   const [cropDialogOpen, setCropDialogOpen] = useAtom(webSettingsCropDialogOpenAtom)
+  const [cropTarget, setCropTarget] = useAtom(webSettingsCropTargetAtom)
   const [, setInspirationDevices] = useAtom(webSettingsInspirationDevicesAtom)
   const [baselineForm, setBaselineForm] = useAtom(webSettingsBaselineFormAtom)
   const [baselineSkillsConfig, setBaselineSkillsConfig] = useAtom(
@@ -787,6 +789,7 @@ export function useWebSettingsController() {
     copyPlainText,
     cropDialogOpen,
     cropSourceUrl,
+    cropTarget,
     form,
     importConfigDialogOpen,
     importConfigInput,
@@ -797,6 +800,7 @@ export function useWebSettingsController() {
     saving,
     setCropDialogOpen,
     setCropSourceUrl,
+    setCropTarget,
     setForm,
     setImportConfigDialogOpen,
     setImportConfigInput,
