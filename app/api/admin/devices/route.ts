@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { clearActivityFeedDataCache } from '@/lib/activity-feed'
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import {
+  ADMIN_DEVICE_LIST_MAX_LIMIT,
   ADMIN_LIST_DEFAULT_PAGE_SIZE,
-  ADMIN_LIST_MAX_PAGE_SIZE,
 } from '@/lib/admin-list-constants'
 import { db } from '@/lib/db'
 import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const { limit, offset } = parsePaginationParams(searchParams, {
       defaultLimit: ADMIN_LIST_DEFAULT_PAGE_SIZE,
-      maxLimit: ADMIN_LIST_MAX_PAGE_SIZE,
+      maxLimit: ADMIN_DEVICE_LIST_MAX_LIMIT,
     })
     const status = String(searchParams.get('status') ?? '').trim()
     const q = String(searchParams.get('q') ?? '').trim()

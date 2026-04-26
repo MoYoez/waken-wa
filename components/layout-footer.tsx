@@ -32,6 +32,7 @@ export function LayoutFooter({
   const isMobile = useIsMobile()
   const currentYear = new Date().getFullYear()
   const [poweredWaveTick, setPoweredWaveTick] = useState(0)
+  const [cloudWobbleTick, setCloudWobbleTick] = useState(0)
   const { count: viewerCount, error, loading } = useViewerCount({ mode: 'heartbeat' })
   const isPresenceConnected = !error && !loading
   const watchingSuffix = t('site.footer.watchingSuffix')
@@ -129,8 +130,14 @@ export function LayoutFooter({
                   <Link
                     href="/admin"
                     className="footer-text-soft inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-1 py-2 font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:min-h-0 sm:py-1"
+                    onMouseEnter={() => setCloudWobbleTick((c) => c + 1)}
+                    onTouchStart={() => setCloudWobbleTick((c) => c + 1)}
                   >
-                    <TiWeatherCloudy className="h-[15px] w-[15px] shrink-0 opacity-75" aria-hidden />
+                    <TiWeatherCloudy
+                      key={`footer-cloud-${cloudWobbleTick}`}
+                      className={`footer-cloud-icon h-[15px] w-[15px] shrink-0 opacity-75${cloudWobbleTick > 0 ? ' is-wobbling' : ''}`}
+                      aria-hidden
+                    />
                     <span>{adminText}</span>
                   </Link>
                 </div>
