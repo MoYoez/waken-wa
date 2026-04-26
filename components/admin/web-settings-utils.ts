@@ -34,6 +34,7 @@ import {
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
+import { normalizeSiteIconUrl } from '@/lib/site-icon'
 import {
   parseThemeCustomSurface,
   THEME_CUSTOM_SURFACE_DEFAULTS,
@@ -299,6 +300,10 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
   if ('pageTitle' in web && typeof web.pageTitle === 'string') {
     const t = web.pageTitle.trim()
     patch.pageTitle = t ? t.slice(0, PAGE_TITLE_MAX_LEN) : DEFAULT_PAGE_TITLE
+  }
+  if ('siteIconUrl' in web) {
+    patch.siteIconUrl =
+      typeof web.siteIconUrl === 'string' ? (normalizeSiteIconUrl(web.siteIconUrl) ?? '') : ''
   }
   if ('userName' in web && typeof web.userName === 'string') patch.userName = web.userName.trim()
   if ('userBio' in web && typeof web.userBio === 'string') patch.userBio = web.userBio.trim()

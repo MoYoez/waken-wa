@@ -82,6 +82,7 @@ import {
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
+import { normalizeSiteIconUrl } from '@/lib/site-icon'
 import { normalizeTimezone } from '@/lib/timezone'
 
 export function useWebSettingsController() {
@@ -234,6 +235,10 @@ export function useWebSettingsController() {
                 ? (normalizeAdminThemeColor(data.adminBackgroundColor) ?? '')
                 : '',
             pageTitle: data.pageTitle ?? DEFAULT_PAGE_TITLE,
+            siteIconUrl:
+              typeof data.siteIconUrl === 'string'
+                ? (normalizeSiteIconUrl(data.siteIconUrl) ?? '')
+                : '',
             userName: data.userName ?? '',
             userBio: data.userBio ?? '',
             avatarUrl: data.avatarUrl ?? '',
@@ -660,6 +665,14 @@ export function useWebSettingsController() {
           : {}),
         ...(typeof data.useNoSqlAsCacheRedis === 'boolean'
           ? { useNoSqlAsCacheRedis: data.useNoSqlAsCacheRedis === true }
+          : {}),
+        ...(typeof data.siteIconUrl === 'string' || data.siteIconUrl === null
+          ? {
+              siteIconUrl:
+                typeof data.siteIconUrl === 'string'
+                  ? (normalizeSiteIconUrl(data.siteIconUrl) ?? '')
+                  : '',
+            }
           : {}),
         ...(typeof data.avatarFetchByServerEnabled === 'boolean'
           ? {

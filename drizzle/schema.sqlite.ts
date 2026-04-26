@@ -85,6 +85,8 @@ export const siteConfig = sqliteTable('site_config', {
   pageTitle: text('page_title')
     .notNull()
     .default('别睡了啦！看看你在做什么'),
+  /** URL or data URL for the browser tab icon; null = use built-in generated icon */
+  siteIconUrl: text('site_icon_url'),
   userName: text('user_name').notNull(),
   userBio: text('user_bio').notNull(),
   avatarUrl: text('avatar_url').notNull(),

@@ -29,6 +29,21 @@ import { Switch } from '@/components/ui/switch'
 import { isRemoteAvatarUrl, resolveAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string' && reader.result.length > 0) {
+        resolve(reader.result)
+        return
+      }
+      reject(new Error('Failed to read file as data URL'))
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'))
+    reader.readAsDataURL(file)
+  })
+}
+
 export function WebSettingsBasicPanel() {
   const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
@@ -50,6 +65,7 @@ export function WebSettingsBasicPanel() {
     avatarUsesRemoteUrl && form.avatarFetchByServerEnabled,
     'admin-preview',
   )
+  const siteIconPreviewUrl = form.siteIconUrl.trim()
 
   const onFileSelected = (file?: File) => {
     if (!file) return
@@ -57,6 +73,13 @@ export function WebSettingsBasicPanel() {
     const objectUrl = URL.createObjectURL(file)
     setCropSourceUrl(objectUrl)
     setCropDialogOpen(true)
+  }
+
+  const onSiteIconSelected = (file?: File) => {
+    if (!file) return
+    void readFileAsDataUrl(file)
+      .then((dataUrl) => patch('siteIconUrl', dataUrl))
+      .catch(() => undefined)
   }
 
   return (
@@ -69,6 +92,47 @@ export function WebSettingsBasicPanel() {
           onChange={(event) => patch('pageTitle', event.target.value)}
           placeholder={DEFAULT_PAGE_TITLE}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>{t('webSettingsBasic.siteIconUrlLabel')}</Label>
+        <Input
+          value={form.siteIconUrl}
+          onChange={(event) => patch('siteIconUrl', event.target.value)}
+          placeholder={t('webSettingsBasic.siteIconUrlPlaceholder')}
+        />
+        <p className="text-xs text-muted-foreground">{t('webSettingsBasic.siteIconUrlHint')}</p>
+        <FileSelectTrigger
+          accept="image/*"
+          buttonLabel={t('common.selectFile')}
+          emptyLabel={t('common.noFileSelected')}
+          onSelect={onSiteIconSelected}
+        />
+        <AnimatePresence initial={false}>
+          {siteIconPreviewUrl ? (
+            <motion.div
+              className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3"
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              <Image
+                src={siteIconPreviewUrl}
+                alt={t('webSettingsBasic.siteIconPreviewAlt')}
+                width={40}
+                height={40}
+                unoptimized
+                className="h-10 w-10 rounded-lg border border-border object-cover"
+              />
+              <span className="text-xs text-muted-foreground">
+                {t('webSettingsBasic.siteIconPreview')}
+              </span>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">

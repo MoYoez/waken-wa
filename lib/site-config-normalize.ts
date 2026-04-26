@@ -2,6 +2,7 @@ import { normalizeAdminThemeColor } from '@/lib/admin-theme-color'
 import { normalizeAppMessageRules } from '@/lib/app-message-rules'
 import { parseJsonString } from '@/lib/json-parse'
 import { normalizePublicPageFontOptions } from '@/lib/public-page-font'
+import { normalizeSiteIconUrl } from '@/lib/site-icon'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 
 function normalizeStringArrayField(raw: unknown): string[] {
@@ -15,6 +16,7 @@ export function normalizeSiteConfigShape(config: Record<string, any>): Record<st
     ...config,
     adminThemeColor: normalizeAdminThemeColor(config.adminThemeColor ?? '') ?? null,
     adminBackgroundColor: normalizeAdminThemeColor(config.adminBackgroundColor ?? '') ?? null,
+    siteIconUrl: normalizeSiteIconUrl(config.siteIconUrl ?? '') ?? null,
     hideInspirationOnHome: config.hideInspirationOnHome === true,
     smoothScrollEnabled: config.smoothScrollEnabled === true,
     forceDisplayTimezone: config.forceDisplayTimezone === true,

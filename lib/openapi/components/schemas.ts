@@ -42,6 +42,7 @@ export function buildSchemas(baseUrl: string) {
     additionalProperties: true,
     properties: {
       pageTitle: { type: 'string' },
+      siteIconUrl: { type: ['string', 'null'] },
       userName: { type: 'string' },
       userBio: { type: 'string' },
       avatarUrl: { type: 'string' },
@@ -206,6 +207,7 @@ export function buildSchemas(baseUrl: string) {
       additionalProperties: true,
       properties: {
         pageTitle: { type: 'string' },
+        siteIconUrl: { type: ['string', 'null'] },
         userName: { type: 'string' },
         userBio: { type: 'string' },
         avatarUrl: { type: 'string' },

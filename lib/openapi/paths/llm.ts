@@ -108,6 +108,7 @@ export function buildLlmPaths() {
               minimalThemeUpdate: {
                 value: {
                   pageTitle: 'Waken Wa',
+                  siteIconUrl: 'https://example.com/favicon.png',
                   currentlyText: 'Current Status',
                   themePreset: 'customSurface',
                   themeCustomSurface: { primary: '#da6d4b', accent: '#2d8f85' },

@@ -58,6 +58,8 @@ export interface SiteConfig {
   /** Empty = use default admin surface tokens. */
   adminBackgroundColor: string
   pageTitle: string
+  /** Empty = use built-in generated browser icon. */
+  siteIconUrl: string
   userName: string
   userBio: string
   avatarUrl: string

@@ -95,6 +95,8 @@ export const siteConfig = pgTable('site_config', {
   pageTitle: varchar('page_title', { length: 120 })
     .notNull()
     .default('别睡了啦！看看你在做什么'),
+  /** URL or data URL for the browser tab icon; null = use built-in generated icon */
+  siteIconUrl: text('site_icon_url'),
   userName: varchar('user_name', { length: 120 }).notNull(),
   userBio: text('user_bio').notNull(),
   avatarUrl: text('avatar_url').notNull(),

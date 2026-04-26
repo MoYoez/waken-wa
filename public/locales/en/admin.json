@@ -827,6 +827,11 @@
   },
   "webSettingsBasic": {
     "pageTitleLabel": "Page title",
+    "siteIconUrlLabel": "Site icon URL",
+    "siteIconUrlPlaceholder": "Leave empty to use the built-in icon, or paste a URL / Data URL",
+    "siteIconUrlHint": "Used for the browser tab and bookmark icon. Paste an image URL, a Data URL, or choose a local image to convert it into a Data URL.",
+    "siteIconPreviewAlt": "Site icon preview",
+    "siteIconPreview": "Site icon preview",
     "userNameLabel": "Homepage name",
     "userBioLabel": "Homepage bio",
     "userNoteLabel": "Homepage note",

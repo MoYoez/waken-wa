@@ -347,6 +347,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   pushSection(lines, '### Profile and Identity')
   pushBullets(lines, [
     '`pageTitle`: Browser title and main site title. Required, non-empty, length-limited',
+    '`siteIconUrl`: Optional browser tab icon URL or image data URL. Empty/null falls back to the built-in generated icon',
     '`userName`: Public display name. Required, non-empty',
     '`userBio`: Public bio text. Required, non-empty',
     '`avatarUrl`: Avatar image URL or data URL. Required, non-empty',

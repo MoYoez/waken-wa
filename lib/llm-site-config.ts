@@ -44,6 +44,7 @@ import {
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
+import { normalizeSiteIconUrl } from '@/lib/site-icon'
 import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
@@ -62,6 +63,7 @@ export async function updateSiteConfigFromPayload(
   const { has, strField, trimStr, strArr } = createSiteConfigFieldReaders(body, existing)
 
   const pageTitle = strField('pageTitle', DEFAULT_PAGE_TITLE).slice(0, PAGE_TITLE_MAX_LEN)
+  const siteIconUrl = normalizeSiteIconUrl(trimStr('siteIconUrl'))
   const userName = trimStr('userName')
   const userBio = trimStr('userBio')
   const avatarUrl = trimStr('avatarUrl')
@@ -455,6 +457,7 @@ export async function updateSiteConfigFromPayload(
     adminThemeColor,
     adminBackgroundColor,
     pageTitle,
+    siteIconUrl,
     userName,
     userBio,
     avatarUrl,

@@ -30,6 +30,7 @@ export const WEB_SETTINGS_INITIAL_FORM: SiteConfig = {
   adminThemeColor: '',
   adminBackgroundColor: '',
   pageTitle: DEFAULT_PAGE_TITLE,
+  siteIconUrl: '',
   userName: '',
   userBio: '',
   avatarUrl: '',

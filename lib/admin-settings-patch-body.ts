@@ -16,6 +16,7 @@ import {
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
+import { normalizeSiteIconUrl } from '@/lib/site-icon'
 
 /**
  * Build JSON body for PATCH /api/admin/settings from a GET response row plus overrides.
@@ -43,6 +44,7 @@ export function buildAdminSettingsPatchBody(
         (data as Record<string, unknown>).adminBackgroundColor ?? '',
       ) ?? null,
     pageTitle: data.pageTitle,
+    siteIconUrl: normalizeSiteIconUrl((data as Record<string, unknown>).siteIconUrl ?? '') ?? null,
     userName: data.userName,
     userBio: data.userBio,
     avatarUrl: data.avatarUrl,

@@ -75,6 +75,7 @@ export async function GET(request: Request) {
         adminThemeColor: cfg.adminThemeColor ?? null,
         adminBackgroundColor: cfg.adminBackgroundColor ?? null,
         pageTitle: cfg.pageTitle,
+        siteIconUrl: cfg.siteIconUrl ?? null,
         userName: cfg.userName,
         userBio: cfg.userBio,
         avatarUrl: cfg.avatarUrl,
