@@ -20,6 +20,11 @@ export type {
 } from './admin'
 export type { SessionPayload } from './auth'
 export type {
+  BrowserMemoryInfo,
+  BrowserStartupLogOptions,
+  BrowserStartupScope,
+} from './browser-startup'
+export type {
   ChartConfig,
   ImageCropAspectMode,
   ImageCropDialogProps,

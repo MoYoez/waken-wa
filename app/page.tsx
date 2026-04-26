@@ -39,6 +39,7 @@ import {
 } from '@/lib/site-config-constants'
 import { getThemePresetCss } from '@/lib/theme-css'
 import { coerceDbTimestampToIsoUtc, normalizeTimezone } from '@/lib/timezone'
+import packageJson from '@/package.json'
 
 // Force dynamic rendering so each request gets fresh data.
 export const dynamic = 'force-dynamic'
@@ -163,6 +164,7 @@ export default async function Home() {
         <div className="floating-orb floating-orb-3" />
       </div>
       <PublicPageTransitionShell
+        appVersion={packageJson.version}
         scope="home"
         enabled={pageLoadingEnabled}
         fontOptions={publicFontOptions}

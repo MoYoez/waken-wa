@@ -10,6 +10,7 @@ import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
 import { resolvePublicPageControlFontOptions } from '@/lib/public-page-font'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { getThemePresetCss } from '@/lib/theme-css'
+import packageJson from '@/package.json'
 
 export default async function InspirationLayout({ children }: { children: React.ReactNode }) {
   const config = await getSiteConfigMemoryFirst()
@@ -53,6 +54,7 @@ export default async function InspirationLayout({ children }: { children: React.
         <div className="floating-orb floating-orb-3" />
       </div>
       <PublicPageTransitionShell
+        appVersion={packageJson.version}
         scope="inspiration"
         enabled={pageLoadingEnabled}
         fontOptions={publicFontOptions}

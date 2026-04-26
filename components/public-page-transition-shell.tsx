@@ -9,12 +9,15 @@ import {
   getSiteSectionTransition,
   getSiteSectionVariants,
 } from '@/components/site-motion'
+import { logBrowserStartupBanner } from '@/lib/browser-startup-log'
 import type { PublicPageFontOption } from '@/lib/public-page-font'
+import type { BrowserStartupScope } from '@/types/browser-startup'
 
 type Props = {
+  appVersion: string
   children: React.ReactNode
   fontOptions: PublicPageFontOption[]
-  scope: 'home' | 'inspiration'
+  scope: BrowserStartupScope
   enabled?: boolean
 }
 
@@ -23,6 +26,7 @@ const THEME_WAIT_TIMEOUT_MS = 2200
 const THEME_WAIT_IMAGE_TIMEOUT_MS = 5000
 
 export function PublicPageTransitionShell({
+  appVersion,
   children,
   fontOptions,
   scope,
@@ -92,6 +96,11 @@ export function PublicPageTransitionShell({
       delete root.dataset.publicPageLoading
     }
   }, [enabled, scope])
+
+  useEffect(() => {
+    if (!contentReady) return
+    void logBrowserStartupBanner({ appVersion, scope })
+  }, [appVersion, contentReady, scope])
 
   return (
     <>
