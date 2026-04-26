@@ -1,38 +1,27 @@
 'use client'
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useT } from 'next-i18next/client'
-import { useDeferredValue, useMemo, useState } from 'react'
-import { toast } from 'sonner'
 
 import {
   getAdminPanelTransition,
   getAdminSectionVariants,
 } from '@/components/admin/admin-motion'
-import {
-  exportAdminActivityApps,
-  exportAdminRuleTools,
-  fetchActivityHistoryApps,
-  fetchActivityHistoryPlaySources,
-} from '@/components/admin/admin-query-fetchers'
-import { adminQueryKeys } from '@/components/admin/admin-query-keys'
-import { importAdminRuleTools } from '@/components/admin/admin-query-mutations'
+import { ListDialogEditor } from '@/components/admin/rule-tools-list-dialog-editor'
+import { getErrorMessage, getTitleRuleRegexErrorMessage,summarizeAppRuleGroup } from '@/components/admin/rule-tools-utils'
 import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
+import { useRuleToolsState } from '@/components/admin/use-rule-tools-state'
 import {
   WebSettingsInset,
   WebSettingsRow,
   WebSettingsRows,
 } from '@/components/admin/web-settings-layout'
 import {
-  listMaxPage,
   ListPaginationBar,
-  SETTINGS_APP_LIST_PAGE_SIZE,
   SETTINGS_RULES_PAGE_SIZE,
 } from '@/components/admin/web-settings-paging'
 import { webSettingsMigrationAtom } from '@/components/admin/web-settings-store'
-import { exportAppRulesJson, parseAppRulesJson } from '@/components/admin/web-settings-utils'
 import { Autocomplete } from '@/components/ui/autocomplete'
 import { Button } from '@/components/ui/button'
 import {
@@ -48,433 +37,11 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  type AppMessageTitleRule,
-  type AppTitleRuleMode,
-  createAppMessageRuleGroupId,
-  createAppMessageTitleRuleId,
-  prepareAppMessageRulesForSave,
-} from '@/lib/app-message-rules'
+import type { AppTitleRuleMode } from '@/lib/app-message-rules'
 import { cn } from '@/lib/utils'
-import type {
-  AppMessageRuleGroup,
-  RuleToolsExportPayload,
-  RuleToolsListItem,
-  RuleToolsListKey,
-  RuleToolsRuleItem,
-  RuleToolsSummary,
-} from '@/types/rule-tools'
-
-type ListEditingState = {
-  listKey: RuleToolsListKey
-  currentValue: string
-  draftValue: string
-}
-
-function summarizeAppRuleGroup(
-  rule: AppMessageRuleGroup,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  const process = rule.processMatch.trim() || t('webSettingsRuleTools.appRules.matchEmpty')
-  const fallback = String(rule.defaultText ?? '').trim()
-  const titleRuleCount = Array.isArray(rule.titleRules) ? rule.titleRules.length : 0
-  if (fallback) {
-    return t('webSettingsRuleTools.appRules.groupSummaryWithDefault', { process, text: fallback })
-  }
-  if (titleRuleCount > 0) {
-    return t('webSettingsRuleTools.appRules.groupSummaryWithTitleRules', {
-      process,
-      count: titleRuleCount,
-    })
-  }
-  return process
-}
-
-function cloneRuleToolsPayload(payload: RuleToolsExportPayload): RuleToolsExportPayload {
-  return {
-    appMessageRules: payload.appMessageRules.map((rule) => ({
-      ...rule,
-      titleRules: rule.titleRules.map((titleRule) => ({ ...titleRule })),
-    })),
-    appMessageRulesShowProcessName: payload.appMessageRulesShowProcessName !== false,
-    appFilterMode: payload.appFilterMode === 'whitelist' ? 'whitelist' : 'blacklist',
-    appBlacklist: [...payload.appBlacklist],
-    appWhitelist: [...payload.appWhitelist],
-    appNameOnlyList: [...payload.appNameOnlyList],
-    captureReportedAppsEnabled: payload.captureReportedAppsEnabled !== false,
-    mediaPlaySourceBlocklist: [...payload.mediaPlaySourceBlocklist],
-  }
-}
-
-function buildRuleToolsSummary(payload: RuleToolsExportPayload): RuleToolsSummary {
-  return {
-    appMessageRulesShowProcessName: payload.appMessageRulesShowProcessName !== false,
-    appFilterMode: payload.appFilterMode === 'whitelist' ? 'whitelist' : 'blacklist',
-    captureReportedAppsEnabled: payload.captureReportedAppsEnabled !== false,
-    ruleGroupCount: payload.appMessageRules.length,
-    appBlacklistCount: payload.appBlacklist.length,
-    appWhitelistCount: payload.appWhitelist.length,
-    appNameOnlyListCount: payload.appNameOnlyList.length,
-    mediaPlaySourceBlocklistCount: payload.mediaPlaySourceBlocklist.length,
-  }
-}
-
-function buildRuleItems(payload: RuleToolsExportPayload): RuleToolsRuleItem[] {
-  return payload.appMessageRules.map((rule, position) => ({
-    ...rule,
-    position,
-  }))
-}
-
-function filterRuleItems(items: RuleToolsRuleItem[], q: string): RuleToolsRuleItem[] {
-  const normalized = q.trim().toLowerCase()
-  if (!normalized) return items
-  return items.filter((item) => {
-    const haystacks = [
-      item.processMatch,
-      item.defaultText ?? '',
-      ...item.titleRules.flatMap((titleRule) => [titleRule.pattern, titleRule.text]),
-    ]
-    return haystacks.some((value) => String(value).toLowerCase().includes(normalized))
-  })
-}
-
-function filterListValues(values: string[], q: string): RuleToolsListItem[] {
-  const normalized = q.trim().toLowerCase()
-  return values
-    .map((value, position) => ({ value, position }))
-    .filter(
-      (item) => item.value.length > 0 && (normalized ? item.value.toLowerCase().includes(normalized) : true),
-    )
-}
-
-function normalizeDraftListValue(listKey: RuleToolsListKey, raw: string): string {
-  const base = raw.trim()
-  return listKey === 'mediaPlaySourceBlocklist' ? base.toLowerCase() : base
-}
-
-function dedupeDraftList(listKey: RuleToolsListKey, values: string[]): string[] {
-  const next: string[] = []
-  const seen = new Set<string>()
-  for (const raw of values) {
-    const value = normalizeDraftListValue(listKey, raw)
-    if (!value) continue
-    const key = value.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    next.push(value)
-  }
-  return next
-}
-
-function normalizePayloadForSave(
-  payload: RuleToolsExportPayload,
-): { data: RuleToolsExportPayload; error: { group: number; rule: number; message: string } | null } {
-  const preparedRules = prepareAppMessageRulesForSave(payload.appMessageRules)
-  if (preparedRules.errors.length > 0) {
-    const first = preparedRules.errors[0]
-    return {
-      data: cloneRuleToolsPayload(payload),
-      error: {
-        group: first.groupIndex + 1,
-        rule: first.titleRuleIndex + 1,
-        message: first.message,
-      },
-    }
-  }
-
-  return {
-    data: {
-      appMessageRules: preparedRules.data,
-      appMessageRulesShowProcessName: payload.appMessageRulesShowProcessName !== false,
-      appFilterMode: payload.appFilterMode === 'whitelist' ? 'whitelist' : 'blacklist',
-      appBlacklist: dedupeDraftList('appBlacklist', payload.appBlacklist),
-      appWhitelist: dedupeDraftList('appWhitelist', payload.appWhitelist),
-      appNameOnlyList: dedupeDraftList('appNameOnlyList', payload.appNameOnlyList),
-      captureReportedAppsEnabled: payload.captureReportedAppsEnabled !== false,
-      mediaPlaySourceBlocklist: dedupeDraftList(
-        'mediaPlaySourceBlocklist',
-        payload.mediaPlaySourceBlocklist,
-      ),
-    },
-    error: null,
-  }
-}
-
-function areRuleToolsPayloadEqual(
-  left: RuleToolsExportPayload | null,
-  right: RuleToolsExportPayload | null,
-): boolean {
-  if (!left || !right) return left === right
-  return JSON.stringify(left) === JSON.stringify(right)
-}
-
-function moveItem<T>(items: readonly T[], fromIndex: number, toIndex: number): T[] {
-  if (fromIndex === toIndex) return [...items]
-  const next = [...items]
-  const [item] = next.splice(fromIndex, 1)
-  if (typeof item === "undefined") return next
-  next.splice(toIndex, 0, item)
-  return next
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message.trim() ? error.message : fallback
-}
-
-function getTitleRuleRegexErrorMessage(
-  titleRule: AppMessageTitleRule,
-  groupIndex: number,
-  titleRuleIndex: number,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string | null {
-  if (titleRule.mode !== 'regex' || !titleRule.pattern.trim()) return null
-  try {
-    new RegExp(titleRule.pattern, 'i')
-    return null
-  } catch (error) {
-    return t('webSettingsRuleTools.appRules.invalidRegex', {
-      group: groupIndex + 1,
-      rule: titleRuleIndex + 1,
-      message: error instanceof Error ? error.message : 'Invalid regular expression',
-    })
-  }
-}
-
-function useHistoryAppSuggestions(query: string, enabled: boolean) {
-  const deferredQuery = useDeferredValue(query)
-  return useQuery({
-    queryKey: adminQueryKeys.activity.historyApps({ q: deferredQuery, limit: 20 }),
-    queryFn: () => fetchActivityHistoryApps({ q: deferredQuery, limit: 20 }),
-    enabled,
-  })
-}
-
-function useHistoryPlaySourceSuggestions(query: string, enabled: boolean) {
-  const deferredQuery = useDeferredValue(query)
-  return useQuery({
-    queryKey: adminQueryKeys.activity.historyPlaySources({ q: deferredQuery, limit: 20 }),
-    queryFn: () => fetchActivityHistoryPlaySources({ q: deferredQuery, limit: 20 }),
-    enabled,
-  })
-}
-
-function ListDialogEditor({
-  description,
-  emptyText,
-  inputId,
-  placeholder,
-  suggestions,
-  suggestionsEnabled,
-  inputValue,
-  onInputValueChange,
-  onAdd,
-  items,
-  total,
-  page,
-  onPageChange,
-  savedSearchValue,
-  onSavedSearchValueChange,
-  loading,
-  refreshing,
-  busy,
-  editingItem,
-  onEditingValueChange,
-  onStartEdit,
-  onCancelEdit,
-  onSaveEdit,
-  onRemove,
-  inputClassName,
-}: {
-  description: string
-  emptyText: string
-  inputId: string
-  placeholder: string
-  suggestions: string[]
-  suggestionsEnabled: boolean
-  inputValue: string
-  onInputValueChange: (value: string) => void
-  onAdd: () => Promise<void> | void
-  items: RuleToolsListItem[]
-  total: number
-  page: number
-  onPageChange: (page: number) => void
-  savedSearchValue: string
-  onSavedSearchValueChange: (value: string) => void
-  loading: boolean
-  refreshing: boolean
-  busy: boolean
-  editingItem: { currentValue: string; draftValue: string } | null
-  onEditingValueChange: (value: string) => void
-  onStartEdit: (value: string) => void
-  onCancelEdit: () => void
-  onSaveEdit: () => Promise<void> | void
-  onRemove: (value: string) => Promise<void> | void
-  inputClassName?: string
-}) {
-  const { t } = useT('admin')
-  const prefersReducedMotion = Boolean(useReducedMotion())
-  const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
-  const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
-    enterY: 10,
-    exitY: 8,
-    scale: 0.996,
-  })
-  const hasSavedSearch = savedSearchValue.trim().length > 0
-
-  return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <div className="shrink-0 space-y-3">
-        <p className="text-xs text-muted-foreground">{description}</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Autocomplete
-            id={inputId}
-            items={suggestions}
-            value={inputValue}
-            onValueChange={onInputValueChange}
-            placeholder={placeholder}
-            inputClassName={inputClassName}
-            showClear={false}
-            emptyText={
-              suggestionsEnabled
-                ? t('webSettingsRuleTools.appNameListEditor.noMatchingHistory')
-                : t('webSettingsRuleTools.appNameListEditor.historyDisabled')
-            }
-          />
-          <Button
-            type="button"
-            className="shrink-0"
-            disabled={busy || inputValue.trim().length === 0}
-            onClick={() => void onAdd()}
-          >
-            {t('webSettingsRuleTools.appNameListEditor.add')}
-          </Button>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={`${inputId}-saved-search`}>{t('common.search')}</Label>
-          <Input
-            id={`${inputId}-saved-search`}
-            value={savedSearchValue}
-            onChange={(event) => onSavedSearchValueChange(event.target.value)}
-            placeholder={t('webSettingsRuleTools.appNameListEditor.savedSearchPlaceholder')}
-          />
-          {refreshing ? (
-            <p className="text-xs text-muted-foreground">{t('common.refreshing')}</p>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {loading ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
-            <p className="text-xs text-muted-foreground">{t('webSettings.loading')}</p>
-          </div>
-        ) : total === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {hasSavedSearch
-                ? t('webSettingsRuleTools.appNameListEditor.noSavedResults')
-                : emptyText}
-            </p>
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-            <p className="shrink-0 text-xs text-muted-foreground">
-              {t('webSettingsRuleTools.appNameListEditor.savedItemsPaged')}
-            </p>
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-background/20 p-3">
-              <motion.ul className="space-y-3" layout>
-                <AnimatePresence initial={false}>
-                  {items.map((item) => {
-                    const isEditing =
-                      editingItem?.currentValue.toLowerCase() === item.value.toLowerCase()
-                    return (
-                      <motion.li
-                        key={item.value.toLowerCase()}
-                        className="rounded-md border bg-background/50 px-3 py-2.5"
-                        variants={sectionVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        transition={sectionTransition}
-                        layout
-                      >
-                        {isEditing ? (
-                          <div className="space-y-2">
-                            <Input
-                              value={editingItem?.draftValue ?? ''}
-                              onChange={(event) => onEditingValueChange(event.target.value)}
-                              className={inputClassName}
-                              placeholder={t('webSettingsRuleTools.appNameListEditor.renamePlaceholder')}
-                            />
-                            <div className="flex flex-wrap gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                disabled={busy || !(editingItem?.draftValue.trim() ?? '')}
-                                onClick={() => void onSaveEdit()}
-                              >
-                                {t('common.save')}
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={busy}
-                                onClick={onCancelEdit}
-                              >
-                                {t('common.cancel')}
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-sm break-all text-foreground">{item.value}</span>
-                            <div className="flex shrink-0 flex-wrap gap-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                disabled={busy}
-                                onClick={() => onStartEdit(item.value)}
-                              >
-                                {t('common.edit')}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                disabled={busy}
-                                onClick={() => void onRemove(item.value)}
-                              >
-                                {t('common.delete')}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </motion.li>
-                    )
-                  })}
-                </AnimatePresence>
-              </motion.ul>
-            </div>
-            <ListPaginationBar
-              page={page}
-              pageSize={SETTINGS_APP_LIST_PAGE_SIZE}
-              total={total}
-              onPageChange={onPageChange}
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 export function WebSettingsRuleTools() {
   const { t } = useT('admin')
-  const queryClient = useQueryClient()
   const [migration] = useAtom(webSettingsMigrationAtom)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
@@ -484,586 +51,111 @@ export function WebSettingsRuleTools() {
     scale: 0.996,
   })
 
-  const [blacklistInput, setBlacklistInput] = useState('')
-  const [whitelistInput, setWhitelistInput] = useState('')
-  const [nameOnlyListInput, setNameOnlyListInput] = useState('')
-  const [mediaSourceInput, setMediaSourceInput] = useState('')
-  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null)
-  const [groupListPage, setGroupListPage] = useState(0)
-  const [ruleSearchInput, setRuleSearchInput] = useState('')
-  const [blacklistListPage, setBlacklistListPage] = useState(0)
-  const [blacklistSearchInput, setBlacklistSearchInput] = useState('')
-  const [whitelistListPage, setWhitelistListPage] = useState(0)
-  const [whitelistSearchInput, setWhitelistSearchInput] = useState('')
-  const [nameOnlyListPage, setNameOnlyListPage] = useState(0)
-  const [nameOnlyListSearchInput, setNameOnlyListSearchInput] = useState('')
-  const [mediaSourceListPage, setMediaSourceListPage] = useState(0)
-  const [mediaSourceSearchInput, setMediaSourceSearchInput] = useState('')
-  const [dialogAppRulesOpen, setDialogAppRulesOpen] = useState(false)
-  const [dialogAppRuleEditorOpen, setDialogAppRuleEditorOpen] = useState(false)
-  const [dialogAppFilterOpen, setDialogAppFilterOpen] = useState(false)
-  const [dialogNameOnlyOpen, setDialogNameOnlyOpen] = useState(false)
-  const [dialogMediaSourceOpen, setDialogMediaSourceOpen] = useState(false)
-  const [importRulesDialogOpen, setImportRulesDialogOpen] = useState(false)
-  const [importRulesInput, setImportRulesInput] = useState('')
-  const [editingListItem, setEditingListItem] = useState<ListEditingState | null>(null)
-  const [savedPayload, setSavedPayload] = useState<RuleToolsExportPayload | null>(null)
-  const [draftPayload, setDraftPayload] = useState<RuleToolsExportPayload | null>(null)
+  const state = useRuleToolsState(migration)
 
-  const ruleToolsQuery = useQuery({
-    queryKey: adminQueryKeys.ruleTools.export(),
-    queryFn: exportAdminRuleTools,
-  })
-  const saveDraftMutation = useMutation({
-    mutationFn: (payload: RuleToolsExportPayload) =>
-      importAdminRuleTools(payload as Record<string, unknown>),
-    onError: (error) => {
-      toast.error(getErrorMessage(error, t('common.networkErrorRetry')))
-    },
-  })
-
-  const committedPayload = savedPayload ?? ruleToolsQuery.data ?? null
-  const draftDirty = useMemo(
-    () => !areRuleToolsPayloadEqual(draftPayload ?? committedPayload, committedPayload),
-    [committedPayload, draftPayload],
-  )
-
-  const currentPayload = draftPayload ?? committedPayload
-  const currentSummary = useMemo(
-    () => (currentPayload ? buildRuleToolsSummary(currentPayload) : null),
-    [currentPayload],
-  )
-  const captureReportedAppsEnabled = currentPayload?.captureReportedAppsEnabled !== false
-  const appFilterMode =
-    currentPayload?.appFilterMode === 'whitelist' ? 'whitelist' : 'blacklist'
-  const currentFilterModeLabel =
-    appFilterMode === 'blacklist'
-      ? t('webSettingsRuleTools.appFilter.blacklistMode')
-      : t('webSettingsRuleTools.appFilter.whitelistMode')
-  const heavyEditingLocked = migration?.heavyEditingLocked === true
-  const busy = heavyEditingLocked || saveDraftMutation.isPending
-
-  const ruleItems = useMemo(
-    () => (currentPayload ? buildRuleItems(currentPayload) : []),
-    [currentPayload],
-  )
-  const filteredRuleItems = useMemo(
-    () => filterRuleItems(ruleItems, ruleSearchInput),
-    [ruleItems, ruleSearchInput],
-  )
-  const resolvedGroupListPage = Math.min(
-    groupListPage,
-    listMaxPage(filteredRuleItems.length, SETTINGS_RULES_PAGE_SIZE),
-  )
-  const pagedRuleItems = useMemo(
-    () =>
-      filteredRuleItems.slice(
-        resolvedGroupListPage * SETTINGS_RULES_PAGE_SIZE,
-        (resolvedGroupListPage + 1) * SETTINGS_RULES_PAGE_SIZE,
-      ),
-    [filteredRuleItems, resolvedGroupListPage],
-  )
-  const previewItems = useMemo(() => ruleItems.slice(0, 3), [ruleItems])
-  const previewTotal = currentSummary?.ruleGroupCount ?? 0
-  const previewOverflow = Math.max(0, previewTotal - previewItems.length)
-
-  const activeSelectedRuleId = useMemo(
-    () =>
-      selectedRuleId && ruleItems.some((item) => item.id === selectedRuleId)
-        ? selectedRuleId
-        : (ruleItems[0]?.id ?? null),
-    [ruleItems, selectedRuleId],
-  )
-  const selectedRule = useMemo(
-    () => ruleItems.find((item) => item.id === activeSelectedRuleId) ?? null,
-    [activeSelectedRuleId, ruleItems],
-  )
-
-  const currentFilterListKey: RuleToolsListKey =
-    appFilterMode === 'blacklist' ? 'appBlacklist' : 'appWhitelist'
-  const currentFilterValues = useMemo(
-    () => currentPayload?.[currentFilterListKey] ?? [],
-    [currentFilterListKey, currentPayload],
-  )
-  const currentFilterSearchInput =
-    currentFilterListKey === 'appBlacklist' ? blacklistSearchInput : whitelistSearchInput
-  const currentFilterPageRaw =
-    currentFilterListKey === 'appBlacklist' ? blacklistListPage : whitelistListPage
-  const filteredCurrentFilterItems = useMemo(
-    () => filterListValues(currentFilterValues, currentFilterSearchInput),
-    [currentFilterSearchInput, currentFilterValues],
-  )
-  const currentFilterPage = Math.min(
-    currentFilterPageRaw,
-    listMaxPage(filteredCurrentFilterItems.length, SETTINGS_APP_LIST_PAGE_SIZE),
-  )
-  const pagedCurrentFilterItems = useMemo(
-    () =>
-      filteredCurrentFilterItems.slice(
-        currentFilterPage * SETTINGS_APP_LIST_PAGE_SIZE,
-        (currentFilterPage + 1) * SETTINGS_APP_LIST_PAGE_SIZE,
-      ),
-    [currentFilterPage, filteredCurrentFilterItems],
-  )
-  const filteredNameOnlyItems = useMemo(
-    () => filterListValues(currentPayload?.appNameOnlyList ?? [], nameOnlyListSearchInput),
-    [currentPayload?.appNameOnlyList, nameOnlyListSearchInput],
-  )
-  const resolvedNameOnlyListPage = Math.min(
-    nameOnlyListPage,
-    listMaxPage(filteredNameOnlyItems.length, SETTINGS_APP_LIST_PAGE_SIZE),
-  )
-  const pagedNameOnlyItems = useMemo(
-    () =>
-      filteredNameOnlyItems.slice(
-        resolvedNameOnlyListPage * SETTINGS_APP_LIST_PAGE_SIZE,
-        (resolvedNameOnlyListPage + 1) * SETTINGS_APP_LIST_PAGE_SIZE,
-      ),
-    [filteredNameOnlyItems, resolvedNameOnlyListPage],
-  )
-  const filteredMediaSourceItems = useMemo(
-    () =>
-      filterListValues(currentPayload?.mediaPlaySourceBlocklist ?? [], mediaSourceSearchInput),
-    [currentPayload?.mediaPlaySourceBlocklist, mediaSourceSearchInput],
-  )
-  const resolvedMediaSourceListPage = Math.min(
-    mediaSourceListPage,
-    listMaxPage(filteredMediaSourceItems.length, SETTINGS_APP_LIST_PAGE_SIZE),
-  )
-  const pagedMediaSourceItems = useMemo(
-    () =>
-      filteredMediaSourceItems.slice(
-        resolvedMediaSourceListPage * SETTINGS_APP_LIST_PAGE_SIZE,
-        (resolvedMediaSourceListPage + 1) * SETTINGS_APP_LIST_PAGE_SIZE,
-      ),
-    [filteredMediaSourceItems, resolvedMediaSourceListPage],
-  )
-
-  const blacklistSuggestionsQuery = useHistoryAppSuggestions(
+  const {
+    ruleToolsQuery,
+    saveDraftMutation,
+    currentPayload,
+    currentSummary,
+    draftDirty,
+    draftPayload,
+    captureReportedAppsEnabled,
+    appFilterMode,
+    currentFilterModeLabel,
+    heavyEditingLocked,
+    busy,
+    ruleItems,
+    filteredRuleItems,
+    resolvedGroupListPage,
+    pagedRuleItems,
+    previewItems,
+    previewTotal,
+    previewOverflow,
+    activeSelectedRuleId,
+    selectedRule,
+    currentFilterListKey,
+    currentFilterSearchInput,
+    currentFilterPage,
+    filteredCurrentFilterItems,
+    pagedCurrentFilterItems,
+    currentFilterSuggestions,
+    currentFilterEditingItem,
+    filteredNameOnlyItems,
+    resolvedNameOnlyListPage,
+    pagedNameOnlyItems,
+    filteredMediaSourceItems,
+    resolvedMediaSourceListPage,
+    pagedMediaSourceItems,
+    nameOnlySuggestionsQuery,
+    mediaSourceSuggestionsQuery,
+    ruleProcessSuggestionsQuery,
     blacklistInput,
-    captureReportedAppsEnabled && dialogAppFilterOpen && appFilterMode === 'blacklist',
-  )
-  const whitelistSuggestionsQuery = useHistoryAppSuggestions(
+    setBlacklistInput,
     whitelistInput,
-    captureReportedAppsEnabled && dialogAppFilterOpen && appFilterMode === 'whitelist',
-  )
-  const nameOnlySuggestionsQuery = useHistoryAppSuggestions(
+    setWhitelistInput,
     nameOnlyListInput,
-    captureReportedAppsEnabled && dialogNameOnlyOpen,
-  )
-  const mediaSourceSuggestionsQuery = useHistoryPlaySourceSuggestions(
+    setNameOnlyListInput,
     mediaSourceInput,
-    captureReportedAppsEnabled && dialogMediaSourceOpen,
-  )
-  const ruleProcessSuggestionsQuery = useHistoryAppSuggestions(
-    selectedRule?.processMatch ?? '',
-    captureReportedAppsEnabled && (dialogAppRuleEditorOpen || dialogAppRulesOpen),
-  )
-
-  const currentFilterSuggestions =
-    currentFilterListKey === 'appBlacklist'
-      ? (blacklistSuggestionsQuery.data ?? [])
-      : (whitelistSuggestionsQuery.data ?? [])
-  const currentFilterEditingItem =
-    editingListItem?.listKey === currentFilterListKey
-      ? {
-          currentValue: editingListItem.currentValue,
-          draftValue: editingListItem.draftValue,
-        }
-      : null
-
-  const invalidateRuleToolsAll = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'rule-tools'] })
-  }
-
-  const persistRuleToolsPayload = async (
-    payload: RuleToolsExportPayload,
-    showSuccessToast = false,
-  ): Promise<boolean> => {
-    if (heavyEditingLocked) {
-      toast.error(t('webSettingsMigration.lockedToast'))
-      return false
-    }
-    const normalized = normalizePayloadForSave(payload)
-    if (normalized.error) {
-      toast.error(
-        t('webSettingsRuleTools.appRules.invalidRegex', {
-          group: normalized.error.group,
-          rule: normalized.error.rule,
-          message: normalized.error.message,
-        }),
-      )
-      return false
-    }
-    try {
-      await saveDraftMutation.mutateAsync(normalized.data)
-      const committed = cloneRuleToolsPayload(normalized.data)
-      setSavedPayload(cloneRuleToolsPayload(committed))
-      setDraftPayload(null)
-      queryClient.setQueryData(adminQueryKeys.ruleTools.export(), cloneRuleToolsPayload(committed))
-      void invalidateRuleToolsAll()
-      if (showSuccessToast) {
-        toast.success(t('webSettingsRuleTools.toasts.saved'))
-      }
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  const updateDraftPayload = (
-    updater: (current: RuleToolsExportPayload) => RuleToolsExportPayload,
-  ) => {
-    setDraftPayload((current) => {
-      const base = current ?? committedPayload
-      if (!base) return current
-      const next = updater(cloneRuleToolsPayload(base))
-      return areRuleToolsPayloadEqual(next, committedPayload) ? null : next
-    })
-  }
-
-  const commitSinglePayloadChange = async (
-    updater: (current: RuleToolsExportPayload) => RuleToolsExportPayload,
-  ) => {
-    const base = currentPayload
-    if (!base) return
-    if (draftDirty) {
-      updateDraftPayload(updater)
-      return
-    }
-    const previous = cloneRuleToolsPayload(base)
-    const next = updater(cloneRuleToolsPayload(base))
-    setSavedPayload(cloneRuleToolsPayload(next))
-    setDraftPayload(null)
-    const ok = await persistRuleToolsPayload(next)
-    if (!ok) {
-      setSavedPayload(cloneRuleToolsPayload(previous))
-      setDraftPayload(null)
-    }
-  }
-
-  const updateRuleDraft = (updater: (current: RuleToolsRuleItem) => RuleToolsRuleItem) => {
-    if (!activeSelectedRuleId) return
-    updateDraftPayload((current) => ({
-      ...current,
-      appMessageRules: current.appMessageRules.map((rule, position) =>
-        rule.id === activeSelectedRuleId
-          ? updater({
-              ...rule,
-              position,
-              titleRules: rule.titleRules.map((titleRule) => ({ ...titleRule })),
-            })
-          : {
-              ...rule,
-              titleRules: rule.titleRules.map((titleRule) => ({ ...titleRule })),
-            },
-      ),
-    }))
-  }
-
-  const updateTitleRuleDraft = (
-    titleRuleId: string,
-    updater: (current: AppMessageTitleRule) => AppMessageTitleRule,
-  ) => {
-    updateRuleDraft((current) => ({
-      ...current,
-      titleRules: current.titleRules.map((titleRule) =>
-        titleRule.id === titleRuleId ? updater(titleRule) : titleRule,
-      ),
-    }))
-  }
-
-  const updateDraftList = (
-    listKey: RuleToolsListKey,
-    updater: (items: string[]) => string[],
-  ) => {
-    updateDraftPayload((current) => ({
-      ...current,
-      [listKey]: updater([...current[listKey]]),
-    }))
-  }
-
-  const handleOpenRuleSelector = () => {
-    if (!selectedRuleId && ruleItems[0]) {
-      setSelectedRuleId(ruleItems[0].id)
-    }
-    setDialogAppRulesOpen(true)
-  }
-
-  const handleOpenRuleEditor = (ruleId: string) => {
-    setSelectedRuleId(ruleId)
-    setDialogAppRuleEditorOpen(false)
-    setDialogAppRulesOpen(true)
-  }
-
-  const handleAppRuleEditorOpenChange = (open: boolean) => {
-    setDialogAppRuleEditorOpen(open)
-    if (!open) {
-      setDialogAppRulesOpen(true)
-    }
-  }
-
-  const openMobileRuleEditor = (rule: RuleToolsRuleItem) => {
-    setSelectedRuleId(rule.id)
-    setDialogAppRulesOpen(false)
-    setDialogAppRuleEditorOpen(true)
-  }
-
-  const handleStartEditListItem = (listKey: RuleToolsListKey, value: string) => {
-    setEditingListItem({
-      listKey,
-      currentValue: value,
-      draftValue: value,
-    })
-  }
-
-  const handleCancelEditListItem = () => {
-    setEditingListItem(null)
-  }
-
-  const handleSaveEditedListItem = () => {
-    if (!editingListItem) return
-    const nextValue = normalizeDraftListValue(
-      editingListItem.listKey,
-      editingListItem.draftValue,
-    )
-    if (!nextValue) return
-    updateDraftList(editingListItem.listKey, (items) => {
-      const targetIndex = items.findIndex(
-        (item) => item.toLowerCase() === editingListItem.currentValue.toLowerCase(),
-      )
-      if (targetIndex < 0) return items
-      const duplicateIndex = items.findIndex(
-        (item, index) =>
-          index !== targetIndex && item.toLowerCase() === nextValue.toLowerCase(),
-      )
-      if (duplicateIndex >= 0) return items
-      const next = [...items]
-      next[targetIndex] = nextValue
-      return next
-    })
-    setEditingListItem(null)
-  }
-
-  const handleRemoveListItem = (listKey: RuleToolsListKey, value: string) => {
-    updateDraftList(listKey, (items) =>
-      items.filter((item) => item.toLowerCase() !== value.toLowerCase()),
-    )
-    if (editingListItem?.listKey === listKey) {
-      setEditingListItem(null)
-    }
-  }
-
-  const handleAddFilterItem = () => {
-    const listKey = currentFilterListKey
-    const raw = listKey === 'appBlacklist' ? blacklistInput : whitelistInput
-    const value = normalizeDraftListValue(listKey, raw)
-    if (!value) return
-    updateDraftList(listKey, (items) => {
-      if (items.some((item) => item.toLowerCase() === value.toLowerCase())) return items
-      return [...items, value]
-    })
-    if (listKey === 'appBlacklist') {
-      setBlacklistInput('')
-      setBlacklistSearchInput('')
-      setBlacklistListPage(
-        listMaxPage((currentPayload?.appBlacklist.length ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
-      )
-    } else {
-      setWhitelistInput('')
-      setWhitelistSearchInput('')
-      setWhitelistListPage(
-        listMaxPage((currentPayload?.appWhitelist.length ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
-      )
-    }
-  }
-
-  const handleAddNameOnlyItem = () => {
-    const value = normalizeDraftListValue('appNameOnlyList', nameOnlyListInput)
-    if (!value) return
-    updateDraftList('appNameOnlyList', (items) => {
-      if (items.some((item) => item.toLowerCase() === value.toLowerCase())) return items
-      return [...items, value]
-    })
-    setNameOnlyListInput('')
-    setNameOnlyListSearchInput('')
-    setNameOnlyListPage(
-      listMaxPage((currentPayload?.appNameOnlyList.length ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
-    )
-  }
-
-  const handleAddMediaSourceItem = () => {
-    const value = normalizeDraftListValue('mediaPlaySourceBlocklist', mediaSourceInput)
-    if (!value) return
-    updateDraftList('mediaPlaySourceBlocklist', (items) => {
-      if (items.some((item) => item.toLowerCase() === value.toLowerCase())) return items
-      return [...items, value]
-    })
-    setMediaSourceInput('')
-    setMediaSourceSearchInput('')
-    setMediaSourceListPage(
-      listMaxPage(
-        (currentPayload?.mediaPlaySourceBlocklist.length ?? 0) + 1,
-        SETTINGS_APP_LIST_PAGE_SIZE,
-      ),
-    )
-  }
-
-  const handleAddRuleGroup = (openEditor = false) => {
-    const nextId = createAppMessageRuleGroupId()
-    updateDraftPayload((current) => ({
-      ...current,
-      appMessageRules: [
-        ...current.appMessageRules,
-        {
-          id: nextId,
-          processMatch: '',
-          defaultText: undefined,
-          titleRules: [],
-        },
-      ],
-    }))
-    setRuleSearchInput('')
-    setGroupListPage(
-      listMaxPage((currentPayload?.appMessageRules.length ?? 0) + 1, SETTINGS_RULES_PAGE_SIZE),
-    )
-    setSelectedRuleId(nextId)
-    if (openEditor) {
-      setDialogAppRulesOpen(false)
-      setDialogAppRuleEditorOpen(true)
-    }
-  }
-
-  const handleDeleteRuleGroup = (groupId: string) => {
-    updateDraftPayload((current) => ({
-      ...current,
-      appMessageRules: current.appMessageRules.filter((rule) => rule.id !== groupId),
-    }))
-    if (selectedRuleId === groupId) {
-      setSelectedRuleId(null)
-    }
-    if (dialogAppRuleEditorOpen) {
-      setDialogAppRuleEditorOpen(false)
-      setDialogAppRulesOpen(true)
-    }
-  }
-
-  const handleMoveRuleGroup = (groupId: string, toIndex: number) => {
-    updateDraftPayload((current) => {
-      const fromIndex = current.appMessageRules.findIndex((rule) => rule.id === groupId)
-      if (fromIndex < 0) return current
-      return {
-        ...current,
-        appMessageRules: moveItem(current.appMessageRules, fromIndex, toIndex),
-      }
-    })
-  }
-
-  const handleAddTitleRule = () => {
-    if (!selectedRule) return
-    updateRuleDraft((current) => ({
-      ...current,
-      titleRules: [
-        ...current.titleRules,
-        {
-          id: createAppMessageTitleRuleId(),
-          mode: 'plain',
-          pattern: '',
-          text: '',
-        },
-      ],
-    }))
-  }
-
-  const handleDeleteTitleRule = (titleRuleId: string) => {
-    updateRuleDraft((current) => ({
-      ...current,
-      titleRules: current.titleRules.filter((item) => item.id !== titleRuleId),
-    }))
-  }
-
-  const handleMoveTitleRule = (titleRuleId: string, toIndex: number) => {
-    updateRuleDraft((current) => {
-      const fromIndex = current.titleRules.findIndex((item) => item.id === titleRuleId)
-      if (fromIndex < 0) return current
-      return {
-        ...current,
-        titleRules: moveItem(current.titleRules, fromIndex, toIndex),
-      }
-    })
-  }
-
-  const handleTitleRuleModeChange = (titleRuleId: string, nextMode: AppTitleRuleMode) => {
-    updateTitleRuleDraft(titleRuleId, (current) => ({
-      ...current,
-      mode: nextMode,
-    }))
-  }
-
-  const copyRulesJson = async () => {
-    try {
-      const payload = currentPayload ?? (await exportAdminRuleTools())
-      const json = exportAppRulesJson(payload)
-      await navigator.clipboard.writeText(json)
-      toast.success(t('webSettingsRuleTools.toasts.copiedRulesJson'))
-    } catch (error) {
-      toast.error(getErrorMessage(error, t('common.copyFailedBrowserPermission')))
-    }
-  }
-
-  const exportUsedAppsJson = async () => {
-    try {
-      const payload = JSON.stringify(await exportAdminActivityApps(), null, 2)
-      const blob = new Blob([payload], { type: 'application/json;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
-      const ts = new Date().toISOString().replace(/[:.]/g, '-')
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `apps-export-${ts}.json`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-      toast.success(t('webSettingsRuleTools.toasts.exportedUsedAppsJson'))
-    } catch (error) {
-      toast.error(getErrorMessage(error, t('query.exportFailed')))
-    }
-  }
-
-  const confirmImportRules = () => {
-    const raw = importRulesInput.trim()
-    if (!raw) {
-      toast.error(t('webSettingsRuleTools.importDialog.pasteRulesJsonFirst'))
-      return
-    }
-    const parsed = parseAppRulesJson(raw, (key) => t(`webSettingsRuleTools.parseErrors.${key}`))
-    if (!parsed.ok) {
-      toast.error(parsed.error)
-      return
-    }
-    const imported = cloneRuleToolsPayload(parsed.data)
-    setDraftPayload(areRuleToolsPayloadEqual(imported, committedPayload) ? null : imported)
-    setSelectedRuleId(null)
-    setImportRulesDialogOpen(false)
-    setImportRulesInput('')
-    setRuleSearchInput('')
-    setBlacklistSearchInput('')
-    setWhitelistSearchInput('')
-    setNameOnlyListSearchInput('')
-    setMediaSourceSearchInput('')
-    toast.success(t('webSettingsRuleTools.toasts.importedRulesIntoForm'))
-  }
-
-  const handleRevertDraft = () => {
-    if (!committedPayload) return
-    setDraftPayload(null)
-    setEditingListItem(null)
-  }
-
-  const handleSaveDraft = async () => {
-    if (!draftPayload || !draftDirty) return
-    await persistRuleToolsPayload(draftPayload, true)
-  }
+    setMediaSourceInput,
+    ruleSearchInput,
+    setRuleSearchInput,
+    setGroupListPage,
+    setBlacklistListPage,
+    setBlacklistSearchInput,
+    setWhitelistListPage,
+    setWhitelistSearchInput,
+    nameOnlyListSearchInput,
+    setNameOnlyListSearchInput,
+    setNameOnlyListPage,
+    mediaSourceSearchInput,
+    setMediaSourceSearchInput,
+    setMediaSourceListPage,
+    dialogAppRulesOpen,
+    setDialogAppRulesOpen,
+    dialogAppRuleEditorOpen,
+    setDialogAppRuleEditorOpen,
+    dialogAppFilterOpen,
+    setDialogAppFilterOpen,
+    dialogNameOnlyOpen,
+    setDialogNameOnlyOpen,
+    dialogMediaSourceOpen,
+    setDialogMediaSourceOpen,
+    importRulesDialogOpen,
+    setImportRulesDialogOpen,
+    importRulesInput,
+    setImportRulesInput,
+    editingListItem,
+    setEditingListItem,
+    setSelectedRuleId,
+    handleOpenRuleSelector,
+    handleOpenRuleEditor,
+    handleAppRuleEditorOpenChange,
+    openMobileRuleEditor,
+    handleStartEditListItem,
+    handleCancelEditListItem,
+    handleSaveEditedListItem,
+    handleRemoveListItem,
+    handleAddFilterItem,
+    handleAddNameOnlyItem,
+    handleAddMediaSourceItem,
+    handleAddRuleGroup,
+    handleDeleteRuleGroup,
+    handleMoveRuleGroup,
+    handleAddTitleRule,
+    handleDeleteTitleRule,
+    handleMoveTitleRule,
+    handleTitleRuleModeChange,
+    updateRuleDraft,
+    updateTitleRuleDraft,
+    updateDraftPayload,
+    commitSinglePayloadChange,
+    copyRulesJson,
+    exportUsedAppsJson,
+    confirmImportRules,
+    handleRevertDraft,
+    handleSaveDraft,
+  } = state
 
   const renderRulePreview = () => {
     if (ruleToolsQuery.isLoading && previewItems.length === 0) {

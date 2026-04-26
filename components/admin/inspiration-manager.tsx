@@ -6,11 +6,9 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { ImagePlus, Loader2, PencilLine, Trash2, X } from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import Image from 'next/image'
+import { useReducedMotion } from 'motion/react'
 import { useT } from 'next-i18next/client'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -29,61 +27,20 @@ import {
   patchInspirationEntry,
   uploadInspirationAsset,
 } from '@/components/admin/admin-query-mutations'
-import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
-import { createLexicalTextContent, LexicalEditor } from '@/components/admin/lexical-editor'
-import { MarkdownContent } from '@/components/admin/markdown-content'
-import { LexicalContent } from '@/components/lexical-content'
+import { InspirationEntryList } from '@/components/admin/inspiration-entry-list'
+import { InspirationFormCard } from '@/components/admin/inspiration-form-card'
+import {
+  INSPIRATION_DRAFT_STORAGE_KEY,
+  INSPIRATION_LIST_PAGE_SIZE,
+  INSPIRATION_MAX_OUTPUT_EDGE,
+} from '@/components/admin/inspiration-manager-constants'
+import { InspirationPreviewDialog } from '@/components/admin/inspiration-preview-dialog'
+import { createLexicalTextContent } from '@/components/admin/lexical-editor'
+import { useInspirationDraft } from '@/components/admin/use-inspiration-draft'
 import { useSiteTimeFormat } from '@/components/site-timezone-provider'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { appendParagraphTextToLexical, lexicalTextContent } from '@/lib/inspiration-lexical'
-import {
-  inspirationLooksLikeMarkdown,
-  inspirationPlainPreviewAny,
-} from '@/lib/inspiration-preview'
-import { normalizeTimezone } from '@/lib/timezone'
-import type {
-  ActivityFeedData,
-  ActivityFeedItem,
-  AdminDeviceSummary,
-  AdminInspirationEntry,
-  InspirationDraft,
-} from '@/types'
-
-/** Server page size; keep small so tall markdown cards do not overflow the viewport. */
-const INSPIRATION_LIST_PAGE_SIZE = 8
-/** Max scroll height for the entry list inside the card (viewport-relative). */
-const INSPIRATION_LIST_MAX_HEIGHT = 'min(75vh,56rem)'
-/** Max long edge (px) for cropped PNG DataURL (cover + inline body images). */
-const INSPIRATION_MAX_OUTPUT_EDGE = 1200
-/** Local draft storage key for admin inspiration form. */
-const INSPIRATION_DRAFT_STORAGE_KEY_V1 = 'waken:admin:inspiration-draft:v1'
-const INSPIRATION_DRAFT_STORAGE_KEY = 'waken:admin:inspiration-draft:v2'
+import type { AdminInspirationEntry } from '@/types'
 
 export function InspirationManager() {
   const { t } = useT('admin')
@@ -92,27 +49,12 @@ export function InspirationManager() {
   const { formatPattern } = useSiteTimeFormat()
   const [page, setPage] = useState(0)
   const [q, setQ] = useState('')
-  const formCardRef = useRef<HTMLDivElement>(null)
-
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [contentLexical, setContentLexical] = useState(() => createLexicalTextContent(''))
-  const [imageDataUrl, setImageDataUrl] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
-  const [attachCurrentStatus, setAttachCurrentStatus] = useState(false)
-  const [attachStatusDeviceHash, setAttachStatusDeviceHash] = useState('')
-  const [attachStatusActivityKey, setAttachStatusActivityKey] = useState('')
-  const [attachStatusIncludeDeviceInfo, setAttachStatusIncludeDeviceInfo] = useState(false)
-  const [statusSnapshotDraft, setStatusSnapshotDraft] = useState('')
-  const [editingEntryId, setEditingEntryId] = useState<number | null>(null)
   const [previewEntry, setPreviewEntry] = useState<AdminInspirationEntry | null>(null)
-  const [bodyImageBusy, setBodyImageBusy] = useState(false)
 
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
   const [cropTarget, setCropTarget] = useState<'cover' | 'body'>('cover')
-  const bodyImageInputRef = useRef<HTMLInputElement>(null)
-  const [draftReady, setDraftReady] = useState(false)
 
   const entriesQuery = useQuery({
     queryKey: adminQueryKeys.inspiration.entries({ page, q }),
@@ -125,12 +67,6 @@ export function InspirationManager() {
     queryFn: () => fetchAdminDeviceSummaries({ limit: 200 }),
   })
 
-  const publicActivityFeedQuery = useQuery({
-    queryKey: adminQueryKeys.activity.publicFeed(),
-    queryFn: fetchPublicActivityFeed,
-    enabled: attachCurrentStatus && Boolean(attachStatusDeviceHash),
-  })
-
   const entries = useMemo(() => entriesQuery.data?.entries ?? [], [entriesQuery.data?.entries])
   const total = entriesQuery.data?.total ?? 0
   const loading = entriesQuery.isLoading
@@ -138,7 +74,32 @@ export function InspirationManager() {
     () => inspirationDevicesQuery.data ?? [],
     [inspirationDevicesQuery.data],
   )
+
+  // The draft hook needs publicActivityFeed data for snapshot memos, but the query's
+  // `enabled` flag depends on draft state (attachCurrentStatus, attachStatusDeviceHash).
+  // We lift a thin piece of state (attachCurrentStatus, attachStatusDeviceHash) out so
+  // the query can reference it before the draft hook is called. The draft hook then
+  // receives both the lifted state and the query result.
+  const [attachCurrentStatus, setAttachCurrentStatus] = useState(false)
+  const [attachStatusDeviceHash, setAttachStatusDeviceHash] = useState('')
+
+  const publicActivityFeedQuery = useQuery({
+    queryKey: adminQueryKeys.activity.publicFeed(),
+    queryFn: fetchPublicActivityFeed,
+    enabled: attachCurrentStatus && Boolean(attachStatusDeviceHash),
+  })
+
   const publicActivityFeed = publicActivityFeedQuery.data ?? null
+
+  const draft = useInspirationDraft({
+    inspirationDevices,
+    publicActivityFeed,
+    attachCurrentStatus,
+    setAttachCurrentStatus,
+    attachStatusDeviceHash,
+    setAttachStatusDeviceHash,
+  })
+
   const publicActivityLoading = publicActivityFeedQuery.isLoading
   const publicActivityError = publicActivityFeedQuery.error
     ? publicActivityFeedQuery.error instanceof Error
@@ -180,198 +141,31 @@ export function InspirationManager() {
     }
   }, [cropSourceUrl])
 
-  useEffect(() => {
-    try {
-      const rawV2 = localStorage.getItem(INSPIRATION_DRAFT_STORAGE_KEY)
-      const rawV1 = rawV2 ? null : localStorage.getItem(INSPIRATION_DRAFT_STORAGE_KEY_V1)
-      const raw = rawV2 ?? rawV1
-      if (!raw) return
-      const draft = JSON.parse(raw) as Partial<InspirationDraft> & { attachStatusDeviceHashes?: unknown }
-      const nextTitle = typeof draft.title === 'string' ? draft.title : ''
-      const nextImage = typeof draft.imageDataUrl === 'string' ? draft.imageDataUrl : ''
-      const nextAttach = draft.attachCurrentStatus === true
-      const nextDeviceHashRaw =
-        typeof draft.attachStatusDeviceHash === 'string'
-          ? draft.attachStatusDeviceHash
-          : Array.isArray(draft.attachStatusDeviceHashes)
-            ? String(draft.attachStatusDeviceHashes.find((v) => typeof v === 'string') ?? '')
-            : ''
-      const nextDeviceHash = nextDeviceHashRaw.trim()
-      const nextContentLexical =
-        typeof draft.contentLexical === 'string' && draft.contentLexical.trim()
-          ? draft.contentLexical
-          : createLexicalTextContent(typeof draft.content === 'string' ? draft.content : '')
-      const nextContent =
-        typeof draft.content === 'string' ? draft.content : lexicalTextContent(nextContentLexical)
-
-      setTitle(nextTitle)
-      setImageDataUrl(nextImage)
-      setAttachCurrentStatus(nextAttach)
-      setAttachStatusDeviceHash(nextAttach ? nextDeviceHash : '')
-      setAttachStatusActivityKey(nextAttach && typeof draft.attachStatusActivityKey === 'string' ? draft.attachStatusActivityKey : '')
-      setAttachStatusIncludeDeviceInfo(nextAttach && draft.attachStatusIncludeDeviceInfo === true)
-      setStatusSnapshotDraft('')
-      setContentLexical(nextContentLexical)
-      setContent(nextContent)
-
-      if (rawV1) {
-        const payload: InspirationDraft = {
-          title: nextTitle,
-          content: nextContent,
-          contentLexical: nextContentLexical,
-          imageDataUrl: nextImage,
-          attachCurrentStatus: nextAttach,
-          attachStatusDeviceHash: nextAttach ? nextDeviceHash : '',
-        }
-        localStorage.setItem(INSPIRATION_DRAFT_STORAGE_KEY, JSON.stringify(payload))
-      }
-    } catch {
-      // Ignore broken local draft payload.
-    } finally {
-      setDraftReady(true)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!draftReady) return
-
-    const lexicalPlain = lexicalTextContent(contentLexical).trim()
-    const hasDraft =
-      title.trim().length > 0 ||
-      content.trim().length > 0 ||
-      lexicalPlain.length > 0 ||
-      imageDataUrl.trim().length > 0 ||
-      attachCurrentStatus ||
-      attachStatusDeviceHash.trim().length > 0 ||
-      attachStatusActivityKey.trim().length > 0 ||
-      attachStatusIncludeDeviceInfo
-
-    if (!hasDraft) {
-      localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
-      return
-    }
-
-    const payload: InspirationDraft = {
-      title,
-      content,
-      contentLexical,
-      imageDataUrl,
-      attachCurrentStatus,
-      attachStatusDeviceHash,
-      attachStatusActivityKey: attachStatusActivityKey.trim() || undefined,
-      attachStatusIncludeDeviceInfo: attachStatusIncludeDeviceInfo || undefined,
-    }
-    localStorage.setItem(INSPIRATION_DRAFT_STORAGE_KEY, JSON.stringify(payload))
-  }, [
-    attachCurrentStatus,
-    attachStatusActivityKey,
-    attachStatusDeviceHash,
-    attachStatusIncludeDeviceInfo,
-    content,
-    contentLexical,
-    draftReady,
-    imageDataUrl,
-    title,
-  ])
-
-  const selectedSnapshotDevice = useMemo(() => {
-    if (!attachStatusDeviceHash) return null
-    return inspirationDevices.find((d) => d.generatedHashKey === attachStatusDeviceHash) ?? null
-  }, [attachStatusDeviceHash, inspirationDevices])
-
-  const selectedSnapshotDeviceName = selectedSnapshotDevice?.displayName ?? ''
-
-  const snapshotCandidates = useMemo(() => {
-    if (!publicActivityFeed || !selectedSnapshotDeviceName) return []
-    const deviceName = selectedSnapshotDeviceName
-    const active = (publicActivityFeed.activeStatuses ?? []).filter((x) => x.device === deviceName)
-    const recent = (publicActivityFeed.recentActivities ?? []).filter((x) => x.device === deviceName)
-    const out: Array<{ key: string; group: 'active' | 'recent'; item: ActivityFeedItem }> = []
-    for (const it of active) out.push({ key: `active:${String(it.id)}`, group: 'active', item: it })
-    for (const it of recent) out.push({ key: `recent:${String(it.id)}`, group: 'recent', item: it })
-    return out
-  }, [publicActivityFeed, selectedSnapshotDeviceName])
-
-  const selectedSnapshotCandidate = useMemo(() => {
-    if (!attachStatusActivityKey) return null
-    return snapshotCandidates.find((c) => c.key === attachStatusActivityKey) ?? null
-  }, [attachStatusActivityKey, snapshotCandidates])
-
-  // Pre-compute snapshot text on the client side from what's already loaded in the UI.
-  // This text is sent directly to the server so it doesn't need to re-query the activity feed.
-  const computedSnapshotText = useMemo(() => {
-    if (!attachCurrentStatus || !attachStatusDeviceHash) return ''
-
-    // Require explicit selection (UX requirement).
-    const chosen = selectedSnapshotCandidate?.item ?? null
-    if (!chosen) return ''
-
-    const st = String(chosen.statusText ?? '').trim()
-    const pn = String(chosen.processName ?? '').trim()
-    const pt = chosen.processTitle != null ? String(chosen.processTitle).trim() : ''
-    const base = st || (pt && pn ? `${pt} | ${pn}` : pn || pt || '')
-    if (!base) return ''
-
-    // Only append device info when the user explicitly enables it.
-    if (!attachStatusIncludeDeviceInfo) return base
-
-    const deviceName = String(selectedSnapshotDeviceName || chosen.device || '').trim()
-    if (!deviceName) return base
-
-    const battRaw =
-      chosen.metadata && typeof chosen.metadata === 'object'
-        ? (chosen.metadata as Record<string, unknown>).deviceBatteryPercent
-        : null
-    const batt = typeof battRaw === 'number' && Number.isFinite(battRaw) ? Math.round(battRaw) : null
-    const suffix =
-      batt !== null
-        ? `(${deviceName} · ${batt}%)`
-        : `(${deviceName})`
-
-    return `${base} ${suffix}`.trim()
-  }, [
-    attachCurrentStatus,
-    attachStatusDeviceHash,
-    selectedSnapshotCandidate,
-    selectedSnapshotDeviceName,
-    attachStatusIncludeDeviceInfo,
-  ])
-
-  // Auto-pick a default candidate once data is loaded (still satisfies "must pick one"). Prefer active.
-  useEffect(() => {
-    if (!attachCurrentStatus) return
-    if (!attachStatusDeviceHash) return
-    if (attachStatusActivityKey) return
-    if (snapshotCandidates.length === 0) return
-    const preferred = snapshotCandidates.find((c) => c.group === 'active') ?? snapshotCandidates[0]
-    setAttachStatusActivityKey(preferred.key)
-  }, [attachCurrentStatus, attachStatusDeviceHash, attachStatusActivityKey, snapshotCandidates])
-
   const createEntryMutation = useMutation({
     mutationFn: async () => {
       await createInspirationEntry({
-        title: title.trim() || undefined,
-        content: content.trim(),
-        contentLexical,
-        imageDataUrl: imageDataUrl.trim() || undefined,
-        attachCurrentStatus,
-        preComputedStatusSnapshot: computedSnapshotText || undefined,
-        attachStatusDeviceHash: attachStatusDeviceHash.trim() || undefined,
-        attachStatusActivityKey: attachStatusActivityKey.trim() || undefined,
-        attachStatusIncludeDeviceInfo: attachStatusIncludeDeviceInfo || undefined,
+        title: draft.title.trim() || undefined,
+        content: draft.content.trim(),
+        contentLexical: draft.contentLexical,
+        imageDataUrl: draft.imageDataUrl.trim() || undefined,
+        attachCurrentStatus: draft.attachCurrentStatus,
+        preComputedStatusSnapshot: draft.computedSnapshotText || undefined,
+        attachStatusDeviceHash: draft.attachStatusDeviceHash.trim() || undefined,
+        attachStatusActivityKey: draft.attachStatusActivityKey.trim() || undefined,
+        attachStatusIncludeDeviceInfo: draft.attachStatusIncludeDeviceInfo || undefined,
       })
     },
     onSuccess: async () => {
-      setTitle('')
-      setContent('')
-      setContentLexical(createLexicalTextContent(''))
-      setImageDataUrl('')
-      setAttachCurrentStatus(false)
-      setAttachStatusDeviceHash('')
-      setAttachStatusActivityKey('')
-      setAttachStatusIncludeDeviceInfo(false)
-      setStatusSnapshotDraft('')
-      setEditingEntryId(null)
+      draft.setTitle('')
+      draft.setContent('')
+      draft.setContentLexical(createLexicalTextContent(''))
+      draft.setImageDataUrl('')
+      draft.setAttachCurrentStatus(false)
+      draft.setAttachStatusDeviceHash('')
+      draft.setAttachStatusActivityKey('')
+      draft.setAttachStatusIncludeDeviceInfo(false)
+      draft.setStatusSnapshotDraft('')
+      draft.setEditingEntryId(null)
       localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
       setPage(0)
       toast.success(t('inspirationManager.toasts.submitted'))
@@ -384,34 +178,34 @@ export function InspirationManager() {
 
   const updateEntryMutation = useMutation({
     mutationFn: async () => {
-      if (!editingEntryId) {
+      if (!draft.editingEntryId) {
         throw new Error(t('inspirationManager.missingEditingEntry'))
       }
       await patchInspirationEntry({
-        id: editingEntryId,
-        title: title.trim() || undefined,
-        content: content.trim(),
-        contentLexical,
-        imageDataUrl: imageDataUrl.trim() || undefined,
-        attachCurrentStatus,
-        statusSnapshot: !attachCurrentStatus ? statusSnapshotDraft.trim() || null : undefined,
-        preComputedStatusSnapshot: attachCurrentStatus ? computedSnapshotText || undefined : undefined,
-        attachStatusDeviceHash: attachStatusDeviceHash.trim() || undefined,
-        attachStatusActivityKey: attachStatusActivityKey.trim() || undefined,
-        attachStatusIncludeDeviceInfo: attachStatusIncludeDeviceInfo || undefined,
+        id: draft.editingEntryId,
+        title: draft.title.trim() || undefined,
+        content: draft.content.trim(),
+        contentLexical: draft.contentLexical,
+        imageDataUrl: draft.imageDataUrl.trim() || undefined,
+        attachCurrentStatus: draft.attachCurrentStatus,
+        statusSnapshot: !draft.attachCurrentStatus ? draft.statusSnapshotDraft.trim() || null : undefined,
+        preComputedStatusSnapshot: draft.attachCurrentStatus ? draft.computedSnapshotText || undefined : undefined,
+        attachStatusDeviceHash: draft.attachStatusDeviceHash.trim() || undefined,
+        attachStatusActivityKey: draft.attachStatusActivityKey.trim() || undefined,
+        attachStatusIncludeDeviceInfo: draft.attachStatusIncludeDeviceInfo || undefined,
       })
     },
     onSuccess: async () => {
-      setTitle('')
-      setContent('')
-      setContentLexical(createLexicalTextContent(''))
-      setImageDataUrl('')
-      setAttachCurrentStatus(false)
-      setAttachStatusDeviceHash('')
-      setAttachStatusActivityKey('')
-      setAttachStatusIncludeDeviceInfo(false)
-      setStatusSnapshotDraft('')
-      setEditingEntryId(null)
+      draft.setTitle('')
+      draft.setContent('')
+      draft.setContentLexical(createLexicalTextContent(''))
+      draft.setImageDataUrl('')
+      draft.setAttachCurrentStatus(false)
+      draft.setAttachStatusDeviceHash('')
+      draft.setAttachStatusActivityKey('')
+      draft.setAttachStatusIncludeDeviceInfo(false)
+      draft.setStatusSnapshotDraft('')
+      draft.setEditingEntryId(null)
       localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
       toast.success(t('inspirationManager.toasts.updated'))
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inspiration', 'entries'] })
@@ -454,7 +248,7 @@ export function InspirationManager() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      if (editingEntryId) {
+      if (draft.editingEntryId) {
         await updateEntryMutation.mutateAsync()
       } else {
         await createEntryMutation.mutateAsync()
@@ -468,418 +262,44 @@ export function InspirationManager() {
     await deleteEntryMutation.mutateAsync(id)
   }
 
-  const resetEditor = useCallback(() => {
-    setTitle('')
-    setContent('')
-    setContentLexical(createLexicalTextContent(''))
-    setImageDataUrl('')
-    setAttachCurrentStatus(false)
-    setAttachStatusDeviceHash('')
-    setAttachStatusActivityKey('')
-    setAttachStatusIncludeDeviceInfo(false)
-    setStatusSnapshotDraft('')
-    setEditingEntryId(null)
-    localStorage.removeItem(INSPIRATION_DRAFT_STORAGE_KEY)
-  }, [])
-
-  const handleEdit = useCallback((entry: AdminInspirationEntry) => {
-    setEditingEntryId(entry.id)
-    setTitle(entry.title ?? '')
-    setContent(entry.content)
-    setContentLexical(
-      typeof entry.contentLexical === 'string' && entry.contentLexical.trim()
-        ? entry.contentLexical
-        : createLexicalTextContent(entry.content),
-    )
-    setImageDataUrl(entry.imageDataUrl ?? '')
-    setAttachCurrentStatus(false)
-    setAttachStatusDeviceHash('')
-    setAttachStatusActivityKey('')
-    setAttachStatusIncludeDeviceInfo(false)
-    setStatusSnapshotDraft(entry.statusSnapshot ?? '')
-
-    requestAnimationFrame(() => {
-      formCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
-  }, [])
-
   return (
     <div className="space-y-4">
-      <Card ref={formCardRef}>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {editingEntryId ? (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
-                {t('inspirationManager.editingNotice', { id: editingEntryId })}
-              </div>
-            ) : null}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="insp-title">{t('inspirationManager.form.titleOptional')}</Label>
-                <Input
-                  id="insp-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder={t('inspirationManager.form.titlePlaceholder')}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="insp-file">{t('inspirationManager.form.imageOptional')}</Label>
-                <FileSelectTrigger
-                  id="insp-file"
-                  accept="image/*"
-                  buttonLabel={t('common.selectFile')}
-                  emptyLabel={t('common.noFileSelected')}
-                  onSelect={(file) => openCropForFile(file, 'cover')}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t('inspirationManager.form.imageHint', { value: INSPIRATION_MAX_OUTPUT_EDGE })}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 text-sm font-normal cursor-pointer">
-                <Checkbox
-                  checked={attachCurrentStatus}
-                  onCheckedChange={(v) => {
-                    const on = v === true
-                    setAttachCurrentStatus(on)
-                    if (!on) {
-                      setAttachStatusDeviceHash('')
-                      setAttachStatusActivityKey('')
-                      setAttachStatusIncludeDeviceInfo(false)
-                    }
-                  }}
-                />
-                <span>{t('inspirationManager.form.attachCurrentStatus')}</span>
-              </label>
-            </div>
-            <AnimatePresence initial={false}>
-              {attachCurrentStatus ? (
-                <motion.div
-                  className="space-y-2 rounded-md border border-border/60 bg-muted/10 p-3"
-                  variants={sectionVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={sectionTransition}
-                  layout
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      {t('inspirationManager.snapshot.optionalDevice')}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => setAttachStatusDeviceHash('')}
-                      >
-                        {t('inspirationManager.snapshot.clear')}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="max-h-36 space-y-1 overflow-y-auto pr-1">
-                    {inspirationDevices.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
-                        {t('inspirationManager.snapshot.noDevices')}
-                      </p>
-                    ) : (
-                      inspirationDevices.map((d) => (
-                        <label
-                          key={d.id}
-                          className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-muted/30"
-                        >
-                          <Checkbox
-                            checked={attachStatusDeviceHash === d.generatedHashKey}
-                            onCheckedChange={(v) => {
-                              const checked = v === true
-                              setAttachStatusDeviceHash((prev) =>
-                                checked ? d.generatedHashKey : prev === d.generatedHashKey ? '' : prev,
-                              )
-                              setAttachStatusActivityKey('')
-                            }}
-                          />
-                          <span className="min-w-0 flex-1 truncate">{d.displayName}</span>
-                          {d.status !== 'active' ? (
-                            <span className="text-amber-600">({d.status})</span>
-                          ) : null}
-                        </label>
-                      ))
-                    )}
-                  </div>
-
-                  <AnimatePresence initial={false}>
-                    {attachStatusDeviceHash ? (
-                      <motion.div
-                        className="mt-2 space-y-2 border-t border-border/50 pt-2"
-                        variants={compactSectionVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        transition={sectionTransition}
-                        layout
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-xs text-muted-foreground">
-                            {t('inspirationManager.snapshot.selectActivity')}
-                          </p>
-                          <label className="flex items-center gap-2 text-xs font-normal cursor-pointer">
-                            <Checkbox
-                              checked={attachStatusIncludeDeviceInfo}
-                              onCheckedChange={(v) => setAttachStatusIncludeDeviceInfo(v === true)}
-                            />
-                            <span>{t('inspirationManager.snapshot.includeDeviceInfo')}</span>
-                          </label>
-                        </div>
-
-                        {publicActivityLoading ? (
-                          <p className="text-xs text-muted-foreground">
-                            {t('inspirationManager.snapshot.loadingActivities')}
-                          </p>
-                        ) : publicActivityError ? (
-                          <p className="text-xs text-destructive">{publicActivityError}</p>
-                        ) : snapshotCandidates.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">
-                            {t('inspirationManager.snapshot.noActivityCandidates')}
-                          </p>
-                        ) : (
-                          <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
-                            {snapshotCandidates.map((c) => {
-                              const label = (() => {
-                                const st = String(c.item.statusText ?? '').trim()
-                                if (st) return st
-                                const pn = String(c.item.processName ?? '').trim()
-                                const pt = c.item.processTitle != null ? String(c.item.processTitle).trim() : ''
-                                if (pt && pn) return `${pt} | ${pn}`
-                                return pn || pt || t('inspirationManager.common.untitled')
-                              })()
-                              return (
-                                <label
-                                  key={c.key}
-                                  className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-muted/30"
-                                >
-                                  <Checkbox
-                                    checked={attachStatusActivityKey === c.key}
-                                    onCheckedChange={(v) => {
-                                      const checked = v === true
-                                      setAttachStatusActivityKey((prev) => (checked ? c.key : prev === c.key ? '' : prev))
-                                    }}
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="min-w-0 truncate text-foreground/90">
-                                      {c.group === 'active'
-                                        ? t('inspirationManager.snapshot.activePrefix')
-                                        : t('inspirationManager.snapshot.recentPrefix')}
-                                      {label}
-                                    </div>
-                                  </div>
-                                </label>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        <div className="text-[11px] text-muted-foreground">
-                          {t('inspirationManager.snapshot.selectionHint')}
-                        </div>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-
-                  <AnimatePresence initial={false}>
-                    {computedSnapshotText ? (
-                      <motion.div
-                        className="mt-2 rounded-md border border-border/40 bg-muted/20 px-3 py-2"
-                        variants={compactSectionVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        transition={sectionTransition}
-                        layout
-                      >
-                        <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('inspirationManager.snapshot.preview')}
-                        </p>
-                        <p className="text-xs text-foreground/80 break-words">{computedSnapshotText}</p>
-                      </motion.div>
-                    ) : attachCurrentStatus && attachStatusDeviceHash && !publicActivityLoading && snapshotCandidates.length === 0 ? (
-                      <motion.div
-                        className="mt-2 rounded-md border border-border/40 bg-muted/10 px-3 py-2"
-                        variants={compactSectionVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        transition={sectionTransition}
-                        layout
-                      >
-                        <p className="text-[11px] text-muted-foreground">
-                          {t('inspirationManager.snapshot.noActivityDataAfterSubmit')}
-                        </p>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-
-            <AnimatePresence initial={false}>
-              {!attachCurrentStatus && statusSnapshotDraft.trim() ? (
-                <motion.div
-                  className="rounded-md border border-border/60 bg-muted/10 p-3"
-                  variants={compactSectionVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={sectionTransition}
-                  layout
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      {t('inspirationManager.snapshot.retainedSnapshot')}
-                    </p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => setStatusSnapshotDraft('')}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      {t('inspirationManager.snapshot.removeSnapshot')}
-                    </Button>
-                  </div>
-                  <p className="text-xs break-words whitespace-pre-wrap text-foreground/80">
-                    {statusSnapshotDraft}
-                  </p>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-
-            <div className="space-y-2">
-              <Label htmlFor="insp-content">{t('inspirationManager.form.contentRequired')}</Label>
-              <Tabs defaultValue="edit" className="w-full">
-                <TabsList className="mb-2">
-                  <TabsTrigger value="edit">{t('inspirationManager.tabs.edit')}</TabsTrigger>
-                  <TabsTrigger value="preview">{t('inspirationManager.tabs.preview')}</TabsTrigger>
-                </TabsList>
-                <TabsContent value="edit" className="mt-0 space-y-2">
-                  <input
-                    ref={bodyImageInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={(e) => {
-                      openCropForFile(e.target.files?.[0], 'body')
-                      e.target.value = ''
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={bodyImageBusy || submitting}
-                    onClick={() => bodyImageInputRef.current?.click()}
-                  >
-                    {bodyImageBusy ? (
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    ) : (
-                      <ImagePlus className="h-4 w-4 mr-1" />
-                    )}
-                    {t('inspirationManager.form.insertBodyImage')}
-                  </Button>
-                  <LexicalEditor
-                    value={contentLexical}
-                    onChange={(next) => setContentLexical(next)}
-                    onPlainTextChange={(plain) => setContent(plain)}
-                    placeholder={t('inspirationManager.form.contentPlaceholder')}
-                  />
-                </TabsContent>
-                <TabsContent value="preview" className="mt-0">
-                  <div className="rounded-md border border-border bg-muted/20 p-3 min-h-[220px] max-h-[360px] overflow-y-auto">
-                    {content.trim() ? (
-                      inspirationLooksLikeMarkdown(content) ? (
-                        <MarkdownContent
-                          markdown={content}
-                          className="text-sm text-muted-foreground"
-                          imageClassName="max-h-72 w-auto rounded-md border border-border my-2"
-                        />
-                      ) : (
-                        <LexicalContent content={contentLexical} className="text-sm text-muted-foreground" />
-                      )
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{t('inspirationManager.common.noContent')}</p>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            <AnimatePresence initial={false}>
-              {imageDataUrl.trim() ? (
-                <motion.div
-                  className="rounded-lg border bg-muted/30 p-3"
-                  variants={sectionVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={sectionTransition}
-                  layout
-                >
-                  <p className="text-xs text-muted-foreground mb-2">{t('inspirationManager.form.imagePreview')}</p>
-                  <Image
-                    src={imageDataUrl.trim()}
-                    alt={t('inspirationManager.form.imagePreviewAlt')}
-                    width={800}
-                    height={600}
-                    loading="eager"
-                    className="max-h-56 w-auto rounded-md border bg-background"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => setImageDataUrl('')}
-                  >
-                    {t('inspirationManager.form.removeImage')}
-                  </Button>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button type="submit" disabled={submitting || !content.trim()}>
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {editingEntryId
-                      ? t('inspirationManager.form.saving')
-                      : t('inspirationManager.form.submitting')}
-                  </>
-                ) : (
-                  editingEntryId
-                    ? t('inspirationManager.form.saveAndPublish')
-                    : t('inspirationManager.form.submitInspiration')
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={submitting}
-                onClick={resetEditor}
-              >
-                {editingEntryId
-                  ? t('inspirationManager.form.cancelEdit')
-                  : t('inspirationManager.form.clear')}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <InspirationFormCard
+        formCardRef={draft.formCardRef}
+        bodyImageInputRef={draft.bodyImageInputRef}
+        title={draft.title}
+        setTitle={draft.setTitle}
+        content={draft.content}
+        setContent={draft.setContent}
+        contentLexical={draft.contentLexical}
+        setContentLexical={draft.setContentLexical}
+        imageDataUrl={draft.imageDataUrl}
+        setImageDataUrl={draft.setImageDataUrl}
+        attachCurrentStatus={draft.attachCurrentStatus}
+        setAttachCurrentStatus={draft.setAttachCurrentStatus}
+        attachStatusDeviceHash={draft.attachStatusDeviceHash}
+        setAttachStatusDeviceHash={draft.setAttachStatusDeviceHash}
+        attachStatusActivityKey={draft.attachStatusActivityKey}
+        setAttachStatusActivityKey={draft.setAttachStatusActivityKey}
+        attachStatusIncludeDeviceInfo={draft.attachStatusIncludeDeviceInfo}
+        setAttachStatusIncludeDeviceInfo={draft.setAttachStatusIncludeDeviceInfo}
+        statusSnapshotDraft={draft.statusSnapshotDraft}
+        setStatusSnapshotDraft={draft.setStatusSnapshotDraft}
+        editingEntryId={draft.editingEntryId}
+        bodyImageBusy={draft.bodyImageBusy}
+        submitting={submitting}
+        computedSnapshotText={draft.computedSnapshotText}
+        snapshotCandidates={draft.snapshotCandidates}
+        inspirationDevices={inspirationDevices}
+        publicActivityLoading={publicActivityLoading}
+        publicActivityError={publicActivityError}
+        sectionVariants={sectionVariants}
+        compactSectionVariants={compactSectionVariants}
+        sectionTransition={sectionTransition}
+        onSubmit={handleSubmit}
+        onReset={draft.resetEditor}
+        openCropForFile={openCropForFile}
+      />
 
       <ImageCropDialog
         open={cropDialogOpen}
@@ -903,258 +323,48 @@ export function InspirationManager() {
         description={t('inspirationManager.crop.description')}
         onComplete={(dataUrl) => {
           if (cropTarget === 'cover') {
-            setImageDataUrl(dataUrl)
+            draft.setImageDataUrl(dataUrl)
             return
           }
           void (async () => {
-            setBodyImageBusy(true)
+            draft.setBodyImageBusy(true)
             try {
               const url = await uploadAssetMutation.mutateAsync(dataUrl)
-              setContentLexical((prev) => {
+              draft.setContentLexical((prev) => {
                 const next = appendParagraphTextToLexical(prev, `![](${url})`)
-                setContent(lexicalTextContent(next))
+                draft.setContent(lexicalTextContent(next))
                 return next
               })
               toast.success(t('inspirationManager.toasts.bodyImageInserted'))
             } finally {
-              setBodyImageBusy(false)
+              draft.setBodyImageBusy(false)
             }
           })()
         }}
       />
-      <div className="mt-8 space-y-3">
-        <h3 className="text-sm font-semibold text-foreground">{t('inspirationManager.search.title')}</h3>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex-1 min-w-[220px] space-y-2">
-            <Label htmlFor="insp-search">{t('inspirationManager.search.keyword')}</Label>
-            <Input
-              id="insp-search"
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value)
-                setPage(0)
-              }}
-              placeholder={t('inspirationManager.search.placeholder')}
-            />
-          </div>
-        </div>
-      </div>
 
-      <Card className="overflow-hidden">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-6 space-y-3">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-4 w-52" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-24 w-full" />
-                </div>
-              ))}
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground">{t('inspirationManager.list.empty')}</div>
-          ) : (
-            <motion.div
-              className="divide-y overflow-y-auto overscroll-contain"
-              style={{ maxHeight: INSPIRATION_LIST_MAX_HEIGHT }}
-              layout
-            >
-              <AnimatePresence initial={false}>
-                {entries.map((entry) => (
-                  <motion.div
-                    key={entry.id}
-                    className="p-4 sm:p-5 space-y-3"
-                    variants={compactSectionVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={sectionTransition}
-                    layout
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-semibold text-foreground truncate max-w-[420px]">
-                            {entry.title ? entry.title : t('inspirationManager.common.untitled')}
-                          </h4>
-                          <span className="text-xs text-muted-foreground">
-                            {formatPattern(entry.createdAt, 'yyyy-MM-dd HH:mm', '—')}
-                          </span>
-                        </div>
-                        <div className="mt-2 text-xs text-muted-foreground line-clamp-3 leading-relaxed">
-                          {
-                            inspirationPlainPreviewAny(
-                              entry.content,
-                              entry.contentLexical,
-                              140,
-                            ).text
-                          }
-                        </div>
-                        <Button
-                          type="button"
-                          variant="link"
-                          size="sm"
-                          className="mt-1 h-auto px-0 text-xs"
-                          onClick={() => setPreviewEntry(entry)}
-                        >
-                          {t('inspirationManager.list.viewMore')}
-                        </Button>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground"
-                          onClick={() => handleEdit(entry)}
-                        >
-                          <PencilLine className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>{t('inspirationManager.deleteDialog.title')}</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {t('inspirationManager.deleteDialog.description')}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(entry.id)}>
-                                {t('common.delete')}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
+      <InspirationEntryList
+        entries={entries}
+        total={total}
+        loading={loading}
+        page={page}
+        totalPages={totalPages}
+        q={q}
+        onQChange={setQ}
+        onPageChange={setPage}
+        onEdit={draft.handleEdit}
+        onDelete={handleDelete}
+        onPreview={setPreviewEntry}
+        formatPattern={formatPattern}
+        compactSectionVariants={compactSectionVariants}
+        sectionTransition={sectionTransition}
+      />
 
-                    {entry.imageDataUrl ? (
-                      <div className="rounded-lg border bg-muted/30 p-3">
-                        <Image
-                          src={entry.imageDataUrl}
-                          alt={t('inspirationManager.list.imageAlt')}
-                          width={800}
-                          height={600}
-                          loading="eager"
-                          className="max-h-64 w-auto rounded-md border bg-background"
-                        />
-                      </div>
-                    ) : null}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          )}
-        </CardContent>
-      </Card>
-
-      {total > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          <span>
-            {t('common.countSummary', { total })}
-            {entries.length > 0 ? (
-              <>
-                {' '}
-                ·{' '}
-                {t('common.pageSummary', {
-                  start: page * INSPIRATION_LIST_PAGE_SIZE + 1,
-                  end: page * INSPIRATION_LIST_PAGE_SIZE + entries.length,
-                })}
-              </>
-            ) : null}
-          </span>
-          {total > INSPIRATION_LIST_PAGE_SIZE ? (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page <= 0}
-              >
-                {t('common.previousPage')}
-              </Button>
-              <span className="tabular-nums text-sm">
-                {page + 1} / {totalPages}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page >= totalPages - 1}
-              >
-                {t('common.nextPage')}
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      <Dialog open={Boolean(previewEntry)} onOpenChange={(open) => !open && setPreviewEntry(null)}>
-        <DialogContent className="max-w-2xl max-h-[min(90vh,56rem)] overflow-y-auto">
-          {previewEntry?.imageDataUrl ? (
-            <div className="-mx-6 -mt-6 mb-4 overflow-hidden rounded-t-lg border-b border-border/60 bg-muted/20">
-              <Image
-                src={previewEntry.imageDataUrl}
-                alt={t('inspirationManager.preview.headerImageAlt')}
-                width={1200}
-                height={800}
-                loading="eager"
-                className="h-auto max-h-[min(42vh,18rem)] w-full object-cover object-center"
-              />
-            </div>
-          ) : null}
-          <DialogHeader>
-            <DialogTitle>{previewEntry?.title?.trim() || t('inspirationManager.common.untitled')}</DialogTitle>
-            <DialogDescription>
-              {previewEntry
-                ? formatPattern(previewEntry.createdAt, 'yyyy-MM-dd HH:mm', '—')
-                : ''}
-            </DialogDescription>
-          </DialogHeader>
-          {previewEntry?.statusSnapshot ? (
-            <div className="rounded-md border border-dashed border-border/70 bg-muted/15 px-2 py-1.5 text-xs text-muted-foreground whitespace-pre-wrap">
-              {previewEntry.statusSnapshot}
-            </div>
-          ) : null}
-          {previewEntry?.contentLexical ? (
-            inspirationLooksLikeMarkdown(previewEntry.content) ? (
-              <MarkdownContent
-                markdown={previewEntry.content}
-                className="text-sm text-muted-foreground"
-                imageClassName="max-h-56 w-auto rounded-md border border-border my-2"
-              />
-            ) : (
-              <LexicalContent content={previewEntry.contentLexical} className="text-sm text-muted-foreground" />
-            )
-          ) : previewEntry ? (
-            <MarkdownContent
-              markdown={previewEntry.content}
-              className="text-sm text-muted-foreground"
-              imageClassName="max-h-56 w-auto rounded-md border border-border my-2"
-            />
-          ) : null}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setPreviewEntry(null)}>
-              {t('inspirationManager.preview.close')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <InspirationPreviewDialog
+        entry={previewEntry}
+        onClose={() => setPreviewEntry(null)}
+        formatPattern={formatPattern}
+      />
     </div>
   )
 }
