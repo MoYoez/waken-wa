@@ -8,6 +8,20 @@ type ViewTransitionDocument = Document & {
 }
 
 type ThemeModeSetter = (theme: ThemeMode) => void
+type ThemeSwitchDirection = 'down' | 'up'
+
+let previousThemeSwitchDirection: ThemeSwitchDirection = 'up'
+
+function getNextThemeSwitchDirection(): ThemeSwitchDirection {
+  previousThemeSwitchDirection = previousThemeSwitchDirection === 'down' ? 'up' : 'down'
+  return previousThemeSwitchDirection
+}
+
+function getThemeSwitchClipPath(direction: ThemeSwitchDirection) {
+  return direction === 'down'
+    ? ['inset(0 0 100% 0)', 'inset(0 0 0 0)']
+    : ['inset(100% 0 0 0)', 'inset(0 0 0 0)']
+}
 
 export function applyThemeModeImmediately(mode: ThemeMode, setTheme: ThemeModeSetter) {
   setTheme(mode)
@@ -50,6 +64,7 @@ export async function applyThemeModeWithTransition(
   }
 
   const root = document.documentElement
+  const direction = getNextThemeSwitchDirection()
   const transition = transitionApi.call(doc, () => {
     applyThemeModeImmediately(mode, setTheme)
   })
@@ -57,13 +72,11 @@ export async function applyThemeModeWithTransition(
   try {
     await transition.ready
     root.dataset.themeSwitch = 'active'
+    root.dataset.themeSwitchDirection = direction
 
     const animation = root.animate(
       {
-        clipPath: [
-          'inset(0 0 100% 0)',
-          'inset(0 0 0 0)',
-        ],
+        clipPath: getThemeSwitchClipPath(direction),
       },
       {
         duration: 1400,
@@ -75,5 +88,6 @@ export async function applyThemeModeWithTransition(
     await animation.finished.catch(() => undefined)
   } finally {
     delete root.dataset.themeSwitch
+    delete root.dataset.themeSwitchDirection
   }
 }

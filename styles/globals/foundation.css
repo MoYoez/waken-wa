@@ -187,6 +187,13 @@ html[data-theme-switch='active']::view-transition-old(root) {
 
 html[data-theme-switch='active']::view-transition-new(root) {
   z-index: 999;
-  transform-origin: top center;
   will-change: clip-path;
+}
+
+html[data-theme-switch='active'][data-theme-switch-direction='down']::view-transition-new(root) {
+  transform-origin: top center;
+}
+
+html[data-theme-switch='active'][data-theme-switch-direction='up']::view-transition-new(root) {
+  transform-origin: bottom center;
 }
