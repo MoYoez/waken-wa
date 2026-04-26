@@ -500,7 +500,7 @@ export function extractRuleToolsImportFromWebPayload(
 
   const modeRaw = String(web.appFilterMode ?? 'blacklist').toLowerCase()
   return {
-    appMessageRules: stripAppMessageRuleIds(normalizeRulesImport(web.appMessageRules)),
+    appMessageRules: normalizeRulesImport(web.appMessageRules),
     appMessageRulesShowProcessName:
       typeof web.appMessageRulesShowProcessName === 'boolean'
         ? web.appMessageRulesShowProcessName

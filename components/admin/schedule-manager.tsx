@@ -19,13 +19,22 @@ import {
   getAdminPanelTransition,
   getAdminSectionVariants,
 } from '@/components/admin/admin-motion'
-import { fetchAdminSettings } from '@/components/admin/admin-query-fetchers'
+import {
+  fetchAdminSettings,
+  fetchAdminSettingsMigration,
+} from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
-import { patchAdminSettings } from '@/components/admin/admin-query-mutations'
+import {
+  clearAdminLegacySettingsData,
+  migrateAdminSettings,
+  patchAdminSettingsSchedule,
+} from '@/components/admin/admin-query-mutations'
 import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
+import { SiteSettingsMigrationCard } from '@/components/admin/site-settings-migration-card'
 import { SortablePeriodTemplatePart } from '@/components/admin/sortable-period-template-part'
 import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
 import { WeekTimetableGrid } from '@/components/admin/week-timetable-grid'
+import type { SiteSettingsMigrationInfo } from '@/components/admin/web-settings-types'
 import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -199,9 +208,14 @@ export interface ScheduleManagerHandle {
 
 export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(function ScheduleManager(_, ref) {
   const { t } = useT('admin')
+  const [migrationActionPending, setMigrationActionPending] = useState(false)
   const settingsQuery = useQuery({
     queryKey: adminQueryKeys.settings.detail(),
     queryFn: fetchAdminSettings,
+  })
+  const migrationQuery = useQuery({
+    queryKey: adminQueryKeys.settings.migration(),
+    queryFn: fetchAdminSettingsMigration,
   })
 
   const initialData = useMemo(
@@ -221,19 +235,58 @@ export const ScheduleManager = forwardRef<ScheduleManagerHandle, object>(functio
     )
   }
 
+  const refreshAll = async () => {
+    await Promise.all([settingsQuery.refetch(), migrationQuery.refetch()])
+  }
+
+  const runMigration = async () => {
+    setMigrationActionPending(true)
+    try {
+      await migrateAdminSettings()
+      await refreshAll()
+      toast.success(t('webSettingsMigration.toasts.migrated'))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('common.networkErrorRetry'))
+    } finally {
+      setMigrationActionPending(false)
+    }
+  }
+
+  const clearLegacyData = async () => {
+    setMigrationActionPending(true)
+    try {
+      await clearAdminLegacySettingsData()
+      await refreshAll()
+      toast.success(t('webSettingsMigration.toasts.legacyDataCleared'))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('common.networkErrorRetry'))
+    } finally {
+      setMigrationActionPending(false)
+    }
+  }
+
   return (
-    <ScheduleManagerEditor
-      key={String(settingsQuery.dataUpdatedAt)}
-      ref={ref}
-      initialData={initialData}
-    />
+    <div className="space-y-4">
+      <SiteSettingsMigrationCard
+        migration={migrationQuery.data ?? null}
+        pending={migrationActionPending}
+        onMigrate={runMigration}
+        onClearLegacyData={clearLegacyData}
+      />
+      <ScheduleManagerEditor
+        key={`${String(settingsQuery.dataUpdatedAt)}:${migrationQuery.data?.migrationState ?? 'legacy'}`}
+        ref={ref}
+        initialData={initialData}
+        migration={migrationQuery.data ?? null}
+      />
+    </div>
   )
 })
 
 const ScheduleManagerEditor = forwardRef<
   ScheduleManagerHandle,
-  { initialData: ScheduleManagerInitialData }
->(function ScheduleManagerEditor({ initialData }, ref) {
+  { initialData: ScheduleManagerInitialData; migration: SiteSettingsMigrationInfo | null }
+>(function ScheduleManagerEditor({ initialData, migration }, ref) {
   const { t } = useT('admin')
   const queryClient = useQueryClient()
   const prefersReducedMotion = Boolean(useReducedMotion())
@@ -268,8 +321,9 @@ const ScheduleManagerEditor = forwardRef<
     initialData.scheduleBaseline,
   )
   const weekdayOptions = useMemo(() => getWeekdayOptions(t), [t])
+  const scheduleLocked = migration?.heavyEditingLocked === true
   const saveSettingsMutation = useMutation({
-    mutationFn: patchAdminSettings,
+    mutationFn: patchAdminSettingsSchedule,
     onSuccess: async (saved) => {
       queryClient.setQueryData(adminQueryKeys.settings.detail(), saved)
       await queryClient.invalidateQueries({ queryKey: adminQueryKeys.settings.detail() })
@@ -358,6 +412,10 @@ const ScheduleManagerEditor = forwardRef<
   const save = async () => {
     if (!serverData) {
       toast.error(t('scheduleManager.configNotLoaded'))
+      return
+    }
+    if (scheduleLocked) {
+      toast.error(t('webSettingsMigration.lockedToast'))
       return
     }
     try {
@@ -1411,6 +1469,10 @@ const ScheduleManagerEditor = forwardRef<
     <UnsavedChangesBar
       open={scheduleDirty}
       saving={saveSettingsMutation.isPending}
+      saveDisabled={scheduleLocked}
+      message={
+        scheduleLocked ? t('webSettingsMigration.lockedMessage') : undefined
+      }
       onSave={save}
       onRevert={revertUnsavedSchedule}
       saveLabel={t('scheduleManager.saveToSiteConfig')}

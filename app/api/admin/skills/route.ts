@@ -1,11 +1,9 @@
-import { eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
-import { db } from '@/lib/db'
-import { siteConfig } from '@/lib/drizzle-schema'
 import { readJsonObject } from '@/lib/request-json'
-import { clearSiteConfigCaches, getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
+import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import {
   clearSkillsApiKey,
   getSkillsSecretEnvStatus,
@@ -130,18 +128,27 @@ export async function PATCH(request: NextRequest) {
           { status: 400 },
         )
       }
-      await db
-        .update(siteConfig)
-        .set({
+      await safeSiteConfigUpsert({
+        where: { id: 1 },
+        update: {
           skillsDebugEnabled: enabled === undefined ? existing.skillsDebugEnabled : enabled,
           skillsAuthMode: authMode === undefined ? existing.skillsAuthMode : authMode,
           skillsOauthTokenTtlMinutes:
             oauthTokenTtlMinutes === undefined
               ? existing.skillsOauthTokenTtlMinutes
               : oauthTokenTtlMinutes,
-        })
-        .where(eq(siteConfig.id, 1))
-      await clearSiteConfigCaches()
+        },
+        create: {
+          id: 1,
+          ...existing,
+          skillsDebugEnabled: enabled === undefined ? existing.skillsDebugEnabled : enabled,
+          skillsAuthMode: authMode === undefined ? existing.skillsAuthMode : authMode,
+          skillsOauthTokenTtlMinutes:
+            oauthTokenTtlMinutes === undefined
+              ? existing.skillsOauthTokenTtlMinutes
+              : oauthTokenTtlMinutes,
+        },
+      })
 
       const existingMode = normalizeAuthMode(existing.skillsAuthMode)
       if (authMode && authMode !== existingMode) {

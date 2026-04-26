@@ -9,9 +9,10 @@ import { FormattedTime } from '@/components/formatted-time'
 import { LexicalContent } from '@/components/lexical-content'
 import { SiteReveal } from '@/components/site-reveal'
 import { db } from '@/lib/db'
-import { inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
+import { inspirationEntries } from '@/lib/drizzle-schema'
 import { getT } from '@/lib/i18n/server'
 import { inspirationLooksLikeMarkdown } from '@/lib/inspiration-preview'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { coerceDbTimestampToIsoUtc, normalizeTimezone } from '@/lib/timezone'
 
 
@@ -52,13 +53,13 @@ export default async function InspirationDetailPage({
 
   const [row, config] = await Promise.all([
     db.select().from(inspirationEntries).where(eq(inspirationEntries.id, id)).limit(1),
-    db.select({ displayTimezone: siteConfig.displayTimezone }).from(siteConfig).limit(1),
+    getSiteConfigMemoryFirst(),
   ])
   const entry = row[0]
   if (!entry) notFound()
 
   const createdAt = coerceDbTimestampToIsoUtc(entry.createdAt)
-  const displayTimezone = normalizeTimezone(config[0]?.displayTimezone)
+  const displayTimezone = normalizeTimezone(config?.displayTimezone)
 
   return (
     <main className="relative min-h-screen overflow-x-hidden">

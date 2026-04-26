@@ -12,7 +12,10 @@ import {
 } from '@/components/admin/admin-motion'
 import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import { WebSettingsInset } from '@/components/admin/web-settings-layout'
-import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
+import {
+  webSettingsFormAtom,
+  webSettingsMigrationAtom,
+} from '@/components/admin/web-settings-store'
 import type { ThemeCustomSurfaceForm } from '@/components/admin/web-settings-types'
 import { hasThemeImageSourceConfigured } from '@/components/admin/web-settings-utils'
 import { Button } from '@/components/ui/button'
@@ -29,6 +32,7 @@ import { Switch } from '@/components/ui/switch'
 import { THEME_CUSTOM_SURFACE_DEFAULTS } from '@/lib/theme-custom-surface'
 import { extractThemeSurfaceFromImageAsset, loadPaletteImage } from '@/lib/theme-image-palette'
 import { loadThemeSurfaceActiveImageAsset } from '@/lib/theme-image-source'
+import { cn } from '@/lib/utils'
 
 type ThemePreviewAssetState = {
   displayUrl: string
@@ -48,6 +52,7 @@ function createEmptyThemePreviewAsset(): ThemePreviewAssetState {
 export function WebSettingsCustomSurface() {
   const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
+  const [migration] = useAtom(webSettingsMigrationAtom)
   const value = form.themeCustomSurface
   const [backgroundImageInput, setBackgroundImageInput] = useState('')
   const [themePreviewImageUrl, setThemePreviewImageUrl] = useState('')
@@ -61,6 +66,7 @@ export function WebSettingsCustomSurface() {
     exitY: 8,
     scale: 0.996,
   })
+  const themeLocked = migration?.heavyEditingLocked === true
 
   const setThemeCustomSurface = (next: ThemeCustomSurfaceForm) => {
     setForm((prev) => ({ ...prev, themeCustomSurface: next }))
@@ -245,7 +251,7 @@ export function WebSettingsCustomSurface() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cn('space-y-4', themeLocked && 'pointer-events-none opacity-60')}>
       <p className="text-xs text-muted-foreground leading-relaxed">
         {t('webSettingsCustomSurface.introLine1Prefix')}{' '}
         <code className="rounded bg-muted px-1">url()</code>

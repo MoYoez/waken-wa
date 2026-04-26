@@ -1,8 +1,5 @@
 import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
-import { db } from '@/lib/db'
-import { rateLimitBackups } from '@/lib/drizzle-schema'
 import { redisIncrWithExpire } from '@/lib/redis-client'
-import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
 
 const memoryStore = new Map<string, { count: number; resetAt: number }>()
 let memoryOpCount = 0
@@ -37,36 +34,6 @@ function isRateLimitedFromMemory(
   return { limited: entry.count > maxRequests, count: entry.count, resetAt: entry.resetAt }
 }
 
-async function backupRateLimitCounter(
-  key: string,
-  count: number,
-  windowMs: number,
-  resetAtMs: number,
-): Promise<void> {
-  try {
-    await db
-      .insert(rateLimitBackups)
-      .values({
-        rlKey: key,
-        count,
-        windowMs,
-        resetAt: sqlDate(new Date(resetAtMs)),
-        updatedAt: sqlTimestamp(),
-      } as never)
-      .onConflictDoUpdate({
-        target: rateLimitBackups.rlKey,
-        set: {
-          count,
-          windowMs,
-          resetAt: sqlDate(new Date(resetAtMs)),
-          updatedAt: sqlTimestamp(),
-        } as never,
-      })
-  } catch {
-    // Silent by design: rate limiting should not break request flow.
-  }
-}
-
 export async function isRateLimited(
   key: string,
   maxRequests: number,
@@ -86,7 +53,6 @@ export async function checkRateLimit(
     (await shouldUseRedisCache()) ? await redisIncrWithExpire(`waken:rl:${key}`, windowSeconds) : null
   if (redisCount != null) {
     const now = Date.now()
-    await backupRateLimitCounter(key, redisCount, windowMs, now + windowMs)
     return {
       limited: redisCount > maxRequests,
       count: redisCount,
@@ -96,7 +62,6 @@ export async function checkRateLimit(
   }
 
   const memory = isRateLimitedFromMemory(key, maxRequests, windowMs)
-  await backupRateLimitCounter(key, memory.count, windowMs, memory.resetAt)
   return {
     limited: memory.limited,
     count: memory.count,

@@ -2,6 +2,7 @@ import { atom } from 'jotai'
 
 import type {
   SiteConfig,
+  SiteSettingsMigrationInfo,
   SkillsAiAuthorizationItem,
   SkillsEditableConfig,
 } from '@/components/admin/web-settings-types'
@@ -111,6 +112,7 @@ export const webSettingsInspirationDevicesAtom = atom<
   Array<{ id: number; displayName: string; generatedHashKey: string; status: string }>
 >([])
 export const webSettingsRedisCacheServerlessForcedAtom = atom(false)
+export const webSettingsMigrationAtom = atom<SiteSettingsMigrationInfo | null>(null)
 
 export const webSettingsSkillsSavingAtom = atom(false)
 export const webSettingsSkillsEnabledAtom = atom(false)

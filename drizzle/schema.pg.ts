@@ -209,6 +209,389 @@ export const siteConfig = pgTable('site_config', {
     .defaultNow(),
 })
 
+export const siteConfigV2Entries = pgTable(
+  'site_config_v2_entries',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    settingKey: varchar('setting_key', { length: 120 }).notNull(),
+    valueKind: varchar('value_kind', { length: 16 }).notNull(),
+    stringValue: text('string_value'),
+    numberValue: integer('number_value'),
+    booleanValue: boolean('boolean_value'),
+    jsonValue: jsonb('json_value'),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('site_config_v2_entries_site_key_key').on(t.siteConfigId, t.settingKey),
+    index('site_config_v2_entries_site_idx').on(t.siteConfigId),
+  ],
+)
+
+export const siteSettingsMigrationMeta = pgTable('site_settings_v2_migration_meta', {
+  siteConfigId: integer('site_config_id')
+    .primaryKey()
+    .references(() => siteConfig.id, { onDelete: 'cascade' }),
+  migrationState: varchar('migration_state', { length: 32 }).notNull().default('legacy'),
+  migratedAt: timestamp('migrated_at', { mode: 'date', withTimezone: true }),
+  legacyDataClearedAt: timestamp('legacy_data_cleared_at', {
+    mode: 'date',
+    withTimezone: true,
+  }),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+export const siteSettingsV2ValueEntries = pgTable(
+  'site_settings_v2_value_entries',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    category: varchar('category', { length: 32 }).notNull(),
+    settingKey: varchar('setting_key', { length: 120 }).notNull(),
+    valueKind: varchar('value_kind', { length: 16 }).notNull(),
+    stringValue: text('string_value'),
+    numberValue: integer('number_value'),
+    booleanValue: boolean('boolean_value'),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_value_entries_site_key_key').on(
+      t.siteConfigId,
+      t.category,
+      t.settingKey,
+    ),
+    index('site_settings_v2_value_entries_site_category_idx').on(
+      t.siteConfigId,
+      t.category,
+    ),
+  ],
+)
+
+export const siteSettingsV2ListEntries = pgTable(
+  'site_settings_v2_list_entries',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    category: varchar('category', { length: 32 }).notNull(),
+    settingKey: varchar('setting_key', { length: 120 }).notNull(),
+    itemValue: text('item_value').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('site_settings_v2_list_entries_site_key_idx').on(
+      t.siteConfigId,
+      t.category,
+      t.settingKey,
+      t.position,
+    ),
+  ],
+)
+
+export const siteSettingsV2ThemeCustomSurface = pgTable('site_settings_v2_theme_custom_surface', {
+  siteConfigId: integer('site_config_id')
+    .primaryKey()
+    .references(() => siteConfig.id, { onDelete: 'cascade' }),
+  background: text('background'),
+  bodyBackground: text('body_background'),
+  animatedBg: text('animated_bg'),
+  primary: text('primary'),
+  secondary: text('secondary'),
+  accent: text('accent'),
+  online: text('online'),
+  foreground: text('foreground'),
+  card: text('card'),
+  border: text('border'),
+  muted: text('muted'),
+  mutedForeground: text('muted_foreground'),
+  homeCardOverlay: text('home_card_overlay'),
+  homeCardOverlayDark: text('home_card_overlay_dark'),
+  homeCardInsetHighlight: text('home_card_inset_highlight'),
+  animatedBgTint1: text('animated_bg_tint_1'),
+  animatedBgTint2: text('animated_bg_tint_2'),
+  animatedBgTint3: text('animated_bg_tint_3'),
+  floatingOrbColor1: text('floating_orb_color_1'),
+  floatingOrbColor2: text('floating_orb_color_2'),
+  floatingOrbColor3: text('floating_orb_color_3'),
+  radius: text('radius'),
+  hideFloatingOrbs: boolean('hide_floating_orbs'),
+  transparentAnimatedBg: boolean('transparent_animated_bg'),
+  backgroundImageMode: varchar('background_image_mode', { length: 24 }),
+  backgroundImageUrl: text('background_image_url'),
+  backgroundRandomApiUrl: text('background_random_api_url'),
+  paletteMode: varchar('palette_mode', { length: 32 }),
+  paletteLiveEnabled: boolean('palette_live_enabled'),
+  paletteLiveScope: varchar('palette_live_scope', { length: 24 }),
+  paletteSeedImageUrl: text('palette_seed_image_url'),
+  createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+export const siteSettingsV2ThemeCustomSurfaceImagePool = pgTable(
+  'site_settings_v2_theme_custom_surface_image_pool',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    imageUrl: text('image_url').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index('site_settings_v2_theme_custom_surface_image_pool_site_idx').on(t.siteConfigId, t.position)],
+)
+
+export const siteSettingsV2ThemePublicFontOptions = pgTable(
+  'site_settings_v2_theme_public_font_options',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    mode: varchar('mode', { length: 16 }).notNull(),
+    label: varchar('label', { length: 60 }).notNull(),
+    family: varchar('family', { length: 100 }).notNull(),
+    url: text('url'),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index('site_settings_v2_theme_public_font_options_site_idx').on(t.siteConfigId, t.position)],
+)
+
+export const siteSettingsV2SchedulePeriods = pgTable(
+  'site_settings_v2_schedule_periods',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    periodId: varchar('period_id', { length: 64 }).notNull(),
+    label: varchar('label', { length: 40 }).notNull(),
+    part: varchar('part', { length: 16 }).notNull(),
+    startTime: varchar('start_time', { length: 8 }).notNull(),
+    endTime: varchar('end_time', { length: 8 }).notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_schedule_periods_site_period_key').on(t.siteConfigId, t.periodId),
+    index('site_settings_v2_schedule_periods_site_idx').on(t.siteConfigId, t.position),
+  ],
+)
+
+export const siteSettingsV2ScheduleGridDays = pgTable(
+  'site_settings_v2_schedule_grid_days',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    weekday: integer('weekday').notNull(),
+    rangeStart: varchar('range_start', { length: 8 }).notNull(),
+    rangeEnd: varchar('range_end', { length: 8 }).notNull(),
+    intervalMinutes: integer('interval_minutes').notNull(),
+    useFixedInterval: boolean('use_fixed_interval').notNull().default(false),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_schedule_grid_days_site_weekday_key').on(t.siteConfigId, t.weekday),
+    index('site_settings_v2_schedule_grid_days_site_idx').on(t.siteConfigId, t.position),
+  ],
+)
+
+export const siteSettingsV2ScheduleCourses = pgTable(
+  'site_settings_v2_schedule_courses',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    courseId: varchar('course_id', { length: 64 }).notNull(),
+    title: varchar('title', { length: 120 }).notNull(),
+    location: varchar('location', { length: 200 }),
+    teacher: varchar('teacher', { length: 120 }),
+    weekday: integer('weekday').notNull(),
+    startTime: varchar('start_time', { length: 8 }).notNull(),
+    endTime: varchar('end_time', { length: 8 }).notNull(),
+    timeMode: varchar('time_mode', { length: 16 }),
+    anchorDate: varchar('anchor_date', { length: 10 }).notNull(),
+    untilDate: varchar('until_date', { length: 10 }),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_schedule_courses_site_course_key').on(t.siteConfigId, t.courseId),
+    index('site_settings_v2_schedule_courses_site_idx').on(t.siteConfigId, t.position),
+  ],
+)
+
+export const siteSettingsV2ScheduleCourseTimeSessions = pgTable(
+  'site_settings_v2_schedule_course_time_sessions',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    courseId: varchar('course_id', { length: 64 }).notNull(),
+    startTime: varchar('start_time', { length: 8 }).notNull(),
+    endTime: varchar('end_time', { length: 8 }).notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('site_settings_v2_schedule_course_time_sessions_site_idx').on(
+      t.siteConfigId,
+      t.courseId,
+      t.position,
+    ),
+  ],
+)
+
+export const siteSettingsV2ScheduleCoursePeriodIds = pgTable(
+  'site_settings_v2_schedule_course_period_ids',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    courseId: varchar('course_id', { length: 64 }).notNull(),
+    periodId: varchar('period_id', { length: 64 }).notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('site_settings_v2_schedule_course_period_ids_site_idx').on(
+      t.siteConfigId,
+      t.courseId,
+      t.position,
+    ),
+  ],
+)
+
+export const siteSettingsV2RuleGroups = pgTable(
+  'site_settings_v2_rule_groups',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    groupId: varchar('group_id', { length: 64 }).notNull(),
+    processMatch: varchar('process_match', { length: 240 }).notNull(),
+    defaultText: text('default_text'),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_rule_groups_site_group_key').on(t.siteConfigId, t.groupId),
+    index('site_settings_v2_rule_groups_site_idx').on(t.siteConfigId, t.position),
+  ],
+)
+
+export const siteSettingsV2RuleTitleRules = pgTable(
+  'site_settings_v2_rule_title_rules',
+  {
+    id: serial('id').primaryKey(),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    groupId: varchar('group_id', { length: 64 }).notNull(),
+    titleRuleId: varchar('title_rule_id', { length: 64 }).notNull(),
+    mode: varchar('mode', { length: 16 }).notNull(),
+    pattern: text('pattern').notNull(),
+    textValue: text('text_value').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_rule_title_rules_site_rule_key').on(
+      t.siteConfigId,
+      t.titleRuleId,
+    ),
+    index('site_settings_v2_rule_title_rules_site_group_idx').on(
+      t.siteConfigId,
+      t.groupId,
+      t.position,
+    ),
+  ],
+)
+
 export const activityAppHistory = pgTable('activity_app_history', {
   id: serial('id').primaryKey(),
   processName: varchar('process_name', { length: 200 }).notNull().unique(),
@@ -336,6 +719,20 @@ export const pgSchema = {
   devices,
   userActivities,
   siteConfig,
+  siteConfigV2Entries,
+  siteSettingsMigrationMeta,
+  siteSettingsV2ValueEntries,
+  siteSettingsV2ListEntries,
+  siteSettingsV2ThemeCustomSurface,
+  siteSettingsV2ThemeCustomSurfaceImagePool,
+  siteSettingsV2ThemePublicFontOptions,
+  siteSettingsV2SchedulePeriods,
+  siteSettingsV2ScheduleGridDays,
+  siteSettingsV2ScheduleCourses,
+  siteSettingsV2ScheduleCourseTimeSessions,
+  siteSettingsV2ScheduleCoursePeriodIds,
+  siteSettingsV2RuleGroups,
+  siteSettingsV2RuleTitleRules,
   activityAppHistory,
   activityPlaySourceHistory,
   systemSecrets,

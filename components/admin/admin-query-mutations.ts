@@ -350,6 +350,70 @@ export async function patchAdminRuleToolsConfig(
   return data.data
 }
 
+async function patchAdminSettingsCategory(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, any>> {
+  const res = await fetch(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await readJson<SuccessResponse<Record<string, any>>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
+    )
+  }
+  return data.data
+}
+
+export async function patchAdminSettingsCore(
+  body: Record<string, unknown>,
+): Promise<Record<string, any>> {
+  return patchAdminSettingsCategory('/api/admin/settings/core', body)
+}
+
+export async function patchAdminSettingsTheme(
+  body: Record<string, unknown>,
+): Promise<Record<string, any>> {
+  return patchAdminSettingsCategory('/api/admin/settings/theme', body)
+}
+
+export async function patchAdminSettingsSchedule(
+  body: Record<string, unknown>,
+): Promise<Record<string, any>> {
+  return patchAdminSettingsCategory('/api/admin/settings/schedule', body)
+}
+
+export async function migrateAdminSettings(): Promise<void> {
+  const res = await fetch('/api/admin/settings/migration', {
+    method: 'POST',
+  })
+  const data = await readJson<SuccessResponse<unknown>>(res)
+  if (!res.ok || !data?.success) {
+    throw new Error(
+      typeof data?.error === 'string'
+        ? data.error
+        : tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
+    )
+  }
+}
+
+export async function clearAdminLegacySettingsData(): Promise<void> {
+  const res = await fetch('/api/admin/settings/migration/legacy-data', {
+    method: 'DELETE',
+  })
+  const data = await readJson<SuccessResponse<unknown>>(res)
+  if (!res.ok || !data?.success) {
+    throw new Error(
+      typeof data?.error === 'string'
+        ? data.error
+        : tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
+    )
+  }
+}
+
 export async function patchAdminRuleToolsRules(
   body: Record<string, unknown>,
 ): Promise<{ revision: string; total: number; groupId?: string; titleRuleId?: string }> {

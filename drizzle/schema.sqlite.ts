@@ -237,6 +237,352 @@ export const siteConfig = sqliteTable('site_config', {
   updatedAt: ts('updated_at'),
 })
 
+export const siteConfigV2Entries = sqliteTable(
+  'site_config_v2_entries',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    settingKey: text('setting_key').notNull(),
+    valueKind: text('value_kind').notNull(),
+    stringValue: text('string_value'),
+    numberValue: integer('number_value'),
+    booleanValue: integer('boolean_value', { mode: 'boolean' }),
+    jsonValue: text('json_value', { mode: 'json' }),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    uniqueIndex('site_config_v2_entries_site_key_key').on(t.siteConfigId, t.settingKey),
+    index('site_config_v2_entries_site_idx').on(t.siteConfigId),
+  ],
+)
+
+export const siteSettingsMigrationMeta = sqliteTable('site_settings_v2_migration_meta', {
+  siteConfigId: integer('site_config_id')
+    .primaryKey()
+    .references(() => siteConfig.id, { onDelete: 'cascade' }),
+  migrationState: text('migration_state').notNull().default('legacy'),
+  migratedAt: tsOpt('migrated_at'),
+  legacyDataClearedAt: tsOpt('legacy_data_cleared_at'),
+  createdAt: ts('created_at'),
+  updatedAt: ts('updated_at'),
+})
+
+export const siteSettingsV2ValueEntries = sqliteTable(
+  'site_settings_v2_value_entries',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    category: text('category').notNull(),
+    settingKey: text('setting_key').notNull(),
+    valueKind: text('value_kind').notNull(),
+    stringValue: text('string_value'),
+    numberValue: integer('number_value'),
+    booleanValue: integer('boolean_value', { mode: 'boolean' }),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_value_entries_site_key_key').on(
+      t.siteConfigId,
+      t.category,
+      t.settingKey,
+    ),
+    index('site_settings_v2_value_entries_site_category_idx').on(
+      t.siteConfigId,
+      t.category,
+    ),
+  ],
+)
+
+export const siteSettingsV2ListEntries = sqliteTable(
+  'site_settings_v2_list_entries',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    category: text('category').notNull(),
+    settingKey: text('setting_key').notNull(),
+    itemValue: text('item_value').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    index('site_settings_v2_list_entries_site_key_idx').on(
+      t.siteConfigId,
+      t.category,
+      t.settingKey,
+      t.position,
+    ),
+  ],
+)
+
+export const siteSettingsV2ThemeCustomSurface = sqliteTable(
+  'site_settings_v2_theme_custom_surface',
+  {
+    siteConfigId: integer('site_config_id')
+      .primaryKey()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    background: text('background'),
+    bodyBackground: text('body_background'),
+    animatedBg: text('animated_bg'),
+    primary: text('primary'),
+    secondary: text('secondary'),
+    accent: text('accent'),
+    online: text('online'),
+    foreground: text('foreground'),
+    card: text('card'),
+    border: text('border'),
+    muted: text('muted'),
+    mutedForeground: text('muted_foreground'),
+    homeCardOverlay: text('home_card_overlay'),
+    homeCardOverlayDark: text('home_card_overlay_dark'),
+    homeCardInsetHighlight: text('home_card_inset_highlight'),
+    animatedBgTint1: text('animated_bg_tint_1'),
+    animatedBgTint2: text('animated_bg_tint_2'),
+    animatedBgTint3: text('animated_bg_tint_3'),
+    floatingOrbColor1: text('floating_orb_color_1'),
+    floatingOrbColor2: text('floating_orb_color_2'),
+    floatingOrbColor3: text('floating_orb_color_3'),
+    radius: text('radius'),
+    hideFloatingOrbs: integer('hide_floating_orbs', { mode: 'boolean' }),
+    transparentAnimatedBg: integer('transparent_animated_bg', { mode: 'boolean' }),
+    backgroundImageMode: text('background_image_mode'),
+    backgroundImageUrl: text('background_image_url'),
+    backgroundRandomApiUrl: text('background_random_api_url'),
+    paletteMode: text('palette_mode'),
+    paletteLiveEnabled: integer('palette_live_enabled', { mode: 'boolean' }),
+    paletteLiveScope: text('palette_live_scope'),
+    paletteSeedImageUrl: text('palette_seed_image_url'),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+)
+
+export const siteSettingsV2ThemeCustomSurfaceImagePool = sqliteTable(
+  'site_settings_v2_theme_custom_surface_image_pool',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    imageUrl: text('image_url').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    index('site_settings_v2_theme_custom_surface_image_pool_site_idx').on(
+      t.siteConfigId,
+      t.position,
+    ),
+  ],
+)
+
+export const siteSettingsV2ThemePublicFontOptions = sqliteTable(
+  'site_settings_v2_theme_public_font_options',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    mode: text('mode').notNull(),
+    label: text('label').notNull(),
+    family: text('family').notNull(),
+    url: text('url'),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    index('site_settings_v2_theme_public_font_options_site_idx').on(
+      t.siteConfigId,
+      t.position,
+    ),
+  ],
+)
+
+export const siteSettingsV2SchedulePeriods = sqliteTable(
+  'site_settings_v2_schedule_periods',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    periodId: text('period_id').notNull(),
+    label: text('label').notNull(),
+    part: text('part').notNull(),
+    startTime: text('start_time').notNull(),
+    endTime: text('end_time').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_schedule_periods_site_period_key').on(
+      t.siteConfigId,
+      t.periodId,
+    ),
+    index('site_settings_v2_schedule_periods_site_idx').on(t.siteConfigId, t.position),
+  ],
+)
+
+export const siteSettingsV2ScheduleGridDays = sqliteTable(
+  'site_settings_v2_schedule_grid_days',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    weekday: integer('weekday').notNull(),
+    rangeStart: text('range_start').notNull(),
+    rangeEnd: text('range_end').notNull(),
+    intervalMinutes: integer('interval_minutes').notNull(),
+    useFixedInterval: integer('use_fixed_interval', { mode: 'boolean' }).notNull().default(false),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_schedule_grid_days_site_weekday_key').on(
+      t.siteConfigId,
+      t.weekday,
+    ),
+    index('site_settings_v2_schedule_grid_days_site_idx').on(t.siteConfigId, t.position),
+  ],
+)
+
+export const siteSettingsV2ScheduleCourses = sqliteTable(
+  'site_settings_v2_schedule_courses',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    courseId: text('course_id').notNull(),
+    title: text('title').notNull(),
+    location: text('location'),
+    teacher: text('teacher'),
+    weekday: integer('weekday').notNull(),
+    startTime: text('start_time').notNull(),
+    endTime: text('end_time').notNull(),
+    timeMode: text('time_mode'),
+    anchorDate: text('anchor_date').notNull(),
+    untilDate: text('until_date'),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_schedule_courses_site_course_key').on(
+      t.siteConfigId,
+      t.courseId,
+    ),
+    index('site_settings_v2_schedule_courses_site_idx').on(t.siteConfigId, t.position),
+  ],
+)
+
+export const siteSettingsV2ScheduleCourseTimeSessions = sqliteTable(
+  'site_settings_v2_schedule_course_time_sessions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    courseId: text('course_id').notNull(),
+    startTime: text('start_time').notNull(),
+    endTime: text('end_time').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    index('site_settings_v2_schedule_course_time_sessions_site_idx').on(
+      t.siteConfigId,
+      t.courseId,
+      t.position,
+    ),
+  ],
+)
+
+export const siteSettingsV2ScheduleCoursePeriodIds = sqliteTable(
+  'site_settings_v2_schedule_course_period_ids',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    courseId: text('course_id').notNull(),
+    periodId: text('period_id').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    index('site_settings_v2_schedule_course_period_ids_site_idx').on(
+      t.siteConfigId,
+      t.courseId,
+      t.position,
+    ),
+  ],
+)
+
+export const siteSettingsV2RuleGroups = sqliteTable(
+  'site_settings_v2_rule_groups',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    groupId: text('group_id').notNull(),
+    processMatch: text('process_match').notNull(),
+    defaultText: text('default_text'),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_rule_groups_site_group_key').on(t.siteConfigId, t.groupId),
+    index('site_settings_v2_rule_groups_site_idx').on(t.siteConfigId, t.position),
+  ],
+)
+
+export const siteSettingsV2RuleTitleRules = sqliteTable(
+  'site_settings_v2_rule_title_rules',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    siteConfigId: integer('site_config_id')
+      .notNull()
+      .references(() => siteConfig.id, { onDelete: 'cascade' }),
+    groupId: text('group_id').notNull(),
+    titleRuleId: text('title_rule_id').notNull(),
+    mode: text('mode').notNull(),
+    pattern: text('pattern').notNull(),
+    textValue: text('text_value').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    uniqueIndex('site_settings_v2_rule_title_rules_site_rule_key').on(
+      t.siteConfigId,
+      t.titleRuleId,
+    ),
+    index('site_settings_v2_rule_title_rules_site_group_idx').on(
+      t.siteConfigId,
+      t.groupId,
+      t.position,
+    ),
+  ],
+)
+
 export const activityAppHistory = sqliteTable(
   'activity_app_history',
   {
@@ -341,6 +687,20 @@ export const sqliteSchema = {
   devices,
   userActivities,
   siteConfig,
+  siteConfigV2Entries,
+  siteSettingsMigrationMeta,
+  siteSettingsV2ValueEntries,
+  siteSettingsV2ListEntries,
+  siteSettingsV2ThemeCustomSurface,
+  siteSettingsV2ThemeCustomSurfaceImagePool,
+  siteSettingsV2ThemePublicFontOptions,
+  siteSettingsV2SchedulePeriods,
+  siteSettingsV2ScheduleGridDays,
+  siteSettingsV2ScheduleCourses,
+  siteSettingsV2ScheduleCourseTimeSessions,
+  siteSettingsV2ScheduleCoursePeriodIds,
+  siteSettingsV2RuleGroups,
+  siteSettingsV2RuleTitleRules,
   activityAppHistory,
   activityPlaySourceHistory,
   systemSecrets,

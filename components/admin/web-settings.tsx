@@ -13,6 +13,7 @@ import {
 } from '@/components/admin/admin-motion'
 import { AdminThemeColorControl } from '@/components/admin/admin-theme-color-control'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
+import { SiteSettingsMigrationCard } from '@/components/admin/site-settings-migration-card'
 import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
 import { useWebSettingsController } from '@/components/admin/use-web-settings-controller'
 import { WebSettingsActivityPanel } from '@/components/admin/web-settings-activity-panel'
@@ -68,10 +69,15 @@ function WebSettingsContent() {
     cropSourceUrl,
     cropTarget,
     form,
+    clearLegacyData,
+    hasLockedLegacyChanges,
     importConfigDialogOpen,
     importConfigInput,
     loading,
+    migration,
+    migrationActionPending,
     revertUnsavedWebSettings,
+    runSettingsMigration,
     revokeSkillsOauthByAiClientId,
     save,
     saveSkillsConfig,
@@ -91,6 +97,7 @@ function WebSettingsContent() {
     scale: 0.996,
   })
   const avatarUsesRemoteUrl = isRemoteAvatarUrl(form.avatarUrl)
+  const themeLocked = migration?.heavyEditingLocked === true
 
   if (loading) {
     return <div className="text-sm text-muted-foreground">{t('webSettings.loading')}</div>
@@ -99,6 +106,13 @@ function WebSettingsContent() {
   return (
     <>
       <div className="space-y-4 sm:space-y-5 sm:rounded-xl sm:border sm:bg-card sm:p-6 [&_label[data-slot=label]]:leading-5">
+        <SiteSettingsMigrationCard
+          migration={migration}
+          pending={migrationActionPending}
+          onMigrate={runSettingsMigration}
+          onClearLegacyData={clearLegacyData}
+        />
+
         <section className="space-y-3">
           <div className="rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4 sm:px-5">
             <div className="space-y-4">
@@ -233,10 +247,11 @@ function WebSettingsContent() {
                 <textarea
                   rows={8}
                   value={form.customCss}
+                  disabled={themeLocked}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, customCss: event.target.value }))
                   }
-                  className="w-full rounded-md border bg-background px-2.5 py-2 text-sm font-mono sm:px-3"
+                  className="w-full rounded-md border bg-background px-2.5 py-2 text-sm font-mono disabled:cursor-not-allowed disabled:opacity-60 sm:px-3"
                   placeholder={t('webSettings.customCss.placeholder')}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -347,6 +362,12 @@ function WebSettingsContent() {
       <UnsavedChangesBar
         open={webSettingsDirty}
         saving={saving}
+        saveDisabled={hasLockedLegacyChanges}
+        message={
+          hasLockedLegacyChanges
+            ? t('webSettingsMigration.lockedMessage')
+            : undefined
+        }
         onSave={save}
         onRevert={revertUnsavedWebSettings}
         saveLabel={t('webSettings.saveConfig')}

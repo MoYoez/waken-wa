@@ -3,16 +3,15 @@ import Link from 'next/link'
 import { ContentReadingPanel } from '@/components/content-reading-panel'
 import { InspirationArchiveList } from '@/components/inspiration-archive-list'
 import { SiteReveal } from '@/components/site-reveal'
-import { db } from '@/lib/db'
-import { siteConfig } from '@/lib/drizzle-schema'
 import { getT } from '@/lib/i18n/server'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { normalizeTimezone } from '@/lib/timezone'
 
 export const dynamic = 'force-dynamic'
 
 export default async function InspirationArchivePage() {
   const { t } = await getT('common')
-  const [config] = await db.select().from(siteConfig).limit(1)
+  const config = await getSiteConfigMemoryFirst()
   const displayTimezone = normalizeTimezone(config?.displayTimezone)
 
   return (

@@ -88,7 +88,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   lines.push('  Read this document first, then follow the decision rules exactly.')
   lines.push('metadata:')
   lines.push('  author: waken-wa')
-  lines.push('  version: 3.2.0')
+  lines.push('  version: 3.3.0')
   lines.push('  category: development')
   lines.push('  tags: [agent-protocol, llm-api, configuration]')
   lines.push('---')
@@ -292,6 +292,12 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
   lines.push('Do not modify these fields through the dedicated LLM HTTP API:')
   lines.push('')
   pushBullets(lines, [
+    '`adminThemeColor`',
+    '`adminBackgroundColor`',
+    '`userNoteTypewriterEnabled`',
+    '`pageLoadingEnabled`',
+    '`searchEngineIndexingEnabled`',
+    '`openApiDocsEnabled`',
     '`useNoSqlAsCacheRedis`',
     '`redisCacheTtlSeconds`',
     '`activityUpdateMode`',
@@ -409,7 +415,7 @@ function buildMarkdown(origin: string, preferredToolMode: ToolMode, endpoints: L
 
   pushSection(lines, '### Activity Filtering and Cute Message Rules')
   pushBullets(lines, [
-    '`appMessageRules`: Array of grouped app rules like `{ processMatch, defaultText?, titleRules }`. Top level matches `processName` by case-insensitive substring; `titleRules` match `processTitle` using `mode: "plain" | "regex"` with `{ pattern, text }`, first match wins, and `text` may use `{process}` / `{title}` placeholders',
+    '`appMessageRules`: Array of grouped app rules like `{ id?, processMatch, defaultText?, titleRules }`. The server auto-generates `id` (string) for each group and each title rule if omitted; when reading back, every group and title rule will always include an `id`. Top level matches `processName` by case-insensitive substring; `titleRules` match `processTitle` using `mode: "plain" | "regex"` with `{ id?, mode, pattern, text }`, first match wins, and `text` may use `{process}` / `{title}` placeholders',
     '`appMessageRulesShowProcessName`: If `true`, append the real process name after a matched cute rule; if `false`, show only the custom text',
     '`appFilterMode`: `blacklist` or `whitelist`',
     '`appBlacklist`: Hidden process names when filter mode is `blacklist`',

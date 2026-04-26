@@ -1,14 +1,10 @@
 'use client'
 
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAtom } from 'jotai'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useT } from 'next-i18next/client'
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -20,18 +16,10 @@ import {
   exportAdminRuleTools,
   fetchActivityHistoryApps,
   fetchActivityHistoryPlaySources,
-  fetchAdminRuleToolsConfig,
-  fetchAdminRuleToolsListPage,
-  fetchAdminRuleToolsRulesPage,
-  fetchAdminRuleToolsSummary,
 } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
-import {
-  importAdminRuleTools,
-  patchAdminRuleToolsConfig,
-  patchAdminRuleToolsList,
-  patchAdminRuleToolsRules,
-} from '@/components/admin/admin-query-mutations'
+import { importAdminRuleTools } from '@/components/admin/admin-query-mutations'
+import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
 import {
   WebSettingsInset,
   WebSettingsRow,
@@ -43,6 +31,7 @@ import {
   SETTINGS_APP_LIST_PAGE_SIZE,
   SETTINGS_RULES_PAGE_SIZE,
 } from '@/components/admin/web-settings-paging'
+import { webSettingsMigrationAtom } from '@/components/admin/web-settings-store'
 import { exportAppRulesJson, parseAppRulesJson } from '@/components/admin/web-settings-utils'
 import { Autocomplete } from '@/components/ui/autocomplete'
 import { Button } from '@/components/ui/button'
@@ -59,14 +48,17 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import type {
-  AppMessageRuleGroup,
-  AppMessageTitleRule,
-  AppTitleRuleMode,
+import {
+  type AppMessageTitleRule,
+  type AppTitleRuleMode,
+  createAppMessageRuleGroupId,
+  createAppMessageTitleRuleId,
+  prepareAppMessageRulesForSave,
 } from '@/lib/app-message-rules'
 import { cn } from '@/lib/utils'
 import type {
-  RuleToolsConfigResponse,
+  AppMessageRuleGroup,
+  RuleToolsExportPayload,
   RuleToolsListItem,
   RuleToolsListKey,
   RuleToolsRuleItem,
@@ -98,18 +90,130 @@ function summarizeAppRuleGroup(
   return process
 }
 
-function cloneRuleItem(rule: RuleToolsRuleItem): RuleToolsRuleItem {
+function cloneRuleToolsPayload(payload: RuleToolsExportPayload): RuleToolsExportPayload {
   return {
-    ...rule,
-    titleRules: rule.titleRules.map((titleRule) => ({ ...titleRule })),
+    appMessageRules: payload.appMessageRules.map((rule) => ({
+      ...rule,
+      titleRules: rule.titleRules.map((titleRule) => ({ ...titleRule })),
+    })),
+    appMessageRulesShowProcessName: payload.appMessageRulesShowProcessName !== false,
+    appFilterMode: payload.appFilterMode === 'whitelist' ? 'whitelist' : 'blacklist',
+    appBlacklist: [...payload.appBlacklist],
+    appWhitelist: [...payload.appWhitelist],
+    appNameOnlyList: [...payload.appNameOnlyList],
+    captureReportedAppsEnabled: payload.captureReportedAppsEnabled !== false,
+    mediaPlaySourceBlocklist: [...payload.mediaPlaySourceBlocklist],
   }
+}
+
+function buildRuleToolsSummary(payload: RuleToolsExportPayload): RuleToolsSummary {
+  return {
+    appMessageRulesShowProcessName: payload.appMessageRulesShowProcessName !== false,
+    appFilterMode: payload.appFilterMode === 'whitelist' ? 'whitelist' : 'blacklist',
+    captureReportedAppsEnabled: payload.captureReportedAppsEnabled !== false,
+    ruleGroupCount: payload.appMessageRules.length,
+    appBlacklistCount: payload.appBlacklist.length,
+    appWhitelistCount: payload.appWhitelist.length,
+    appNameOnlyListCount: payload.appNameOnlyList.length,
+    mediaPlaySourceBlocklistCount: payload.mediaPlaySourceBlocklist.length,
+  }
+}
+
+function buildRuleItems(payload: RuleToolsExportPayload): RuleToolsRuleItem[] {
+  return payload.appMessageRules.map((rule, position) => ({
+    ...rule,
+    position,
+  }))
+}
+
+function filterRuleItems(items: RuleToolsRuleItem[], q: string): RuleToolsRuleItem[] {
+  const normalized = q.trim().toLowerCase()
+  if (!normalized) return items
+  return items.filter((item) => {
+    const haystacks = [
+      item.processMatch,
+      item.defaultText ?? '',
+      ...item.titleRules.flatMap((titleRule) => [titleRule.pattern, titleRule.text]),
+    ]
+    return haystacks.some((value) => String(value).toLowerCase().includes(normalized))
+  })
+}
+
+function filterListValues(values: string[], q: string): RuleToolsListItem[] {
+  const normalized = q.trim().toLowerCase()
+  return values
+    .map((value, position) => ({ value, position }))
+    .filter(
+      (item) => item.value.length > 0 && (normalized ? item.value.toLowerCase().includes(normalized) : true),
+    )
+}
+
+function normalizeDraftListValue(listKey: RuleToolsListKey, raw: string): string {
+  const base = raw.trim()
+  return listKey === 'mediaPlaySourceBlocklist' ? base.toLowerCase() : base
+}
+
+function dedupeDraftList(listKey: RuleToolsListKey, values: string[]): string[] {
+  const next: string[] = []
+  const seen = new Set<string>()
+  for (const raw of values) {
+    const value = normalizeDraftListValue(listKey, raw)
+    if (!value) continue
+    const key = value.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    next.push(value)
+  }
+  return next
+}
+
+function normalizePayloadForSave(
+  payload: RuleToolsExportPayload,
+): { data: RuleToolsExportPayload; error: { group: number; rule: number; message: string } | null } {
+  const preparedRules = prepareAppMessageRulesForSave(payload.appMessageRules)
+  if (preparedRules.errors.length > 0) {
+    const first = preparedRules.errors[0]
+    return {
+      data: cloneRuleToolsPayload(payload),
+      error: {
+        group: first.groupIndex + 1,
+        rule: first.titleRuleIndex + 1,
+        message: first.message,
+      },
+    }
+  }
+
+  return {
+    data: {
+      appMessageRules: preparedRules.data,
+      appMessageRulesShowProcessName: payload.appMessageRulesShowProcessName !== false,
+      appFilterMode: payload.appFilterMode === 'whitelist' ? 'whitelist' : 'blacklist',
+      appBlacklist: dedupeDraftList('appBlacklist', payload.appBlacklist),
+      appWhitelist: dedupeDraftList('appWhitelist', payload.appWhitelist),
+      appNameOnlyList: dedupeDraftList('appNameOnlyList', payload.appNameOnlyList),
+      captureReportedAppsEnabled: payload.captureReportedAppsEnabled !== false,
+      mediaPlaySourceBlocklist: dedupeDraftList(
+        'mediaPlaySourceBlocklist',
+        payload.mediaPlaySourceBlocklist,
+      ),
+    },
+    error: null,
+  }
+}
+
+function areRuleToolsPayloadEqual(
+  left: RuleToolsExportPayload | null,
+  right: RuleToolsExportPayload | null,
+): boolean {
+  if (!left || !right) return left === right
+  return JSON.stringify(left) === JSON.stringify(right)
 }
 
 function moveItem<T>(items: readonly T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex === toIndex) return [...items]
   const next = [...items]
   const [item] = next.splice(fromIndex, 1)
-  if (typeof item === 'undefined') return next
+  if (typeof item === "undefined") return next
   next.splice(toIndex, 0, item)
   return next
 }
@@ -124,9 +228,7 @@ function getTitleRuleRegexErrorMessage(
   titleRuleIndex: number,
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string | null {
-  if (titleRule.mode !== 'regex' || !titleRule.pattern.trim()) {
-    return null
-  }
+  if (titleRule.mode !== 'regex' || !titleRule.pattern.trim()) return null
   try {
     new RegExp(titleRule.pattern, 'i')
     return null
@@ -287,7 +389,6 @@ function ListDialogEditor({
                   {items.map((item) => {
                     const isEditing =
                       editingItem?.currentValue.toLowerCase() === item.value.toLowerCase()
-
                     return (
                       <motion.li
                         key={item.value.toLowerCase()}
@@ -374,6 +475,7 @@ function ListDialogEditor({
 export function WebSettingsRuleTools() {
   const { t } = useT('admin')
   const queryClient = useQueryClient()
+  const [migration] = useAtom(webSettingsMigrationAtom)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const sectionTransition = getAdminPanelTransition(prefersReducedMotion)
   const sectionVariants = getAdminSectionVariants(prefersReducedMotion, {
@@ -405,134 +507,138 @@ export function WebSettingsRuleTools() {
   const [importRulesDialogOpen, setImportRulesDialogOpen] = useState(false)
   const [importRulesInput, setImportRulesInput] = useState('')
   const [editingListItem, setEditingListItem] = useState<ListEditingState | null>(null)
-  const [ruleDraft, setRuleDraft] = useState<RuleToolsRuleItem | null>(null)
-  const [selectedRuleSnapshot, setSelectedRuleSnapshot] = useState<RuleToolsRuleItem | null>(null)
+  const [savedPayload, setSavedPayload] = useState<RuleToolsExportPayload | null>(null)
+  const [draftPayload, setDraftPayload] = useState<RuleToolsExportPayload | null>(null)
 
-  const deferredRuleSearch = useDeferredValue(ruleSearchInput)
-  const deferredBlacklistSearch = useDeferredValue(blacklistSearchInput)
-  const deferredWhitelistSearch = useDeferredValue(whitelistSearchInput)
-  const deferredNameOnlySearch = useDeferredValue(nameOnlyListSearchInput)
-  const deferredMediaSourceSearch = useDeferredValue(mediaSourceSearchInput)
-
-  const configRevisionRef = useRef('')
-  const rulesRevisionRef = useRef('')
-  const listRevisionRef = useRef<Record<RuleToolsListKey, string>>({
-    appBlacklist: '',
-    appWhitelist: '',
-    appNameOnlyList: '',
-    mediaPlaySourceBlocklist: '',
+  const ruleToolsQuery = useQuery({
+    queryKey: adminQueryKeys.ruleTools.export(),
+    queryFn: exportAdminRuleTools,
+  })
+  const saveDraftMutation = useMutation({
+    mutationFn: (payload: RuleToolsExportPayload) =>
+      importAdminRuleTools(payload as Record<string, unknown>),
+    onError: (error) => {
+      toast.error(getErrorMessage(error, t('common.networkErrorRetry')))
+    },
   })
 
-  const summaryQuery = useQuery({
-    queryKey: adminQueryKeys.ruleTools.summary(),
-    queryFn: fetchAdminRuleToolsSummary,
-  })
-  const configQuery = useQuery({
-    queryKey: adminQueryKeys.ruleTools.config(),
-    queryFn: fetchAdminRuleToolsConfig,
-  })
-  const rulesPreviewQuery = useQuery({
-    queryKey: adminQueryKeys.ruleTools.rulesPreview(),
-    queryFn: () =>
-      fetchAdminRuleToolsRulesPage({
-        page: 0,
-        q: '',
-        pageSize: 3,
-      }),
-  })
-  const rulesQuery = useQuery({
-    queryKey: adminQueryKeys.ruleTools.rules({
-      q: deferredRuleSearch,
-      page: groupListPage,
-      pageSize: SETTINGS_RULES_PAGE_SIZE,
-    }),
-    queryFn: () =>
-      fetchAdminRuleToolsRulesPage({
-        page: groupListPage,
-        q: deferredRuleSearch,
-        pageSize: SETTINGS_RULES_PAGE_SIZE,
-      }),
-    enabled: dialogAppRulesOpen || dialogAppRuleEditorOpen,
-    placeholderData: keepPreviousData,
-  })
+  const committedPayload = savedPayload ?? ruleToolsQuery.data ?? null
+  const draftDirty = useMemo(
+    () => !areRuleToolsPayloadEqual(draftPayload ?? committedPayload, committedPayload),
+    [committedPayload, draftPayload],
+  )
 
-  const currentConfig = configQuery.data
-  const currentSummary = summaryQuery.data
-  const captureReportedAppsEnabled =
-    currentConfig?.captureReportedAppsEnabled ??
-    currentSummary?.captureReportedAppsEnabled ??
-    true
+  const currentPayload = draftPayload ?? committedPayload
+  const currentSummary = useMemo(
+    () => (currentPayload ? buildRuleToolsSummary(currentPayload) : null),
+    [currentPayload],
+  )
+  const captureReportedAppsEnabled = currentPayload?.captureReportedAppsEnabled !== false
   const appFilterMode =
-    currentConfig?.appFilterMode ?? currentSummary?.appFilterMode ?? 'blacklist'
+    currentPayload?.appFilterMode === 'whitelist' ? 'whitelist' : 'blacklist'
+  const currentFilterModeLabel =
+    appFilterMode === 'blacklist'
+      ? t('webSettingsRuleTools.appFilter.blacklistMode')
+      : t('webSettingsRuleTools.appFilter.whitelistMode')
+  const heavyEditingLocked = migration?.heavyEditingLocked === true
+  const busy = heavyEditingLocked || saveDraftMutation.isPending
 
-  const blacklistQuery = useQuery({
-    queryKey: adminQueryKeys.ruleTools.list({
-      listKey: 'appBlacklist',
-      q: deferredBlacklistSearch,
-      page: blacklistListPage,
-      pageSize: SETTINGS_APP_LIST_PAGE_SIZE,
-    }),
-    queryFn: () =>
-      fetchAdminRuleToolsListPage({
-        listKey: 'appBlacklist',
-        page: blacklistListPage,
-        q: deferredBlacklistSearch,
-        pageSize: SETTINGS_APP_LIST_PAGE_SIZE,
-      }),
-    enabled: dialogAppFilterOpen && appFilterMode === 'blacklist',
-    placeholderData: keepPreviousData,
-  })
-  const whitelistQuery = useQuery({
-    queryKey: adminQueryKeys.ruleTools.list({
-      listKey: 'appWhitelist',
-      q: deferredWhitelistSearch,
-      page: whitelistListPage,
-      pageSize: SETTINGS_APP_LIST_PAGE_SIZE,
-    }),
-    queryFn: () =>
-      fetchAdminRuleToolsListPage({
-        listKey: 'appWhitelist',
-        page: whitelistListPage,
-        q: deferredWhitelistSearch,
-        pageSize: SETTINGS_APP_LIST_PAGE_SIZE,
-      }),
-    enabled: dialogAppFilterOpen && appFilterMode === 'whitelist',
-    placeholderData: keepPreviousData,
-  })
-  const nameOnlyListQuery = useQuery({
-    queryKey: adminQueryKeys.ruleTools.list({
-      listKey: 'appNameOnlyList',
-      q: deferredNameOnlySearch,
-      page: nameOnlyListPage,
-      pageSize: SETTINGS_APP_LIST_PAGE_SIZE,
-    }),
-    queryFn: () =>
-      fetchAdminRuleToolsListPage({
-        listKey: 'appNameOnlyList',
-        page: nameOnlyListPage,
-        q: deferredNameOnlySearch,
-        pageSize: SETTINGS_APP_LIST_PAGE_SIZE,
-      }),
-    enabled: dialogNameOnlyOpen,
-    placeholderData: keepPreviousData,
-  })
-  const mediaSourceListQuery = useQuery({
-    queryKey: adminQueryKeys.ruleTools.list({
-      listKey: 'mediaPlaySourceBlocklist',
-      q: deferredMediaSourceSearch,
-      page: mediaSourceListPage,
-      pageSize: SETTINGS_APP_LIST_PAGE_SIZE,
-    }),
-    queryFn: () =>
-      fetchAdminRuleToolsListPage({
-        listKey: 'mediaPlaySourceBlocklist',
-        page: mediaSourceListPage,
-        q: deferredMediaSourceSearch,
-        pageSize: SETTINGS_APP_LIST_PAGE_SIZE,
-      }),
-    enabled: dialogMediaSourceOpen,
-    placeholderData: keepPreviousData,
-  })
+  const ruleItems = useMemo(
+    () => (currentPayload ? buildRuleItems(currentPayload) : []),
+    [currentPayload],
+  )
+  const filteredRuleItems = useMemo(
+    () => filterRuleItems(ruleItems, ruleSearchInput),
+    [ruleItems, ruleSearchInput],
+  )
+  const resolvedGroupListPage = Math.min(
+    groupListPage,
+    listMaxPage(filteredRuleItems.length, SETTINGS_RULES_PAGE_SIZE),
+  )
+  const pagedRuleItems = useMemo(
+    () =>
+      filteredRuleItems.slice(
+        resolvedGroupListPage * SETTINGS_RULES_PAGE_SIZE,
+        (resolvedGroupListPage + 1) * SETTINGS_RULES_PAGE_SIZE,
+      ),
+    [filteredRuleItems, resolvedGroupListPage],
+  )
+  const previewItems = useMemo(() => ruleItems.slice(0, 3), [ruleItems])
+  const previewTotal = currentSummary?.ruleGroupCount ?? 0
+  const previewOverflow = Math.max(0, previewTotal - previewItems.length)
+
+  const activeSelectedRuleId = useMemo(
+    () =>
+      selectedRuleId && ruleItems.some((item) => item.id === selectedRuleId)
+        ? selectedRuleId
+        : (ruleItems[0]?.id ?? null),
+    [ruleItems, selectedRuleId],
+  )
+  const selectedRule = useMemo(
+    () => ruleItems.find((item) => item.id === activeSelectedRuleId) ?? null,
+    [activeSelectedRuleId, ruleItems],
+  )
+
+  const currentFilterListKey: RuleToolsListKey =
+    appFilterMode === 'blacklist' ? 'appBlacklist' : 'appWhitelist'
+  const currentFilterValues = useMemo(
+    () => currentPayload?.[currentFilterListKey] ?? [],
+    [currentFilterListKey, currentPayload],
+  )
+  const currentFilterSearchInput =
+    currentFilterListKey === 'appBlacklist' ? blacklistSearchInput : whitelistSearchInput
+  const currentFilterPageRaw =
+    currentFilterListKey === 'appBlacklist' ? blacklistListPage : whitelistListPage
+  const filteredCurrentFilterItems = useMemo(
+    () => filterListValues(currentFilterValues, currentFilterSearchInput),
+    [currentFilterSearchInput, currentFilterValues],
+  )
+  const currentFilterPage = Math.min(
+    currentFilterPageRaw,
+    listMaxPage(filteredCurrentFilterItems.length, SETTINGS_APP_LIST_PAGE_SIZE),
+  )
+  const pagedCurrentFilterItems = useMemo(
+    () =>
+      filteredCurrentFilterItems.slice(
+        currentFilterPage * SETTINGS_APP_LIST_PAGE_SIZE,
+        (currentFilterPage + 1) * SETTINGS_APP_LIST_PAGE_SIZE,
+      ),
+    [currentFilterPage, filteredCurrentFilterItems],
+  )
+  const filteredNameOnlyItems = useMemo(
+    () => filterListValues(currentPayload?.appNameOnlyList ?? [], nameOnlyListSearchInput),
+    [currentPayload?.appNameOnlyList, nameOnlyListSearchInput],
+  )
+  const resolvedNameOnlyListPage = Math.min(
+    nameOnlyListPage,
+    listMaxPage(filteredNameOnlyItems.length, SETTINGS_APP_LIST_PAGE_SIZE),
+  )
+  const pagedNameOnlyItems = useMemo(
+    () =>
+      filteredNameOnlyItems.slice(
+        resolvedNameOnlyListPage * SETTINGS_APP_LIST_PAGE_SIZE,
+        (resolvedNameOnlyListPage + 1) * SETTINGS_APP_LIST_PAGE_SIZE,
+      ),
+    [filteredNameOnlyItems, resolvedNameOnlyListPage],
+  )
+  const filteredMediaSourceItems = useMemo(
+    () =>
+      filterListValues(currentPayload?.mediaPlaySourceBlocklist ?? [], mediaSourceSearchInput),
+    [currentPayload?.mediaPlaySourceBlocklist, mediaSourceSearchInput],
+  )
+  const resolvedMediaSourceListPage = Math.min(
+    mediaSourceListPage,
+    listMaxPage(filteredMediaSourceItems.length, SETTINGS_APP_LIST_PAGE_SIZE),
+  )
+  const pagedMediaSourceItems = useMemo(
+    () =>
+      filteredMediaSourceItems.slice(
+        resolvedMediaSourceListPage * SETTINGS_APP_LIST_PAGE_SIZE,
+        (resolvedMediaSourceListPage + 1) * SETTINGS_APP_LIST_PAGE_SIZE,
+      ),
+    [filteredMediaSourceItems, resolvedMediaSourceListPage],
+  )
+
   const blacklistSuggestionsQuery = useHistoryAppSuggestions(
     blacklistInput,
     captureReportedAppsEnabled && dialogAppFilterOpen && appFilterMode === 'blacklist',
@@ -549,178 +655,110 @@ export function WebSettingsRuleTools() {
     mediaSourceInput,
     captureReportedAppsEnabled && dialogMediaSourceOpen,
   )
-
-  const patchSummaryCache = (updater: (current: RuleToolsSummary) => RuleToolsSummary) => {
-    queryClient.setQueryData<RuleToolsSummary | undefined>(
-      adminQueryKeys.ruleTools.summary(),
-      (current) => (current ? updater(current) : current),
-    )
-  }
-
-  const invalidateRuleToolsAll = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.summary() }),
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.config() }),
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.rulesPreview() }),
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rule-tools', 'rules'] }),
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rule-tools', 'list'] }),
-    ])
-  }
-
-  const configMutation = useMutation({
-    mutationFn: patchAdminRuleToolsConfig,
-    onSuccess: (data) => {
-      configRevisionRef.current = data.revision
-      queryClient.setQueryData(adminQueryKeys.ruleTools.config(), data)
-      patchSummaryCache((current) => ({
-        ...current,
-        appFilterMode: data.appFilterMode,
-        captureReportedAppsEnabled: data.captureReportedAppsEnabled,
-        appMessageRulesShowProcessName: data.appMessageRulesShowProcessName,
-      }))
-      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.summary() })
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, t('common.networkErrorRetry')))
-    },
-  })
-
-  const rulesMutation = useMutation({
-    mutationFn: patchAdminRuleToolsRules,
-    onSuccess: (data) => {
-      rulesRevisionRef.current = data.revision
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.summary() }),
-        queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.rulesPreview() }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'rule-tools', 'rules'] }),
-      ])
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, t('common.networkErrorRetry')))
-    },
-  })
-
-  const listMutation = useMutation({
-    mutationFn: ({
-      listKey,
-      body,
-    }: {
-      listKey: RuleToolsListKey
-      body: Record<string, unknown>
-    }) => patchAdminRuleToolsList(listKey, body),
-    onSuccess: (data, variables) => {
-      listRevisionRef.current[variables.listKey] = data.revision
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: adminQueryKeys.ruleTools.summary() }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'rule-tools', 'list'] }),
-      ])
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, t('common.networkErrorRetry')))
-    },
-  })
-
-  const importMutation = useMutation({
-    mutationFn: importAdminRuleTools,
-    onSuccess: () => {
-      void invalidateRuleToolsAll()
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, t('common.networkErrorRetry')))
-    },
-  })
-
-  useEffect(() => {
-    if (configQuery.data?.revision) {
-      configRevisionRef.current = configQuery.data.revision
-    }
-  }, [configQuery.data?.revision])
-
-  useEffect(() => {
-    if (rulesQuery.data?.revision) {
-      rulesRevisionRef.current = rulesQuery.data.revision
-    } else if (rulesPreviewQuery.data?.revision) {
-      rulesRevisionRef.current = rulesPreviewQuery.data.revision
-    }
-  }, [rulesPreviewQuery.data?.revision, rulesQuery.data?.revision])
-
-  useEffect(() => {
-    if (blacklistQuery.data?.revision) {
-      listRevisionRef.current.appBlacklist = blacklistQuery.data.revision
-    }
-  }, [blacklistQuery.data?.revision])
-
-  useEffect(() => {
-    if (whitelistQuery.data?.revision) {
-      listRevisionRef.current.appWhitelist = whitelistQuery.data.revision
-    }
-  }, [whitelistQuery.data?.revision])
-
-  useEffect(() => {
-    if (nameOnlyListQuery.data?.revision) {
-      listRevisionRef.current.appNameOnlyList = nameOnlyListQuery.data.revision
-    }
-  }, [nameOnlyListQuery.data?.revision])
-
-  useEffect(() => {
-    if (mediaSourceListQuery.data?.revision) {
-      listRevisionRef.current.mediaPlaySourceBlocklist = mediaSourceListQuery.data.revision
-    }
-  }, [mediaSourceListQuery.data?.revision])
-
-  const activeSelectedRuleId = useMemo(
-    () => selectedRuleId ?? rulesQuery.data?.items[0]?.id ?? null,
-    [rulesQuery.data?.items, selectedRuleId],
-  )
-
-  const selectedRuleFromQueries = useMemo(() => {
-    if (!activeSelectedRuleId) return null
-    return (
-      rulesQuery.data?.items.find((item) => item.id === activeSelectedRuleId) ??
-      rulesPreviewQuery.data?.items.find((item) => item.id === activeSelectedRuleId) ??
-      null
-    )
-  }, [activeSelectedRuleId, rulesPreviewQuery.data?.items, rulesQuery.data?.items])
-
-  const selectedRule = useMemo(() => {
-    if (!activeSelectedRuleId) return null
-    if (selectedRuleSnapshot?.id === activeSelectedRuleId) {
-      return selectedRuleSnapshot
-    }
-    if (selectedRuleFromQueries?.id === activeSelectedRuleId) {
-      return selectedRuleFromQueries
-    }
-    return null
-  }, [activeSelectedRuleId, selectedRuleFromQueries, selectedRuleSnapshot])
-
-  const activeRuleDraft = useMemo(() => {
-    if (!selectedRule) return null
-    return ruleDraft?.id === selectedRule.id ? ruleDraft : cloneRuleItem(selectedRule)
-  }, [ruleDraft, selectedRule])
-
   const ruleProcessSuggestionsQuery = useHistoryAppSuggestions(
-    activeRuleDraft?.processMatch ?? '',
+    selectedRule?.processMatch ?? '',
     captureReportedAppsEnabled && (dialogAppRuleEditorOpen || dialogAppRulesOpen),
   )
 
-  const withHandledMutation = async <T,>(action: () => Promise<T>): Promise<T | null> => {
+  const currentFilterSuggestions =
+    currentFilterListKey === 'appBlacklist'
+      ? (blacklistSuggestionsQuery.data ?? [])
+      : (whitelistSuggestionsQuery.data ?? [])
+  const currentFilterEditingItem =
+    editingListItem?.listKey === currentFilterListKey
+      ? {
+          currentValue: editingListItem.currentValue,
+          draftValue: editingListItem.draftValue,
+        }
+      : null
+
+  const invalidateRuleToolsAll = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'rule-tools'] })
+  }
+
+  const persistRuleToolsPayload = async (
+    payload: RuleToolsExportPayload,
+    showSuccessToast = false,
+  ): Promise<boolean> => {
+    if (heavyEditingLocked) {
+      toast.error(t('webSettingsMigration.lockedToast'))
+      return false
+    }
+    const normalized = normalizePayloadForSave(payload)
+    if (normalized.error) {
+      toast.error(
+        t('webSettingsRuleTools.appRules.invalidRegex', {
+          group: normalized.error.group,
+          rule: normalized.error.rule,
+          message: normalized.error.message,
+        }),
+      )
+      return false
+    }
     try {
-      return await action()
+      await saveDraftMutation.mutateAsync(normalized.data)
+      const committed = cloneRuleToolsPayload(normalized.data)
+      setSavedPayload(cloneRuleToolsPayload(committed))
+      setDraftPayload(null)
+      queryClient.setQueryData(adminQueryKeys.ruleTools.export(), cloneRuleToolsPayload(committed))
+      void invalidateRuleToolsAll()
+      if (showSuccessToast) {
+        toast.success(t('webSettingsRuleTools.toasts.saved'))
+      }
+      return true
     } catch {
-      return null
+      return false
+    }
+  }
+
+  const updateDraftPayload = (
+    updater: (current: RuleToolsExportPayload) => RuleToolsExportPayload,
+  ) => {
+    setDraftPayload((current) => {
+      const base = current ?? committedPayload
+      if (!base) return current
+      const next = updater(cloneRuleToolsPayload(base))
+      return areRuleToolsPayloadEqual(next, committedPayload) ? null : next
+    })
+  }
+
+  const commitSinglePayloadChange = async (
+    updater: (current: RuleToolsExportPayload) => RuleToolsExportPayload,
+  ) => {
+    const base = currentPayload
+    if (!base) return
+    if (draftDirty) {
+      updateDraftPayload(updater)
+      return
+    }
+    const previous = cloneRuleToolsPayload(base)
+    const next = updater(cloneRuleToolsPayload(base))
+    setSavedPayload(cloneRuleToolsPayload(next))
+    setDraftPayload(null)
+    const ok = await persistRuleToolsPayload(next)
+    if (!ok) {
+      setSavedPayload(cloneRuleToolsPayload(previous))
+      setDraftPayload(null)
     }
   }
 
   const updateRuleDraft = (updater: (current: RuleToolsRuleItem) => RuleToolsRuleItem) => {
-    setRuleDraft((current) => {
-      const base =
-        current && selectedRule && current.id === selectedRule.id
-          ? current
-          : selectedRule
-            ? cloneRuleItem(selectedRule)
-            : null
-      return base ? updater(base) : base
-    })
+    if (!activeSelectedRuleId) return
+    updateDraftPayload((current) => ({
+      ...current,
+      appMessageRules: current.appMessageRules.map((rule, position) =>
+        rule.id === activeSelectedRuleId
+          ? updater({
+              ...rule,
+              position,
+              titleRules: rule.titleRules.map((titleRule) => ({ ...titleRule })),
+            })
+          : {
+              ...rule,
+              titleRules: rule.titleRules.map((titleRule) => ({ ...titleRule })),
+            },
+      ),
+    }))
   }
 
   const updateTitleRuleDraft = (
@@ -735,197 +773,28 @@ export function WebSettingsRuleTools() {
     }))
   }
 
-  const replaceSelectedRuleState = (nextRule: RuleToolsRuleItem | null) => {
-    if (!nextRule) {
-      setSelectedRuleSnapshot(null)
-      setRuleDraft(null)
-      return
-    }
-    const snapshot = cloneRuleItem(nextRule)
-    setSelectedRuleSnapshot(snapshot)
-    setRuleDraft(cloneRuleItem(snapshot))
-  }
-
-  const patchSelectedRuleSnapshot = (
-    ruleId: string,
-    updater: (current: RuleToolsRuleItem) => RuleToolsRuleItem,
+  const updateDraftList = (
+    listKey: RuleToolsListKey,
+    updater: (items: string[]) => string[],
   ) => {
-    setSelectedRuleSnapshot((current) => {
-      const base =
-        current?.id === ruleId
-          ? cloneRuleItem(current)
-          : selectedRule?.id === ruleId
-            ? cloneRuleItem(selectedRule)
-            : null
-      return base ? updater(base) : current
-    })
+    updateDraftPayload((current) => ({
+      ...current,
+      [listKey]: updater([...current[listKey]]),
+    }))
   }
 
-  const getRulesRevision = () =>
-    rulesRevisionRef.current || rulesQuery.data?.revision || rulesPreviewQuery.data?.revision || ''
-
-  const getConfigRevision = () => configRevisionRef.current || configQuery.data?.revision || ''
-
-  const getListRevision = (listKey: RuleToolsListKey) => {
-    if (listRevisionRef.current[listKey]) {
-      return listRevisionRef.current[listKey]
+  const handleOpenRuleSelector = () => {
+    if (!selectedRuleId && ruleItems[0]) {
+      setSelectedRuleId(ruleItems[0].id)
     }
-    switch (listKey) {
-      case 'appBlacklist':
-        return blacklistQuery.data?.revision ?? ''
-      case 'appWhitelist':
-        return whitelistQuery.data?.revision ?? ''
-      case 'appNameOnlyList':
-        return nameOnlyListQuery.data?.revision ?? ''
-      case 'mediaPlaySourceBlocklist':
-        return mediaSourceListQuery.data?.revision ?? ''
-      default:
-        return ''
-    }
+    setDialogAppRulesOpen(true)
   }
 
-  const saveConfigPatch = async (patch: Partial<RuleToolsConfigResponse>) => {
-    const revision = getConfigRevision()
-    if (!revision) return false
-    const result = await withHandledMutation(() =>
-      configMutation.mutateAsync({
-        revision,
-        ...patch,
-      }),
-    )
-    return result !== null
+  const handleOpenRuleEditor = (ruleId: string) => {
+    setSelectedRuleId(ruleId)
+    setDialogAppRuleEditorOpen(false)
+    setDialogAppRulesOpen(true)
   }
-
-  const saveListAction = async (listKey: RuleToolsListKey, body: Record<string, unknown>) => {
-    const revision = getListRevision(listKey)
-    if (!revision) return false
-    const result = await withHandledMutation(() =>
-      listMutation.mutateAsync({
-        listKey,
-        body: {
-          revision,
-          ...body,
-        },
-      }),
-    )
-    return result !== null
-  }
-
-  const commitRuleGroupDraft = async () => {
-    if (!selectedRule || !activeRuleDraft) return true
-    const patch: Record<string, unknown> = {}
-    if (activeRuleDraft.processMatch !== selectedRule.processMatch) {
-      patch.processMatch = activeRuleDraft.processMatch
-    }
-    if ((activeRuleDraft.defaultText ?? '') !== (selectedRule.defaultText ?? '')) {
-      patch.defaultText = activeRuleDraft.defaultText ?? ''
-    }
-    if (Object.keys(patch).length === 0) return true
-
-    const result = await withHandledMutation(() =>
-      rulesMutation.mutateAsync({
-        action: 'update_group',
-        revision: getRulesRevision(),
-        groupId: selectedRule.id,
-        patch,
-      }),
-    )
-    if (result) {
-      patchSelectedRuleSnapshot(selectedRule.id, (current) => ({
-        ...current,
-        processMatch: activeRuleDraft.processMatch,
-        defaultText: activeRuleDraft.defaultText ?? undefined,
-      }))
-    }
-    return result !== null
-  }
-
-  const commitTitleRuleDraft = async (titleRuleId: string) => {
-    if (!selectedRule || !activeRuleDraft) return true
-    const currentDraft = activeRuleDraft.titleRules.find((item) => item.id === titleRuleId)
-    const currentServer = selectedRule.titleRules.find((item) => item.id === titleRuleId)
-    if (!currentDraft || !currentServer) return true
-    const patch: Record<string, unknown> = {}
-    if (currentDraft.mode !== currentServer.mode) patch.mode = currentDraft.mode
-    if (currentDraft.pattern !== currentServer.pattern) patch.pattern = currentDraft.pattern
-    if (currentDraft.text !== currentServer.text) patch.text = currentDraft.text
-    if (Object.keys(patch).length === 0) return true
-
-    const result = await withHandledMutation(() =>
-      rulesMutation.mutateAsync({
-        action: 'update_title_rule',
-        revision: getRulesRevision(),
-        groupId: selectedRule.id,
-        titleRuleId,
-        patch,
-      }),
-    )
-    if (result) {
-      patchSelectedRuleSnapshot(selectedRule.id, (current) => ({
-        ...current,
-        titleRules: current.titleRules.map((item) =>
-          item.id === titleRuleId
-            ? {
-                ...item,
-                mode: currentDraft.mode,
-                pattern: currentDraft.pattern,
-                text: currentDraft.text,
-              }
-            : item,
-        ),
-      }))
-    }
-    return result !== null
-  }
-
-  const commitEntireRuleDraft = async () => {
-    if (!(await commitRuleGroupDraft())) return false
-    if (!activeRuleDraft) return true
-    for (const titleRule of activeRuleDraft.titleRules) {
-      if (!(await commitTitleRuleDraft(titleRule.id))) {
-        return false
-      }
-    }
-    return true
-  }
-
-  const currentFilterListKey: RuleToolsListKey =
-    appFilterMode === 'blacklist' ? 'appBlacklist' : 'appWhitelist'
-  const currentFilterListQuery =
-    currentFilterListKey === 'appBlacklist' ? blacklistQuery : whitelistQuery
-  const currentFilterSuggestions =
-    currentFilterListKey === 'appBlacklist'
-      ? (blacklistSuggestionsQuery.data ?? [])
-      : (whitelistSuggestionsQuery.data ?? [])
-  const currentFilterSearchInput =
-    currentFilterListKey === 'appBlacklist' ? blacklistSearchInput : whitelistSearchInput
-  const currentFilterPage =
-    currentFilterListKey === 'appBlacklist' ? blacklistListPage : whitelistListPage
-  const currentFilterRevision =
-    currentFilterListKey === 'appBlacklist'
-      ? (blacklistQuery.data?.revision ?? '')
-      : (whitelistQuery.data?.revision ?? '')
-  const currentFilterEditingItem =
-    editingListItem?.listKey === currentFilterListKey
-      ? {
-          currentValue: editingListItem.currentValue,
-          draftValue: editingListItem.draftValue,
-        }
-      : null
-
-  const previewItems = rulesPreviewQuery.data?.items ?? []
-  const previewTotal =
-    currentSummary?.ruleGroupCount ?? rulesPreviewQuery.data?.total ?? rulesQuery.data?.total ?? 0
-  const previewOverflow = Math.max(0, previewTotal - previewItems.length)
-  const configReady = Boolean(currentConfig?.revision)
-  const rulesReady = Boolean(rulesQuery.data?.revision || rulesPreviewQuery.data?.revision)
-  const rulesRefreshing = rulesQuery.isFetching && !rulesQuery.isLoading
-  const nameOnlyRevision = nameOnlyListQuery.data?.revision ?? ''
-  const mediaSourceRevision = mediaSourceListQuery.data?.revision ?? ''
-  const currentFilterModeLabel =
-    appFilterMode === 'blacklist'
-      ? t('webSettingsRuleTools.appFilter.blacklistMode')
-      : t('webSettingsRuleTools.appFilter.whitelistMode')
 
   const handleAppRuleEditorOpenChange = (open: boolean) => {
     setDialogAppRuleEditorOpen(open)
@@ -934,24 +803,8 @@ export function WebSettingsRuleTools() {
     }
   }
 
-  const handleOpenRuleSelector = () => {
-    setDialogAppRulesOpen(true)
-  }
-
-  const handleOpenRuleEditor = (ruleId: string) => {
-    setSelectedRuleId(ruleId)
-    const currentItem =
-      rulesQuery.data?.items.find((item) => item.id === ruleId) ??
-      rulesPreviewQuery.data?.items.find((item) => item.id === ruleId) ??
-      null
-    replaceSelectedRuleState(currentItem ? cloneRuleItem(currentItem) : null)
-    setDialogAppRuleEditorOpen(false)
-    setDialogAppRulesOpen(true)
-  }
-
   const openMobileRuleEditor = (rule: RuleToolsRuleItem) => {
     setSelectedRuleId(rule.id)
-    replaceSelectedRuleState(cloneRuleItem(rule))
     setDialogAppRulesOpen(false)
     setDialogAppRuleEditorOpen(true)
   }
@@ -968,128 +821,126 @@ export function WebSettingsRuleTools() {
     setEditingListItem(null)
   }
 
-  const handleSaveEditedListItem = async () => {
+  const handleSaveEditedListItem = () => {
     if (!editingListItem) return
-    const ok = await saveListAction(editingListItem.listKey, {
-      action: 'update',
-      currentValue: editingListItem.currentValue,
-      nextValue: editingListItem.draftValue,
+    const nextValue = normalizeDraftListValue(
+      editingListItem.listKey,
+      editingListItem.draftValue,
+    )
+    if (!nextValue) return
+    updateDraftList(editingListItem.listKey, (items) => {
+      const targetIndex = items.findIndex(
+        (item) => item.toLowerCase() === editingListItem.currentValue.toLowerCase(),
+      )
+      if (targetIndex < 0) return items
+      const duplicateIndex = items.findIndex(
+        (item, index) =>
+          index !== targetIndex && item.toLowerCase() === nextValue.toLowerCase(),
+      )
+      if (duplicateIndex >= 0) return items
+      const next = [...items]
+      next[targetIndex] = nextValue
+      return next
     })
-    if (ok) {
+    setEditingListItem(null)
+  }
+
+  const handleRemoveListItem = (listKey: RuleToolsListKey, value: string) => {
+    updateDraftList(listKey, (items) =>
+      items.filter((item) => item.toLowerCase() !== value.toLowerCase()),
+    )
+    if (editingListItem?.listKey === listKey) {
       setEditingListItem(null)
     }
   }
 
-  const handleRemoveListItem = async (listKey: RuleToolsListKey, value: string) => {
-    const ok = await saveListAction(listKey, {
-      action: 'delete',
-      currentValue: value,
-    })
-    if (ok && editingListItem?.listKey === listKey) {
-      setEditingListItem(null)
-    }
-  }
-
-  const handleAddFilterItem = async () => {
-    const value =
-      currentFilterListKey === 'appBlacklist' ? blacklistInput.trim() : whitelistInput.trim()
+  const handleAddFilterItem = () => {
+    const listKey = currentFilterListKey
+    const raw = listKey === 'appBlacklist' ? blacklistInput : whitelistInput
+    const value = normalizeDraftListValue(listKey, raw)
     if (!value) return
-    const ok = await saveListAction(currentFilterListKey, {
-      action: 'create',
-      value,
+    updateDraftList(listKey, (items) => {
+      if (items.some((item) => item.toLowerCase() === value.toLowerCase())) return items
+      return [...items, value]
     })
-    if (!ok) return
-    if (currentFilterListKey === 'appBlacklist') {
+    if (listKey === 'appBlacklist') {
       setBlacklistInput('')
       setBlacklistSearchInput('')
       setBlacklistListPage(
-        listMaxPage((currentFilterListQuery.data?.total ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
+        listMaxPage((currentPayload?.appBlacklist.length ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
       )
     } else {
       setWhitelistInput('')
       setWhitelistSearchInput('')
       setWhitelistListPage(
-        listMaxPage((currentFilterListQuery.data?.total ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
+        listMaxPage((currentPayload?.appWhitelist.length ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
       )
     }
   }
 
-  const handleAddNameOnlyItem = async () => {
-    const value = nameOnlyListInput.trim()
+  const handleAddNameOnlyItem = () => {
+    const value = normalizeDraftListValue('appNameOnlyList', nameOnlyListInput)
     if (!value) return
-    const ok = await saveListAction('appNameOnlyList', {
-      action: 'create',
-      value,
+    updateDraftList('appNameOnlyList', (items) => {
+      if (items.some((item) => item.toLowerCase() === value.toLowerCase())) return items
+      return [...items, value]
     })
-    if (!ok) return
     setNameOnlyListInput('')
     setNameOnlyListSearchInput('')
     setNameOnlyListPage(
-      listMaxPage((nameOnlyListQuery.data?.total ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
+      listMaxPage((currentPayload?.appNameOnlyList.length ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
     )
   }
 
-  const handleAddMediaSourceItem = async () => {
-    const value = mediaSourceInput.trim().toLowerCase()
+  const handleAddMediaSourceItem = () => {
+    const value = normalizeDraftListValue('mediaPlaySourceBlocklist', mediaSourceInput)
     if (!value) return
-    const ok = await saveListAction('mediaPlaySourceBlocklist', {
-      action: 'create',
-      value,
+    updateDraftList('mediaPlaySourceBlocklist', (items) => {
+      if (items.some((item) => item.toLowerCase() === value.toLowerCase())) return items
+      return [...items, value]
     })
-    if (!ok) return
     setMediaSourceInput('')
     setMediaSourceSearchInput('')
     setMediaSourceListPage(
-      listMaxPage((mediaSourceListQuery.data?.total ?? 0) + 1, SETTINGS_APP_LIST_PAGE_SIZE),
+      listMaxPage(
+        (currentPayload?.mediaPlaySourceBlocklist.length ?? 0) + 1,
+        SETTINGS_APP_LIST_PAGE_SIZE,
+      ),
     )
   }
 
-  const handleAddRuleGroup = async (openEditor = false) => {
-    if (!rulesReady) return
-    const result = await withHandledMutation(() =>
-      rulesMutation.mutateAsync({
-        action: 'create_group',
-        revision: getRulesRevision(),
-        group: {
+  const handleAddRuleGroup = (openEditor = false) => {
+    const nextId = createAppMessageRuleGroupId()
+    updateDraftPayload((current) => ({
+      ...current,
+      appMessageRules: [
+        ...current.appMessageRules,
+        {
+          id: nextId,
           processMatch: '',
-          defaultText: '',
+          defaultText: undefined,
           titleRules: [],
         },
-      }),
-    )
-    if (!result) return
+      ],
+    }))
     setRuleSearchInput('')
-    setGroupListPage(listMaxPage(result.total, SETTINGS_RULES_PAGE_SIZE))
-    setSelectedRuleId(result.groupId ?? null)
-    replaceSelectedRuleState(
-      result.groupId
-        ? {
-            id: result.groupId,
-            processMatch: '',
-            defaultText: undefined,
-            titleRules: [],
-            position: Math.max(0, result.total - 1),
-          }
-        : null,
+    setGroupListPage(
+      listMaxPage((currentPayload?.appMessageRules.length ?? 0) + 1, SETTINGS_RULES_PAGE_SIZE),
     )
+    setSelectedRuleId(nextId)
     if (openEditor) {
       setDialogAppRulesOpen(false)
       setDialogAppRuleEditorOpen(true)
     }
   }
 
-  const handleDeleteRuleGroup = async (groupId: string) => {
-    const result = await withHandledMutation(() =>
-      rulesMutation.mutateAsync({
-        action: 'delete_group',
-        revision: getRulesRevision(),
-        groupId,
-      }),
-    )
-    if (!result) return
+  const handleDeleteRuleGroup = (groupId: string) => {
+    updateDraftPayload((current) => ({
+      ...current,
+      appMessageRules: current.appMessageRules.filter((rule) => rule.id !== groupId),
+    }))
     if (selectedRuleId === groupId) {
       setSelectedRuleId(null)
-      replaceSelectedRuleState(null)
     }
     if (dialogAppRuleEditorOpen) {
       setDialogAppRuleEditorOpen(false)
@@ -1097,126 +948,61 @@ export function WebSettingsRuleTools() {
     }
   }
 
-  const handleMoveRuleGroup = async (groupId: string, toIndex: number) => {
-    const result = await withHandledMutation(() =>
-      rulesMutation.mutateAsync({
-        action: 'move_group',
-        revision: getRulesRevision(),
-        groupId,
-        toIndex,
-      }),
-    )
-    if (result && activeSelectedRuleId === groupId) {
-      patchSelectedRuleSnapshot(groupId, (current) => ({
+  const handleMoveRuleGroup = (groupId: string, toIndex: number) => {
+    updateDraftPayload((current) => {
+      const fromIndex = current.appMessageRules.findIndex((rule) => rule.id === groupId)
+      if (fromIndex < 0) return current
+      return {
         ...current,
-        position: toIndex,
-      }))
-      setRuleDraft((current) =>
-        current?.id === groupId
-          ? {
-              ...current,
-              position: toIndex,
-            }
-          : current,
-      )
-    }
+        appMessageRules: moveItem(current.appMessageRules, fromIndex, toIndex),
+      }
+    })
   }
 
-  const handleAddTitleRule = async () => {
+  const handleAddTitleRule = () => {
     if (!selectedRule) return
-    if (!(await commitEntireRuleDraft())) return
-    const baseRule = activeRuleDraft ? cloneRuleItem(activeRuleDraft) : cloneRuleItem(selectedRule)
-    const result = await withHandledMutation(() =>
-      rulesMutation.mutateAsync({
-        action: 'create_title_rule',
-        revision: getRulesRevision(),
-        groupId: selectedRule.id,
-        index: baseRule.titleRules.length,
-        rule: {
-          mode: 'plain',
-          pattern: '',
-          text: '',
-        },
-      }),
-    )
-    if (!result) return
-    replaceSelectedRuleState({
-      ...baseRule,
+    updateRuleDraft((current) => ({
+      ...current,
       titleRules: [
-        ...baseRule.titleRules,
+        ...current.titleRules,
         {
-          id: result.titleRuleId ?? `${selectedRule.id}-title-rule-${baseRule.titleRules.length}`,
+          id: createAppMessageTitleRuleId(),
           mode: 'plain',
           pattern: '',
           text: '',
         },
       ],
+    }))
+  }
+
+  const handleDeleteTitleRule = (titleRuleId: string) => {
+    updateRuleDraft((current) => ({
+      ...current,
+      titleRules: current.titleRules.filter((item) => item.id !== titleRuleId),
+    }))
+  }
+
+  const handleMoveTitleRule = (titleRuleId: string, toIndex: number) => {
+    updateRuleDraft((current) => {
+      const fromIndex = current.titleRules.findIndex((item) => item.id === titleRuleId)
+      if (fromIndex < 0) return current
+      return {
+        ...current,
+        titleRules: moveItem(current.titleRules, fromIndex, toIndex),
+      }
     })
   }
 
-  const handleDeleteTitleRule = async (titleRuleId: string) => {
-    if (!selectedRule) return
-    const baseRule = activeRuleDraft ? cloneRuleItem(activeRuleDraft) : cloneRuleItem(selectedRule)
-    const result = await withHandledMutation(() =>
-      rulesMutation.mutateAsync({
-        action: 'delete_title_rule',
-        revision: getRulesRevision(),
-        groupId: selectedRule.id,
-        titleRuleId,
-      }),
-    )
-    if (!result) return
-    replaceSelectedRuleState({
-      ...baseRule,
-      titleRules: baseRule.titleRules.filter((item) => item.id !== titleRuleId),
-    })
-  }
-
-  const handleMoveTitleRule = async (titleRuleId: string, toIndex: number) => {
-    if (!selectedRule) return
-    if (!(await commitEntireRuleDraft())) return
-    const baseRule = activeRuleDraft ? cloneRuleItem(activeRuleDraft) : cloneRuleItem(selectedRule)
-    const fromIndex = baseRule.titleRules.findIndex((item) => item.id === titleRuleId)
-    if (fromIndex < 0) return
-    const result = await withHandledMutation(() =>
-      rulesMutation.mutateAsync({
-        action: 'move_title_rule',
-        revision: getRulesRevision(),
-        groupId: selectedRule.id,
-        titleRuleId,
-        toIndex,
-      }),
-    )
-    if (!result) return
-    replaceSelectedRuleState({
-      ...baseRule,
-      titleRules: moveItem(baseRule.titleRules, fromIndex, toIndex),
-    })
-  }
-
-  const handleTitleRuleModeChange = async (
-    titleRuleId: string,
-    nextMode: AppTitleRuleMode,
-  ) => {
-    if (!selectedRule) return
+  const handleTitleRuleModeChange = (titleRuleId: string, nextMode: AppTitleRuleMode) => {
     updateTitleRuleDraft(titleRuleId, (current) => ({
       ...current,
       mode: nextMode,
     }))
-    await withHandledMutation(() =>
-      rulesMutation.mutateAsync({
-        action: 'update_title_rule',
-        revision: getRulesRevision(),
-        groupId: selectedRule.id,
-        titleRuleId,
-        patch: { mode: nextMode },
-      }),
-    )
   }
 
   const copyRulesJson = async () => {
     try {
-      const payload = await exportAdminRuleTools()
+      const payload = currentPayload ?? (await exportAdminRuleTools())
       const json = exportAppRulesJson(payload)
       await navigator.clipboard.writeText(json)
       toast.success(t('webSettingsRuleTools.toasts.copiedRulesJson'))
@@ -1244,7 +1030,7 @@ export function WebSettingsRuleTools() {
     }
   }
 
-  const confirmImportRules = async () => {
+  const confirmImportRules = () => {
     const raw = importRulesInput.trim()
     if (!raw) {
       toast.error(t('webSettingsRuleTools.importDialog.pasteRulesJsonFirst'))
@@ -1255,10 +1041,9 @@ export function WebSettingsRuleTools() {
       toast.error(parsed.error)
       return
     }
-    const result = await withHandledMutation(() => importMutation.mutateAsync(parsed.data))
-    if (!result) return
+    const imported = cloneRuleToolsPayload(parsed.data)
+    setDraftPayload(areRuleToolsPayloadEqual(imported, committedPayload) ? null : imported)
     setSelectedRuleId(null)
-    replaceSelectedRuleState(null)
     setImportRulesDialogOpen(false)
     setImportRulesInput('')
     setRuleSearchInput('')
@@ -1269,11 +1054,21 @@ export function WebSettingsRuleTools() {
     toast.success(t('webSettingsRuleTools.toasts.importedRulesIntoForm'))
   }
 
+  const handleRevertDraft = () => {
+    if (!committedPayload) return
+    setDraftPayload(null)
+    setEditingListItem(null)
+  }
+
+  const handleSaveDraft = async () => {
+    if (!draftPayload || !draftDirty) return
+    await persistRuleToolsPayload(draftPayload, true)
+  }
+
   const renderRulePreview = () => {
-    if (rulesPreviewQuery.isLoading && previewItems.length === 0) {
+    if (ruleToolsQuery.isLoading && previewItems.length === 0) {
       return <p className="text-xs text-muted-foreground">{t('webSettings.loading')}</p>
     }
-
     if (previewItems.length === 0) {
       return (
         <p className="text-xs text-muted-foreground">
@@ -1313,7 +1108,7 @@ export function WebSettingsRuleTools() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    disabled={!rulesReady || rulesMutation.isPending}
+                    disabled={!currentPayload || busy}
                     onClick={() => handleOpenRuleEditor(item.id)}
                   >
                     {t('common.edit')}
@@ -1333,9 +1128,6 @@ export function WebSettingsRuleTools() {
   }
 
   const renderRuleGroupList = (mobile: boolean) => {
-    const items = rulesQuery.data?.items ?? []
-    const rulesTotal = currentSummary?.ruleGroupCount ?? rulesQuery.data?.total ?? 0
-    const filteredTotal = rulesQuery.data?.total ?? 0
     const hasSearch = ruleSearchInput.trim().length > 0
 
     return (
@@ -1354,8 +1146,8 @@ export function WebSettingsRuleTools() {
             variant="outline"
             size="sm"
             className="w-full sm:w-auto"
-            disabled={!rulesReady || rulesMutation.isPending}
-            onClick={() => void handleAddRuleGroup(mobile)}
+            disabled={!currentPayload || busy}
+            onClick={() => handleAddRuleGroup(mobile)}
           >
             {t('webSettingsRuleTools.appRules.addGroup')}
           </Button>
@@ -1374,17 +1166,17 @@ export function WebSettingsRuleTools() {
             }}
             placeholder={t('webSettingsRuleTools.appRules.searchPlaceholder')}
           />
-          {rulesRefreshing ? (
+          {ruleToolsQuery.isFetching && !ruleToolsQuery.isLoading ? (
             <p className="text-xs text-muted-foreground">{t('common.refreshing')}</p>
           ) : null}
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {rulesQuery.isLoading && !rulesQuery.data ? (
+          {ruleToolsQuery.isLoading && !currentPayload ? (
             <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
               <p className="text-xs text-muted-foreground">{t('webSettings.loading')}</p>
             </div>
-          ) : items.length === 0 ? (
+          ) : pagedRuleItems.length === 0 ? (
             <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
               <p className="text-xs leading-relaxed text-muted-foreground">
                 {hasSearch
@@ -1394,12 +1186,9 @@ export function WebSettingsRuleTools() {
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col gap-3">
-              <div
-                className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-lg border border-border/60 bg-background/20 p-3"
-              >
-                {items.map((item) => {
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-lg border border-border/60 bg-background/20 p-3">
+                {pagedRuleItems.map((item) => {
                   const isSelected = !mobile && activeSelectedRuleId === item.id
-
                   return (
                     <button
                       key={item.id}
@@ -1416,13 +1205,12 @@ export function WebSettingsRuleTools() {
                           return
                         }
                         setSelectedRuleId(item.id)
-                        replaceSelectedRuleState(cloneRuleItem(item))
                       }}
                     >
                       <p className="text-xs font-medium text-foreground/80">
                         {t('webSettingsRuleTools.appRules.ruleIndex', {
                           index: item.position + 1,
-                          total: rulesTotal,
+                          total: currentSummary?.ruleGroupCount ?? 0,
                         })}
                       </p>
                       <p className="mt-1 break-all font-mono text-sm text-foreground">
@@ -1436,9 +1224,9 @@ export function WebSettingsRuleTools() {
                 })}
               </div>
               <ListPaginationBar
-                page={groupListPage}
+                page={resolvedGroupListPage}
                 pageSize={SETTINGS_RULES_PAGE_SIZE}
-                total={filteredTotal}
+                total={filteredRuleItems.length}
                 onPageChange={setGroupListPage}
               />
             </div>
@@ -1449,11 +1237,10 @@ export function WebSettingsRuleTools() {
   }
 
   const renderRuleGroupEditor = (mobile: boolean) => {
-    if (rulesQuery.isLoading && !selectedRule) {
+    if (ruleToolsQuery.isLoading && !selectedRule) {
       return <p className="text-xs text-muted-foreground">{t('webSettings.loading')}</p>
     }
-
-    if (!selectedRule || !activeRuleDraft) {
+    if (!selectedRule) {
       return (
         <div className="flex h-full min-h-[18rem] items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
           <div className="space-y-2">
@@ -1465,11 +1252,7 @@ export function WebSettingsRuleTools() {
             </p>
             {mobile ? (
               <div className="flex flex-wrap justify-center gap-2 pt-1">
-                <Button
-                  type="button"
-                  disabled={!rulesReady}
-                  onClick={() => void handleAddRuleGroup(true)}
-                >
+                <Button type="button" disabled={!currentPayload || busy} onClick={() => handleAddRuleGroup(true)}>
                   {t('webSettingsRuleTools.appRules.addGroup')}
                 </Button>
                 <Button
@@ -1489,8 +1272,8 @@ export function WebSettingsRuleTools() {
       )
     }
 
-    const total = currentSummary?.ruleGroupCount ?? rulesQuery.data?.total ?? 0
     const groupIndex = selectedRule.position
+    const total = currentSummary?.ruleGroupCount ?? 0
 
     return (
       <div className="space-y-4">
@@ -1513,13 +1296,9 @@ export function WebSettingsRuleTools() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
-                    void (async () => {
-                      if (!(await commitEntireRuleDraft())) return
-                      setDialogAppRuleEditorOpen(false)
-                      setDialogAppRulesOpen(true)
-                    })()
+                    setDialogAppRuleEditorOpen(false)
+                    setDialogAppRulesOpen(true)
                   }}
                 >
                   {t('webSettingsRuleTools.appRules.chooseAnotherGroup')}
@@ -1529,9 +1308,8 @@ export function WebSettingsRuleTools() {
                 type="button"
                 size="sm"
                 variant="ghost"
-                disabled={rulesMutation.isPending || selectedRule.position <= 0}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => void handleMoveRuleGroup(selectedRule.id, selectedRule.position - 1)}
+                disabled={busy || selectedRule.position <= 0}
+                onClick={() => handleMoveRuleGroup(selectedRule.id, selectedRule.position - 1)}
               >
                 {t('webSettingsRuleTools.appRules.moveUp')}
               </Button>
@@ -1539,9 +1317,8 @@ export function WebSettingsRuleTools() {
                 type="button"
                 size="sm"
                 variant="ghost"
-                disabled={rulesMutation.isPending || selectedRule.position >= total - 1}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => void handleMoveRuleGroup(selectedRule.id, selectedRule.position + 1)}
+                disabled={busy || selectedRule.position >= total - 1}
+                onClick={() => handleMoveRuleGroup(selectedRule.id, selectedRule.position + 1)}
               >
                 {t('webSettingsRuleTools.appRules.moveDown')}
               </Button>
@@ -1549,9 +1326,8 @@ export function WebSettingsRuleTools() {
                 type="button"
                 size="sm"
                 variant="ghost"
-                disabled={rulesMutation.isPending}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => void handleDeleteRuleGroup(selectedRule.id)}
+                disabled={busy}
+                onClick={() => handleDeleteRuleGroup(selectedRule.id)}
               >
                 {t('common.delete')}
               </Button>
@@ -1569,16 +1345,13 @@ export function WebSettingsRuleTools() {
           <Autocomplete
             id="rule-group-process-match"
             items={ruleProcessSuggestionsQuery.data ?? []}
-            value={activeRuleDraft.processMatch}
+            value={selectedRule.processMatch}
             onValueChange={(value) =>
               updateRuleDraft((current) => ({
                 ...current,
                 processMatch: value,
               }))
             }
-            onBlur={() => {
-              void commitRuleGroupDraft()
-            }}
             placeholder={t('webSettingsRuleTools.appRules.processMatchPlaceholder')}
             inputClassName="font-mono"
             emptyText={
@@ -1596,16 +1369,13 @@ export function WebSettingsRuleTools() {
           <Textarea
             id="rule-group-default-text"
             rows={3}
-            value={activeRuleDraft.defaultText ?? ''}
+            value={selectedRule.defaultText ?? ''}
             onChange={(event) =>
               updateRuleDraft((current) => ({
                 ...current,
-                defaultText: event.target.value,
+                defaultText: event.target.value || undefined,
               }))
             }
-            onBlur={() => {
-              void commitRuleGroupDraft()
-            }}
             placeholder={t('webSettingsRuleTools.appRules.defaultTextPlaceholder')}
           />
           <p className="text-xs leading-6 text-muted-foreground">
@@ -1627,30 +1397,29 @@ export function WebSettingsRuleTools() {
               type="button"
               size="sm"
               variant="outline"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => void handleAddTitleRule()}
+              disabled={busy}
+              onClick={handleAddTitleRule}
             >
               {t('webSettingsRuleTools.appRules.addTitleRule')}
             </Button>
           </div>
 
-          {activeRuleDraft.titleRules.length === 0 ? (
+          {selectedRule.titleRules.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               {t('webSettingsRuleTools.appRules.noTitleRules')}
             </p>
           ) : (
             <motion.ul className="space-y-3" layout>
               <AnimatePresence initial={false}>
-                {activeRuleDraft.titleRules.map((titleRule, index) => {
+                {selectedRule.titleRules.map((titleRule, index) => {
                   const isFirst = index <= 0
-                  const isLast = index >= activeRuleDraft.titleRules.length - 1
+                  const isLast = index >= selectedRule.titleRules.length - 1
                   const regexError = getTitleRuleRegexErrorMessage(
                     titleRule,
                     groupIndex,
                     index,
                     t,
                   )
-
                   return (
                     <motion.li
                       key={titleRule.id}
@@ -1668,7 +1437,7 @@ export function WebSettingsRuleTools() {
                             <p className="text-sm font-medium text-foreground">
                               {t('webSettingsRuleTools.appRules.titleRuleIndex', {
                                 index: index + 1,
-                                total: activeRuleDraft.titleRules.length,
+                                total: selectedRule.titleRules.length,
                               })}
                             </p>
                             <p className="text-xs text-muted-foreground">
@@ -1682,9 +1451,8 @@ export function WebSettingsRuleTools() {
                               type="button"
                               size="sm"
                               variant="ghost"
-                              disabled={rulesMutation.isPending || isFirst}
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => void handleMoveTitleRule(titleRule.id, index - 1)}
+                              disabled={busy || isFirst}
+                              onClick={() => handleMoveTitleRule(titleRule.id, index - 1)}
                             >
                               {t('webSettingsRuleTools.appRules.moveUp')}
                             </Button>
@@ -1692,9 +1460,8 @@ export function WebSettingsRuleTools() {
                               type="button"
                               size="sm"
                               variant="ghost"
-                              disabled={rulesMutation.isPending || isLast}
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => void handleMoveTitleRule(titleRule.id, index + 1)}
+                              disabled={busy || isLast}
+                              onClick={() => handleMoveTitleRule(titleRule.id, index + 1)}
                             >
                               {t('webSettingsRuleTools.appRules.moveDown')}
                             </Button>
@@ -1702,9 +1469,8 @@ export function WebSettingsRuleTools() {
                               type="button"
                               size="sm"
                               variant="ghost"
-                              disabled={rulesMutation.isPending}
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => void handleDeleteTitleRule(titleRule.id)}
+                              disabled={busy}
+                              onClick={() => handleDeleteTitleRule(titleRule.id)}
                             >
                               {t('common.delete')}
                             </Button>
@@ -1718,7 +1484,7 @@ export function WebSettingsRuleTools() {
                             onValueChange={(value) => {
                               const nextMode: AppTitleRuleMode =
                                 value === 'regex' ? 'regex' : 'plain'
-                              void handleTitleRuleModeChange(titleRule.id, nextMode)
+                              handleTitleRuleModeChange(titleRule.id, nextMode)
                             }}
                             className="grid gap-3 sm:grid-cols-2"
                           >
@@ -1760,9 +1526,6 @@ export function WebSettingsRuleTools() {
                                 pattern: event.target.value,
                               }))
                             }
-                            onBlur={() => {
-                              void commitTitleRuleDraft(titleRule.id)
-                            }}
                             className="font-mono"
                             placeholder={
                               titleRule.mode === 'regex'
@@ -1789,9 +1552,6 @@ export function WebSettingsRuleTools() {
                                 text: event.target.value,
                               }))
                             }
-                            onBlur={() => {
-                              void commitTitleRuleDraft(titleRule.id)
-                            }}
                             placeholder={t('webSettingsRuleTools.appRules.titleRuleTextPlaceholder')}
                           />
                         </div>
@@ -1814,14 +1574,13 @@ export function WebSettingsRuleTools() {
     )
   }
 
-  if (summaryQuery.isLoading && !currentSummary) {
+  if (ruleToolsQuery.isLoading && !currentPayload) {
     return <div className="text-sm text-muted-foreground">{t('webSettings.loading')}</div>
   }
-
-  if (summaryQuery.isError && !currentSummary) {
+  if (ruleToolsQuery.isError && !currentPayload) {
     return (
       <div className="text-sm text-destructive">
-        {getErrorMessage(summaryQuery.error, t('common.networkErrorRetry'))}
+        {getErrorMessage(ruleToolsQuery.error, t('common.networkErrorRetry'))}
       </div>
     )
   }
@@ -1846,7 +1605,7 @@ export function WebSettingsRuleTools() {
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={!rulesReady}
+                disabled={!currentPayload || busy}
                 onClick={handleOpenRuleSelector}
               >
                 {t('webSettingsRuleTools.editInDialog')}
@@ -1872,10 +1631,13 @@ export function WebSettingsRuleTools() {
               action={
                 <Switch
                   id="rule-tools-show-process-name"
-                  checked={currentConfig?.appMessageRulesShowProcessName ?? true}
-                  disabled={!configReady || configMutation.isPending}
+                  checked={currentPayload?.appMessageRulesShowProcessName ?? true}
+                  disabled={!currentPayload || busy}
                   onCheckedChange={(value) => {
-                    void saveConfigPatch({ appMessageRulesShowProcessName: value })
+                    void commitSinglePayloadChange((current) => ({
+                      ...current,
+                      appMessageRulesShowProcessName: value,
+                    }))
                   }}
                 />
               }
@@ -1888,9 +1650,12 @@ export function WebSettingsRuleTools() {
                 <Switch
                   id="rule-tools-capture-reported-apps"
                   checked={captureReportedAppsEnabled}
-                  disabled={!configReady || configMutation.isPending}
+                  disabled={!currentPayload || busy}
                   onCheckedChange={(value) => {
-                    void saveConfigPatch({ captureReportedAppsEnabled: value })
+                    void commitSinglePayloadChange((current) => ({
+                      ...current,
+                      captureReportedAppsEnabled: value,
+                    }))
                   }}
                 />
               }
@@ -1918,6 +1683,7 @@ export function WebSettingsRuleTools() {
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled={!currentPayload || busy}
                   onClick={() => setDialogAppFilterOpen(true)}
                 >
                   {t('webSettingsRuleTools.editInDialog')}
@@ -1934,6 +1700,7 @@ export function WebSettingsRuleTools() {
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled={!currentPayload || busy}
                   onClick={() => setDialogNameOnlyOpen(true)}
                 >
                   {t('webSettingsRuleTools.editInDialog')}
@@ -1950,6 +1717,7 @@ export function WebSettingsRuleTools() {
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled={!currentPayload || busy}
                   onClick={() => setDialogMediaSourceOpen(true)}
                 >
                   {t('webSettingsRuleTools.editInDialog')}
@@ -1968,6 +1736,7 @@ export function WebSettingsRuleTools() {
             <Button
               type="button"
               variant="outline"
+              disabled={!currentPayload || busy}
               onClick={() => setImportRulesDialogOpen(true)}
             >
               {t('webSettingsRuleTools.actions.importRulesJson')}
@@ -1980,9 +1749,7 @@ export function WebSettingsRuleTools() {
         open={dialogAppRulesOpen}
         onOpenChange={(open) => {
           setDialogAppRulesOpen(open)
-          if (!open) {
-            setEditingListItem(null)
-          }
+          if (!open) setEditingListItem(null)
         }}
       >
         <DialogContent
@@ -2031,9 +1798,7 @@ export function WebSettingsRuleTools() {
         open={dialogAppFilterOpen}
         onOpenChange={(open) => {
           setDialogAppFilterOpen(open)
-          if (!open) {
-            setEditingListItem(null)
-          }
+          if (!open) setEditingListItem(null)
         }}
       >
         <DialogContent className="flex h-[calc(100vh-1rem)] max-h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:h-[min(90vh,56rem)] sm:max-h-[min(90vh,56rem)] sm:w-[calc(100vw-1.5rem)]">
@@ -2043,115 +1808,108 @@ export function WebSettingsRuleTools() {
               {t('webSettingsRuleTools.appFilter.dialogDescription')}
             </DialogDescription>
           </DialogHeader>
-
           <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 sm:px-6">
             <div className="flex h-full min-h-0 flex-col gap-4">
-            <RadioGroup
-              value={appFilterMode}
-              disabled={!configReady || configMutation.isPending}
-              onValueChange={(value) => {
-                if (value !== 'blacklist' && value !== 'whitelist') return
-                setEditingListItem(null)
-                void saveConfigPatch({ appFilterMode: value })
-              }}
-              className="grid gap-3 sm:grid-cols-2"
-            >
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/70 px-4 py-4">
-                <RadioGroupItem value="blacklist" id="rule-tools-filter-blacklist" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {t('webSettingsRuleTools.appFilter.blacklistMode')}
-                  </p>
-                  <p className="text-xs leading-6 text-muted-foreground">
-                    {t('webSettingsRuleTools.appFilter.blacklistDescription')}
-                  </p>
-                </div>
-              </label>
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/70 px-4 py-4">
-                <RadioGroupItem value="whitelist" id="rule-tools-filter-whitelist" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {t('webSettingsRuleTools.appFilter.whitelistMode')}
-                  </p>
-                  <p className="text-xs leading-6 text-muted-foreground">
-                    {t('webSettingsRuleTools.appFilter.whitelistDescription')}
-                  </p>
-                </div>
-              </label>
-            </RadioGroup>
+              <RadioGroup
+                value={appFilterMode}
+                disabled={busy}
+                onValueChange={(value) => {
+                  if (value !== 'blacklist' && value !== 'whitelist') return
+                  setEditingListItem(null)
+                  updateDraftPayload((current) => ({
+                    ...current,
+                    appFilterMode: value,
+                  }))
+                }}
+                className="grid gap-3 sm:grid-cols-2"
+              >
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/70 px-4 py-4">
+                  <RadioGroupItem value="blacklist" id="rule-tools-filter-blacklist" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {t('webSettingsRuleTools.appFilter.blacklistMode')}
+                    </p>
+                    <p className="text-xs leading-6 text-muted-foreground">
+                      {t('webSettingsRuleTools.appFilter.blacklistDescription')}
+                    </p>
+                  </div>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/70 px-4 py-4">
+                  <RadioGroupItem value="whitelist" id="rule-tools-filter-whitelist" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {t('webSettingsRuleTools.appFilter.whitelistMode')}
+                    </p>
+                    <p className="text-xs leading-6 text-muted-foreground">
+                      {t('webSettingsRuleTools.appFilter.whitelistDescription')}
+                    </p>
+                  </div>
+                </label>
+              </RadioGroup>
 
-            <ListDialogEditor
-              description={
-                appFilterMode === 'blacklist'
-                  ? t('webSettingsRuleTools.appFilter.blacklistInputDescription')
-                  : t('webSettingsRuleTools.appFilter.whitelistInputDescription')
-              }
-              emptyText={
-                appFilterMode === 'blacklist'
-                  ? t('webSettingsRuleTools.appFilter.blacklistEmpty')
-                  : t('webSettingsRuleTools.appFilter.whitelistEmpty')
-              }
-              inputId="rule-tools-filter-list"
-              placeholder={
-                appFilterMode === 'blacklist'
-                  ? t('webSettingsRuleTools.appFilter.blacklistPlaceholder')
-                  : t('webSettingsRuleTools.appFilter.whitelistPlaceholder')
-              }
-              suggestions={currentFilterSuggestions}
-              suggestionsEnabled={captureReportedAppsEnabled}
-              inputValue={
-                currentFilterListKey === 'appBlacklist' ? blacklistInput : whitelistInput
-              }
-              onInputValueChange={
-                currentFilterListKey === 'appBlacklist' ? setBlacklistInput : setWhitelistInput
-              }
-              onAdd={handleAddFilterItem}
-              items={currentFilterListQuery.data?.items ?? []}
-              total={currentFilterListQuery.data?.total ?? 0}
-              page={currentFilterPage}
-              onPageChange={
-                currentFilterListKey === 'appBlacklist'
-                  ? setBlacklistListPage
-                  : setWhitelistListPage
-              }
-              savedSearchValue={currentFilterSearchInput}
-              onSavedSearchValueChange={(value) => {
-                if (currentFilterListKey === 'appBlacklist') {
-                  setBlacklistSearchInput(value)
-                  setBlacklistListPage(0)
-                } else {
-                  setWhitelistSearchInput(value)
-                  setWhitelistListPage(0)
+              <ListDialogEditor
+                description={
+                  appFilterMode === 'blacklist'
+                    ? t('webSettingsRuleTools.appFilter.blacklistInputDescription')
+                    : t('webSettingsRuleTools.appFilter.whitelistInputDescription')
                 }
-              }}
-              loading={currentFilterListQuery.isLoading && !currentFilterListQuery.data}
-              refreshing={currentFilterListQuery.isFetching && !currentFilterListQuery.isLoading}
-              busy={
-                listMutation.isPending ||
-                configMutation.isPending ||
-                currentFilterRevision.length === 0
-              }
-              editingItem={currentFilterEditingItem}
-              onEditingValueChange={(value) =>
-                setEditingListItem((current) =>
-                  current ? { ...current, draftValue: value } : current,
-                )
-              }
-              onStartEdit={(value) => handleStartEditListItem(currentFilterListKey, value)}
-              onCancelEdit={handleCancelEditListItem}
-              onSaveEdit={handleSaveEditedListItem}
-              onRemove={(value) => handleRemoveListItem(currentFilterListKey, value)}
-              inputClassName="font-mono"
-            />
+                emptyText={
+                  appFilterMode === 'blacklist'
+                    ? t('webSettingsRuleTools.appFilter.blacklistEmpty')
+                    : t('webSettingsRuleTools.appFilter.whitelistEmpty')
+                }
+                inputId="rule-tools-filter-list"
+                placeholder={
+                  appFilterMode === 'blacklist'
+                    ? t('webSettingsRuleTools.appFilter.blacklistPlaceholder')
+                    : t('webSettingsRuleTools.appFilter.whitelistPlaceholder')
+                }
+                suggestions={currentFilterSuggestions}
+                suggestionsEnabled={captureReportedAppsEnabled}
+                inputValue={
+                  currentFilterListKey === 'appBlacklist' ? blacklistInput : whitelistInput
+                }
+                onInputValueChange={
+                  currentFilterListKey === 'appBlacklist' ? setBlacklistInput : setWhitelistInput
+                }
+                onAdd={handleAddFilterItem}
+                items={pagedCurrentFilterItems}
+                total={filteredCurrentFilterItems.length}
+                page={currentFilterPage}
+                onPageChange={
+                  currentFilterListKey === 'appBlacklist'
+                    ? setBlacklistListPage
+                    : setWhitelistListPage
+                }
+                savedSearchValue={currentFilterSearchInput}
+                onSavedSearchValueChange={(value) => {
+                  if (currentFilterListKey === 'appBlacklist') {
+                    setBlacklistSearchInput(value)
+                    setBlacklistListPage(0)
+                  } else {
+                    setWhitelistSearchInput(value)
+                    setWhitelistListPage(0)
+                  }
+                }}
+                loading={ruleToolsQuery.isLoading && !currentPayload}
+                refreshing={ruleToolsQuery.isFetching && !ruleToolsQuery.isLoading}
+                busy={busy}
+                editingItem={currentFilterEditingItem}
+                onEditingValueChange={(value) =>
+                  setEditingListItem((current) =>
+                    current ? { ...current, draftValue: value } : current,
+                  )
+                }
+                onStartEdit={(value) => handleStartEditListItem(currentFilterListKey, value)}
+                onCancelEdit={handleCancelEditListItem}
+                onSaveEdit={handleSaveEditedListItem}
+                onRemove={(value) => handleRemoveListItem(currentFilterListKey, value)}
+                inputClassName="font-mono"
+              />
             </div>
           </div>
-
           <DialogFooter className="shrink-0 border-t px-4 py-4 sm:px-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDialogAppFilterOpen(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => setDialogAppFilterOpen(false)}>
               {t('common.cancel')}
             </Button>
           </DialogFooter>
@@ -2162,9 +1920,7 @@ export function WebSettingsRuleTools() {
         open={dialogNameOnlyOpen}
         onOpenChange={(open) => {
           setDialogNameOnlyOpen(open)
-          if (!open) {
-            setEditingListItem(null)
-          }
+          if (!open) setEditingListItem(null)
         }}
       >
         <DialogContent className="flex h-[calc(100vh-1rem)] max-h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:h-[min(90vh,56rem)] sm:max-h-[min(90vh,56rem)] sm:w-[calc(100vw-1.5rem)]">
@@ -2174,7 +1930,6 @@ export function WebSettingsRuleTools() {
               {t('webSettingsRuleTools.nameOnly.dialogDescription')}
             </DialogDescription>
           </DialogHeader>
-
           <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 sm:px-6">
             <ListDialogEditor
               description={t('webSettingsRuleTools.nameOnly.inputDescription')}
@@ -2186,18 +1941,18 @@ export function WebSettingsRuleTools() {
               inputValue={nameOnlyListInput}
               onInputValueChange={setNameOnlyListInput}
               onAdd={handleAddNameOnlyItem}
-              items={nameOnlyListQuery.data?.items ?? []}
-              total={nameOnlyListQuery.data?.total ?? 0}
-              page={nameOnlyListPage}
+              items={pagedNameOnlyItems}
+              total={filteredNameOnlyItems.length}
+              page={resolvedNameOnlyListPage}
               onPageChange={setNameOnlyListPage}
               savedSearchValue={nameOnlyListSearchInput}
               onSavedSearchValueChange={(value) => {
                 setNameOnlyListSearchInput(value)
                 setNameOnlyListPage(0)
               }}
-              loading={nameOnlyListQuery.isLoading && !nameOnlyListQuery.data}
-              refreshing={nameOnlyListQuery.isFetching && !nameOnlyListQuery.isLoading}
-              busy={listMutation.isPending || nameOnlyRevision.length === 0}
+              loading={ruleToolsQuery.isLoading && !currentPayload}
+              refreshing={ruleToolsQuery.isFetching && !ruleToolsQuery.isLoading}
+              busy={busy}
               editingItem={
                 editingListItem?.listKey === 'appNameOnlyList'
                   ? {
@@ -2218,13 +1973,8 @@ export function WebSettingsRuleTools() {
               inputClassName="font-mono"
             />
           </div>
-
           <DialogFooter className="shrink-0 border-t px-4 py-4 sm:px-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDialogNameOnlyOpen(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => setDialogNameOnlyOpen(false)}>
               {t('common.cancel')}
             </Button>
           </DialogFooter>
@@ -2235,9 +1985,7 @@ export function WebSettingsRuleTools() {
         open={dialogMediaSourceOpen}
         onOpenChange={(open) => {
           setDialogMediaSourceOpen(open)
-          if (!open) {
-            setEditingListItem(null)
-          }
+          if (!open) setEditingListItem(null)
         }}
       >
         <DialogContent className="flex h-[calc(100vh-1rem)] max-h-[calc(100vh-1rem)] w-[calc(100vw-1rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:h-[min(90vh,56rem)] sm:max-h-[min(90vh,56rem)] sm:w-[calc(100vw-1.5rem)]">
@@ -2247,7 +1995,6 @@ export function WebSettingsRuleTools() {
               {t('webSettingsRuleTools.mediaSource.dialogDescription')}
             </DialogDescription>
           </DialogHeader>
-
           <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 sm:px-6">
             <ListDialogEditor
               description={t('webSettingsRuleTools.mediaSource.inputDescription')}
@@ -2259,18 +2006,18 @@ export function WebSettingsRuleTools() {
               inputValue={mediaSourceInput}
               onInputValueChange={setMediaSourceInput}
               onAdd={handleAddMediaSourceItem}
-              items={mediaSourceListQuery.data?.items ?? []}
-              total={mediaSourceListQuery.data?.total ?? 0}
-              page={mediaSourceListPage}
+              items={pagedMediaSourceItems}
+              total={filteredMediaSourceItems.length}
+              page={resolvedMediaSourceListPage}
               onPageChange={setMediaSourceListPage}
               savedSearchValue={mediaSourceSearchInput}
               onSavedSearchValueChange={(value) => {
                 setMediaSourceSearchInput(value)
                 setMediaSourceListPage(0)
               }}
-              loading={mediaSourceListQuery.isLoading && !mediaSourceListQuery.data}
-              refreshing={mediaSourceListQuery.isFetching && !mediaSourceListQuery.isLoading}
-              busy={listMutation.isPending || mediaSourceRevision.length === 0}
+              loading={ruleToolsQuery.isLoading && !currentPayload}
+              refreshing={ruleToolsQuery.isFetching && !ruleToolsQuery.isLoading}
+              busy={busy}
               editingItem={
                 editingListItem?.listKey === 'mediaPlaySourceBlocklist'
                   ? {
@@ -2293,7 +2040,6 @@ export function WebSettingsRuleTools() {
               inputClassName="font-mono"
             />
           </div>
-
           <DialogFooter className="shrink-0 border-t px-4 py-4 sm:px-6">
             <Button
               type="button"
@@ -2333,16 +2079,21 @@ export function WebSettingsRuleTools() {
             >
               {t('common.cancel')}
             </Button>
-            <Button
-              type="button"
-              disabled={importMutation.isPending}
-              onClick={() => void confirmImportRules()}
-            >
+            <Button type="button" disabled={busy} onClick={confirmImportRules}>
               {t('webSettingsRuleTools.importDialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UnsavedChangesBar
+        open={draftDirty}
+        saving={saveDraftMutation.isPending}
+        saveDisabled={heavyEditingLocked || !draftPayload}
+        message={heavyEditingLocked ? t('webSettingsMigration.lockedMessage') : undefined}
+        onSave={handleSaveDraft}
+        onRevert={handleRevertDraft}
+      />
     </>
   )
 }

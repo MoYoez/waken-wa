@@ -9,7 +9,7 @@ import {
 } from '@/lib/admin-list-constants'
 import { getBearerApiTokenRecord, getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { devices, inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
+import { devices, inspirationEntries } from '@/lib/drizzle-schema'
 import {
   extractInspirationDeviceKey,
   gateInspirationApiForDevice,
@@ -26,6 +26,7 @@ import {
 } from '@/lib/inspiration-lexical'
 import { parsePaginationParams } from '@/lib/pagination'
 import { readJsonObject } from '@/lib/request-json'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { normalizeTimezone } from '@/lib/timezone'
 
@@ -92,10 +93,10 @@ export async function GET(request: NextRequest) {
     const listBase = db.select().from(inspirationEntries).orderBy(desc(inspirationEntries.createdAt))
     const countBase = db.select({ c: count() }).from(inspirationEntries)
 
-    const [items, [totalRow], [config]] = await Promise.all([
+    const [items, [totalRow], config] = await Promise.all([
       (searchCond ? listBase.where(searchCond) : listBase).limit(limit).offset(offset),
       searchCond ? countBase.where(searchCond) : countBase,
-      db.select({ displayTimezone: siteConfig.displayTimezone }).from(siteConfig).limit(1),
+      getSiteConfigMemoryFirst(),
     ])
     const displayTimezone = normalizeTimezone(config?.displayTimezone)
 

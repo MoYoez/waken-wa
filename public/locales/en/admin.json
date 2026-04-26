@@ -467,7 +467,8 @@
       "toasts": {
         "copiedRulesJson": "Rules JSON copied to the clipboard",
         "exportedUsedAppsJson": "Exported used apps JSON",
-        "importedRulesIntoForm": "Rules imported and applied immediately."
+        "importedRulesIntoForm": "Rules imported into the current draft.",
+        "saved": "Rule tools settings saved."
       },
     "parseErrors": {
       "parseFailed": "Failed to parse JSON",
@@ -578,12 +579,12 @@
     },
       "importDialog": {
         "title": "Import rules JSON",
-        "description": "This explicitly overwrites the saved rule-tools configuration and applies it immediately.",
+        "description": "Import the rules into the current draft. They are only written after you save.",
         "label": "Rules JSON",
         "placeholder": "Paste JSON containing version and rules",
-        "confirm": "Import and overwrite",
-      "pasteRulesJsonFirst": "Paste the rules JSON first"
-    }
+        "confirm": "Import into draft",
+        "pasteRulesJsonFirst": "Paste the rules JSON first"
+      }
   },
   "scheduleManager": {
     "loading": "Loading schedule settings…",
@@ -828,7 +829,8 @@
     },
     "saveConfig": "Save settings",
     "toasts": {
-      "saved": "Site settings saved"
+      "saved": "Site settings saved",
+      "partialSavedHint": "Saved changes were synced, and unsaved edits were kept. Please review and retry."
     }
   },
   "webSettingsBasic": {
@@ -1200,6 +1202,43 @@
     "legacyMcpEndpointHintPrefix": "Use this endpoint with a bearer token header like",
     "legacyMcpEndpointHintSuffix": ".",
     "disabledHint": "Enable Skills / MCP first to configure auth modes and expose the personal life panel tooling endpoints."
+  },
+  "webSettingsMigration": {
+    "title": "Heavy settings migration",
+    "states": {
+      "legacy": "Legacy storage",
+      "migrated": "Migrated",
+      "legacy_cleared": "Legacy data cleared"
+    },
+    "descriptions": {
+      "legacy": "These theme, schedule, rule, and other heavy settings still use the legacy storage path. You can review them now, but you need to migrate before editing.",
+      "migrated": "Heavy settings now use the new split storage. Category editing is enabled, and the old legacy columns are still kept until you clear them.",
+      "legacy_cleared": "The new split storage is active, and the legacy site_config values, old skills authorize-code secrets, and rate_limit_backups cache rows have been cleared. Reads now go straight to the new storage."
+    },
+    "actions": {
+      "migrate": "Migrate to new storage",
+      "clearLegacyData": "Clear legacy data"
+    },
+    "confirmMigrate": {
+      "title": "Migrate heavy settings now?",
+      "description": "This copies the legacy heavy settings into the new category tables and switches future reads and writes to the new storage. It does not delete the existing legacy column data.",
+      "confirm": "Confirm migration"
+    },
+    "confirmClear": {
+      "title": "Clear legacy data now?",
+      "description": "This clears the migrated legacy values in site_config and deletes the old skills_oauth_authorize_code records from system_secrets plus the stale rate_limit_backups cache rows. It does not drop any table structure and does not affect the data already stored in the new tables. This action cannot be automatically undone.",
+      "confirm": "Confirm clear"
+    },
+    "meta": {
+      "migratedAt": "Migrated at",
+      "legacyDataClearedAt": "Legacy data cleared at"
+    },
+    "lockedMessage": "These settings now belong to the new split storage flow. Run the one-click migration before saving changes here.",
+    "lockedToast": "Run the one-click migration before editing these heavy settings.",
+    "toasts": {
+      "migrated": "Heavy settings migrated",
+      "legacyDataCleared": "Legacy data cleared"
+    }
   },
   "unsavedChanges": {
     "saving": "Saving…",

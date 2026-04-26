@@ -3,6 +3,7 @@ import type { UserNoteHitokotoEncode } from '@/lib/hitokoto'
 import type { PublicPageFontOptionMode } from '@/lib/public-page-font'
 import type { ScheduleCourse, SchedulePeriodTemplateItem } from '@/lib/schedule-courses'
 import type { ScheduleDayGrid } from '@/lib/schedule-grid-by-weekday'
+import type { SiteSettingsMigrationState } from '@/lib/site-settings-constants'
 import type {
   ThemeBackgroundImageMode,
   ThemePaletteLiveScope,
@@ -155,4 +156,17 @@ export type SkillsEditableConfig = {
   enabled: boolean
   authMode: 'oauth' | 'apikey' | ''
   oauthTokenTtlMinutes: number
+}
+
+export type SiteSettingsMigrationInfo = {
+  siteConfigId: number
+  migrationState: SiteSettingsMigrationState
+  migratedAt: string | null
+  legacyDataClearedAt: string | null
+  legacyDataPresent: boolean
+  stateInferred: boolean
+  coveredCategories: string[]
+  canMigrate: boolean
+  canClearLegacyData: boolean
+  heavyEditingLocked: boolean
 }

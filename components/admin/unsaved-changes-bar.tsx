@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils'
 export type UnsavedChangesBarProps = {
   open: boolean
   saving?: boolean
+  saveDisabled?: boolean
   onSave: () => void | Promise<void>
   onRevert: () => void
   saveLabel?: string
@@ -46,6 +47,7 @@ export type UnsavedChangesBarProps = {
 export function UnsavedChangesBar({
   open,
   saving = false,
+  saveDisabled = false,
   onSave,
   onRevert,
   saveLabel,
@@ -102,7 +104,12 @@ export function UnsavedChangesBar({
                 >
                   {resolvedRevertLabel}
                 </Button>
-                <Button type="button" size="sm" onClick={() => void onSave()} disabled={saving}>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void onSave()}
+                  disabled={saving || saveDisabled}
+                >
                   {saving ? t('unsavedChanges.saving') : resolvedSaveLabel}
                 </Button>
               </div>

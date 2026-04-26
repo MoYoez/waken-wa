@@ -467,7 +467,8 @@
       "toasts": {
         "copiedRulesJson": "已复制规则 JSON 到剪贴板",
         "exportedUsedAppsJson": "已导出已使用应用 JSON",
-        "importedRulesIntoForm": "规则已导入并立即生效"
+        "importedRulesIntoForm": "规则已导入到当前草稿",
+        "saved": "规则工具配置已保存"
       },
     "parseErrors": {
       "parseFailed": "JSON 解析失败",
@@ -578,12 +579,12 @@
     },
       "importDialog": {
         "title": "导入规则 JSON",
-        "description": "将显式覆盖当前已保存的规则工具配置，并立即生效。",
+        "description": "将规则导入到当前草稿；确认保存后才会写入已保存配置。",
         "label": "规则 JSON",
         "placeholder": "粘贴 JSON（包含 version 与 rules 字段）",
-        "confirm": "导入并覆盖规则",
-      "pasteRulesJsonFirst": "请先粘贴规则 JSON"
-    }
+        "confirm": "导入到当前草稿",
+        "pasteRulesJsonFirst": "请先粘贴规则 JSON"
+      }
   },
   "scheduleManager": {
     "loading": "加载课表配置中…",
@@ -828,7 +829,8 @@
     },
     "saveConfig": "保存配置",
     "toasts": {
-      "saved": "站点配置已保存"
+      "saved": "站点配置已保存",
+      "partialSavedHint": "已同步已保存内容，未提交的改动仍保留，请检查后重试"
     }
   },
   "webSettingsBasic": {
@@ -1200,6 +1202,43 @@
     "legacyMcpEndpointHintPrefix": "调用该接口时可使用类似如下的 Bearer Token 请求头：",
     "legacyMcpEndpointHintSuffix": "。",
     "disabledHint": "请先启用 Skills / MCP，随后才能配置认证模式，并把这个个人生活面板的 AI 工具接口暴露出去。"
+  },
+  "webSettingsMigration": {
+    "title": "重配置迁移状态",
+    "states": {
+      "legacy": "旧方案",
+      "migrated": "已迁移",
+      "legacy_cleared": "旧数据已清理"
+    },
+    "descriptions": {
+      "legacy": "当前仍使用旧方案存储。主题、课表、规则和部分重配置暂时只能查看，如需修改请先迁移到新方案。",
+      "migrated": "重配置已迁移到新方案存储。现在可以继续编辑分类配置，旧列数据仍保留，可按需手动清理。",
+      "legacy_cleared": "新方案存储已生效，旧 site_config 数据、旧 skills 授权码密钥和 rate_limit_backups 缓存数据也已清理。读取会直接走新存储。"
+    },
+    "actions": {
+      "migrate": "一键迁移到新方案",
+      "clearLegacyData": "清理旧数据"
+    },
+    "confirmMigrate": {
+      "title": "确认迁移到新方案？",
+      "description": "这会把旧重配置复制到新的分类表中，并切换到新方案读取写入；不会删除旧列中的现有数据。",
+      "confirm": "确认迁移"
+    },
+    "confirmClear": {
+      "title": "确认清理旧数据？",
+      "description": "这会清空 site_config 中已迁移的旧值，并删除 system_secrets 里旧的 skills_oauth_authorize_code 记录与 rate_limit_backups 中的旧缓存数据；不会删除表结构，也不会影响新方案中的数据。此操作无法自动恢复。",
+      "confirm": "确认清理"
+    },
+    "meta": {
+      "migratedAt": "迁移时间",
+      "legacyDataClearedAt": "旧数据清理时间"
+    },
+    "lockedMessage": "这部分配置已切换为新方案存储。请先完成一键迁移，再保存这里的更改。",
+    "lockedToast": "请先完成一键迁移，再修改这部分重配置。",
+    "toasts": {
+      "migrated": "已迁移到新方案",
+      "legacyDataCleared": "旧数据已清理"
+    }
   },
   "unsavedChanges": {
     "saving": "保存中…",

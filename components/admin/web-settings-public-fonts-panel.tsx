@@ -4,7 +4,10 @@ import { useAtom } from 'jotai'
 import { useT } from 'next-i18next/client'
 
 import { WebSettingsInset } from '@/components/admin/web-settings-layout'
-import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
+import {
+  webSettingsFormAtom,
+  webSettingsMigrationAtom,
+} from '@/components/admin/web-settings-store'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -15,10 +18,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
 
 export function WebSettingsPublicFontsPanel() {
   const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
+  const [migration] = useAtom(webSettingsMigrationAtom)
+  const themeLocked = migration?.heavyEditingLocked === true
 
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -41,7 +47,9 @@ export function WebSettingsPublicFontsPanel() {
   }
 
   return (
-    <WebSettingsInset className="space-y-4">
+    <WebSettingsInset
+      className={cn('space-y-4', themeLocked && 'pointer-events-none opacity-60')}
+    >
       <div className="space-y-1">
         <Label>{t('webSettingsBasic.publicFontsTitle')}</Label>
         <p className="text-xs leading-relaxed text-muted-foreground">

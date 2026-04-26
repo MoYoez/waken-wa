@@ -1,10 +1,7 @@
-import { eq } from 'drizzle-orm'
-
 import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
-import { db } from '@/lib/db'
-import { siteConfig } from '@/lib/drizzle-schema'
 import { redisDel, redisGetJson, redisSetJson } from '@/lib/redis-client'
 import { normalizeSiteConfigShape } from '@/lib/site-config-normalize'
+import { readEffectiveSiteConfig } from '@/lib/site-settings-read'
 
 type SiteConfigValue = any | null
 const SITE_CONFIG_CACHE_KEY = 'waken:site-config:v1'
@@ -57,7 +54,7 @@ export async function getSiteConfigMemoryFirst(): Promise<SiteConfigValue> {
     }
   }
 
-  const [row] = await db.select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1)
+  const row = await readEffectiveSiteConfig()
   setSiteConfigMemoryCache(row ?? null)
   const normalizedRow = getCacheState().value
   if (normalizedRow && typeof normalizedRow === 'object' && (await shouldUseRedisCache())) {

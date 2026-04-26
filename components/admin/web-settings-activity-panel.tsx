@@ -17,6 +17,7 @@ import {
 import {
   webSettingsFormAtom,
   webSettingsInspirationDevicesAtom,
+  webSettingsMigrationAtom,
   webSettingsRedisCacheServerlessForcedAtom,
 } from '@/components/admin/web-settings-store'
 import { Button } from '@/components/ui/button'
@@ -84,6 +85,7 @@ export function WebSettingsActivityPanel() {
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [redisCacheServerlessForced] = useAtom(webSettingsRedisCacheServerlessForcedAtom)
   const [inspirationDevices] = useAtom(webSettingsInspirationDevicesAtom)
+  const [migration] = useAtom(webSettingsMigrationAtom)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -94,6 +96,7 @@ export function WebSettingsActivityPanel() {
     exitY: 8,
     scale: 0.996,
   })
+  const coreHeavyLocked = migration?.heavyEditingLocked === true
 
   return (
     <div className="space-y-4">
@@ -448,6 +451,7 @@ export function WebSettingsActivityPanel() {
           }
           checked={form.inspirationDeviceRestrictionEnabled}
           onCheckedChange={(value) => patch('inspirationDeviceRestrictionEnabled', value)}
+          disabled={coreHeavyLocked}
           className="px-0 py-0 sm:px-0"
         />
 
@@ -471,6 +475,7 @@ export function WebSettingsActivityPanel() {
                   <label key={device.id} className="flex cursor-pointer items-center gap-2 text-sm">
                     <input
                       type="checkbox"
+                      disabled={coreHeavyLocked}
                       checked={form.inspirationAllowedDeviceHashes.includes(device.generatedHashKey)}
                       onChange={(event) => {
                         const key = device.generatedHashKey

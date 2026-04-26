@@ -2,22 +2,16 @@ import 'server-only'
 
 import { createHash } from 'node:crypto'
 
-import { eq } from 'drizzle-orm'
-
-import { clearActivityFeedDataCache } from '@/lib/activity-feed'
 import { ADMIN_LIST_DEFAULT_PAGE_SIZE, ADMIN_LIST_MAX_PAGE_SIZE } from '@/lib/admin-list-constants'
 import {
   createAppMessageRuleGroupId,
   createAppMessageTitleRuleId,
   normalizeAppMessageRules,
   prepareAppMessageRulesForSave,
-  stripAppMessageRuleIds,
 } from '@/lib/app-message-rules'
-import { db } from '@/lib/db'
-import { siteConfig } from '@/lib/drizzle-schema'
-import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { normalizeSiteConfigShape } from '@/lib/site-config-normalize'
+import { persistRulesSettingsValues } from '@/lib/site-settings-write'
 import type {
   AppMessageRuleGroup,
   AppMessageTitleRule,
@@ -148,24 +142,7 @@ async function readRuleToolsState(): Promise<RuleToolsState> {
 }
 
 async function persistRuleToolsValues(values: Record<string, unknown>): Promise<void> {
-  const [row] = await db.select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1)
-  if (!row || typeof row !== 'object') {
-    const error = new Error('未找到网页配置，请先完成初始化配置')
-    ;(error as { status?: number }).status = 400
-    throw error
-  }
-  const existing = normalizeSiteConfigShape(row as Record<string, unknown>)
-
-  await safeSiteConfigUpsert({
-    where: { id: 1 },
-    update: values,
-    create: {
-      ...(existing as Record<string, unknown>),
-      ...values,
-    },
-  })
-
-  await clearActivityFeedDataCache()
+  await persistRulesSettingsValues(values)
 }
 
 function findGroupIndex(rules: AppMessageRuleGroup[], groupId: string): number {
@@ -639,7 +616,10 @@ export async function getRuleToolsExportPayload(): Promise<RuleToolsExportPayloa
   const state = await readRuleToolsState()
   return {
     ...state.config,
-    appMessageRules: stripAppMessageRuleIds(state.appMessageRules),
+    appMessageRules: state.appMessageRules.map((rule) => ({
+      ...rule,
+      titleRules: rule.titleRules.map((titleRule) => ({ ...titleRule })),
+    })),
     appBlacklist: [...state.appBlacklist],
     appWhitelist: [...state.appWhitelist],
     appNameOnlyList: [...state.appNameOnlyList],

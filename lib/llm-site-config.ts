@@ -20,7 +20,6 @@ import {
   normalizeAiToolMode,
   resolveColorSettings,
 } from '@/lib/llm-site-config-helpers'
-import { persistSiteConfigValues } from '@/lib/llm-site-config-persist'
 import { normalizePublicPageFontOptions } from '@/lib/public-page-font'
 import {
   backfillCoursePeriodIdsFromTemplate,
@@ -45,13 +44,14 @@ import {
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
 import { normalizeSiteIconUrl } from '@/lib/site-icon'
+import { persistCompatibilitySiteConfigValues } from '@/lib/site-settings-write'
 import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 import { normalizeTimezone } from '@/lib/timezone'
 
 export { getSafeSiteConfig, LLM_DENIED_SITE_CONFIG_KEYS }
 
-export async function updateSiteConfigFromPayload(
+export async function prepareSiteConfigValuesFromPayload(
   body: Record<string, unknown>,
   options?: { allowRestrictedFields?: boolean },
 ) {
@@ -528,5 +528,13 @@ export async function updateSiteConfigFromPayload(
     activityRejectLockappSleep,
   }
 
-  return persistSiteConfigValues(siteConfigValues)
+  return siteConfigValues
+}
+
+export async function updateSiteConfigFromPayload(
+  body: Record<string, unknown>,
+  options?: { allowRestrictedFields?: boolean },
+) {
+  const siteConfigValues = await prepareSiteConfigValuesFromPayload(body, options)
+  return persistCompatibilitySiteConfigValues(siteConfigValues, body)
 }

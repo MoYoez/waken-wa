@@ -1,12 +1,13 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 
 import { db } from '@/lib/db'
-import { inspirationAssets, inspirationEntries, siteConfig } from '@/lib/drizzle-schema'
+import { inspirationAssets, inspirationEntries } from '@/lib/drizzle-schema'
 import {
   extractInspirationImagePublicKeysFromText,
   inspirationInlineImageUrl,
 } from '@/lib/inspiration-inline-images'
 import { extractInspirationImagePublicKeysFromLexical } from '@/lib/inspiration-lexical'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { coerceDbTimestampToIsoUtc } from '@/lib/timezone'
 
 export function toInspirationAssetDate(value: unknown): Date | null {
@@ -71,7 +72,7 @@ export async function scanReferencedInspirationAssetPublicKeys() {
     }
   }
 
-  const [cfg] = await db.select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1)
+  const cfg = await getSiteConfigMemoryFirst()
   if (cfg) {
     for (const value of Object.values(cfg)) {
       if (typeof value !== 'string' || value.length === 0) continue

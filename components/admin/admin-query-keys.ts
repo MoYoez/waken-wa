@@ -3,6 +3,7 @@
 export const adminQueryKeys = {
   settings: {
     detail: () => ['admin', 'settings'] as const,
+    migration: () => ['admin', 'settings', 'migration'] as const,
   },
   users: {
     list: () => ['admin', 'users'] as const,

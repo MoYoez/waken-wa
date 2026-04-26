@@ -15,6 +15,7 @@ import {
   webSettingsCropSourceUrlAtom,
   webSettingsCropTargetAtom,
   webSettingsFormAtom,
+  webSettingsMigrationAtom,
 } from '@/components/admin/web-settings-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,6 +34,7 @@ import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title
 export function WebSettingsBasicPanel() {
   const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
+  const [migration] = useAtom(webSettingsMigrationAtom)
   const [cropSourceUrl, setCropSourceUrl] = useAtom(webSettingsCropSourceUrlAtom)
   const [, setCropDialogOpen] = useAtom(webSettingsCropDialogOpenAtom)
   const [, setCropTarget] = useAtom(webSettingsCropTargetAtom)
@@ -47,6 +49,7 @@ export function WebSettingsBasicPanel() {
     scale: 0.996,
   })
   const avatarUsesRemoteUrl = isRemoteAvatarUrl(form.avatarUrl)
+  const themeLocked = migration?.heavyEditingLocked === true
   const avatarPreviewUrl = resolveAvatarUrl(
     form.avatarUrl,
     avatarUsesRemoteUrl && form.avatarFetchByServerEnabled,
@@ -161,7 +164,11 @@ export function WebSettingsBasicPanel() {
 
       <div className="space-y-2">
         <Label htmlFor="theme-preset-basic">{t('webSettingsBasic.themePresetLabel')}</Label>
-        <Select value={form.themePreset} onValueChange={(value) => patch('themePreset', value)}>
+        <Select
+          value={form.themePreset}
+          onValueChange={(value) => patch('themePreset', value)}
+          disabled={themeLocked}
+        >
           <SelectTrigger id="theme-preset-basic" className="w-full">
             <SelectValue placeholder={t('webSettingsBasic.themePresetPlaceholder')} />
           </SelectTrigger>

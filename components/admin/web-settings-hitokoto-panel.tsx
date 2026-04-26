@@ -13,7 +13,10 @@ import {
   WebSettingsRow,
   WebSettingsRows,
 } from '@/components/admin/web-settings-layout'
-import { webSettingsFormAtom } from '@/components/admin/web-settings-store'
+import {
+  webSettingsFormAtom,
+  webSettingsMigrationAtom,
+} from '@/components/admin/web-settings-store'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,6 +33,7 @@ import { HITOKOTO_CATEGORY_OPTIONS } from '@/lib/hitokoto'
 export function WebSettingsHitokotoPanel() {
   const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
+  const [migration] = useAtom(webSettingsMigrationAtom)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const patch = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -40,6 +44,7 @@ export function WebSettingsHitokotoPanel() {
     exitY: 8,
     scale: 0.996,
   })
+  const coreHeavyLocked = migration?.heavyEditingLocked === true
 
   return (
     <div className="space-y-4">
@@ -214,6 +219,7 @@ export function WebSettingsHitokotoPanel() {
                       className="flex items-center gap-2 text-sm font-normal cursor-pointer"
                     >
                       <Checkbox
+                        disabled={coreHeavyLocked}
                         checked={form.userNoteHitokotoCategories.includes(option.id)}
                         onCheckedChange={(value) => {
                           const checked = value === true

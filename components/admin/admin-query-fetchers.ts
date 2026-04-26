@@ -26,6 +26,7 @@ import type {
   RuleToolsRulesResponse,
   RuleToolsSummary,
 } from '@/types/rule-tools'
+import type { SiteSettingsMigrationInfo } from '@/components/admin/web-settings-types'
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   const res = await fetch('/api/admin/users')
@@ -140,14 +141,30 @@ export async function fetchAdminTokenPage(input: {
 }
 
 export async function fetchAdminSettings(): Promise<Record<string, any>> {
-  const res = await fetch('/api/admin/settings')
-  const data = await readJson<SuccessResponse<Record<string, any>>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
-    )
+  const paths = [
+    '/api/admin/settings/core',
+    '/api/admin/settings/theme',
+    '/api/admin/settings/schedule',
+  ] as const
+
+  const segments = await Promise.all(
+    paths.map(async (path) => {
+      const res = await fetch(path)
+      const data = await readJson<SuccessResponse<Record<string, any>>>(res)
+      if (!res.ok || !data?.success || !data.data) {
+        throw new Error(
+          data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
+        )
+      }
+      return data.data
+    }),
+  )
+
+  if (segments.length === 0) {
+    throw new Error(tAdminClient('query.loadSettingsFailed', { status: 'unknown' }))
   }
-  return data.data
+
+  return Object.assign({}, ...segments)
 }
 
 export async function fetchAdminSkills(): Promise<AdminSkillsData> {
@@ -189,6 +206,17 @@ export async function fetchPublicActivityFeed(): Promise<ActivityFeedData> {
   if (!res.ok || !data?.success || !data.data) {
     throw new Error(
       data?.error || tAdminClient('query.loadPublicActivityFeedFailed', { status: res.status }),
+    )
+  }
+  return data.data
+}
+
+export async function fetchAdminSettingsMigration(): Promise<SiteSettingsMigrationInfo> {
+  const res = await fetch('/api/admin/settings/migration')
+  const data = await readJson<SuccessResponse<SiteSettingsMigrationInfo>>(res)
+  if (!res.ok || !data?.success || !data.data) {
+    throw new Error(
+      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
     )
   }
   return data.data

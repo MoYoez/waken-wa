@@ -76,7 +76,7 @@ export type RuleToolsListResponse = {
 }
 
 export type RuleToolsExportPayload = RuleToolsConfigData & {
-  appMessageRules: ExportableAppMessageRuleGroup[]
+  appMessageRules: AppMessageRuleGroup[]
   appBlacklist: string[]
   appWhitelist: string[]
   appNameOnlyList: string[]

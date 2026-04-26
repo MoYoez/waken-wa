@@ -13,6 +13,7 @@ import { getT } from '@/lib/i18n/server'
 import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { parseHistoryWindowMinutes, parseProcessStaleSeconds } from '@/lib/site-config-constants'
+import { bootstrapSiteSettingsSplitStorage } from '@/lib/site-settings-write'
 import { normalizeCustomCss } from '@/lib/theme-css'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
 
@@ -218,6 +219,7 @@ export async function POST(request: NextRequest) {
           `[setup-admin] unknown DB columns stripped during setup upsert: ${upsertResult.strippedColumns.join(', ')}`,
         )
       }
+      await bootstrapSiteSettingsSplitStorage(executor)
       return { admin, schemaWarnings: upsertResult.strippedColumns }
     }
 
