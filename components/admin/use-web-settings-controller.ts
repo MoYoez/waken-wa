@@ -15,8 +15,8 @@ import {
 } from '@/components/admin/admin-query-fetchers'
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
 import {
-  importAdminRuleTools,
   clearAdminLegacySettingsData,
+  importAdminRuleTools,
   migrateAdminSettings,
   patchAdminSettingsCore,
   patchAdminSettingsSchedule,

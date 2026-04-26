@@ -5,8 +5,8 @@ import { and, asc, eq } from 'drizzle-orm'
 import { normalizeAppMessageRules } from '@/lib/app-message-rules'
 import { db } from '@/lib/db'
 import {
-  siteSettingsV2ListEntries,
   siteSettingsMigrationMeta,
+  siteSettingsV2ListEntries,
   siteSettingsV2RuleGroups,
   siteSettingsV2RuleTitleRules,
   siteSettingsV2ScheduleCoursePeriodIds,

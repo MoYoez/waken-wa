@@ -7,6 +7,7 @@ import {
   readJson,
   type SuccessResponse,
 } from '@/components/admin/admin-query-shared'
+import type { SiteSettingsMigrationInfo } from '@/components/admin/web-settings-types'
 import { tAdminClient } from '@/lib/i18n/admin-client'
 import type { ActivityFeedData } from '@/types/activity'
 import type {
@@ -26,7 +27,6 @@ import type {
   RuleToolsRulesResponse,
   RuleToolsSummary,
 } from '@/types/rule-tools'
-import type { SiteSettingsMigrationInfo } from '@/components/admin/web-settings-types'
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   const res = await fetch('/api/admin/users')

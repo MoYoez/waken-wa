@@ -1,10 +1,10 @@
+import { DEFAULT_PAGE_TITLE } from '@/lib/default-page-title'
 import {
   SITE_CONFIG_HISTORY_WINDOW_DEFAULT_MINUTES,
   SITE_CONFIG_PROCESS_STALE_DEFAULT_SECONDS,
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
   SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES,
 } from '@/lib/site-config-constants'
-import { DEFAULT_PAGE_TITLE } from '@/lib/default-page-title'
 
 export const SITE_SETTINGS_MIGRATION_STATES = [
   'legacy',

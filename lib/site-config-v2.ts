@@ -5,8 +5,8 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { siteConfig, siteConfigV2Entries } from '@/lib/drizzle-schema'
 import { parseJsonString } from '@/lib/json-parse'
-import { normalizeJsonFieldsForDb } from '@/lib/sqlite-json'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
+import { normalizeJsonFieldsForDb } from '@/lib/sqlite-json'
 
 type SiteConfigRecord = Record<string, unknown>
 type SiteConfigV2ValueKind = 'string' | 'number' | 'boolean' | 'json' | 'null'

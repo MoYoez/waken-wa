@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
+import { readJsonObject } from '@/lib/request-json'
 import {
   getRuleToolsListPage,
   isRuleToolsListKey,
   patchRuleToolsList,
 } from '@/lib/rule-tools-config'
-import { readJsonObject } from '@/lib/request-json'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0

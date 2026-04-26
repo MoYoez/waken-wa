@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { readJsonObject } from '@/lib/request-json'
-import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { safeSiteConfigUpsert } from '@/lib/safe-site-config-upsert'
+import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   clearSkillsApiKey,
   getSkillsSecretEnvStatus,

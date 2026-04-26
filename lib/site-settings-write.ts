@@ -6,10 +6,10 @@ import { clearActivityFeedDataCache } from '@/lib/activity-feed'
 import { normalizeAppMessageRules } from '@/lib/app-message-rules'
 import { db } from '@/lib/db'
 import {
-  siteConfigV2Entries,
   rateLimitBackups,
-  siteSettingsV2ListEntries,
+  siteConfigV2Entries,
   siteSettingsMigrationMeta,
+  siteSettingsV2ListEntries,
   siteSettingsV2RuleGroups,
   siteSettingsV2RuleTitleRules,
   siteSettingsV2ScheduleCoursePeriodIds,
@@ -33,22 +33,22 @@ import {
   upsertSiteConfigV2Entries,
 } from '@/lib/site-config-v2'
 import {
-  readEffectiveSiteConfig,
-  readSiteSettingsMigrationSnapshot,
-  readSiteSettingsSnapshot,
-  SITE_SETTINGS_SITE_CONFIG_ID,
-} from '@/lib/site-settings-read'
-import {
   hasAnyRecordKey,
-  SITE_SETTINGS_CLEAR_LEGACY_SITE_CONFIG_VALUES,
   omitRecordKeys,
   pickRecordKeys,
+  SITE_SETTINGS_CLEAR_LEGACY_SITE_CONFIG_VALUES,
   SITE_SETTINGS_COMPAT_WRITE_BLOCKED_KEYS,
   SITE_SETTINGS_RULES_KEYS,
   SITE_SETTINGS_SCHEDULE_CATEGORY_KEYS,
   SITE_SETTINGS_THEME_CATEGORY_KEYS,
   type SiteSettingsMigrationState,
 } from '@/lib/site-settings-constants'
+import {
+  readEffectiveSiteConfig,
+  readSiteSettingsMigrationSnapshot,
+  readSiteSettingsSnapshot,
+  SITE_SETTINGS_SITE_CONFIG_ID,
+} from '@/lib/site-settings-read'
 import { SKILLS_SECRET_KEYS } from '@/lib/skills-constants'
 import { sqlTimestamp } from '@/lib/sql-timestamp'
 import { parseThemeCustomSurface } from '@/lib/theme-custom-surface'
