@@ -282,6 +282,7 @@ export function buildAdminThemeVars(
 
 export function buildAdminBackgroundVars(
   color: string,
+  resolvedTheme: ResolvedTheme,
 ): Record<(typeof ADMIN_BACKGROUND_VAR_NAMES)[number], string> {
   const rgb = hexToRgb(color)
   if (!rgb) {
@@ -305,45 +306,55 @@ export function buildAdminBackgroundVars(
   }
 
   const base = rgbToHsl(rgb)
-  const isLightBackground = relativeLuminance(rgb) >= 0.42
-  const surfaceSat = clamp(base.s * 0.32, 0.02, 0.18)
-  const card = {
+  const isDark = resolvedTheme === 'dark'
+  const surfaceSat = clamp(base.s * (isDark ? 0.4 : 0.32), 0.02, isDark ? 0.22 : 0.18)
+  const background = {
     h: base.h,
     s: surfaceSat,
-    l: clamp(base.l + (isLightBackground ? 0.045 : 0.055), 0, 0.985),
+    l: isDark ? clamp(0.1 + base.l * 0.1, 0.12, 0.22) : clamp(0.918 + base.l * 0.072, 0.92, 0.985),
+  }
+  const card = {
+    h: base.h,
+    s: clamp(surfaceSat * (isDark ? 1.04 : 0.96), 0.02, isDark ? 0.22 : 0.16),
+    l: clamp(background.l + (isDark ? 0.018 : 0.012), isDark ? 0.13 : 0.93, isDark ? 0.24 : 0.99),
   }
   const secondary = {
     h: base.h,
-    s: clamp(surfaceSat * 1.1, 0.02, 0.2),
-    l: clamp(base.l + (isLightBackground ? -0.03 : 0.085), 0.06, 0.95),
+    s: clamp(surfaceSat * (isDark ? 1.18 : 1.1), 0.02, isDark ? 0.25 : 0.2),
+    l: clamp(background.l + (isDark ? 0.055 : -0.032), isDark ? 0.18 : 0.86, isDark ? 0.32 : 0.95),
   }
   const muted = {
     h: base.h,
-    s: clamp(surfaceSat * 1.2, 0.02, 0.22),
-    l: clamp(base.l + (isLightBackground ? -0.045 : 0.11), 0.08, 0.94),
+    s: clamp(surfaceSat * (isDark ? 1.08 : 1.2), 0.02, isDark ? 0.22 : 0.22),
+    l: clamp(background.l + (isDark ? 0.042 : -0.045), isDark ? 0.16 : 0.84, isDark ? 0.29 : 0.94),
   }
   const border = {
     h: base.h,
-    s: clamp(surfaceSat * 0.9, 0.015, 0.16),
-    l: clamp(base.l + (isLightBackground ? -0.14 : 0.16), 0.16, 0.82),
+    s: clamp(surfaceSat * 0.9, 0.015, isDark ? 0.18 : 0.16),
+    l: clamp(background.l + (isDark ? 0.11 : -0.12), isDark ? 0.28 : 0.72, isDark ? 0.42 : 0.9),
+  }
+  const sidebar = {
+    h: base.h,
+    s: clamp(surfaceSat * (isDark ? 0.96 : 0.94), 0.02, isDark ? 0.2 : 0.16),
+    l: clamp(background.l + (isDark ? 0.01 : -0.008), isDark ? 0.12 : 0.91, isDark ? 0.22 : 0.98),
   }
 
   return {
-    '--background': color,
-    '--foreground': isLightBackground ? 'oklch(0.22 0.01 60)' : 'oklch(0.985 0 0)',
+    '--background': toHslCss(background),
+    '--foreground': isDark ? 'oklch(0.985 0 0)' : 'oklch(0.22 0.01 60)',
     '--card': toHslCss(card),
-    '--card-foreground': isLightBackground ? 'oklch(0.22 0.01 60)' : 'oklch(0.985 0 0)',
+    '--card-foreground': isDark ? 'oklch(0.985 0 0)' : 'oklch(0.22 0.01 60)',
     '--popover': toHslCss(card),
-    '--popover-foreground': isLightBackground ? 'oklch(0.22 0.01 60)' : 'oklch(0.985 0 0)',
+    '--popover-foreground': isDark ? 'oklch(0.985 0 0)' : 'oklch(0.22 0.01 60)',
     '--secondary': toHslCss(secondary),
-    '--secondary-foreground': isLightBackground ? 'oklch(0.32 0.01 60)' : 'oklch(0.985 0 0)',
+    '--secondary-foreground': isDark ? 'oklch(0.985 0 0)' : 'oklch(0.32 0.01 60)',
     '--muted': toHslCss(muted),
-    '--muted-foreground': isLightBackground ? 'oklch(0.52 0.015 60)' : 'oklch(0.74 0.01 260)',
-    '--border': toHslAlphaCss(border, isLightBackground ? 0.5 : 0.36),
-    '--input': toHslAlphaCss(border, isLightBackground ? 0.5 : 0.36),
-    '--sidebar': toHslCss(card),
-    '--sidebar-foreground': isLightBackground ? 'oklch(0.22 0.01 60)' : 'oklch(0.985 0 0)',
-    '--sidebar-border': toHslAlphaCss(border, isLightBackground ? 0.52 : 0.38),
+    '--muted-foreground': isDark ? 'oklch(0.74 0.01 260)' : 'oklch(0.52 0.015 60)',
+    '--border': toHslAlphaCss(border, isDark ? 0.38 : 0.5),
+    '--input': toHslAlphaCss(border, isDark ? 0.38 : 0.5),
+    '--sidebar': toHslCss(sidebar),
+    '--sidebar-foreground': isDark ? 'oklch(0.985 0 0)' : 'oklch(0.22 0.01 60)',
+    '--sidebar-border': toHslAlphaCss(border, isDark ? 0.4 : 0.52),
   }
 }
 
@@ -355,7 +366,7 @@ export function buildAdminAppearanceVars(input: {
   const vars: Record<string, string> = {}
 
   if (input.backgroundColor) {
-    Object.assign(vars, buildAdminBackgroundVars(input.backgroundColor))
+    Object.assign(vars, buildAdminBackgroundVars(input.backgroundColor, input.resolvedTheme))
   }
 
   if (input.themeColor) {

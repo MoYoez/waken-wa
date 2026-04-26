@@ -64,7 +64,7 @@ export function AdminThemeRuntime({
     clearAdminThemeVars(target)
 
     if (backgroundColor) {
-      const backgroundVars = buildAdminBackgroundVars(backgroundColor)
+      const backgroundVars = buildAdminBackgroundVars(backgroundColor, resolvedTheme ?? 'light')
       for (const [key, value] of Object.entries(backgroundVars)) {
         target.style.setProperty(key, value)
       }
