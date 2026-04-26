@@ -1,9 +1,12 @@
+import { styleText } from 'node:util'
+
 import type { NextRequest } from 'next/server'
 
 import { getRequestLanguage } from '@/lib/i18n/request-locale'
 import { getT } from '@/lib/i18n/server'
 
 const insecureCookieWarnings = new Set<string>()
+const warnLabel = styleText('yellow', 'warn')
 
 function getForwardedProto(request: NextRequest): string | null {
   const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim().toLowerCase()
@@ -34,12 +37,13 @@ export async function resolveCookieSecureFlag(
     insecureCookieWarnings.add(warningKey)
     const forwardedProto = getForwardedProto(request) ?? 'missing'
     const { t } = await getT('auth', { lng: getRequestLanguage(request) })
-    console.warn(t('cookie.insecureWarning', {
+    const warning = t('cookie.insecureWarning', {
       cookieName,
       host,
       protocol: request.nextUrl.protocol,
       forwardedProto,
-    }))
+    })
+    console.warn(`${warnLabel} ${warning}`)
   }
 
   return false
