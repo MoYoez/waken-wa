@@ -22,7 +22,10 @@
       "noActiveStatus": "暂无设备在线状态",
       "viewSteamDetails": "查看 Steam 游戏详情",
       "deviceFallback": "设备 #{{id}}",
-      "activityFallback": "活动 #{{id}}"
+      "activityFallback": "活动 #{{id}}",
+      "customOfflineStatus": "离线",
+      "customLockStatus": "已锁定",
+      "lastOnline": "最后在线"
     },
     "note": {
       "loadingHitokoto": "加载一言…",

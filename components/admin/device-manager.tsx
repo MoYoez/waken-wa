@@ -144,6 +144,11 @@ export function DeviceManager({
   const [newHashKey, setNewHashKey] = useState('')
   const [reviewDeviceId, setReviewDeviceId] = useState<number | null>(null)
   const [reviewTokenId, setReviewTokenId] = useState('')
+  const [editCustomStatusDeviceId, setEditCustomStatusDeviceId] = useState<number | null>(null)
+  const [customOfflineStatus, setCustomOfflineStatus] = useState('')
+  const [customOfflineStatusEnabled, setCustomOfflineStatusEnabled] = useState(false)
+  const [customLockStatus, setCustomLockStatus] = useState('')
+  const [customLockStatusEnabled, setCustomLockStatusEnabled] = useState(false)
   const highlightHandledRef = useRef(false)
 
   const tokensQuery = useQuery({
@@ -309,6 +314,47 @@ export function DeviceManager({
     },
   })
 
+  const updateCustomStatusMutation = useMutation({
+    mutationFn: async ({
+      id,
+      customOfflineStatus,
+      customOfflineStatusEnabled,
+      customLockStatus,
+      customLockStatusEnabled,
+    }: {
+      id: number
+      customOfflineStatus?: string | null
+      customOfflineStatusEnabled?: boolean
+      customLockStatus?: string | null
+      customLockStatusEnabled?: boolean
+    }) => {
+      const response = await fetch(`/api/admin/devices/${id}/custom-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customOfflineStatus,
+          customOfflineStatusEnabled,
+          customLockStatus,
+          customLockStatusEnabled,
+        }),
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(error.error || 'Failed to update custom status')
+      }
+      return response.json()
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'devices'] })
+      await queryClient.invalidateQueries({ queryKey: ['activity-feed'] })
+      setEditCustomStatusDeviceId(null)
+      toast.success(t('devices.customStatus.saved'))
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : t('common.networkError'))
+    },
+  })
+
   const removeDeviceMutation = useMutation({
     mutationFn: async (id: number) => {
       await deleteAdminDevice(id)
@@ -345,6 +391,38 @@ export function DeviceManager({
 
   const updatePinToTop = async (id: number, pinToTop: boolean) => {
     await updatePinMutation.mutateAsync({ id, pinToTop })
+  }
+
+  const openCustomStatusEditor = async (item: AdminDeviceItem) => {
+    setEditCustomStatusDeviceId(item.id)
+    // Fetch current custom status values
+    try {
+      const response = await fetch(`/api/admin/devices/${item.id}/custom-status`)
+      if (response.ok) {
+        const result = await response.json()
+        const data = result.data
+        setCustomOfflineStatus(data.customOfflineStatus || '')
+        setCustomOfflineStatusEnabled(data.customOfflineStatusEnabled || false)
+        setCustomLockStatus(data.customLockStatus || '')
+        setCustomLockStatusEnabled(data.customLockStatusEnabled || false)
+      }
+    } catch {
+      // Use defaults if fetch fails
+      setCustomOfflineStatus('')
+      setCustomOfflineStatusEnabled(false)
+      setCustomLockStatus('')
+      setCustomLockStatusEnabled(false)
+    }
+  }
+
+  const saveCustomStatus = async (id: number) => {
+    await updateCustomStatusMutation.mutateAsync({
+      id,
+      customOfflineStatus: customOfflineStatus.trim() || null,
+      customOfflineStatusEnabled,
+      customLockStatus: customLockStatus.trim() || null,
+      customLockStatusEnabled,
+    })
   }
 
   const updateBinding = async (id: number, apiTokenId: number | null) => {
@@ -700,6 +778,24 @@ export function DeviceManager({
                       disabled={updateSteamMutation.isPending}
                     />
                   </div>
+                  <div className="rounded-md border border-border/60 bg-muted/20 px-2.5 py-2 sm:px-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs font-medium">
+                        {t('devices.customStatusTitle')}
+                      </Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => void openCustomStatusEditor(item)}
+                      >
+                        {t('devices.editCustomStatus')}
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      {t('devices.customStatusDescription')}
+                    </p>
+                  </div>
                 </div>
                   </motion.div>
                 ))}
@@ -860,6 +956,111 @@ export function DeviceManager({
               </DialogFooter>
             </>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={editCustomStatusDeviceId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditCustomStatusDeviceId(null)
+            setCustomOfflineStatus('')
+            setCustomOfflineStatusEnabled(false)
+            setCustomLockStatus('')
+            setCustomLockStatusEnabled(false)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg" showCloseButton>
+          <DialogHeader>
+            <DialogTitle>{t('devices.customStatus.title')}</DialogTitle>
+            <DialogDescription>
+              {t('devices.customStatus.description')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-3 rounded-md border border-border/60 bg-muted/20 p-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="custom-offline-enabled" className="text-sm font-medium cursor-pointer">
+                  {t('devices.customStatus.offlineTitle')}
+                </Label>
+                <Switch
+                  id="custom-offline-enabled"
+                  checked={customOfflineStatusEnabled}
+                  onCheckedChange={setCustomOfflineStatusEnabled}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t('devices.customStatus.offlineDescription')}
+              </p>
+              <div className="space-y-2">
+                <Input
+                  value={customOfflineStatus}
+                  onChange={(e) => setCustomOfflineStatus(e.target.value)}
+                  placeholder={t('devices.customStatus.offlinePlaceholder')}
+                  maxLength={100}
+                  disabled={!customOfflineStatusEnabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('devices.customStatus.maxLength', { max: 100 })} ({customOfflineStatus.length}/100)
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-md border border-border/60 bg-muted/20 p-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="custom-lock-enabled" className="text-sm font-medium cursor-pointer">
+                  {t('devices.customStatus.lockTitle')}
+                </Label>
+                <Switch
+                  id="custom-lock-enabled"
+                  checked={customLockStatusEnabled}
+                  onCheckedChange={setCustomLockStatusEnabled}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t('devices.customStatus.lockDescription')}
+              </p>
+              <div className="space-y-2">
+                <Input
+                  value={customLockStatus}
+                  onChange={(e) => setCustomLockStatus(e.target.value)}
+                  placeholder={t('devices.customStatus.lockPlaceholder')}
+                  maxLength={100}
+                  disabled={!customLockStatusEnabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('devices.customStatus.maxLength', { max: 100 })} ({customLockStatus.length}/100)
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEditCustomStatusDeviceId(null)
+                setCustomOfflineStatus('')
+                setCustomOfflineStatusEnabled(false)
+                setCustomLockStatus('')
+                setCustomLockStatusEnabled(false)
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (editCustomStatusDeviceId !== null) {
+                  void saveCustomStatus(editCustomStatusDeviceId)
+                }
+              }}
+              disabled={updateCustomStatusMutation.isPending}
+            >
+              {updateCustomStatusMutation.isPending ? t('common.saving') : t('common.save')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

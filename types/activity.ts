@@ -52,6 +52,8 @@ export interface ActivityFeedItem {
   lastReportAt?: string
   updatedAt?: string
   steamNowPlaying?: { appId: string; name: string; imageUrl: string } | null
+  isCustomOfflineStatus?: boolean
+  isCustomLockStatus?: boolean
 }
 
 export interface ActivityFeedData {

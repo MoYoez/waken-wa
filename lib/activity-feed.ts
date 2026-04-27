@@ -14,6 +14,7 @@ import {
 } from '@/lib/app-message-rules'
 import { db } from '@/lib/db'
 import { devices, userActivities } from '@/lib/drizzle-schema'
+import { isLockScreenReporterProcessName } from '@/lib/lockapp-reporter'
 import { listRealtimeActivities } from '@/lib/realtime-activity-cache'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
@@ -403,6 +404,73 @@ export async function getActivityFeedData(
       ? (row as unknown as ActivityFeedItem)
       : (redactGeneratedHashKeyForClient(row) as unknown as ActivityFeedItem)
     activeStatuses.push(item)
+  }
+
+  // Handle custom statuses for lock-screen and offline devices
+  const allDevicesWithCustomStatus = await db
+    .select({
+      id: devices.id,
+      displayName: devices.displayName,
+      generatedHashKey: devices.generatedHashKey,
+      lastSeenAt: devices.lastSeenAt,
+      customOfflineStatus: devices.customOfflineStatus,
+      customOfflineStatusEnabled: devices.customOfflineStatusEnabled,
+      customOfflineStatusUpdatedAt: devices.customOfflineStatusUpdatedAt,
+      customLockStatus: devices.customLockStatus,
+      customLockStatusEnabled: devices.customLockStatusEnabled,
+      customLockStatusUpdatedAt: devices.customLockStatusUpdatedAt,
+    })
+    .from(devices)
+    .where(eq(devices.status, 'active'))
+
+  const activeDeviceHashKeys = new Set(activeStatuses.map((s) => s.generatedHashKey).filter(Boolean))
+
+  // Replace lock-screen activities with custom lock status
+  for (let i = 0; i < activeStatuses.length; i++) {
+    const item = activeStatuses[i]
+    if (!item.processName) continue
+
+    if (isLockScreenReporterProcessName(item.processName)) {
+      const device = allDevicesWithCustomStatus.find((d: { generatedHashKey: string | null }) => d.generatedHashKey === item.generatedHashKey)
+      if (device?.customLockStatusEnabled && device.customLockStatus) {
+        activeStatuses[i] = {
+          ...item,
+          statusText: device.customLockStatus,
+          processTitle: null,
+          isCustomLockStatus: true,
+        }
+      }
+    }
+  }
+
+  // Add custom offline status for offline devices
+  for (const device of allDevicesWithCustomStatus) {
+    if (!device.generatedHashKey) continue
+    if (activeDeviceHashKeys.has(device.generatedHashKey)) continue
+    if (!device.customOfflineStatusEnabled || !device.customOfflineStatus) continue
+
+    const timestampValue = device.customOfflineStatusUpdatedAt || device.lastSeenAt || new Date()
+    const timestamp = typeof timestampValue === 'string' ? timestampValue : timestampValue.toISOString()
+
+    const syntheticItem: ActivityFeedItem = {
+      id: `offline-${device.id}`,
+      deviceId: device.id,
+      device: device.displayName,
+      processName: '',
+      processTitle: null,
+      startedAt: timestamp,
+      endedAt: null,
+      metadata: null,
+      statusText: device.customOfflineStatus,
+      lastReportAt: timestamp,
+      isCustomOfflineStatus: true,
+    }
+
+    if (!options?.includeGeneratedHashKey) {
+      delete (syntheticItem as Partial<ActivityFeedItem>).generatedHashKey
+    }
+
+    activeStatuses.push(syntheticItem)
   }
 
   const recentTopApps: ActivityFeedItem[] = []

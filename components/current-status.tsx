@@ -6,7 +6,9 @@ import {
   BatteryCharging,
   Clock,
   Gamepad2,
+  Hourglass,
   Laptop,
+  Moon,
   Music,
   Smartphone,
   Tablet,
@@ -344,6 +346,12 @@ function CurrentStatusCard({
   const deviceType = getDeviceType(deviceName, activity.metadata)
   const lastReportAt = activity.lastReportAt || activity.updatedAt || activity.startedAt
   const statusLine = typeof activity.statusText === 'string' ? activity.statusText.trim() : ''
+  const isCustomStatus = activity.isCustomOfflineStatus || activity.isCustomLockStatus
+  const customStatusType = activity.isCustomOfflineStatus
+    ? 'customOfflineStatus'
+    : activity.isCustomLockStatus
+    ? 'customLockStatus'
+    : null
   const media = hideActivityMedia ? null : getMediaDisplay(activity.metadata)
   const sp = activity.steamNowPlaying
   const steam: SteamNowPlayingInfo | null =
@@ -364,6 +372,8 @@ function CurrentStatusCard({
     processTitle: activity.processTitle,
     statusLine,
     steamName: steam?.name ?? '',
+    isCustomOfflineStatus: activity.isCustomOfflineStatus,
+    isCustomLockStatus: activity.isCustomLockStatus,
   })
 
   useEffect(() => {
@@ -449,7 +459,13 @@ function CurrentStatusCard({
         </div>
 
         <div className="flex items-start gap-2">
-          <AppWindow className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+          {activity.isCustomLockStatus ? (
+            <Hourglass className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+          ) : activity.isCustomOfflineStatus ? (
+            <Moon className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+          ) : (
+            <AppWindow className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+          )}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-foreground/90 min-w-0">
             {statusLine ? (
               <span className="font-medium">{statusLine}</span>

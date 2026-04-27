@@ -22,7 +22,10 @@
       "noActiveStatus": "No devices are currently online",
       "viewSteamDetails": "View Steam game details",
       "deviceFallback": "device #{{id}}",
-      "activityFallback": "activity #{{id}}"
+      "activityFallback": "activity #{{id}}",
+      "customOfflineStatus": "Offline",
+      "customLockStatus": "Locked",
+      "lastOnline": "Last online"
     },
     "note": {
       "loadingHitokoto": "Loading quote…",

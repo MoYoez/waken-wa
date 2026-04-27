@@ -46,6 +46,12 @@ export const devices = pgTable(
       onDelete: 'set null',
     }),
     lastSeenAt: timestamp('last_seen_at', { mode: 'date', withTimezone: true }),
+    customOfflineStatus: text('custom_offline_status'),
+    customOfflineStatusEnabled: boolean('custom_offline_status_enabled').default(false),
+    customOfflineStatusUpdatedAt: timestamp('custom_offline_status_updated_at', { mode: 'date', withTimezone: true }),
+    customLockStatus: text('custom_lock_status'),
+    customLockStatusEnabled: boolean('custom_lock_status_enabled').default(false),
+    customLockStatusUpdatedAt: timestamp('custom_lock_status_updated_at', { mode: 'date', withTimezone: true }),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
       .notNull()
       .defaultNow(),
