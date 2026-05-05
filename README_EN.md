@@ -72,7 +72,7 @@
 Make sure **Docker** is installed, including `docker compose`. Then run:
 
 ```bash
-curl -fsSL https://wakeme.lemonkoi.one | bash
+curl -fsSL https://goodluck.xwx.today | bash
 ```
 
 > The script automatically resolves the latest **stable version tag** and starts the matching `moyoez/waken-wa:<tag>` Docker Hub image. By default, it does not track `main`, which makes it a better fit for everyday self-hosted deployments. SQLite data is stored in a Docker volume by default; see `docker-compose.yml` for details. Environment variables can be configured from [`.env.example`](.env.example), or by editing `.env` in the deployment directory.
@@ -80,15 +80,15 @@ curl -fsSL https://wakeme.lemonkoi.one | bash
 To deploy the latest `main` branch version explicitly, enable:
 
 ```bash
-curl -fsSL https://wakeme.lemonkoi.one | USE_LATEST_VERSION=1 bash
+curl -fsSL https://goodluck.xwx.today | USE_LATEST_VERSION=1 bash
 ```
 
 You can also override the branch, repository, image, or install workspace with environment variables:
 
 ```bash
-curl -fsSL https://wakeme.lemonkoi.one | WAKEN_BRANCH=main bash
-curl -fsSL https://wakeme.lemonkoi.one | WAKEN_IMAGE=moyoez/waken-wa:v0.30 bash
-curl -fsSL https://wakeme.lemonkoi.one | WAKEN_WORKSPACE=~/waken-wa-deploy bash
+curl -fsSL https://goodluck.xwx.today | WAKEN_BRANCH=main bash
+curl -fsSL https://goodluck.xwx.today | WAKEN_IMAGE=moyoez/waken-wa:v0.30 bash
+curl -fsSL https://goodluck.xwx.today | WAKEN_WORKSPACE=~/waken-wa-deploy bash
 ```
 
 #### Build From Source
