@@ -25,7 +25,12 @@
       "activityFallback": "activity #{{id}}",
       "customOfflineStatus": "Offline",
       "customLockStatus": "Locked",
-      "lastOnline": "Last online"
+      "lastOnline": "Last online",
+      "mediaSource": "Source",
+      "mediaPlaying": "Playing",
+      "mediaPaused": "Paused",
+      "mediaStopped": "Stopped",
+      "mediaPlayback": "Playback"
     },
     "note": {
       "loadingHitokoto": "Loading quote…",

@@ -75,6 +75,7 @@
     "react-image-crop": "^11.0.10",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "sharp": "^0.34.5",
     "sonner": "^1.7.1",
     "tailwind-merge": "^3.3.1",
     "zod": "^3.24.1"

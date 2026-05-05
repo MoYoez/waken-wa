@@ -115,6 +115,12 @@ export interface SiteConfig {
   /** When true, the public site uses Lenis smooth scrolling globally. */
   smoothScrollEnabled: boolean
   hideActivityMedia: boolean
+  /** When true, show media source in hover card. */
+  mediaDisplayShowSource: boolean
+  /** When true, show media cover image in hover card. */
+  mediaDisplayShowCover: boolean
+  /** Max number of cover images to keep per device (0 = unlimited, recommended: 50). */
+  mediaCoverMaxCount: number
   /** When true, hide the inspiration section from the home page. */
   hideInspirationOnHome: boolean
   /**

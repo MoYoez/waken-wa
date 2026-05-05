@@ -5,6 +5,7 @@ __v0_jsx-dev-runtime.ts
 .snowflake/
 .v0-trash/
 .vercel/
+.claude/
 next.user-config.*
 
 # Environment variables

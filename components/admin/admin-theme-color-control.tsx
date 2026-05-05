@@ -27,8 +27,8 @@ export function AdminThemeColorControl({
   const previewBackgroundColor = backgroundColor || ADMIN_BACKGROUND_COLOR_FALLBACK
 
   return (
-    <div className="grid gap-3 xl:grid-cols-2">
-      <div className="space-y-3 rounded-xl border border-border/60 bg-background/70 p-4">
+    <div className="grid gap-4 xl:grid-cols-2">
+      <div className="space-y-3">
         <Label htmlFor="admin-theme-color">{t('webSettings.adminThemeColorLabel')}</Label>
         <p className="text-xs leading-relaxed text-muted-foreground">
           {t('webSettings.adminThemeColorHint')}
@@ -71,7 +71,7 @@ export function AdminThemeColorControl({
         </div>
       </div>
 
-      <div className="space-y-3 rounded-xl border border-border/60 bg-background/70 p-4">
+      <div className="space-y-3">
         <Label htmlFor="admin-background-color">{t('webSettings.adminBackgroundColorLabel')}</Label>
         <p className="text-xs leading-relaxed text-muted-foreground">
           {t('webSettings.adminBackgroundColorHint')}

@@ -147,6 +147,61 @@ export function WebSettingsActivityPanel() {
         />
 
         <ToggleRow
+          id="media-display-show-source"
+          title={t('webSettingsActivity.mediaDisplayShowSourceTitle')}
+          description={t('webSettingsActivity.mediaDisplayShowSourceDescription')}
+          checked={form.mediaDisplayShowSource}
+          onCheckedChange={(value) => patch('mediaDisplayShowSource', value)}
+          disabled={coreHeavyLocked}
+        />
+
+        <ToggleRow
+          id="media-display-show-cover"
+          title={t('webSettingsActivity.mediaDisplayShowCoverTitle')}
+          description={t('webSettingsActivity.mediaDisplayShowCoverDescription')}
+          checked={form.mediaDisplayShowCover}
+          onCheckedChange={(value) => patch('mediaDisplayShowCover', value)}
+          disabled={coreHeavyLocked}
+        />
+
+        <AnimatePresence initial={false}>
+          {form.mediaDisplayShowCover ? (
+            <motion.div
+              variants={sectionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={sectionTransition}
+              layout
+            >
+              <WebSettingsInset className="space-y-2">
+                <Label htmlFor="media-cover-max-count">{t('webSettingsActivity.mediaCoverMaxCountLabel')}</Label>
+                <Input
+                  id="media-cover-max-count"
+                  type="number"
+                  onWheel={(event) => event.currentTarget.blur()}
+                  min={0}
+                  max={500}
+                  value={form.mediaCoverMaxCount}
+                  disabled={coreHeavyLocked}
+                  onChange={(event) =>
+                    patch('mediaCoverMaxCount', Number(event.target.value || 50))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('webSettingsActivity.mediaCoverMaxCountHint')}
+                </p>
+                <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+                  <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+                    {t('webSettingsActivity.mediaCoverServerlessWarning')}
+                  </p>
+                </div>
+              </WebSettingsInset>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        <ToggleRow
           id="hide-inspiration-on-home"
           title={t('webSettingsActivity.hideInspirationOnHomeTitle')}
           description={t('webSettingsActivity.hideInspirationOnHomeDescription')}

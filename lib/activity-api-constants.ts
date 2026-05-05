@@ -4,6 +4,9 @@ export const ACTIVITY_METADATA_MAX_KEYS = 50
 /** Max `JSON.stringify(metadata)` length for activity POST validation. */
 export const ACTIVITY_METADATA_MAX_JSON_LENGTH = 10240
 
+/** Max data URL length accepted for one activity media cover upload. */
+export const ACTIVITY_MEDIA_COVER_DATA_URL_MAX_LENGTH = 2 * 1024 * 1024
+
 /** Default limit for activity feed reads (REST, SSE, status snapshots). */
 export const ACTIVITY_FEED_DEFAULT_LIMIT = 50
 

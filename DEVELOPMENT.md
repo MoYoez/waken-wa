@@ -41,6 +41,23 @@ Copy [`.env.example`](.env.example) to `.env` or `.env.local`, then fill in the 
 
 Avatar, nickname, bio, and related profile fields are configured from **`/admin` site settings** or during first-time setup.
 
+## Site Settings Storage
+
+Site settings have two storage layers:
+
+- **Legacy row:** `site_config` in `drizzle/schema.sqlite.ts` and `drizzle/schema.pg.ts`. This exists for setup, old deployments, and compatibility reads.
+- **Migrated/v2 storage:** `site_config_v2_entries` for core key/value settings, plus split tables for theme, schedule, and rule settings. Admin category routes write through `lib/site-settings-write.ts`, and reads are composed in `lib/site-settings-read.ts`.
+
+When adding a new site setting key:
+
+- If the key is only meant for migrated settings, do **not** add a column to legacy `site_config`.
+- Give old data a runtime default in `lib/site-config-normalize.ts`, the admin form initial state, and the frontend consumer.
+- Add the key to `prepareSiteConfigValuesFromPayload()` in `lib/llm-site-config.ts` so `/api/admin/settings/core` can persist it.
+- If the key must not be editable before migration, add it to `SITE_SETTINGS_MIGRATED_CORE_KEYS` in `lib/site-settings-constants.ts`; `persistCoreSettingsFromPrepared()` will reject it until migration is complete.
+- Keep import/export and API docs in sync when the setting is user-facing.
+
+Only change both Drizzle schemas when adding real database structure or a field that must be persisted by the legacy table before migration.
+
 ### Build
 
 ```bash

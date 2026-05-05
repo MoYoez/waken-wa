@@ -54,7 +54,7 @@ export function buildDevicePaths(baseUrl: string) {
                   is_charging: true,
                   push_mode: 'realtime',
                   metadata: {
-                    source: 'manual-test',
+                    play_source: 'manual-test',
                     media: { title: 'Example Track', singer: 'Example Artist' },
                   },
                 },

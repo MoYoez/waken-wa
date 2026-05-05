@@ -98,6 +98,11 @@ export function buildAdminSettingsPatchBody(
     globalMouseTiltGyroEnabled: Boolean((data as Record<string, unknown>).globalMouseTiltGyroEnabled),
     smoothScrollEnabled: Boolean((data as Record<string, unknown>).smoothScrollEnabled),
     hideActivityMedia: Boolean(data.hideActivityMedia),
+    mediaDisplayShowSource: Boolean((data as Record<string, unknown>).mediaDisplayShowSource),
+    mediaDisplayShowCover: Boolean((data as Record<string, unknown>).mediaDisplayShowCover),
+    mediaCoverMaxCount: Number.isFinite(Number((data as Record<string, unknown>).mediaCoverMaxCount))
+      ? Math.min(Math.max(Math.round(Number((data as Record<string, unknown>).mediaCoverMaxCount)), 0), 500)
+      : 50,
     activityRejectLockappSleep: Boolean(data.activityRejectLockappSleep),
     scheduleSlotMinutes,
     schedulePeriodTemplate,

@@ -92,6 +92,32 @@ export const userActivities = pgTable(
   ],
 )
 
+export const mediaCovers = pgTable(
+  'media_covers',
+  {
+    id: serial('id').primaryKey(),
+    deviceId: integer('device_id')
+      .notNull()
+      .references(() => devices.id, { onDelete: 'cascade' }),
+    generatedHashKey: varchar('generated_hash_key', { length: 128 }).notNull(),
+    coverHash: varchar('cover_hash', { length: 32 }).notNull(),
+    mimeType: varchar('mime_type', { length: 64 }).notNull(),
+    base64Data: text('base64_data').notNull(),
+    sizeBytes: integer('size_bytes').notNull().default(0),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('media_covers_device_id_cover_hash_key').on(t.deviceId, t.coverHash),
+    index('media_covers_generated_hash_key_idx').on(t.generatedHashKey),
+    index('media_covers_device_updated_at_idx').on(t.deviceId, t.updatedAt),
+  ],
+)
+
 export const siteConfig = pgTable('site_config', {
   id: integer('id').primaryKey().default(1),
   /** Hex #RRGGBB for admin shell accent; null = use built-in admin theme */
@@ -724,6 +750,7 @@ export const pgSchema = {
   apiTokens,
   devices,
   userActivities,
+  mediaCovers,
   siteConfig,
   siteConfigV2Entries,
   siteSettingsMigrationMeta,

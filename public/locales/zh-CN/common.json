@@ -25,7 +25,12 @@
       "activityFallback": "活动 #{{id}}",
       "customOfflineStatus": "离线",
       "customLockStatus": "已锁定",
-      "lastOnline": "最后在线"
+      "lastOnline": "最后在线",
+      "mediaSource": "来源",
+      "mediaPlaying": "正在播放",
+      "mediaPaused": "已暂停",
+      "mediaStopped": "已停止",
+      "mediaPlayback": "播放进度"
     },
     "note": {
       "loadingHitokoto": "加载一言…",

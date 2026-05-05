@@ -1,4 +1,5 @@
 import {
+  ACTIVITY_MEDIA_COVER_DATA_URL_MAX_LENGTH,
   ACTIVITY_METADATA_MAX_JSON_LENGTH,
   ACTIVITY_METADATA_MAX_KEYS,
   DEVICE_BATTERY_PERCENT_MAX,
@@ -18,6 +19,8 @@ import { USER_ACTIVITY_PERSIST_MAX_SEC, USER_ACTIVITY_PERSIST_MIN_SEC } from '@/
 type ParseActivityReportOptions = {
   stripMetadataKeysBeforeValidate?: string[]
   stripMetadataKeysAfterNormalize?: string[]
+  /** When true, extract coverDataUrl from media object instead of keeping in metadata */
+  extractMediaCoverDataUrl?: boolean
 }
 
 type ParseActivityReportSuccess = {
@@ -28,6 +31,8 @@ type ParseActivityReportSuccess = {
     processName: string
     processTitle: string | null
     metadata: Record<string, unknown> | null
+    /** Extracted cover data URL, will be null if not present or extraction disabled */
+    mediaCoverDataUrl: string | null
   }
 }
 
@@ -52,6 +57,24 @@ function removeMetadataKeys(
   }
 
   return metadata
+}
+
+/** Extract `coverDataUrl` (base64 data URL) from metadata.media for storage. */
+function extractMediaCoverDataUrl(metadata: Record<string, unknown> | null): string | null {
+  if (!metadata?.media || typeof metadata.media !== 'object' || Array.isArray(metadata.media)) {
+    return null
+  }
+
+  const media = { ...(metadata.media as Record<string, unknown>) }
+  const coverDataUrlRaw = media.coverDataUrl
+  if (typeof coverDataUrlRaw !== 'string' || !coverDataUrlRaw.startsWith('data:image/')) {
+    metadata.media = media
+    return null
+  }
+
+  delete media.coverDataUrl
+  metadata.media = media
+  return coverDataUrlRaw
 }
 
 export function parseActivityReportBody(
@@ -85,11 +108,22 @@ export function parseActivityReportBody(
       : null
 
   let metadata: Record<string, unknown> | null = null
+  let mediaCoverDataUrl: string | null = null
   if (metadataRaw && typeof metadataRaw === 'object' && !Array.isArray(metadataRaw)) {
     metadata = { ...(metadataRaw as Record<string, unknown>) }
     metadata = removeMetadataKeys(metadata, options.stripMetadataKeysBeforeValidate)
     if (!metadata) {
       metadata = {}
+    }
+
+    if (options.extractMediaCoverDataUrl) {
+      mediaCoverDataUrl = extractMediaCoverDataUrl(metadata)
+      if (
+        mediaCoverDataUrl &&
+        mediaCoverDataUrl.length > ACTIVITY_MEDIA_COVER_DATA_URL_MAX_LENGTH
+      ) {
+        return { ok: false, error: '媒体封面图片过大', status: 400 }
+      }
     }
 
     const metaKeys = Object.keys(metadata)
@@ -149,6 +183,7 @@ export function parseActivityReportBody(
       processName,
       processTitle,
       metadata,
+      mediaCoverDataUrl,
     },
   }
 }

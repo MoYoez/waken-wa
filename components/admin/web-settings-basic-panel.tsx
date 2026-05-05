@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import { useT } from 'next-i18next/client'
 
+import { AdminLanguageToggle } from '@/components/admin/admin-language-toggle'
 import {
   getAdminPanelTransition,
   getAdminSectionVariants,
@@ -32,6 +33,7 @@ import { isRemoteAvatarUrl, resolveAvatarUrl } from '@/lib/avatar-url'
 import { DEFAULT_PAGE_TITLE, PAGE_TITLE_MAX_LEN } from '@/lib/default-page-title'
 
 export function WebSettingsBasicPanel() {
+  const { t: tCommon } = useT('common')
   const { t } = useT('admin')
   const [form, setForm] = useAtom(webSettingsFormAtom)
   const [migration] = useAtom(webSettingsMigrationAtom)
@@ -77,6 +79,18 @@ export function WebSettingsBasicPanel() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+        <div className="min-w-0 space-y-0.5">
+          <Label className="font-normal">
+            {tCommon('admin.language.title')}
+          </Label>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {tCommon('admin.language.description')}
+          </p>
+        </div>
+        <AdminLanguageToggle />
+      </div>
+
       <div className="space-y-2">
         <Label>{t('webSettingsBasic.pageTitleLabel')}</Label>
         <Input

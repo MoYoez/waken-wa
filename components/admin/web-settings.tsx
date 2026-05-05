@@ -6,7 +6,6 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useT } from 'next-i18next/client'
 import { useMemo } from 'react'
 
-import { AdminLanguageToggle } from '@/components/admin/admin-language-toggle'
 import {
   getAdminPanelTransition,
   getAdminSectionVariants,
@@ -113,57 +112,6 @@ function WebSettingsContent() {
           onClearLegacyData={clearLegacyData}
         />
 
-        <section className="space-y-3">
-          <div className="rounded-2xl border border-border/60 bg-muted/[0.06] px-4 py-4 sm:px-5">
-            <div className="space-y-4">
-              <div className="max-w-2xl space-y-1">
-                <h3 className="text-sm font-semibold tracking-wide text-foreground">
-                  {t('webSettings.adminAppearanceTitle')}
-                </h3>
-                <p className="text-xs leading-6 text-muted-foreground">
-                  {t('webSettings.adminAppearanceDescription')}
-                </p>
-              </div>
-              <div className="hidden items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/70 px-4 py-3 lg:flex">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {t('webSettings.adminThemeModeLabel')}
-                  </p>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    {t('webSettings.adminThemeModeHint')}
-                  </p>
-                </div>
-                <ThemeModeToggle className="shrink-0" />
-              </div>
-              <AdminThemeColorControl
-                themeColor={form.adminThemeColor}
-                backgroundColor={form.adminBackgroundColor}
-                onThemeColorChange={(value) =>
-                  setForm((prev) => ({ ...prev, adminThemeColor: value }))
-                }
-                onBackgroundColorChange={(value) =>
-                  setForm((prev) => ({ ...prev, adminBackgroundColor: value }))
-                }
-              />
-            </div>
-          </div>
-          <div className="hidden rounded-2xl border border-border/60 bg-muted/[0.06] px-5 py-5 lg:block">
-            <div className="space-y-4">
-              <div className="max-w-2xl space-y-1">
-                <h3 className="text-sm font-semibold tracking-wide text-foreground">
-                  {tCommon('admin.language.title')}
-                </h3>
-                <p className="text-xs leading-6 text-muted-foreground">
-                  {tCommon('admin.language.description')}
-                </p>
-              </div>
-              <div className="rounded-xl border border-border/60 bg-background/70 p-4">
-                <AdminLanguageToggle />
-              </div>
-            </div>
-          </div>
-        </section>
-
         <Tabs defaultValue="basic" className="space-y-4 sm:space-y-5">
           <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-fit">
             <TabsTrigger value="basic" className="w-full">
@@ -183,6 +131,34 @@ function WebSettingsContent() {
               title={t('webSettings.sections.platform.title')}
               description={t('webSettings.sections.platform.description')}
             >
+              <WebSettingsRows>
+                <WebSettingsRow
+                  title={t('webSettings.adminThemeModeLabel')}
+                  description={t('webSettings.adminThemeModeHint')}
+                  action={<ThemeModeToggle className="shrink-0" />}
+                  actionClassName="pt-0"
+                />
+              </WebSettingsRows>
+              <WebSettingsInset className="space-y-3">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium text-foreground">
+                    {t('webSettings.adminAppearanceTitle')}
+                  </h4>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {t('webSettings.adminAppearanceDescription')}
+                  </p>
+                </div>
+                <AdminThemeColorControl
+                  themeColor={form.adminThemeColor}
+                  backgroundColor={form.adminBackgroundColor}
+                  onThemeColorChange={(value) =>
+                    setForm((prev) => ({ ...prev, adminThemeColor: value }))
+                  }
+                  onBackgroundColorChange={(value) =>
+                    setForm((prev) => ({ ...prev, adminBackgroundColor: value }))
+                  }
+                />
+              </WebSettingsInset>
               {avatarUsesRemoteUrl ? (
                 <WebSettingsRows>
                   <WebSettingsRow

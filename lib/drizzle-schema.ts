@@ -10,6 +10,7 @@ export const adminUsers = usePg ? pg.adminUsers : sqlite.adminUsers
 export const apiTokens = usePg ? pg.apiTokens : sqlite.apiTokens
 export const devices = usePg ? pg.devices : sqlite.devices
 export const userActivities = usePg ? pg.userActivities : sqlite.userActivities
+export const mediaCovers = usePg ? pg.mediaCovers : sqlite.mediaCovers
 export const siteConfig = usePg ? pg.siteConfig : sqlite.siteConfig
 export const siteConfigV2Entries = usePg ? pg.siteConfigV2Entries : sqlite.siteConfigV2Entries
 export const siteSettingsMigrationMeta = usePg

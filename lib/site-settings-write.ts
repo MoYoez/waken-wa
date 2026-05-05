@@ -38,6 +38,7 @@ import {
   pickRecordKeys,
   SITE_SETTINGS_CLEAR_LEGACY_SITE_CONFIG_VALUES,
   SITE_SETTINGS_COMPAT_WRITE_BLOCKED_KEYS,
+  SITE_SETTINGS_MIGRATED_CORE_KEYS,
   SITE_SETTINGS_RULES_KEYS,
   SITE_SETTINGS_SCHEDULE_CATEGORY_KEYS,
   SITE_SETTINGS_THEME_CATEGORY_KEYS,
@@ -849,6 +850,13 @@ export async function persistCoreSettingsFromPrepared(
   executor: any = db,
 ): Promise<Record<string, unknown> | null> {
   const migrationState = await readMigrationState(executor)
+
+  if (
+    migrationState === 'legacy' &&
+    hasAnyRecordKey(requestedBody, SITE_SETTINGS_MIGRATED_CORE_KEYS)
+  ) {
+    throw createSiteSettingsMigrationRequiredError()
+  }
 
   if (migrationState === 'legacy') {
     await persistSiteConfigSubset(executor, preparedValues, Object.keys(requestedBody))

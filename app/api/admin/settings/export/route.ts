@@ -144,6 +144,11 @@ export async function GET(request: Request) {
         globalMouseTiltGyroEnabled: cfg.globalMouseTiltGyroEnabled === true,
         smoothScrollEnabled: cfg.smoothScrollEnabled === true,
         hideActivityMedia: cfg.hideActivityMedia === true,
+        mediaDisplayShowSource: cfg.mediaDisplayShowSource === true,
+        mediaDisplayShowCover: cfg.mediaDisplayShowCover === true,
+        mediaCoverMaxCount: Number.isFinite(Number(cfg.mediaCoverMaxCount))
+          ? Math.min(Math.max(Math.round(Number(cfg.mediaCoverMaxCount)), 0), 500)
+          : 50,
         hideInspirationOnHome: cfg.hideInspirationOnHome === true,
         activityRejectLockappSleep: cfg.activityRejectLockappSleep === true,
       },

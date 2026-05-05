@@ -147,20 +147,212 @@ function mediaPrimaryLine(media: MediaDisplay): string {
   return media.singer ? `${media.title} · ${media.singer}` : media.title
 }
 
+function formatPlaybackTime(ms: number | null): string {
+  if (ms === null || !Number.isFinite(ms) || ms < 0) return '--:--'
+  const totalSeconds = Math.floor(ms / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+function getPlaybackPosition(media: MediaDisplay, nowMs: number): number | null {
+  let positionMs = media.positionMs
+  if (media.state === 'playing') {
+    if (media.startedAtMs !== null) {
+      positionMs = nowMs - media.startedAtMs
+    } else if (media.positionMs !== null && media.reportedAtMs !== null) {
+      positionMs = media.positionMs + Math.max(0, nowMs - media.reportedAtMs)
+    }
+  }
+
+  if (positionMs === null || !Number.isFinite(positionMs)) return null
+  const clamped = Math.max(0, positionMs)
+  return media.durationMs !== null ? Math.min(clamped, media.durationMs) : clamped
+}
+
+function getPlaybackPercent(positionMs: number | null, durationMs: number | null): number | null {
+  if (positionMs === null || durationMs === null || durationMs <= 0) return null
+  return Math.min(100, Math.max(0, (positionMs / durationMs) * 100))
+}
+
+function hasPlaybackDetails(media: MediaDisplay): boolean {
+  return Boolean(
+    media.state ||
+      media.positionMs !== null ||
+      media.durationMs !== null ||
+      media.startedAtMs !== null ||
+      media.endsAtMs !== null ||
+      media.reportedAtMs !== null,
+  )
+}
+
 function MediaAndSteamRow({
   media,
   steam,
+  showMediaSource,
+  showMediaCover,
 }: {
   media: MediaDisplay | null
   steam: SteamNowPlayingInfo | null
+  showMediaSource: boolean
+  showMediaCover: boolean
 }) {
   const { t } = useT('common')
   const isMobile = useIsMobile()
   const [steamImgFailed, setSteamImgFailed] = useState(false)
+  const [mediaCoverImgFailed, setMediaCoverImgFailed] = useState(false)
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (media?.state !== 'playing' || (media.startedAtMs === null && media.reportedAtMs === null)) {
+      return
+    }
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [media?.reportedAtMs, media?.startedAtMs, media?.state])
 
   if (!media && !steam) return null
 
+  const playbackPositionMs = media ? getPlaybackPosition(media, nowMs) : null
+  const playbackPercent = media
+    ? getPlaybackPercent(playbackPositionMs, media.durationMs)
+    : null
   const pair = Boolean(media && steam)
+  const hasMediaDetails = Boolean(
+    media &&
+      ((showMediaSource && media.source) ||
+        (showMediaCover && media.coverUrl) ||
+        hasPlaybackDetails(media)),
+  )
+
+  const MediaContent = () => (
+    <>
+      {showMediaCover && media?.coverUrl && !mediaCoverImgFailed ? (
+        <Image
+          src={media.coverUrl}
+          alt=""
+          width={460}
+          height={460}
+          loading="eager"
+          className="w-full max-h-48 rounded-md object-cover bg-muted"
+          onError={() => setMediaCoverImgFailed(true)}
+        />
+      ) : null}
+      {media ? (
+        <div className="space-y-2">
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold leading-snug break-words">{media.title}</p>
+            {media.singer || media.album ? (
+              <p className="text-xs leading-snug text-muted-foreground break-words">
+                {[media.singer, media.album].filter(Boolean).join(' · ')}
+              </p>
+            ) : null}
+          </div>
+          {hasPlaybackDetails(media) ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                  <span
+                    className={cn(
+                      'h-1.5 w-1.5 rounded-full',
+                      media.state === 'playing'
+                        ? 'bg-emerald-500'
+                        : media.state === 'paused'
+                          ? 'bg-amber-500'
+                          : 'bg-muted-foreground/70',
+                    )}
+                    aria-hidden
+                  />
+                  {media.state === 'playing'
+                    ? t('site.currentStatus.mediaPlaying')
+                    : media.state === 'paused'
+                      ? t('site.currentStatus.mediaPaused')
+                      : media.state === 'stopped'
+                        ? t('site.currentStatus.mediaStopped')
+                        : t('site.currentStatus.mediaPlayback')}
+                </span>
+                <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                  {formatPlaybackTime(playbackPositionMs)}
+                  {media.durationMs !== null ? ` / ${formatPlaybackTime(media.durationMs)}` : null}
+                </span>
+              </div>
+              {playbackPercent !== null ? (
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-foreground transition-[width] duration-500 ease-linear"
+                    style={{ width: `${playbackPercent}%` }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {showMediaSource && media?.source ? (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">{t('site.currentStatus.mediaSource')}</p>
+          <p className="text-sm leading-snug break-words">{media.source}</p>
+        </div>
+      ) : null}
+    </>
+  )
+
+  const mediaContent = media ? (
+    <div
+      className={cn(
+        'flex min-w-0 items-center gap-2',
+        pair ? 'min-w-0 flex-1 basis-0' : 'w-full min-w-0',
+      )}
+      role="presentation"
+    >
+      <Music className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      {hasMediaDetails ? (
+        isMobile ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'min-w-0 flex-1 basis-0 items-center text-left',
+                  pair ? 'inline-flex max-w-full' : 'flex w-full justify-start',
+                  'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md transition-colors',
+                )}
+              >
+                <MarqueeIfNeeded text={mediaPrimaryLine(media)} />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[min(18rem,calc(100vw-2rem))] space-y-3 p-3" align="start">
+              {MediaContent()}
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <HoverCard openDelay={120}>
+            <HoverCardTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'min-w-0 flex-1 basis-0 items-center text-left',
+                  pair ? 'inline-flex max-w-full' : 'flex w-full justify-start',
+                  'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md transition-colors',
+                )}
+              >
+                <MarqueeIfNeeded text={mediaPrimaryLine(media)} />
+              </button>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-72 space-y-3" align="start">
+              {MediaContent()}
+            </HoverCardContent>
+          </HoverCard>
+        )
+      ) : (
+        <MarqueeIfNeeded text={mediaPrimaryLine(media)} />
+      )}
+    </div>
+  ) : null
 
   return (
     <div
@@ -169,17 +361,7 @@ function MediaAndSteamRow({
         pair ? 'gap-2' : 'gap-1.5',
       )}
     >
-      {media ? (
-        <div
-          className={cn(
-            'flex min-w-0 items-center gap-2',
-            pair ? 'min-w-0 flex-1 basis-0' : 'w-full min-w-0',
-          )}
-        >
-          <Music className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-          <MarqueeIfNeeded text={mediaPrimaryLine(media)} />
-        </div>
-      ) : null}
+      {mediaContent}
 
       {steam ? (
         <div
@@ -293,6 +475,8 @@ function MediaAndSteamRow({
 
 interface CurrentStatusProps {
   hideActivityMedia?: boolean
+  showMediaSource?: boolean
+  showMediaCover?: boolean
 }
 
 function LastReportTime({
@@ -322,11 +506,15 @@ function LastReportTime({
 function CurrentStatusCard({
   activity,
   hideActivityMedia,
+  showMediaSource,
+  showMediaCover,
   sectionTransition,
   sectionVariants,
 }: {
   activity: ActivityFeedItem
   hideActivityMedia: boolean
+  showMediaSource: boolean
+  showMediaCover: boolean
   sectionTransition: ReturnType<typeof getSiteSectionTransition>
   sectionVariants: ReturnType<typeof getSiteSectionVariants>
 }) {
@@ -483,7 +671,14 @@ function CurrentStatusCard({
           </div>
         </div>
 
-        {media || steam ? <MediaAndSteamRow media={media} steam={steam} /> : null}
+        {media || steam ? (
+          <MediaAndSteamRow
+            media={media}
+            steam={steam}
+            showMediaSource={showMediaSource}
+            showMediaCover={showMediaCover}
+          />
+        ) : null}
 
         <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
@@ -514,7 +709,11 @@ function CurrentStatusCard({
   )
 }
 
-export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps) {
+export function CurrentStatus({
+  hideActivityMedia = false,
+  showMediaSource = false,
+  showMediaCover = false,
+}: CurrentStatusProps) {
   const { t } = useT('common')
   const { feed, error } = useSharedActivityFeed()
   const prefersReducedMotion = Boolean(useReducedMotion())
@@ -560,6 +759,8 @@ export function CurrentStatus({ hideActivityMedia = false }: CurrentStatusProps)
             <CurrentStatusCard
               activity={activity}
               hideActivityMedia={hideActivityMedia}
+              showMediaSource={showMediaSource}
+              showMediaCover={showMediaCover}
               sectionTransition={sectionTransition}
               sectionVariants={sectionVariants}
               key={

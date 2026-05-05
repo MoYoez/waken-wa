@@ -74,6 +74,12 @@ export const SITE_SETTINGS_CORE_HEAVY_KEYS = [
   'inspirationAllowedDeviceHashes',
 ] as const
 
+export const SITE_SETTINGS_MIGRATED_CORE_KEYS = [
+  'mediaDisplayShowSource',
+  'mediaDisplayShowCover',
+  'mediaCoverMaxCount',
+] as const
+
 export const SITE_SETTINGS_HEAVY_KEYS = [
   ...SITE_SETTINGS_THEME_HEAVY_KEYS,
   ...SITE_SETTINGS_SCHEDULE_HEAVY_KEYS,

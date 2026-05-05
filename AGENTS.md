@@ -119,6 +119,17 @@ flowchart TB
 
 推送 schema 使用 `pnpm db:push` 或 `pnpm db:push:postgres`（具体 config 文件见 [drizzle.config.pg.ts](drizzle.config.pg.ts)、[drizzle.config.sqlite.ts](drizzle.config.sqlite.ts)）。
 
+### 站点设置迁移后的新增 key 约定
+
+站点设置已从旧的 `site_config` 实体列模式迁移到 split/v2 存储：
+
+- **旧表**：[drizzle/schema.sqlite.ts](drizzle/schema.sqlite.ts) / [drizzle/schema.pg.ts](drizzle/schema.pg.ts) 中的 `siteConfig` 是 legacy 兼容层，主要用于未迁移环境、初始化和旧数据读取。
+- **新设置 key**：迁移后应写入 `site_config_v2_entries`（以及 theme / schedule / rules 的分类表），不要为了普通新增设置继续给 `site_config` 加实体列。
+- **读取默认值**：新 key 在老表或旧数据中不存在时，应用层必须给默认值（通常在 [lib/site-config-normalize.ts](lib/site-config-normalize.ts)、表单初始值、前台消费处兜底），不要依赖 legacy 列。
+- **保存保护**：如果新 key 只支持迁移后的 v2 存储，应加入 [lib/site-settings-constants.ts](lib/site-settings-constants.ts) 的 `SITE_SETTINGS_MIGRATED_CORE_KEYS`（或相应分类约束），并在 [lib/site-settings-write.ts](lib/site-settings-write.ts) 中保持未迁移状态下返回“请先迁移到新方案”。
+- **写入链路**：核心设置 key 通常需要同时检查 [lib/llm-site-config.ts](lib/llm-site-config.ts)（`prepareSiteConfigValuesFromPayload`）、[lib/site-config-normalize.ts](lib/site-config-normalize.ts)、[components/admin/use-web-settings-controller.ts](components/admin/use-web-settings-controller.ts)、[components/admin/web-settings-store.ts](components/admin/web-settings-store.ts)、[components/admin/web-settings-types.ts](components/admin/web-settings-types.ts)、导入导出与 OpenAPI schema。
+- **何时改 schema**：只有新增真正的数据表、分类存储表、业务记录表，或必须兼容未迁移 legacy 单表写入的字段时，才改 PG/SQLite schema。若只是迁移后设置 key，不改 `site_config`。
+
 ### SQLite JSON 绑定注意事项
 
 - **SQLite（better-sqlite3）参数绑定不接受对象/数组**：写入时只能 bind number/string/bigint/buffer/null。
@@ -155,13 +166,13 @@ flowchart TB
 | 活动流 | REST + SSE | [app/api/activity/route.ts](app/api/activity/route.ts)、[app/api/activity/stream/route.ts](app/api/activity/stream/route.ts)、[lib/activity-feed.ts](lib/activity-feed.ts) |
 | 管理后台 UI | 仪表盘、设置、设备等 | [app/admin/](app/admin/)、[components/admin/](components/admin/) |
 | 灵感 | 列表页与 API | [app/inspiration/](app/inspiration/)、[app/api/inspiration/](app/api/inspiration/) |
-| 站点配置 | 单表配置驱动标题与行为 | [lib/drizzle-schema.ts](lib/drizzle-schema.ts) 中 `siteConfig` |
+| 站点配置 | legacy `site_config` + 迁移后 split/v2 设置存储 | [lib/site-settings-read.ts](lib/site-settings-read.ts)、[lib/site-settings-write.ts](lib/site-settings-write.ts)、[lib/site-config-v2.ts](lib/site-config-v2.ts) |
 
 ---
 
 ## 7. Agent / 协作者工作准则
 
-1. **数据库变更**：必须同步 PG 与 SQLite 两套 schema，并更新 [lib/drizzle-schema.ts](lib/drizzle-schema.ts)。**新增列不要加 `.notNull()`**（默认可空 + 代码侧默认值）；确需 `NOT NULL` 时须带服务端 `.default`（见上文「迁移与已有数据」）。
+1. **数据库变更**：必须同步 PG 与 SQLite 两套 schema，并更新 [lib/drizzle-schema.ts](lib/drizzle-schema.ts)。**新增列不要加 `.notNull()`**（默认可空 + 代码侧默认值）；确需 `NOT NULL` 时须带服务端 `.default`（见上文「迁移与已有数据」）。普通站点设置新增 key 优先走迁移后的 v2 存储，不要默认给 legacy `site_config` 加列。
 2. **优先复用**：业务逻辑放在 [lib/](lib/)，页面与 Route 保持精简。
 3. **服务端边界**：数据库与敏感逻辑使用 `server-only`（参见 [lib/db.ts](lib/db.ts)），避免在客户端包中引入服务端专用模块。
 4. **大改前**：先阅读相关 `app/api/**/route.ts` 与 [lib/](lib/) 中的既有实现，保持命名与错误处理风格一致。

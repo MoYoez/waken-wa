@@ -51,6 +51,12 @@ import { normalizeTimezone } from '@/lib/timezone'
 
 export { getSafeSiteConfig, LLM_DENIED_SITE_CONFIG_KEYS }
 
+function normalizeMediaCoverMaxCount(value: unknown): number {
+  const count = Number(value)
+  if (!Number.isFinite(count)) return 50
+  return Math.min(Math.max(Math.round(count), 0), 500)
+}
+
 export async function prepareSiteConfigValuesFromPayload(
   body: Record<string, unknown>,
   options?: { allowRestrictedFields?: boolean },
@@ -390,6 +396,18 @@ export async function prepareSiteConfigValuesFromPayload(
   if (body.hideActivityMedia !== undefined && body.hideActivityMedia !== null) {
     hideActivityMedia = Boolean(body.hideActivityMedia)
   }
+  let mediaDisplayShowSource = existing?.mediaDisplayShowSource === true
+  if (body.mediaDisplayShowSource !== undefined && body.mediaDisplayShowSource !== null) {
+    mediaDisplayShowSource = Boolean(body.mediaDisplayShowSource)
+  }
+  let mediaDisplayShowCover = existing?.mediaDisplayShowCover === true
+  if (body.mediaDisplayShowCover !== undefined && body.mediaDisplayShowCover !== null) {
+    mediaDisplayShowCover = Boolean(body.mediaDisplayShowCover)
+  }
+  let mediaCoverMaxCount = normalizeMediaCoverMaxCount(existing?.mediaCoverMaxCount)
+  if (body.mediaCoverMaxCount !== undefined && body.mediaCoverMaxCount !== null) {
+    mediaCoverMaxCount = normalizeMediaCoverMaxCount(body.mediaCoverMaxCount)
+  }
 
   let hideInspirationOnHome = existing?.hideInspirationOnHome === true
   if (body.hideInspirationOnHome !== undefined && body.hideInspirationOnHome !== null) {
@@ -513,6 +531,9 @@ export async function prepareSiteConfigValuesFromPayload(
     globalMouseTiltGyroEnabled,
     smoothScrollEnabled,
     hideActivityMedia,
+    mediaDisplayShowSource,
+    mediaDisplayShowCover,
+    mediaCoverMaxCount,
     hideInspirationOnHome,
     hcaptchaEnabled,
     hcaptchaSiteKey,

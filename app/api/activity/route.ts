@@ -23,7 +23,8 @@ import { db } from '@/lib/db'
 import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
 import { devices, userActivities } from '@/lib/drizzle-schema'
 import { isLockScreenReporterProcessName } from '@/lib/lockapp-reporter'
-import { buildDeviceApprovalUrl } from '@/lib/public-request-url'
+import { saveCoverFromDataUrl } from '@/lib/media-cover-storage'
+import { buildDeviceApprovalUrl, getPublicOrigin } from '@/lib/public-request-url'
 import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { parseProcessStaleSeconds } from '@/lib/site-config-constants'
@@ -32,6 +33,19 @@ import { toDbJsonValue } from '@/lib/sqlite-json'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+function normalizeMediaPlaySource(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase()
+}
+
+function mediaPlaySourceBlocked(config: unknown, metadata: Record<string, unknown>): boolean {
+  const blockedSources = (config as Record<string, unknown> | null)?.mediaPlaySourceBlocklist
+  if (!Array.isArray(blockedSources) || blockedSources.length === 0) return false
+
+  const source = normalizeMediaPlaySource(metadata.play_source)
+  if (!source) return false
+  return blockedSources.some((item) => normalizeMediaPlaySource(item) === source)
+}
 
 async function validateToken(request: NextRequest): Promise<{ id: number } | null> {
   const authHeader = request.headers.get('authorization')
@@ -104,6 +118,7 @@ export async function POST(request: NextRequest) {
 
     const parsedBody = parseActivityReportBody(body as Record<string, unknown>, {
       stripMetadataKeysAfterNormalize: PUBLIC_ACTIVITY_RESERVED_METADATA_KEYS,
+      extractMediaCoverDataUrl: true,
     })
     if (!parsedBody.ok) {
       return NextResponse.json({ success: false, error: parsedBody.error }, { status: parsedBody.status })
@@ -115,6 +130,7 @@ export async function POST(request: NextRequest) {
       processName: process_name,
       processTitle: process_title,
       metadata,
+      mediaCoverDataUrl,
     } = parsedBody.data
 
     if (!generatedHashKey || !process_name) {
@@ -277,14 +293,41 @@ export async function POST(request: NextRequest) {
     const isActivePush = pushModeNorm === 'active' || pushModeNorm === 'persistent'
     const realtimeTtlSeconds = parseProcessStaleSeconds(siteCfg?.processStaleSeconds)
     const realtimeExpiresAt = new Date(reportAtMs + realtimeTtlSeconds * 1000)
-    let finalMetadata: Record<string, unknown> | null
-    if (isActivePush) {
-      finalMetadata = {
-        ...(metadata || {}),
-        pushMode: 'active',
-        [USER_PERSIST_EXPIRES_AT_METADATA_KEY]: realtimeExpiresAt.toISOString(),
-        [USER_ACTIVITY_DB_SYNCED_METADATA_KEY]: true,
+    const finalMetadata: Record<string, unknown> = {
+      ...(metadata || {}),
+      pushMode: isActivePush ? 'active' : 'realtime',
+      ...(isActivePush
+        ? {
+            [USER_PERSIST_EXPIRES_AT_METADATA_KEY]: realtimeExpiresAt.toISOString(),
+            [USER_ACTIVITY_DB_SYNCED_METADATA_KEY]: true,
+          }
+        : {}),
+    }
+
+    const enableCover =
+      siteCfg?.mediaDisplayShowCover === true &&
+      !mediaPlaySourceBlocked(siteCfg, finalMetadata)
+
+    if (enableCover && mediaCoverDataUrl) {
+      const maxCoverCount = Number(siteCfg.mediaCoverMaxCount ?? 50)
+      const baseUrl = getPublicOrigin(request)
+      const coverInfo = await saveCoverFromDataUrl(
+        deviceRecord.id,
+        generatedHashKey,
+        mediaCoverDataUrl,
+        Number.isFinite(maxCoverCount) && maxCoverCount >= 0 ? maxCoverCount : 50,
+        baseUrl,
+      )
+      if (coverInfo) {
+        const media = finalMetadata.media
+        finalMetadata.media =
+          media && typeof media === 'object' && !Array.isArray(media)
+            ? { ...(media as Record<string, unknown>), coverUrl: coverInfo.url }
+            : { coverUrl: coverInfo.url }
       }
+    }
+
+    if (isActivePush) {
       const now = sqlTimestamp()
       const expiresAtVal = sqlDate(realtimeExpiresAt)
       await db
@@ -311,10 +354,6 @@ export async function POST(request: NextRequest) {
         })
       await removeRealtimeActivity(generatedHashKey, process_name)
     } else {
-      finalMetadata = {
-        ...(metadata || {}),
-        pushMode: 'realtime',
-      }
       await upsertRealtimeActivity(
         {
           deviceId: deviceRecord.id,

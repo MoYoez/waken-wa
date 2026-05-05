@@ -123,6 +123,8 @@ export default async function Home() {
   const showScheduleHomeColumn = scheduleInClassOnHome && scheduleCoursesForHome.length > 0
 
   const hideActivityMedia = Boolean(cfg.hideActivityMedia)
+  const mediaDisplayShowSource = cfg.mediaDisplayShowSource === true
+  const mediaDisplayShowCover = cfg.mediaDisplayShowCover === true
   const hideInspirationOnHome = cfg.hideInspirationOnHome === true
   const pageLoadingEnabled = cfg.pageLoadingEnabled !== false
   const smoothScrollEnabled = cfg.smoothScrollEnabled === true
@@ -237,7 +239,11 @@ export default async function Home() {
                           {currentlyText}
                         </h2>
                         <div className="space-y-3">
-                          <CurrentStatus hideActivityMedia={hideActivityMedia} />
+                          <CurrentStatus
+                            hideActivityMedia={hideActivityMedia}
+                            showMediaSource={mediaDisplayShowSource}
+                            showMediaCover={mediaDisplayShowCover}
+                          />
                         </div>
                       </section>
                     </SiteReveal>

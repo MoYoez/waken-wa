@@ -462,6 +462,18 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
   if ('hideActivityMedia' in web && typeof web.hideActivityMedia === 'boolean') {
     patch.hideActivityMedia = web.hideActivityMedia
   }
+  if ('mediaDisplayShowSource' in web && typeof web.mediaDisplayShowSource === 'boolean') {
+    patch.mediaDisplayShowSource = web.mediaDisplayShowSource
+  }
+  if ('mediaDisplayShowCover' in web && typeof web.mediaDisplayShowCover === 'boolean') {
+    patch.mediaDisplayShowCover = web.mediaDisplayShowCover
+  }
+  if ('mediaCoverMaxCount' in web) {
+    const maxCount = Number(web.mediaCoverMaxCount)
+    if (Number.isFinite(maxCount) && maxCount >= 0) {
+      patch.mediaCoverMaxCount = Math.min(Math.max(maxCount, 0), 500)
+    }
+  }
   if ('hideInspirationOnHome' in web && typeof web.hideInspirationOnHome === 'boolean') {
     patch.hideInspirationOnHome = web.hideInspirationOnHome
   }

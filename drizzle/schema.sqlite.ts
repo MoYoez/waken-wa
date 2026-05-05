@@ -82,6 +82,28 @@ export const userActivities = sqliteTable(
   ],
 )
 
+export const mediaCovers = sqliteTable(
+  'media_covers',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    deviceId: integer('device_id')
+      .notNull()
+      .references(() => devices.id, { onDelete: 'cascade' }),
+    generatedHashKey: text('generated_hash_key').notNull(),
+    coverHash: text('cover_hash').notNull(),
+    mimeType: text('mime_type').notNull(),
+    base64Data: text('base64_data').notNull(),
+    sizeBytes: integer('size_bytes').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    uniqueIndex('media_covers_device_id_cover_hash_key').on(t.deviceId, t.coverHash),
+    index('media_covers_generated_hash_key_idx').on(t.generatedHashKey),
+    index('media_covers_device_updated_at_idx').on(t.deviceId, t.updatedAt),
+  ],
+)
+
 export const siteConfig = sqliteTable('site_config', {
   id: integer('id').primaryKey().default(1),
   /** Hex #RRGGBB for admin shell accent; null = use built-in admin theme */
@@ -692,6 +714,7 @@ export const sqliteSchema = {
   apiTokens,
   devices,
   userActivities,
+  mediaCovers,
   siteConfig,
   siteConfigV2Entries,
   siteSettingsMigrationMeta,

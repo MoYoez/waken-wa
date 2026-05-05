@@ -88,6 +88,7 @@ import {
   omitRecordKeys,
   pickRecordKeys,
   SITE_SETTINGS_CORE_HEAVY_KEYS,
+  SITE_SETTINGS_MIGRATED_CORE_KEYS,
   SITE_SETTINGS_SCHEDULE_CATEGORY_KEYS,
   SITE_SETTINGS_THEME_CATEGORY_KEYS,
 } from '@/lib/site-settings-constants'
@@ -313,6 +314,9 @@ export function useWebSettingsController() {
       globalMouseTiltGyroEnabled: data.globalMouseTiltGyroEnabled === true,
       smoothScrollEnabled: data.smoothScrollEnabled === true,
       hideActivityMedia: data.hideActivityMedia === true,
+      mediaDisplayShowSource: data.mediaDisplayShowSource === true,
+      mediaDisplayShowCover: data.mediaDisplayShowCover === true,
+      mediaCoverMaxCount: Number(data.mediaCoverMaxCount ?? 50),
       hideInspirationOnHome: data.hideInspirationOnHome === true,
       activityRejectLockappSleep: data.activityRejectLockappSleep === true,
       displayTimezone: normalizeTimezone(data.displayTimezone),
@@ -547,10 +551,18 @@ export function useWebSettingsController() {
       SITE_SETTINGS_CORE_HEAVY_KEYS,
     )
   }, [baselineForm, form])
+  const migratedCoreSettingsDirty = useMemo(() => {
+    if (!baselineForm) return false
+    return hasKeyDiff(
+      form as unknown as Record<string, unknown>,
+      baselineForm as unknown as Record<string, unknown>,
+      SITE_SETTINGS_MIGRATED_CORE_KEYS,
+    )
+  }, [baselineForm, form])
 
   const hasLockedLegacyChanges =
     migration?.heavyEditingLocked === true &&
-    (themeSettingsDirty || scheduleSettingsDirty || coreHeavySettingsDirty)
+    (themeSettingsDirty || scheduleSettingsDirty || coreHeavySettingsDirty || migratedCoreSettingsDirty)
 
   const runSettingsMigration = async () => {
     setMigrationActionPending(true)

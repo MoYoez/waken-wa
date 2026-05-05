@@ -12,6 +12,8 @@ function normalizeStringArrayField(raw: unknown): string[] {
 }
 
 export function normalizeSiteConfigShape(config: Record<string, any>): Record<string, any> {
+  const mediaCoverMaxCount = Number(config.mediaCoverMaxCount)
+
   return {
     ...config,
     adminThemeColor: normalizeAdminThemeColor(config.adminThemeColor ?? '') ?? null,
@@ -19,6 +21,11 @@ export function normalizeSiteConfigShape(config: Record<string, any>): Record<st
     siteIconUrl: normalizeSiteIconUrl(config.siteIconUrl ?? '') ?? null,
     hideInspirationOnHome: config.hideInspirationOnHome === true,
     smoothScrollEnabled: config.smoothScrollEnabled === true,
+    mediaDisplayShowSource: config.mediaDisplayShowSource === true,
+    mediaDisplayShowCover: config.mediaDisplayShowCover === true,
+    mediaCoverMaxCount: Number.isFinite(mediaCoverMaxCount)
+      ? Math.min(Math.max(Math.round(mediaCoverMaxCount), 0), 500)
+      : 50,
     forceDisplayTimezone: config.forceDisplayTimezone === true,
     themeCustomSurface: parseThemeCustomSurface(config.themeCustomSurface),
     publicFontOptionsEnabled: config.publicFontOptionsEnabled === true,
