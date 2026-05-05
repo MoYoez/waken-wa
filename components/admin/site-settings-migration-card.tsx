@@ -38,7 +38,11 @@ export function SiteSettingsMigrationCard({
 }) {
   const { t } = useT('admin')
 
-  if (!migration || migration.migrationState === 'legacy_cleared') {
+  if (
+    !migration ||
+    migration.migrationState === 'legacy_cleared' ||
+    (migration.migrationState === 'migrated' && !migration.legacyDataPresent)
+  ) {
     return null
   }
 
