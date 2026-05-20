@@ -584,6 +584,9 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
   if ('hideInspirationOnHome' in web && typeof web.hideInspirationOnHome === 'boolean') {
     patch.hideInspirationOnHome = web.hideInspirationOnHome
   }
+  if ('disableFrontendDeviceAnimation' in web && typeof web.disableFrontendDeviceAnimation === 'boolean') {
+    patch.disableFrontendDeviceAnimation = web.disableFrontendDeviceAnimation
+  }
   if ('activityRejectLockappSleep' in web && typeof web.activityRejectLockappSleep === 'boolean') {
     patch.activityRejectLockappSleep = web.activityRejectLockappSleep
   }

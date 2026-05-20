@@ -28,11 +28,20 @@ import { getBatteryLabel, getDeviceType, mediaPrimaryLine } from './current-stat
 function LastReportTime({
   value,
   timestampFormat,
+  disableAnimation,
 }: {
   value: string
   timestampFormat: string
+  disableAnimation?: boolean
 }) {
   const { formatPattern } = useSiteTimeFormat()
+  if (disableAnimation) {
+    return (
+      <span className="inline-block">
+        {formatPattern(value, timestampFormat, '--')}
+      </span>
+    )
+  }
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.span
@@ -57,6 +66,7 @@ export function CurrentStatusCard({
   showMediaNcmLink,
   sectionTransition,
   sectionVariants,
+  disableAnimation = false,
 }: {
   activity: ActivityFeedItem
   hideActivityMedia: boolean
@@ -65,6 +75,7 @@ export function CurrentStatusCard({
   showMediaNcmLink: boolean
   sectionTransition: ReturnType<typeof getSiteSectionTransition>
   sectionVariants: ReturnType<typeof getSiteSectionVariants>
+  disableAnimation?: boolean
 }) {
   const { t } = useT('common')
   const [flashKey, setFlashKey] = useState<string | null>(null)
@@ -107,6 +118,8 @@ export function CurrentStatusCard({
   })
 
   useEffect(() => {
+    if (disableAnimation) return
+
     const previousSignature = previousSignatureRef.current
     previousSignatureRef.current = updateSignature
 
@@ -125,39 +138,35 @@ export function CurrentStatusCard({
       window.clearTimeout(showTimeoutId)
       window.clearTimeout(hideTimeoutId)
     }
-  }, [updateSignature])
+  }, [updateSignature, disableAnimation])
 
-  return (
-    <motion.div
-      className={cn(
-        'home-glass-card relative rounded-lg border border-t-0 border-r-0 border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:p-6',
+  const cardClassName = cn(
+    'home-glass-card relative rounded-lg border border-t-0 border-r-0 border-border bg-card p-5 shadow-sm transition-[border-color,box-shadow] hover:border-primary/25 hover:shadow-md sm:p-6',
+  )
+
+  const cardContent = (
+    <>
+      {!disableAnimation && (
+        <AnimatePresence initial={false}>
+          {flashKey === updateSignature ? (
+            <motion.div
+              key={updateSignature}
+              className="pointer-events-none absolute inset-0 rounded-[inherit] border border-t-0 border-r-0 border-primary/45"
+              initial={{ opacity: 0, boxShadow: '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)' }}
+              animate={{
+                opacity: [0, 1, 0],
+                boxShadow: [
+                  '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)',
+                  '0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent), 0 10px 30px color-mix(in srgb, var(--primary) 10%, transparent)',
+                  '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)',
+                ],
+              }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.85, ease: 'easeOut' }}
+            />
+          ) : null}
+        </AnimatePresence>
       )}
-      variants={sectionVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={sectionTransition}
-      layout
-    >
-      <AnimatePresence initial={false}>
-        {flashKey === updateSignature ? (
-          <motion.div
-            key={updateSignature}
-            className="pointer-events-none absolute inset-0 rounded-[inherit] border border-t-0 border-r-0 border-primary/45"
-            initial={{ opacity: 0, boxShadow: '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)' }}
-            animate={{
-              opacity: [0, 1, 0],
-              boxShadow: [
-                '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)',
-                '0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent), 0 10px 30px color-mix(in srgb, var(--primary) 10%, transparent)',
-                '0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent)',
-              ],
-            }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.85, ease: 'easeOut' }}
-          />
-        ) : null}
-      </AnimatePresence>
       <div className="space-y-4">
         <div className="home-glass-subcard rounded-md border border-t-0 border-r-0 border-border/50 bg-muted/55 px-3 py-2.5 space-y-2 shadow-[inset_0_1px_0_0_var(--home-card-inset-highlight)]">
           <div className="text-xs font-medium text-foreground/65 tracking-tight mb-0.5">
@@ -240,11 +249,33 @@ export function CurrentStatusCard({
               </span>
             </div>
             <div className="text-xs tabular-nums text-foreground pl-5 sm:pl-0 w-full sm:text-right">
-              <LastReportTime value={lastReportAt} timestampFormat={timestampFormat} />
+              <LastReportTime value={lastReportAt} timestampFormat={timestampFormat} disableAnimation={disableAnimation} />
             </div>
           </div>
         </div>
       </div>
+    </>
+  )
+
+  if (disableAnimation) {
+    return (
+      <div className={cardClassName}>
+        {cardContent}
+      </div>
+    )
+  }
+
+  return (
+    <motion.div
+      className={cardClassName}
+      variants={sectionVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={sectionTransition}
+      layout
+    >
+      {cardContent}
     </motion.div>
   )
 }

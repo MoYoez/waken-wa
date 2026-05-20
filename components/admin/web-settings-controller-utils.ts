@@ -269,6 +269,7 @@ export function buildWebSettingsForm(
     mediaDisplayShowNcmLink: data.mediaDisplayShowNcmLink === true,
     mediaCoverMaxCount: Number(data.mediaCoverMaxCount ?? 50),
     hideInspirationOnHome: data.hideInspirationOnHome === true,
+    disableFrontendDeviceAnimation: data.disableFrontendDeviceAnimation === true,
     activityRejectLockappSleep: data.activityRejectLockappSleep === true,
     displayTimezone: normalizeTimezone(data.displayTimezone),
     forceDisplayTimezone: data.forceDisplayTimezone === true,

@@ -32,6 +32,7 @@ export function normalizeSiteConfigShape(config: Record<string, any>): Record<st
     adminBackgroundColor: normalizeAdminThemeColor(config.adminBackgroundColor ?? '') ?? null,
     siteIconUrl: normalizeSiteIconUrl(config.siteIconUrl ?? '') ?? null,
     hideInspirationOnHome: config.hideInspirationOnHome === true,
+    disableFrontendDeviceAnimation: config.disableFrontendDeviceAnimation === true,
     smoothScrollEnabled: config.smoothScrollEnabled === true,
     todayStatusEmoji: normalizeTodayStatusEmoji(config.todayStatusEmoji) || null,
     todayStatusText: normalizeTodayStatusText(config.todayStatusText) || null,

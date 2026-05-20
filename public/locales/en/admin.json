@@ -989,6 +989,8 @@
     "mediaCoverServerlessWarning": "Strongly avoid enabling this on serverless platforms: covers are written to the database with activity reports, which can noticeably increase function payload size, database storage, and read bandwidth. You can ignore this note on non-serverless deployments.",
     "hideInspirationOnHomeTitle": "Hide inspiration on home",
     "hideInspirationOnHomeDescription": "When enabled, the home page hides the inspiration section while keeping the archive and admin content intact.",
+    "disableFrontendDeviceAnimationTitle": "Disable device update animation",
+    "disableFrontendDeviceAnimationDescription": "When enabled, removes transition animations from device status updates on the public page. Reduces GPU usage for devices with limited graphics capabilities.",
     "activityRejectLockappSleepTitle": "Ignore LockApp / loginwindow / sleep-like activities",
     "activityRejectLockappSleepDescription": "Filters out Windows LockApp, macOS loginwindow, and similar lock-screen or sleep-state activity reports from the public feed.",
     "forceDisplayTimezoneTitle": "Force displayed timezone",

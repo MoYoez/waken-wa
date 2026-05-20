@@ -230,6 +230,14 @@ export function WebSettingsActivityPanel() {
         />
 
         <ToggleRow
+          id="disable-frontend-device-animation"
+          title={t('webSettingsActivity.disableFrontendDeviceAnimationTitle')}
+          description={t('webSettingsActivity.disableFrontendDeviceAnimationDescription')}
+          checked={form.disableFrontendDeviceAnimation}
+          onCheckedChange={(value) => patch('disableFrontendDeviceAnimation', value)}
+        />
+
+        <ToggleRow
           id="activity-reject-lockapp-sleep"
           title={t('webSettingsActivity.activityRejectLockappSleepTitle')}
           description={t('webSettingsActivity.activityRejectLockappSleepDescription')}

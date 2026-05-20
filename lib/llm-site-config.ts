@@ -541,6 +541,11 @@ export async function prepareSiteConfigValuesFromPayload(
     hideInspirationOnHome = Boolean(normalizedBody.hideInspirationOnHome)
   }
 
+  let disableFrontendDeviceAnimation = existing?.disableFrontendDeviceAnimation === true
+  if (normalizedBody.disableFrontendDeviceAnimation !== undefined && normalizedBody.disableFrontendDeviceAnimation !== null) {
+    disableFrontendDeviceAnimation = Boolean(normalizedBody.disableFrontendDeviceAnimation)
+  }
+
   let displayTimezone = existing?.displayTimezone ?? 'Asia/Shanghai'
   if (normalizedBody.displayTimezone !== undefined && normalizedBody.displayTimezone !== null) {
     displayTimezone = normalizeTimezone(normalizedBody.displayTimezone)
@@ -707,6 +712,7 @@ export async function prepareSiteConfigValuesFromPayload(
     mediaDisplayShowNcmLink,
     mediaCoverMaxCount,
     hideInspirationOnHome,
+    disableFrontendDeviceAnimation,
     hcaptchaEnabled,
     hcaptchaSiteKey,
     hcaptchaSecretKey,

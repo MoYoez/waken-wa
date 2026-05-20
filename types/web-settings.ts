@@ -143,6 +143,8 @@ export interface SiteConfig {
   mediaCoverMaxCount: number | string
   /** When true, hide the inspiration section from the home page. */
   hideInspirationOnHome: boolean
+  /** When true, disable device status update animations on the public page to reduce GPU usage. */
+  disableFrontendDeviceAnimation: boolean
   /**
    * When true, POST /api/activity rejects reports whose process_name matches lock-screen / sleep-like reporters
    * such as LockApp or macOS loginwindow.

@@ -139,6 +139,7 @@ export default async function Home() {
   const mediaDisplayShowCover = cfg.mediaDisplayShowCover === true
   const mediaDisplayShowNcmLink = cfg.mediaDisplayShowNcmLink === true
   const hideInspirationOnHome = cfg.hideInspirationOnHome === true
+  const disableFrontendDeviceAnimation = cfg.disableFrontendDeviceAnimation === true
   const pageLoadingEnabled = cfg.pageLoadingEnabled !== false
   const smoothScrollEnabled = cfg.smoothScrollEnabled === true
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
@@ -261,6 +262,7 @@ export default async function Home() {
                             showMediaSource={mediaDisplayShowSource}
                             showMediaCover={mediaDisplayShowCover}
                             showMediaNcmLink={mediaDisplayShowNcmLink}
+                            disableAnimation={disableFrontendDeviceAnimation}
                           />
                         </div>
                       </section>

@@ -989,6 +989,8 @@
     "mediaCoverServerlessWarning": "强烈不建议在 Serverless 平台开启：封面会随活动上报写入数据库，可能明显增加函数请求体、数据库体积与读取带宽。如果你的部署不是 Serverless，可忽略此提示。",
     "hideInspirationOnHomeTitle": "不显示随想录",
     "hideInspirationOnHomeDescription": "开启后，主页不显示随想录区块；随想录列表页和后台内容仍保留。",
+    "disableFrontendDeviceAnimationTitle": "关闭设备更新动画",
+    "disableFrontendDeviceAnimationDescription": "开启后，前台设备状态更新时不再播放过渡动画。适合 GPU 性能有限的设备访问时降低显卡负担。",
     "activityRejectLockappSleepTitle": "忽略 LockApp / loginwindow / 睡眠类活动",
     "activityRejectLockappSleepDescription": "过滤掉 Windows LockApp、macOS loginwindow 或类似睡眠状态的活动上报，避免进入公开活动流。",
     "forceDisplayTimezoneTitle": "强制显示时区",
