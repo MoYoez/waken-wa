@@ -79,3 +79,17 @@ export type {
 } from './steam'
 export type { ThemeCustomSurfaceFields, ThemePreset } from './theme'
 export type { ViewerCountData, ViewerCountResponse } from './viewers'
+export type {
+  WebSettingsImportContext,
+  WebSettingsMigrationContext,
+  WebSettingsSaveContext,
+  WebSettingsSetBoolean,
+  WebSettingsSetFormState,
+  WebSettingsSetNumber,
+  WebSettingsSetSkillsAuthMode,
+  WebSettingsSetSkillsAuthorizations,
+  WebSettingsSetSkillsConfig,
+  WebSettingsSetString,
+  WebSettingsSkillsSaveContext,
+  WebSettingsTranslateFn,
+} from './web-settings-actions'

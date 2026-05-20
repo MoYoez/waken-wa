@@ -1,9 +1,14 @@
 'use client'
 
-import { type AdminSkillsData, readJson, type SuccessResponse } from '@/components/admin/admin-query-shared'
+import {
+  fetchAdminData,
+  fetchAdminOk,
+  fetchAdminSuccess,
+  fetchAdminVoid,
+} from '@/lib/admin-client-fetch'
 import { tAdminClient } from '@/lib/i18n/admin-client'
 import type { AdminUserRow } from '@/types/admin'
-import type { SetupInitialConfig } from '@/types/components'
+import type { AdminSkillsData, SuccessResponse } from '@/types/admin-query'
 import type {
   RuleToolsConfigResponse,
   RuleToolsListKey,
@@ -14,49 +19,29 @@ export async function createAdminUser(input: {
   username: string
   password: string
 }): Promise<AdminUserRow> {
-  const res = await fetch('/api/admin/users', {
+  return fetchAdminData<AdminUserRow>('/api/admin/users', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    json: input,
+    fallbackError: tAdminClient('mutation.createAdminUserFailed'),
   })
-  const data = await readJson<SuccessResponse<AdminUserRow>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      typeof data?.error === 'string'
-        ? data.error
-        : tAdminClient('mutation.createAdminUserFailed'),
-    )
-  }
-  return data.data
 }
 
 export async function deleteAdminUser(id: number): Promise<void> {
-  const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
-    )
-  }
+  await fetchAdminVoid(`/api/admin/users/${id}`, {
+    method: 'DELETE',
+    fallbackError: tAdminClient('mutation.deleteFailed'),
+  })
 }
 
 export async function changeAdminPassword(input: {
   currentPassword: string
   newPassword: string
 }): Promise<void> {
-  const res = await fetch('/api/admin/change-password', {
+  await fetchAdminVoid('/api/admin/change-password', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    json: input,
+    fallbackError: tAdminClient('mutation.changePasswordFailed'),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string'
-        ? data.error
-        : tAdminClient('mutation.changePasswordFailed'),
-    )
-  }
 }
 
 export async function createAdminDevice(input: {
@@ -64,59 +49,43 @@ export async function createAdminDevice(input: {
   apiTokenId?: number
   generatedHashKey?: string
 }): Promise<void> {
-  const res = await fetch('/api/admin/devices', {
+  await fetchAdminVoid('/api/admin/devices', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    json: input,
+    fallbackError: tAdminClient('mutation.createDeviceFailed'),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(data?.error || tAdminClient('mutation.createDeviceFailed'))
-  }
 }
 
 export async function patchAdminDevice(body: Record<string, unknown>): Promise<void> {
-  const res = await fetch('/api/admin/devices', {
+  await fetchAdminVoid('/api/admin/devices', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    json: body,
+    fallbackError: tAdminClient('mutation.updateFailed'),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.updateFailed'),
-    )
-  }
 }
 
 export async function deleteAdminDevice(id: number): Promise<void> {
-  const res = await fetch(`/api/admin/devices?id=${id}`, { method: 'DELETE' })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
-    )
-  }
+  await fetchAdminVoid(`/api/admin/devices?id=${id}`, {
+    method: 'DELETE',
+    fallbackError: tAdminClient('mutation.deleteFailed'),
+  })
 }
 
 export async function deleteAdminInspirationOrphanAssets(keys: string[]): Promise<{
   deleted: number
   skipped: number
 }> {
-  const res = await fetch('/api/admin/inspiration/orphan-assets', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ publicKeys: keys }),
-  })
-  const data = await readJson<SuccessResponse<{ deleted?: number; skipped?: number }>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
-    )
-  }
+  const data = await fetchAdminData<{ deleted?: number; skipped?: number }>(
+    '/api/admin/inspiration/orphan-assets',
+    {
+      method: 'DELETE',
+      json: { publicKeys: keys },
+      fallbackError: tAdminClient('mutation.deleteFailed'),
+    },
+  )
   return {
-    deleted: typeof data.data?.deleted === 'number' ? data.data.deleted : 0,
-    skipped: typeof data.data?.skipped === 'number' ? data.data.skipped : 0,
+    deleted: typeof data.deleted === 'number' ? data.deleted : 0,
+    skipped: typeof data.skipped === 'number' ? data.skipped : 0,
   }
 }
 
@@ -129,22 +98,17 @@ export async function createAdminToken(input: {
   tokenBundleBase64: string | null
   endpoint: string | null
 }> {
-  const res = await fetch('/api/admin/tokens', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
-  const data = await readJson<
+  const { json: data } = await fetchAdminSuccess<
     SuccessResponse<{ token?: string }> & {
-      tokenBundleBase64?: string | null
       endpoint?: string | null
+      tokenBundleBase64?: string | null
     }
-  >(res)
-  if (!res.ok || !data?.success || !data.data?.token) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.createFailed'),
-    )
-  }
+  >('/api/admin/tokens', {
+    method: 'POST',
+    json: input,
+    fallbackError: tAdminClient('mutation.createFailed'),
+  })
+  if (!data.data?.token) throw new Error(tAdminClient('mutation.createFailed'))
   return {
     token: data.data.token,
     tokenBundleBase64: data.tokenBundleBase64 || null,
@@ -153,146 +117,90 @@ export async function createAdminToken(input: {
 }
 
 export async function patchAdminToken(body: Record<string, unknown>): Promise<void> {
-  const res = await fetch('/api/admin/tokens', {
+  await fetchAdminVoid('/api/admin/tokens', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    json: body,
+    fallbackError: tAdminClient('mutation.updateFailed'),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.updateFailed'),
-    )
-  }
 }
 
 export async function deleteAdminToken(id: number): Promise<void> {
-  const res = await fetch(`/api/admin/tokens?id=${id}`, { method: 'DELETE' })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
-    )
-  }
+  await fetchAdminVoid(`/api/admin/tokens?id=${id}`, {
+    method: 'DELETE',
+    fallbackError: tAdminClient('mutation.deleteFailed'),
+  })
 }
 
 export async function patchAdminSkills(body: Record<string, unknown>): Promise<AdminSkillsData> {
-  const res = await fetch('/api/admin/skills', {
+  return fetchAdminData<AdminSkillsData>('/api/admin/skills', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    json: body,
+    fallbackError: (response) =>
+      tAdminClient('mutation.saveFailedHttp', { status: response.status }),
   })
-  const data = await readJson<SuccessResponse<AdminSkillsData>>(res)
-  if (!data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('mutation.saveFailedHttp', { status: res.status }),
-    )
-  }
-  return data.data
 }
 
 export async function createAdminActivity(payload: Record<string, unknown>): Promise<void> {
-  const res = await fetch('/api/admin/activity', {
+  await fetchAdminVoid('/api/admin/activity', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    json: payload,
+    fallbackError: tAdminClient('mutation.addFailed'),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.addFailed'),
-    )
-  }
 }
 
 export async function endAdminActivity(id: number): Promise<void> {
-  const res = await fetch('/api/admin/activity', {
+  await fetchAdminVoid('/api/admin/activity', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
+    json: { id },
+    fallbackError: tAdminClient('mutation.endActivityFailed'),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string'
-        ? data.error
-        : tAdminClient('mutation.endActivityFailed'),
-    )
-  }
 }
 
 export async function uploadInspirationAsset(dataUrl: string): Promise<string> {
-  const res = await fetch('/api/inspiration/assets', {
+  const data = await fetchAdminData<{ url?: string }>('/api/inspiration/assets', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageDataUrl: dataUrl }),
+    json: { imageDataUrl: dataUrl },
     credentials: 'include',
+    fallbackError: tAdminClient('mutation.uploadBodyImageFailed'),
   })
-  const data = await readJson<SuccessResponse<{ url?: string }>>(res)
-  if (!res.ok || !data?.success || !data.data?.url) {
-    throw new Error(
-      typeof data?.error === 'string'
-        ? data.error
-        : tAdminClient('mutation.uploadBodyImageFailed'),
-    )
-  }
-  return String(data.data.url)
+  if (!data.url) throw new Error(tAdminClient('mutation.uploadBodyImageFailed'))
+  return String(data.url)
 }
 
 export async function uploadImageSource(
   imageDataUrl: string,
   usageKey: string,
 ): Promise<string> {
-  const res = await fetch('/api/image-src', {
+  const data = await fetchAdminData<{ url?: string }>('/api/image-src', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageDataUrl, usageKey }),
+    json: { imageDataUrl, usageKey },
+    fallbackError: tAdminClient('mutation.uploadBodyImageFailed'),
   })
-  const data = await readJson<SuccessResponse<{ url?: string }>>(res)
-  if (!res.ok || !data?.success || !data.data?.url) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.uploadBodyImageFailed'),
-    )
-  }
-  return String(data.data.url)
+  if (!data.url) throw new Error(tAdminClient('mutation.uploadBodyImageFailed'))
+  return String(data.url)
 }
 
 export async function createInspirationEntry(body: Record<string, unknown>): Promise<void> {
-  const res = await fetch('/api/inspiration/entries', {
+  await fetchAdminVoid('/api/inspiration/entries', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    json: body,
+    fallbackError: tAdminClient('mutation.submitFailed'),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.submitFailed'),
-    )
-  }
 }
 
 export async function patchInspirationEntry(body: Record<string, unknown>): Promise<void> {
-  const res = await fetch('/api/inspiration/entries', {
+  await fetchAdminVoid('/api/inspiration/entries', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    json: body,
+    fallbackError: tAdminClient('mutation.saveFailed'),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.saveFailed'),
-    )
-  }
 }
 
 export async function deleteInspirationEntry(id: number): Promise<void> {
-  const res = await fetch(`/api/inspiration/entries?id=${id}`, { method: 'DELETE' })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('mutation.deleteFailed'),
-    )
-  }
+  await fetchAdminVoid(`/api/inspiration/entries?id=${id}`, {
+    method: 'DELETE',
+    fallbackError: tAdminClient('mutation.deleteFailed'),
+  })
 }
 
 export async function setupAdminSite(input: {
@@ -310,10 +218,9 @@ export async function setupAdminSite(input: {
   earlierText: string
   adminText: string
 }): Promise<void> {
-  const res = await fetch('/api/admin/setup/admin', {
+  await fetchAdminVoid('/api/admin/setup/admin', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+    json: {
       username: input.needAdminSetup ? input.username : undefined,
       password: input.needAdminSetup ? input.password : undefined,
       pageTitle: input.pageTitle,
@@ -326,12 +233,9 @@ export async function setupAdminSite(input: {
       currentlyText: input.currentlyText,
       earlierText: input.earlierText,
       adminText: input.adminText,
-    }),
+    },
+    fallbackError: tAdminClient('mutation.setupFailed'),
   })
-  const data = await readJson<SuccessResponse<SetupInitialConfig>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(data?.error || tAdminClient('mutation.setupFailed'))
-  }
 }
 
 export async function loginAdmin(username: string, password: string): Promise<void> {
@@ -341,36 +245,24 @@ export async function loginAdmin(username: string, password: string): Promise<vo
 export async function patchAdminRuleToolsConfig(
   body: Record<string, unknown>,
 ): Promise<RuleToolsConfigResponse> {
-  const res = await fetch('/api/admin/rule-tools/config', {
+  return fetchAdminData<RuleToolsConfigResponse>('/api/admin/rule-tools/config', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    json: body,
+    fallbackError: (response) =>
+      tAdminClient('mutation.saveSettingsFailedHttp', { status: response.status }),
   })
-  const data = await readJson<SuccessResponse<RuleToolsConfigResponse>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
-    )
-  }
-  return data.data
 }
 
 async function patchAdminSettingsCategory(
   path: string,
   body: Record<string, unknown>,
 ): Promise<Record<string, any>> {
-  const res = await fetch(path, {
+  return fetchAdminData<Record<string, any>>(path, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    json: body,
+    fallbackError: (response) =>
+      tAdminClient('mutation.saveSettingsFailedHttp', { status: response.status }),
   })
-  const data = await readJson<SuccessResponse<Record<string, any>>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
-    )
-  }
-  return data.data
 }
 
 export async function patchAdminSettingsCore(
@@ -392,85 +284,59 @@ export async function patchAdminSettingsSchedule(
 }
 
 export async function migrateAdminSettings(): Promise<void> {
-  const res = await fetch('/api/admin/settings/migration', {
+  await fetchAdminVoid('/api/admin/settings/migration', {
     method: 'POST',
+    fallbackError: (response) =>
+      tAdminClient('mutation.saveSettingsFailedHttp', { status: response.status }),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string'
-        ? data.error
-        : tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
-    )
-  }
 }
 
 export async function clearAdminLegacySettingsData(): Promise<void> {
-  const res = await fetch('/api/admin/settings/migration/legacy-data', {
+  await fetchAdminVoid('/api/admin/settings/migration/legacy-data', {
     method: 'DELETE',
+    fallbackError: (response) =>
+      tAdminClient('mutation.saveSettingsFailedHttp', { status: response.status }),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      typeof data?.error === 'string'
-        ? data.error
-        : tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
-    )
-  }
 }
 
 export async function patchAdminRuleToolsRules(
   body: Record<string, unknown>,
 ): Promise<{ revision: string; total: number; groupId?: string; titleRuleId?: string }> {
-  const res = await fetch('/api/admin/rule-tools/rules', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  const data = await readJson<
-    SuccessResponse<{ revision: string; total: number; groupId?: string; titleRuleId?: string }>
-  >(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<{ revision: string; total: number; groupId?: string; titleRuleId?: string }>(
+    '/api/admin/rule-tools/rules',
+    {
+      method: 'PATCH',
+      json: body,
+      fallbackError: (response) =>
+        tAdminClient('mutation.saveSettingsFailedHttp', { status: response.status }),
+    },
+  )
 }
 
 export async function patchAdminRuleToolsList(
   listKey: RuleToolsListKey,
   body: Record<string, unknown>,
 ): Promise<{ revision: string; total: number }> {
-  const res = await fetch(`/api/admin/rule-tools/lists/${listKey}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  const data = await readJson<SuccessResponse<{ revision: string; total: number }>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<{ revision: string; total: number }>(
+    `/api/admin/rule-tools/lists/${listKey}`,
+    {
+      method: 'PATCH',
+      json: body,
+      fallbackError: (response) =>
+        tAdminClient('mutation.saveSettingsFailedHttp', { status: response.status }),
+    },
+  )
 }
 
 export async function importAdminRuleTools(
   body: Record<string, unknown>,
 ): Promise<RuleToolsSummary> {
-  const res = await fetch('/api/admin/rule-tools/import', {
+  return fetchAdminData<RuleToolsSummary>('/api/admin/rule-tools/import', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    json: body,
+    fallbackError: (response) =>
+      tAdminClient('mutation.saveSettingsFailedHttp', { status: response.status }),
   })
-  const data = await readJson<SuccessResponse<RuleToolsSummary>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('mutation.saveSettingsFailedHttp', { status: res.status }),
-    )
-  }
-  return data.data
 }
 
 export async function loginAdminWithCaptcha(input: {
@@ -479,28 +345,23 @@ export async function loginAdminWithCaptcha(input: {
   hcaptchaToken?: string
   fallbackErrorMessage?: string
 }): Promise<void> {
-  const res = await fetch('/api/auth/login', {
+  await fetchAdminVoid('/api/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+    json: {
       username: input.username,
       password: input.password,
       hcaptchaToken: input.hcaptchaToken || undefined,
-    }),
+    },
+    fallbackError: input.fallbackErrorMessage || tAdminClient('mutation.autoLoginFailedManual'),
   })
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || input.fallbackErrorMessage || tAdminClient('mutation.autoLoginFailedManual'),
-    )
-  }
 }
 
 export async function logoutAdmin(): Promise<void> {
-  const res = await fetch('/api/auth/logout', { method: 'POST' })
-  if (!res.ok) {
-    throw new Error(tAdminClient('mutation.logoutFailedHttp', { status: res.status }))
-  }
+  await fetchAdminOk('/api/auth/logout', {
+    method: 'POST',
+    fallbackError: (response) =>
+      tAdminClient('mutation.logoutFailedHttp', { status: response.status }),
+  })
 }
 
 export async function approveSkillsOauthAuthorizeCode(authorizeCode: string): Promise<{
@@ -508,24 +369,18 @@ export async function approveSkillsOauthAuthorizeCode(authorizeCode: string): Pr
   approvedAt: string
   expiresAt: string
 }> {
-  const res = await fetch('/api/admin/skills/oauth/authorize', {
+  const data = await fetchAdminData<{
+    approved?: boolean
+    approvedAt?: string
+    expiresAt?: string
+  }>('/api/admin/skills/oauth/authorize', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ confirm: true, authorizeCode }),
+    json: { confirm: true, authorizeCode },
+    fallbackError: (response) => `HTTP ${response.status}`,
   })
-  const json = await readJson<
-    SuccessResponse<{
-      approved?: boolean
-      approvedAt?: string
-      expiresAt?: string
-    }>
-  >(res)
-  if (!json?.success) {
-    throw new Error(json?.error || `HTTP ${res.status}`)
-  }
   return {
-    approved: json.data?.approved === true,
-    approvedAt: String(json.data?.approvedAt ?? ''),
-    expiresAt: String(json.data?.expiresAt ?? ''),
+    approved: data.approved === true,
+    approvedAt: String(data.approvedAt ?? ''),
+    expiresAt: String(data.expiresAt ?? ''),
   }
 }

@@ -4,7 +4,6 @@ import { useT } from 'next-i18next/client'
 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { THEME_CUSTOM_SURFACE_DEFAULTS } from '@/lib/theme-custom-surface'
 import type { ThemeCustomSurfaceForm } from '@/types/web-settings'
 

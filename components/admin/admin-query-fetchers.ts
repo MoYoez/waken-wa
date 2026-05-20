@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  type AdminSkillsData,
-  type DevicesResponse,
-  type PaginationResponse,
-  readJson,
-  type SuccessResponse,
-} from '@/components/admin/admin-query-shared'
+import { fetchAdminData, fetchAdminSuccess } from '@/lib/admin-client-fetch'
 import { tAdminClient } from '@/lib/i18n/admin-client'
 import type { ActivityFeedData } from '@/types/activity'
 import type {
@@ -16,6 +10,7 @@ import type {
   AdminUserRow,
   ApiTokenListRow,
 } from '@/types/admin'
+import type { AdminSkillsData, PaginationResponse, SuccessResponse } from '@/types/admin-query'
 import type { AdminInspirationEntry } from '@/types/inspiration'
 import type { OrphanAssetRow } from '@/types/inspiration'
 import type {
@@ -29,14 +24,11 @@ import type {
 import type { SiteSettingsMigrationInfo } from '@/types/web-settings'
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
-  const res = await fetch('/api/admin/users')
-  const data = await readJson<SuccessResponse<AdminUserRow[]>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadAdminsFailed', { status: res.status }),
-    )
-  }
-  return Array.isArray(data.data) ? data.data : []
+  const data = await fetchAdminData<AdminUserRow[]>('/api/admin/users', {
+    fallbackError: (response) =>
+      tAdminClient('query.loadAdminsFailed', { status: response.status }),
+  })
+  return Array.isArray(data) ? data : []
 }
 
 export async function fetchAdminDeviceSummaries(input?: {
@@ -48,16 +40,16 @@ export async function fetchAdminDeviceSummaries(input?: {
   if (input?.status) params.set('status', input.status)
 
   const query = params.toString()
-  const res = await fetch(query ? `/api/admin/devices?${query}` : '/api/admin/devices')
-  const data = await readJson<DevicesResponse>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadDeviceListFailed', { status: res.status }),
-    )
-  }
+  const data = await fetchAdminData<Array<Record<string, unknown>>>(
+    query ? `/api/admin/devices?${query}` : '/api/admin/devices',
+    {
+      fallbackError: (response) =>
+        tAdminClient('query.loadDeviceListFailed', { status: response.status }),
+    },
+  )
 
-  return Array.isArray(data.data)
-    ? data.data.map((row) => ({
+  return Array.isArray(data)
+    ? data.map((row) => ({
         id: Number(row.id),
         displayName: String(row.displayName ?? ''),
         generatedHashKey: String(row.generatedHashKey ?? ''),
@@ -79,15 +71,12 @@ export async function fetchAdminDevicesPage(input: {
   if (input.q.trim()) params.set('q', input.q.trim())
   if (input.status) params.set('status', input.status)
 
-  const res = await fetch(`/api/admin/devices?${params}`)
-  const data = await readJson<
+  const { json: data } = await fetchAdminSuccess<
     SuccessResponse<AdminDeviceItem[]> & { pagination?: PaginationResponse }
-  >(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadDevicesFailed', { status: res.status }),
-    )
-  }
+  >(`/api/admin/devices?${params}`, {
+    fallbackError: (response) =>
+      tAdminClient('query.loadDevicesFailed', { status: response.status }),
+  })
   return {
     items: Array.isArray(data.data) ? data.data : [],
     total: Number(data.pagination?.total || 0),
@@ -95,25 +84,19 @@ export async function fetchAdminDevicesPage(input: {
 }
 
 export async function fetchAdminInspirationOrphanAssets(): Promise<OrphanAssetRow[]> {
-  const res = await fetch('/api/admin/inspiration/orphan-assets')
-  const data = await readJson<SuccessResponse<OrphanAssetRow[]>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadOrphanImagesFailed', { status: res.status }),
-    )
-  }
-  return Array.isArray(data.data) ? data.data : []
+  const data = await fetchAdminData<OrphanAssetRow[]>('/api/admin/inspiration/orphan-assets', {
+    fallbackError: (response) =>
+      tAdminClient('query.loadOrphanImagesFailed', { status: response.status }),
+  })
+  return Array.isArray(data) ? data : []
 }
 
 export async function fetchAdminTokenOptions(): Promise<AdminTokenOption[]> {
-  const res = await fetch('/api/admin/tokens')
-  const data = await readJson<SuccessResponse<AdminTokenOption[]>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadTokensFailed', { status: res.status }),
-    )
-  }
-  return Array.isArray(data.data) ? data.data : []
+  const data = await fetchAdminData<AdminTokenOption[]>('/api/admin/tokens', {
+    fallbackError: (response) =>
+      tAdminClient('query.loadTokensFailed', { status: response.status }),
+  })
+  return Array.isArray(data) ? data : []
 }
 
 export async function fetchAdminTokenPage(input: {
@@ -124,15 +107,12 @@ export async function fetchAdminTokenPage(input: {
     limit: String(input.pageSize),
     offset: String(input.page * input.pageSize),
   })
-  const res = await fetch(`/api/admin/tokens?${params}`)
-  const data = await readJson<
+  const { json: data } = await fetchAdminSuccess<
     SuccessResponse<ApiTokenListRow[]> & { pagination?: PaginationResponse }
-  >(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadTokensFailed', { status: res.status }),
-    )
-  }
+  >(`/api/admin/tokens?${params}`, {
+    fallbackError: (response) =>
+      tAdminClient('query.loadTokensFailed', { status: response.status }),
+  })
   const rows = Array.isArray(data.data) ? data.data : []
   return {
     rows,
@@ -148,16 +128,12 @@ export async function fetchAdminSettings(): Promise<Record<string, any>> {
   ] as const
 
   const segments = await Promise.all(
-    paths.map(async (path) => {
-      const res = await fetch(path)
-      const data = await readJson<SuccessResponse<Record<string, any>>>(res)
-      if (!res.ok || !data?.success || !data.data) {
-        throw new Error(
-          data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
-        )
-      }
-      return data.data
-    }),
+    paths.map((path) =>
+      fetchAdminData<Record<string, any>>(path, {
+        fallbackError: (response) =>
+          tAdminClient('query.loadSettingsFailed', { status: response.status }),
+      }),
+    ),
   )
 
   if (segments.length === 0) {
@@ -168,58 +144,40 @@ export async function fetchAdminSettings(): Promise<Record<string, any>> {
 }
 
 export async function fetchAdminSkills(): Promise<AdminSkillsData> {
-  const res = await fetch('/api/admin/skills')
-  const data = await readJson<SuccessResponse<AdminSkillsData>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadSkillsFailed', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<AdminSkillsData>('/api/admin/skills', {
+    fallbackError: (response) =>
+      tAdminClient('query.loadSkillsFailed', { status: response.status }),
+  })
 }
 
 export async function exportAdminSettings(): Promise<string> {
-  const res = await fetch('/api/admin/settings/export')
-  const data = await readJson<SuccessResponse<{ encoded?: string }>>(res)
-  if (!res.ok || !data?.success || !data.data?.encoded) {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('query.exportFailed'),
-    )
-  }
-  return data.data.encoded
+  const data = await fetchAdminData<{ encoded?: string }>('/api/admin/settings/export', {
+    fallbackError: tAdminClient('query.exportFailed'),
+  })
+  if (!data.encoded) throw new Error(tAdminClient('query.exportFailed'))
+  return data.encoded
 }
 
 export async function fetchActivityFeed(): Promise<ActivityFeedData> {
-  const res = await fetch('/api/activity', { cache: 'no-store' })
-  const data = await readJson<SuccessResponse<ActivityFeedData>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadActivityFeedFailed', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<ActivityFeedData>('/api/activity', {
+    cache: 'no-store',
+    fallbackError: (response) =>
+      tAdminClient('query.loadActivityFeedFailed', { status: response.status }),
+  })
 }
 
 export async function fetchPublicActivityFeed(): Promise<ActivityFeedData> {
-  const res = await fetch('/api/activity?public=1')
-  const data = await readJson<SuccessResponse<ActivityFeedData>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadPublicActivityFeedFailed', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<ActivityFeedData>('/api/activity?public=1', {
+    fallbackError: (response) =>
+      tAdminClient('query.loadPublicActivityFeedFailed', { status: response.status }),
+  })
 }
 
 export async function fetchAdminSettingsMigration(): Promise<SiteSettingsMigrationInfo> {
-  const res = await fetch('/api/admin/settings/migration')
-  const data = await readJson<SuccessResponse<SiteSettingsMigrationInfo>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<SiteSettingsMigrationInfo>('/api/admin/settings/migration', {
+    fallbackError: (response) =>
+      tAdminClient('query.loadSettingsFailed', { status: response.status }),
+  })
 }
 
 export async function fetchActivityHistoryApps(input?: {
@@ -232,17 +190,15 @@ export async function fetchActivityHistoryApps(input?: {
   if (typeof input?.offset === 'number') params.set('offset', String(input.offset))
   if (input?.q?.trim()) params.set('q', input.q.trim())
   const query = params.toString()
-  const res = await fetch(
+  const data = await fetchAdminData<Array<{ processName?: unknown }>>(
     query ? `/api/admin/activity/history/apps?${query}` : '/api/admin/activity/history/apps',
+    {
+      fallbackError: (response) =>
+        tAdminClient('query.loadHistoryAppsFailed', { status: response.status }),
+    },
   )
-  const data = await readJson<SuccessResponse<Array<{ processName?: unknown }>>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadHistoryAppsFailed', { status: res.status }),
-    )
-  }
-  return Array.isArray(data.data)
-    ? data.data
+  return Array.isArray(data)
+    ? data
         .map((item) => String(item?.processName ?? '').trim())
         .filter((item) => item.length > 0)
     : []
@@ -258,55 +214,40 @@ export async function fetchActivityHistoryPlaySources(input?: {
   if (typeof input?.offset === 'number') params.set('offset', String(input.offset))
   if (input?.q?.trim()) params.set('q', input.q.trim())
   const query = params.toString()
-  const res = await fetch(
+  const data = await fetchAdminData<Array<{ playSource?: unknown }>>(
     query
       ? `/api/admin/activity/history/play-sources?${query}`
       : '/api/admin/activity/history/play-sources',
+    {
+      fallbackError: (response) =>
+        tAdminClient('query.loadHistoryPlaySourcesFailed', { status: response.status }),
+    },
   )
-  const data = await readJson<SuccessResponse<Array<{ playSource?: unknown }>>>(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadHistoryPlaySourcesFailed', { status: res.status }),
-    )
-  }
-  return Array.isArray(data.data)
-    ? data.data
+  return Array.isArray(data)
+    ? data
         .map((item) => String(item?.playSource ?? '').trim().toLowerCase())
         .filter((item) => item.length > 0)
     : []
 }
 
 export async function exportAdminActivityApps(): Promise<unknown> {
-  const res = await fetch('/api/admin/activity/apps-export')
-  const data = await readJson<SuccessResponse<unknown>>(res)
-  if (!res.ok || !data?.success || typeof data.data === 'undefined') {
-    throw new Error(
-      typeof data?.error === 'string' ? data.error : tAdminClient('query.exportFailed'),
-    )
-  }
-  return data.data
+  return fetchAdminData<unknown>('/api/admin/activity/apps-export', {
+    fallbackError: tAdminClient('query.exportFailed'),
+  })
 }
 
 export async function fetchAdminRuleToolsSummary(): Promise<RuleToolsSummary> {
-  const res = await fetch('/api/admin/rule-tools/summary')
-  const data = await readJson<SuccessResponse<RuleToolsSummary>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<RuleToolsSummary>('/api/admin/rule-tools/summary', {
+    fallbackError: (response) =>
+      tAdminClient('query.loadSettingsFailed', { status: response.status }),
+  })
 }
 
 export async function fetchAdminRuleToolsConfig(): Promise<RuleToolsConfigResponse> {
-  const res = await fetch('/api/admin/rule-tools/config')
-  const data = await readJson<SuccessResponse<RuleToolsConfigResponse>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<RuleToolsConfigResponse>('/api/admin/rule-tools/config', {
+    fallbackError: (response) =>
+      tAdminClient('query.loadSettingsFailed', { status: response.status }),
+  })
 }
 
 export async function fetchAdminRuleToolsRulesPage(input: {
@@ -319,14 +260,10 @@ export async function fetchAdminRuleToolsRulesPage(input: {
     offset: String(input.page * input.pageSize),
   })
   if (input.q.trim()) params.set('q', input.q.trim())
-  const res = await fetch(`/api/admin/rule-tools/rules?${params}`)
-  const data = await readJson<SuccessResponse<RuleToolsRulesResponse>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<RuleToolsRulesResponse>(`/api/admin/rule-tools/rules?${params}`, {
+    fallbackError: (response) =>
+      tAdminClient('query.loadSettingsFailed', { status: response.status }),
+  })
 }
 
 export async function fetchAdminRuleToolsListPage(input: {
@@ -340,25 +277,19 @@ export async function fetchAdminRuleToolsListPage(input: {
     offset: String(input.page * input.pageSize),
   })
   if (input.q.trim()) params.set('q', input.q.trim())
-  const res = await fetch(`/api/admin/rule-tools/lists/${input.listKey}?${params}`)
-  const data = await readJson<SuccessResponse<RuleToolsListResponse>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadSettingsFailed', { status: res.status }),
-    )
-  }
-  return data.data
+  return fetchAdminData<RuleToolsListResponse>(
+    `/api/admin/rule-tools/lists/${input.listKey}?${params}`,
+    {
+      fallbackError: (response) =>
+        tAdminClient('query.loadSettingsFailed', { status: response.status }),
+    },
+  )
 }
 
 export async function exportAdminRuleTools(): Promise<RuleToolsExportPayload> {
-  const res = await fetch('/api/admin/rule-tools/export')
-  const data = await readJson<SuccessResponse<RuleToolsExportPayload>>(res)
-  if (!res.ok || !data?.success || !data.data) {
-    throw new Error(
-      data?.error || tAdminClient('query.exportFailed'),
-    )
-  }
-  return data.data
+  return fetchAdminData<RuleToolsExportPayload>('/api/admin/rule-tools/export', {
+    fallbackError: tAdminClient('query.exportFailed'),
+  })
 }
 
 export async function fetchAdminInspirationEntries(input: {
@@ -375,21 +306,19 @@ export async function fetchAdminInspirationEntries(input: {
     offset: String(input.page * input.pageSize),
   })
   if (input.q.trim()) params.set('q', input.q.trim())
-  const res = await fetch(`/api/inspiration/entries?${params}`)
-  const data = await readJson<
+  const { json: data } = await fetchAdminSuccess<
     SuccessResponse<AdminInspirationEntry[]> & {
       pagination?: { total?: number }
       displayTimezone?: string
     }
-  >(res)
-  if (!res.ok || !data?.success) {
-    throw new Error(
-      data?.error || tAdminClient('query.loadInspirationEntriesFailed', { status: res.status }),
-    )
-  }
+  >(`/api/inspiration/entries?${params}`, {
+    fallbackError: (response) =>
+      tAdminClient('query.loadInspirationEntriesFailed', { status: response.status }),
+  })
   return {
     entries: Array.isArray(data.data) ? data.data : [],
     total: Number(data.pagination?.total || 0),
-    displayTimezone: typeof data.displayTimezone === 'string' ? data.displayTimezone : 'Asia/Shanghai',
+    displayTimezone:
+      typeof data.displayTimezone === 'string' ? data.displayTimezone : 'Asia/Shanghai',
   }
 }

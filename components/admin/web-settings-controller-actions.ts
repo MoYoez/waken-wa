@@ -1,4 +1,3 @@
-import { type QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { adminQueryKeys } from '@/components/admin/admin-query-keys'
@@ -45,76 +44,15 @@ import {
   normalizeTodayStatusExpiresAt,
   normalizeTodayStatusText,
 } from '@/lib/today-status'
-import type { SiteConfig, SkillsAiAuthorizationItem, SkillsEditableConfig } from '@/types/web-settings'
-
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string
-
-type SetString = (value: string) => void
-type SetBoolean = (value: boolean) => void
-type SetNumber = (value: number | string) => void
-type SetSkillsAuthMode = (value: SkillsEditableConfig['authMode']) => void
-type SetSkillsAuthorizations = (value: SkillsAiAuthorizationItem[]) => void
-type SetSkillsConfig = (value: SkillsEditableConfig) => void
-type SetFormState = (value: SiteConfig | ((prev: SiteConfig) => SiteConfig)) => void
-
-type SaveSettingsContext = {
-  t: TranslateFn
-  queryClient: QueryClient
-  form: SiteConfig
-  baselineForm: SiteConfig | null
-  skillsEnabled: boolean
-  skillsAuthMode: SkillsEditableConfig['authMode']
-  skillsOauthTokenTtlMinutes: number | string
-  themeSettingsDirty: boolean
-  scheduleSettingsDirty: boolean
-  hasLockedLegacyChanges: boolean
-  setSaving: SetBoolean
-  setSkillsEnabled: SetBoolean
-  setSkillsAuthMode: SetSkillsAuthMode
-  setSkillsApiKeyConfigured: SetBoolean
-  setSkillsOauthConfigured: SetBoolean
-  setSkillsOauthTokenTtlMinutes: SetNumber
-  setSkillsAiAuthorizations: SetSkillsAuthorizations
-  setLegacyMcpConfigured: SetBoolean
-  setBaselineSkillsConfig: SetSkillsConfig
-  refreshSettingsData: () => Promise<Record<string, any>>
-  syncPartiallySavedSettings: (
-    data: Record<string, any>,
-    formSnapshot: SiteConfig,
-    unsavedKeys: readonly string[],
-  ) => void
-}
-
-type SkillsSaveContext = {
-  t: TranslateFn
-  queryClient: QueryClient
-  setSkillsSaving: SetBoolean
-  setSkillsEnabled: SetBoolean
-  setSkillsAuthMode: SetSkillsAuthMode
-  setSkillsApiKeyConfigured: SetBoolean
-  setSkillsOauthConfigured: SetBoolean
-  setSkillsOauthTokenTtlMinutes: SetNumber
-  setSkillsAiAuthorizations: SetSkillsAuthorizations
-  setSkillsGeneratedApiKey: SetString
-  setLegacyMcpConfigured: SetBoolean
-  setLegacyMcpGeneratedApiKey: SetString
-}
-
-type MigrationContext = {
-  t: TranslateFn
-  queryClient: QueryClient
-  setMigrationActionPending: SetBoolean
-  refreshSettingsData: () => Promise<Record<string, any>>
-  refreshMigrationData: () => Promise<Record<string, any>>
-}
-
-type ImportContext = {
-  t: TranslateFn
-  queryClient: QueryClient
-  importConfigInput: string
-  setForm: SetFormState
-  setImportConfigDialogOpen: SetBoolean
-}
+import type { SkillsEditableConfig } from '@/types/web-settings'
+import type {
+  WebSettingsImportContext as ImportContext,
+  WebSettingsMigrationContext as MigrationContext,
+  WebSettingsSaveContext as SaveSettingsContext,
+  WebSettingsSetString as SetString,
+  WebSettingsSkillsSaveContext as SkillsSaveContext,
+  WebSettingsTranslateFn as TranslateFn,
+} from '@/types/web-settings-actions'
 
 function ValidateRange(
   t: TranslateFn,
