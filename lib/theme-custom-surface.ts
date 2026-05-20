@@ -1,3 +1,4 @@
+import { SanitizeCssText, SanitizeUrl } from '@/lib/sanitize'
 import type {
   ThemeBackgroundImageMode,
   ThemeCustomSurfaceFields,
@@ -11,7 +12,6 @@ export type { ThemeCustomSurfaceFields } from '@/types/theme'
 const MAX_SHORT = 2400
 const MAX_ANIMATED = 12000
 const MAX_RADIUS = 48
-const MAX_URL_INNER = 2048
 const MAX_IMAGE_POOL = 24
 
 function normalizeThemeBackgroundImageMode(raw: unknown): ThemeBackgroundImageMode | undefined {
@@ -33,9 +33,7 @@ function normalizeThemePaletteLiveScope(raw: unknown): ThemePaletteLiveScope | u
 }
 
 function sanitizeThemeImageSource(input: unknown): string {
-  const s = String(input ?? '').trim()
-  if (!s) return ''
-  return isSafeCssUrl(s) ? s : ''
+  return SanitizeUrl(input)
 }
 
 function sanitizeThemeImagePool(input: unknown): string[] | undefined {
@@ -56,90 +54,6 @@ export function resolveThemeImageRuntimeUrl(input: unknown): string {
   const clean = sanitizeThemeImageSource(input)
   if (!clean) return ''
   return clean
-}
-
-/**
- * True if inner part of css url(...) is allowed (https/http, same-origin paths, image data URLs).
- * Note: url(...) must not contain unencoded ")" — very long or exotic data: URLs may not parse.
- */
-export function isSafeCssUrl(inner: string): boolean {
-  const t = inner.trim().replace(/^["']|["']$/g, '').trim()
-  if (!t || t.length > MAX_URL_INNER) return false
-  const head = t.slice(0, 80).toLowerCase()
-  if (head.includes('javascript:') || head.includes('vbscript:')) return false
-
-  if (head.startsWith('data:')) {
-    if (
-      /^data:image\/(png|jpeg|jpg|gif|webp|avif|bmp);base64,/i.test(t) &&
-      /^data:image\/(png|jpeg|jpg|gif|webp|avif|bmp);base64,[a-z0-9+/=\s]+$/i.test(t)
-    ) {
-      return true
-    }
-    // Inline SVG: trusted admin context; block obvious script. Note: ")" inside the URL breaks our url() parser — use https or encode.
-    if (/^data:image\/svg\+xml/i.test(t)) {
-      if (t.length > MAX_URL_INNER) return false
-      if (/<script/i.test(t)) return false
-      return !t.includes(')')
-    }
-    return false
-  }
-
-  if (/^https:\/\//i.test(t)) return true
-  if (/^http:\/\//i.test(t)) return true
-  if (t.startsWith('/')) return true
-  if (t.startsWith('./') || t.startsWith('../')) return true
-  return false
-}
-
-/**
- * Replace disallowed url(...) with `none`.
- * Allowed URLs are re-emitted as url("...") so spaces before `)`, quotes in paths, and parser quirks are avoided.
- */
-export function sanitizeCssUrls(css: string): string {
-  const re = /url\s*\(/gi
-  let last = 0
-  let out = ''
-  let m: RegExpExecArray | null
-  while ((m = re.exec(css)) !== null) {
-    const start = m.index
-    out += css.slice(last, start)
-    let j = start + m[0].length
-    while (j < css.length && /\s/.test(css[j])) j += 1
-
-    let inner = ''
-    const c = css[j]
-    if (c === '"' || c === "'") {
-      const q = c
-      j += 1
-      while (j < css.length) {
-        if (css[j] === '\\' && j + 1 < css.length) {
-          inner += css[j] + css[j + 1]
-          j += 2
-          continue
-        }
-        if (css[j] === q) {
-          j += 1
-          break
-        }
-        inner += css[j]
-        j += 1
-      }
-    } else {
-      while (j < css.length && css[j] !== ')') {
-        inner += css[j]
-        j += 1
-      }
-    }
-    while (j < css.length && /\s/.test(css[j])) j += 1
-    if (css[j] === ')') j += 1
-
-    const stripped = inner.trim().replace(/^["']|["']$/g, '').trim()
-    out += !isSafeCssUrl(stripped) ? 'none' : `url(${JSON.stringify(stripped)})`
-    last = j
-    re.lastIndex = j
-  }
-  out += css.slice(last)
-  return out
 }
 
 /** Defaults inspired by soft personal / “paper + warm gradient” landing pages. */
@@ -186,17 +100,7 @@ export const THEME_CUSTOM_SURFACE_DEFAULTS: Required<
 }
 
 export function sanitizeThemeCssValue(input: unknown, maxLen: number): string {
-  let s = String(input ?? '')
-    .trim()
-    .slice(0, maxLen)
-  s = s
-    .replace(/[<>{}]/g, '')
-    .replace(/@import/gi, '')
-    .replace(/expression\s*\(/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/behavior\s*:/gi, '')
-  s = sanitizeCssUrls(s)
-  return s
+  return SanitizeCssText(input, maxLen, { declarationValue: true })
 }
 
 function parseThemeCustomSurfaceRaw(raw: unknown): unknown {
