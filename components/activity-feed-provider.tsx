@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, type ReactNode,useContext } from 'react'
+import { createContext, type ReactNode, useContext } from 'react'
 
 import { useActivityFeed } from '@/hooks/use-activity-feed'
 import type { ActivityUpdateMode } from '@/lib/activity-update-mode'
@@ -22,7 +22,7 @@ export function ActivityFeedProvider({
   mode: ActivityUpdateMode
   children: ReactNode
 }) {
-  const value = useActivityFeed({ initialFeed, mode })
+  const value = useActivityFeed({ initialFeed, mode, realtimeStartDelayMs: 2500 })
   return <ActivityFeedContext.Provider value={value}>{children}</ActivityFeedContext.Provider>
 }
 

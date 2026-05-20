@@ -13,6 +13,7 @@ import {
   getSiteSectionTransition,
   getSiteSectionVariants,
 } from '@/components/site-motion'
+import { WithInspirationImageTransform } from '@/lib/inspiration-image-client'
 import {
   extractInspirationLeadImage,
   inspirationPlainPreview,
@@ -144,11 +145,13 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
     <div className="space-y-3">
       <motion.div layout className="space-y-3">
         <AnimatePresence initial={false}>
-          {items.map((entry) => {
+          {items.map((entry, index) => {
             const href = `/inspiration/${entry.id}`
             const entryImageSrc = entry.imageUrl ?? entry.imageDataUrl ?? null
             const inlineLead = !entryImageSrc ? extractInspirationLeadImage(entry.content) : null
-            const cardImageSrc = entryImageSrc ?? inlineLead?.imageSrc ?? null
+            const cardImageSrcRaw = entryImageSrc ?? inlineLead?.imageSrc ?? null
+            const cardImageSrc = cardImageSrcRaw ? WithInspirationImageTransform(cardImageSrcRaw) : null
+            const prioritizeImage = index === 0
             const preview = inlineLead?.imageSrc
               ? inspirationPlainPreview(inlineLead.contentWithoutImage, 120).text
               : inspirationPlainPreviewAny(entry.content, entry.contentLexical, 120).text
@@ -182,7 +185,9 @@ export function InspirationArchiveList({ displayTimezone }: { displayTimezone: s
                         src={cardImageSrc}
                         alt=""
                         fill
-                        loading="eager"
+                        priority={prioritizeImage}
+                        loading={prioritizeImage ? undefined : 'lazy'}
+                        fetchPriority={prioritizeImage ? 'high' : undefined}
                         className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
                         sizes="(max-width: 640px) 56px, 64px"
                       />

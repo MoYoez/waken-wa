@@ -76,7 +76,7 @@ export function useViewerCount(options: UseViewerCountOptions = {}) {
 
       const res = await fetch('/api/viewers', {
         method: mode === 'heartbeat' ? 'POST' : 'GET',
-        cache: 'no-store',
+        cache: 'no-cache',
       })
       const json = (await res.json().catch(() => null)) as ViewerCountResponse | null
       if (!res.ok || !json?.success || typeof json.data?.count !== 'number') {

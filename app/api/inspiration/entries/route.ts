@@ -70,9 +70,15 @@ function formatDeviceSuffix(options: {
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const INSPIRATION_LIST_IMAGE_OPTIONS = {
+  format: 'webp' as const,
+  quality: 60,
+  width: 180,
+}
+
 function toEntryResponseItem<T extends { id: number; imageDataUrl?: string | null }>(item: T) {
   const imageDataUrl = typeof item.imageDataUrl === 'string' ? item.imageDataUrl.trim() : ''
-  const imageUrl = imageDataUrl ? inspirationEntryImageUrl(item.id) : null
+  const imageUrl = imageDataUrl ? inspirationEntryImageUrl(item.id, INSPIRATION_LIST_IMAGE_OPTIONS) : null
   return {
     ...item,
     imageDataUrl: imageUrl,

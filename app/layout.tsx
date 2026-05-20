@@ -115,17 +115,17 @@ export default async function RootLayout({
     ),
   )
   const htmlClassName = persistedTheme === 'dark' ? 'dark' : undefined
+  const shouldPreconnectPublicFont =
+    publicPageFontRuntime.stylesheetHref?.startsWith('https://fonts.loli.net/') === true
 
   return (
     <html lang={lng} suppressHydrationWarning className={htmlClassName} style={htmlStyle}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: buildThemeBootstrapScript() }} />
-        <link rel="preconnect" href="https://fonts.loli.net" />
-        <link rel="preconnect" href="https://gstatic.loli.net" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@300;400;500&family=Satisfy&family=Ubuntu:wght@300;400;500;700&display=swap"
-        />
+        {shouldPreconnectPublicFont ? <link rel="preconnect" href="https://fonts.loli.net" /> : null}
+        {shouldPreconnectPublicFont ? (
+          <link rel="preconnect" href="https://gstatic.loli.net" crossOrigin="anonymous" />
+        ) : null}
         {publicPageFontRuntime.stylesheetHref ? (
           <link
             id={PUBLIC_PAGE_FONT_STYLESHEET_ELEMENT_ID}

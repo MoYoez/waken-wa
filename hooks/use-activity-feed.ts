@@ -8,16 +8,23 @@ import type { ActivityFeedData } from '@/types/activity'
 const SSE_RECONNECT_DELAY_MS = 3000
 const POLLING_INTERVAL_MS = 30000
 const MAX_SSE_FAILURES = 3
+const DEFAULT_REALTIME_START_DELAY_MS = 2500
 
 interface UseActivityFeedOptions {
   /** Server-rendered snapshot for immediate first paint. */
   initialFeed?: ActivityFeedData | null
   /** Update mode from server-side settings */
   mode?: ActivityUpdateMode
+  /** Delay realtime connection when an SSR snapshot already exists, keeping it out of the initial critical path. */
+  realtimeStartDelayMs?: number
 }
 
 export function useActivityFeed(options: UseActivityFeedOptions = {}) {
-  const { initialFeed = null, mode = 'sse' } = options
+  const {
+    initialFeed = null,
+    mode = 'sse',
+    realtimeStartDelayMs = DEFAULT_REALTIME_START_DELAY_MS,
+  } = options
 
   const [feed, setFeed] = useState<ActivityFeedData | null>(initialFeed)
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +33,7 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
   const failureCountRef = useRef(0)
   const eventSourceRef = useRef<EventSource | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const realtimeStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** When false, SSE `error` events are ignored (tab hidden or effect teardown). */
   const allowSseReconnectRef = useRef(true)
@@ -45,7 +53,7 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch('/api/activity?public=1', { cache: 'no-store' })
+      const res = await fetch('/api/activity?public=1', { cache: 'no-cache' })
       if (!res.ok) throw new Error('fetch failed')
       const json = await res.json()
       if (json?.success && json?.data) {
@@ -76,6 +84,10 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
   }, [])
 
   const cleanupAll = useCallback(() => {
+    if (realtimeStartTimerRef.current) {
+      clearTimeout(realtimeStartTimerRef.current)
+      realtimeStartTimerRef.current = null
+    }
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
       eventSourceRef.current = null
@@ -148,7 +160,15 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
     if (mode === 'polling') {
       startPolling()
     } else {
-      cleanup = connectSSE()
+      const delayMs = initialFeed ? Math.max(0, Math.round(realtimeStartDelayMs)) : 0
+      if (delayMs > 0) {
+        realtimeStartTimerRef.current = setTimeout(() => {
+          realtimeStartTimerRef.current = null
+          connectSSE()
+        }, delayMs)
+      } else {
+        cleanup = connectSSE()
+      }
     }
 
     return () => {
@@ -156,7 +176,7 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
       cleanup?.()
       cleanupAll()
     }
-  }, [mode, tabVisible, connectSSE, startPolling, cleanupAll])
+  }, [mode, tabVisible, initialFeed, realtimeStartDelayMs, connectSSE, startPolling, cleanupAll])
 
   return { feed, error, connectionMode }
 }

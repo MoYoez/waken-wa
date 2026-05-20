@@ -3,15 +3,21 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
 import { inspirationAssets } from '@/lib/drizzle-schema'
+import { CreateTransformedImageResponse } from '@/lib/image-transform-response'
 import { parseDataImagePayload } from '@/lib/inspiration-inline-images'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const INSPIRATION_IMAGE_RESPONSE_OPTIONS = {
+  cacheControl: 'public, max-age=31536000, immutable',
+  defaultQuality: 72,
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ publicKey: string }> },
 ) {
   try {
@@ -38,13 +44,12 @@ export async function GET(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    return new NextResponse(new Uint8Array(parsed.buffer), {
-      status: 200,
-      headers: {
-        'Content-Type': parsed.mime,
-        'Cache-Control': 'public, max-age=31536000, immutable',
-      },
-    })
+    return CreateTransformedImageResponse(
+      parsed.buffer,
+      parsed.mime,
+      request,
+      INSPIRATION_IMAGE_RESPONSE_OPTIONS,
+    )
   } catch (error) {
     console.error('inspiration image GET failed:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

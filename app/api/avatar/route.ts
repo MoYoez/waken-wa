@@ -3,11 +3,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminSession, unauthorizedJson } from '@/lib/admin-api-auth'
 import { isRemoteAvatarUrl } from '@/lib/avatar-url'
 import { extractImageSourcePublicKey, readImageSourceDataUrl } from '@/lib/image-source-store'
+import { CreateTransformedImageResponse } from '@/lib/image-transform-response'
 import { decodeInlineImageDataUrl, inlineImageBody } from '@/lib/inline-image-data'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+const AVATAR_IMAGE_RESPONSE_OPTIONS = {
+  cacheControl: 'public, max-age=3600, s-maxage=3600',
+  defaultFormat: 'webp' as const,
+  defaultQuality: 72,
+  defaultWidth: 128,
+}
 
 function isUpstreamTimeoutError(error: unknown): boolean {
   const current = error as {
@@ -22,12 +30,12 @@ function isUpstreamTimeoutError(error: unknown): boolean {
   )
 }
 
-async function fetchAvatarResponse(rawUrl: string) {
+async function fetchAvatarResponse(request: NextRequest, rawUrl: string) {
   try {
     const upstream = await fetch(rawUrl, {
       method: 'GET',
       redirect: 'follow',
-      cache: 'no-store',
+      next: { revalidate: 3600 },
       headers: {
         Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
         'User-Agent': 'Mozilla/5.0 (compatible; WakenAvatarProxy/1.0)',
@@ -50,13 +58,7 @@ async function fetchAvatarResponse(rawUrl: string) {
     }
 
     const buffer = await upstream.arrayBuffer()
-    return new NextResponse(buffer, {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
-      },
-    })
+    return CreateTransformedImageResponse(buffer, contentType, request, AVATAR_IMAGE_RESPONSE_OPTIONS)
   } catch (error) {
     if (isUpstreamTimeoutError(error)) {
       console.warn('avatar proxy upstream timeout:', error)
@@ -80,7 +82,7 @@ export async function GET(request: NextRequest) {
     if (!isRemoteAvatarUrl(previewUrl)) {
       return NextResponse.json({ success: false, error: 'Invalid avatar url' }, { status: 400 })
     }
-    return fetchAvatarResponse(previewUrl)
+    return fetchAvatarResponse(request, previewUrl)
   }
 
   const config = await getSiteConfigMemoryFirst()
@@ -90,13 +92,12 @@ export async function GET(request: NextRequest) {
     if (!decoded) {
       return NextResponse.json({ success: false, error: 'Invalid avatar image data' }, { status: 404 })
     }
-    return new NextResponse(inlineImageBody(decoded.buffer), {
-      status: 200,
-      headers: {
-        'Content-Type': decoded.contentType,
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
-      },
-    })
+    return CreateTransformedImageResponse(
+      inlineImageBody(decoded.buffer),
+      decoded.contentType,
+      request,
+      AVATAR_IMAGE_RESPONSE_OPTIONS,
+    )
   }
   const imageSourceKey = extractImageSourcePublicKey(configuredUrl)
   if (imageSourceKey) {
@@ -105,17 +106,16 @@ export async function GET(request: NextRequest) {
     if (!decoded) {
       return NextResponse.json({ success: false, error: 'Invalid avatar image source' }, { status: 404 })
     }
-    return new NextResponse(inlineImageBody(decoded.buffer), {
-      status: 200,
-      headers: {
-        'Content-Type': decoded.contentType,
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
-      },
-    })
+    return CreateTransformedImageResponse(
+      inlineImageBody(decoded.buffer),
+      decoded.contentType,
+      request,
+      AVATAR_IMAGE_RESPONSE_OPTIONS,
+    )
   }
   if (!config?.avatarFetchByServerEnabled || !isRemoteAvatarUrl(configuredUrl)) {
     return NextResponse.json({ success: false, error: 'Avatar proxy is disabled' }, { status: 404 })
   }
 
-  return fetchAvatarResponse(configuredUrl)
+  return fetchAvatarResponse(request, configuredUrl)
 }

@@ -4,13 +4,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { inspirationEntries } from '@/lib/drizzle-schema'
+import { CreateTransformedImageResponse } from '@/lib/image-transform-response'
 import { parseDataImagePayload } from '@/lib/inspiration-inline-images'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+const ENTRY_IMAGE_RESPONSE_OPTIONS = {
+  cacheControl: 'private, max-age=300',
+  defaultQuality: 72,
+}
+
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -39,13 +45,12 @@ export async function GET(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    return new NextResponse(new Uint8Array(parsed.buffer), {
-      status: 200,
-      headers: {
-        'Content-Type': parsed.mime,
-        'Cache-Control': 'private, no-store',
-      },
-    })
+    return CreateTransformedImageResponse(
+      parsed.buffer,
+      parsed.mime,
+      request,
+      ENTRY_IMAGE_RESPONSE_OPTIONS,
+    )
   } catch (error) {
     console.error('inspiration entry image GET failed:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

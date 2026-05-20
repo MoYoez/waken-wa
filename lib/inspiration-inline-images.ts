@@ -8,6 +8,7 @@ import { inspirationAssets } from '@/lib/drizzle-schema'
 import { extractInspirationImagePublicKeysFromLexical } from '@/lib/inspiration-lexical'
 
 export const INSPIRATION_IMG_URL_PREFIX = '/api/inspiration/img/'
+const INSPIRATION_ENTRY_IMG_URL_PREFIX = '/api/inspiration/entry-img/'
 const ALLOWED_INLINE_IMAGE_MIME_TYPES = new Set([
   'image/avif',
   'image/bmp',
@@ -19,6 +20,22 @@ const ALLOWED_INLINE_IMAGE_MIME_TYPES = new Set([
 
 const UUID_IN_PATH_RE =
   /\/api\/inspiration\/img\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi
+
+type InspirationImageUrlOptions = {
+  format?: 'avif' | 'jpeg' | 'png' | 'webp'
+  quality?: number
+  width?: number
+}
+
+function appendImageUrlOptions(path: string, options?: InspirationImageUrlOptions): string {
+  if (!options) return path
+  const params = new URLSearchParams()
+  if (Number.isFinite(options.width)) params.set('w', String(Math.round(options.width as number)))
+  if (Number.isFinite(options.quality)) params.set('q', String(Math.round(options.quality as number)))
+  if (options.format) params.set('format', options.format)
+  const query = params.toString()
+  return query ? `${path}?${query}` : path
+}
 
 export function extractInspirationImagePublicKeysFromText(input: string): string[] {
   const keys = new Set<string>()
@@ -34,12 +51,18 @@ export function extractInspirationImagePublicKeysFromMarkdown(markdown: string):
   return extractInspirationImagePublicKeysFromText(markdown)
 }
 
-export function inspirationInlineImageUrl(publicKey: string): string {
-  return `${INSPIRATION_IMG_URL_PREFIX}${publicKey}`
+export function inspirationInlineImageUrl(
+  publicKey: string,
+  options?: InspirationImageUrlOptions,
+): string {
+  return appendImageUrlOptions(`${INSPIRATION_IMG_URL_PREFIX}${publicKey}`, options)
 }
 
-export function inspirationEntryImageUrl(entryId: number): string {
-  return `/api/inspiration/entry-img/${entryId}`
+export function inspirationEntryImageUrl(
+  entryId: number,
+  options?: InspirationImageUrlOptions,
+): string {
+  return appendImageUrlOptions(`${INSPIRATION_ENTRY_IMG_URL_PREFIX}${entryId}`, options)
 }
 
 export function extractInspirationEntryIdFromImageUrl(input: string): number | null {

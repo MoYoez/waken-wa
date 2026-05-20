@@ -12,6 +12,7 @@ import {
   getSiteSectionVariants,
 } from '@/components/site-motion'
 import { Card } from '@/components/ui/card'
+import { WithInspirationImageTransform } from '@/lib/inspiration-image-client'
 import {
   extractInspirationLeadImage,
   inspirationPlainPreview,
@@ -115,11 +116,13 @@ export function InspirationHomeSection({
     <div className="space-y-4">
       <motion.div className="space-y-3" layout>
         <AnimatePresence initial={false}>
-          {entries.map((entry) => {
+          {entries.map((entry, index) => {
             const detailHref = `/inspiration/${entry.id}`
             const entryImageSrc = entry.imageUrl ?? entry.imageDataUrl ?? null
             const inlineLead = !entryImageSrc ? extractInspirationLeadImage(entry.content) : null
-            const cardImageSrc = entryImageSrc ?? inlineLead?.imageSrc ?? null
+            const cardImageSrcRaw = entryImageSrc ?? inlineLead?.imageSrc ?? null
+            const cardImageSrc = cardImageSrcRaw ? WithInspirationImageTransform(cardImageSrcRaw) : null
+            const prioritizeImage = index === 0
             const preview = inlineLead?.imageSrc
               ? inspirationPlainPreview(inlineLead.contentWithoutImage, 96).text
               : inspirationPlainPreviewAny(entry.content, entry.contentLexical, 96).text
@@ -158,7 +161,9 @@ export function InspirationHomeSection({
                           src={cardImageSrc}
                           alt=""
                           fill
-                          loading="eager"
+                          priority={prioritizeImage}
+                          loading={prioritizeImage ? undefined : 'lazy'}
+                          fetchPriority={prioritizeImage ? 'high' : undefined}
                           className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
                           sizes="(max-width: 640px) 64px, 75px"
                         />

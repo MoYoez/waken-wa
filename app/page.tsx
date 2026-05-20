@@ -22,7 +22,7 @@ import {
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
 import { verifySiteLockSession } from '@/lib/auth'
-import { isRemoteAvatarUrl, resolveAvatarUrl } from '@/lib/avatar-url'
+import { resolveAvatarUrl } from '@/lib/avatar-url'
 import { db } from '@/lib/db'
 import { inspirationEntries } from '@/lib/drizzle-schema'
 import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
@@ -51,6 +51,18 @@ import packageJson from '@/package.json'
 // Force dynamic rendering so each request gets fresh data.
 export const dynamic = 'force-dynamic'
 
+const HOME_AVATAR_IMAGE_OPTIONS = {
+  format: 'webp' as const,
+  quality: 70,
+  width: 96,
+}
+
+const HOME_INSPIRATION_IMAGE_OPTIONS = {
+  format: 'webp' as const,
+  quality: 60,
+  width: 180,
+}
+
 export default async function Home() {
   const config = await getSiteConfigMemoryFirst()
   if (!config) {
@@ -70,8 +82,12 @@ export default async function Home() {
   const userName = config.userName
   const userBio = config.userBio
   const avatarUrl = config.avatarUrl
-  const avatarSrc = resolveAvatarUrl(avatarUrl, config.avatarFetchByServerEnabled === true, 'public')
-  const shouldPrefetchAvatar = isRemoteAvatarUrl(avatarUrl)
+  const avatarSrc = resolveAvatarUrl(
+    avatarUrl,
+    config.avatarFetchByServerEnabled === true,
+    'public',
+    HOME_AVATAR_IMAGE_OPTIONS,
+  )
   // Config object for later use
   const cfg = config as Record<string, unknown>
   const todayStatusEmoji = normalizeTodayStatusEmoji(cfg.todayStatusEmoji)
@@ -109,8 +125,8 @@ export default async function Home() {
   const displayTimezoneForEntries = normalizeTimezone(cfg.displayTimezone)
   const inspirationHomeEntries = inspirationRows.map((row: (typeof inspirationRows)[number]) => ({
     ...row,
-    imageDataUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id) : null,
-    imageUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id) : null,
+    imageDataUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, HOME_INSPIRATION_IMAGE_OPTIONS) : null,
+    imageUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, HOME_INSPIRATION_IMAGE_OPTIONS) : null,
     createdAt: coerceDbTimestampToIsoUtc(row.createdAt),
     displayTimezone: displayTimezoneForEntries,
   }))
@@ -160,7 +176,6 @@ export default async function Home() {
 
   return (
     <>
-      {shouldPrefetchAvatar && avatarSrc ? <link rel="prefetch" href={avatarSrc} as="image" /> : null}
       <LenisSmoothScroll enabled={smoothScrollEnabled} />
       <HomeScrollbarHider />
       {themeCss && (
