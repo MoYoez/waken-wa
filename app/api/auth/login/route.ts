@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       user: { id: user.id, username: user.username }
     })
   } catch (error) {
-    console.error('登录失败:', error)
+    console.error('Login failed:', error)
     const { t } = await getT('auth', { lng: getRequestLanguage(request) })
     return NextResponse.json(
       { success: false, error: t('login.failed') },

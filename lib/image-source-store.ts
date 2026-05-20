@@ -108,7 +108,7 @@ export async function upsertImageSourceFromDataUrl(
     const row = await selectImageSourceByUsageKey(usageKey, executor)
     const publicKey = typeof row?.publicKey === 'string' ? row.publicKey.trim() : ''
     if (!publicKey) {
-      throw new Error('图片源保存失败')
+      throw new Error('Failed to save image source')
     }
     return imageSourceUrl(publicKey)
   }
@@ -133,7 +133,7 @@ export async function upsertImageSourceFromDataUrl(
   const row = await selectImageSourceByHash(contentHash, executor)
   const publicKey = typeof row?.publicKey === 'string' ? row.publicKey.trim() : ''
   if (!publicKey) {
-    throw new Error('图片源保存失败')
+    throw new Error('Failed to save image source')
   }
   return imageSourceUrl(publicKey)
 }

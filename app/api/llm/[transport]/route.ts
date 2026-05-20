@@ -111,7 +111,7 @@ async function updateCategorySettings(
   assertCategoryPayload(category, payload)
   const currentConfig = await readEffectiveSiteConfig()
   if (!currentConfig) {
-    const error = new Error('未找到网页配置，请先完成初始化配置')
+    const error = new Error('Site configuration not found. Please complete setup first.')
     ;(error as { status?: number }).status = 400
     throw error
   }

@@ -170,7 +170,7 @@ export function buildDevicePaths(baseUrl: string) {
               pending: {
                 value: {
                   success: false,
-                  error: '设备待后台审核后可用',
+                  error: 'Device is pending admin review',
                   pending: true,
                   approvalUrl: `${baseUrl}/admin?tab=devices&hash=MY_DEVICE_HASH`,
                   registration: {

@@ -168,7 +168,7 @@ export function parseActivityReportBody(
         mediaCoverDataUrl &&
         mediaCoverDataUrl.length > ACTIVITY_MEDIA_COVER_DATA_URL_MAX_LENGTH
       ) {
-        return { ok: false, error: '媒体封面图片过大', status: 400 }
+        return { ok: false, error: 'Media cover image is too large', status: 400 }
       }
     }
     if (options.extractMediaAppIconDataUrl) {
@@ -177,7 +177,7 @@ export function parseActivityReportBody(
         mediaAppIconDataUrl &&
         mediaAppIconDataUrl.length > ACTIVITY_MEDIA_COVER_DATA_URL_MAX_LENGTH
       ) {
-        return { ok: false, error: '媒体程序图标过大', status: 400 }
+        return { ok: false, error: 'Media app icon is too large', status: 400 }
       }
     }
 
@@ -186,7 +186,7 @@ export function parseActivityReportBody(
       metaKeys.length > ACTIVITY_METADATA_MAX_KEYS ||
       JSON.stringify(metadata).length > ACTIVITY_METADATA_MAX_JSON_LENGTH
     ) {
-      return { ok: false, error: 'metadata 数据过大', status: 400 }
+      return { ok: false, error: 'Metadata is too large', status: 400 }
     }
   }
 

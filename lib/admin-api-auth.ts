@@ -7,5 +7,5 @@ export async function requireAdminSession() {
 }
 
 export function unauthorizedJson() {
-  return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+  return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 }

@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       })
     return NextResponse.json({ success: true, data: user }, { status: 201 })
   } catch (error) {
-    console.error('创建管理员失败:', error)
+    console.error('Failed to create admin:', error)
     const { t } = await getT('auth', { lng: getRequestLanguage(request) })
     return NextResponse.json({ success: false, error: t('adminUsers.createFailed') }, { status: 500 })
   }

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const { listKey } = await context.params
   if (!isRuleToolsListKey(listKey)) {
-    return NextResponse.json({ success: false, error: '未知列表' }, { status: 404 })
+    return NextResponse.json({ success: false, error: 'Unknown list' }, { status: 404 })
   }
 
   try {
@@ -41,8 +41,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       data: await getRuleToolsListPage({ listKey, q, limit, offset }),
     })
   } catch (error) {
-    console.error('读取规则列表失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read rule list:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }
 
@@ -54,7 +54,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { listKey } = await context.params
   if (!isRuleToolsListKey(listKey)) {
-    return NextResponse.json({ success: false, error: '未知列表' }, { status: 404 })
+    return NextResponse.json({ success: false, error: 'Unknown list' }, { status: 404 })
   }
 
   try {
@@ -74,7 +74,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         { status },
       )
     }
-    console.error('更新规则列表失败:', error)
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+    console.error('Failed to update rule list:', error)
+    return NextResponse.json({ success: false, error: 'Failed to update' }, { status: 500 })
   }
 }

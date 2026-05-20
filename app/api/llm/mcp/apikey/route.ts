@@ -33,7 +33,7 @@ async function handle(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Query token 已废弃，请改用 Authorization 或 X-Waken-MCP-Key 请求头',
+        error: 'Query token is deprecated. Use the Authorization or X-Waken-MCP-Key request header instead.',
       },
       { status: 400 },
     )
@@ -54,7 +54,7 @@ async function handle(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'MCP 未启用',
+        error: 'MCP is not enabled',
         data: {
           enabled,
           configured,
@@ -69,7 +69,7 @@ async function handle(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'MCP API Key 未配置',
+        error: 'MCP API key is not configured',
         data: {
           enabled,
           configured,
@@ -84,7 +84,7 @@ async function handle(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: '缺少 MCP API Key',
+        error: 'Missing MCP API key',
         data: {
           enabled,
           configured,
@@ -101,7 +101,7 @@ async function handle(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'MCP API Key 无效',
+        error: 'Invalid MCP API key',
         data: {
           enabled,
           configured,

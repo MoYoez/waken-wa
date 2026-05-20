@@ -103,8 +103,8 @@ export function createLlmSettingsCategoryRoute(options: LlmSettingsCategoryRoute
         data: data ? options.read(data as Record<string, unknown>) : null,
       })
     } catch (error) {
-      console.error(`读取 LLM ${options.categoryName} 配置失败:`, error)
-      return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+      console.error(`Failed to read LLM ${options.categoryName} settings:`, error)
+      return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
     }
   }
 
@@ -133,7 +133,7 @@ export function createLlmSettingsCategoryRoute(options: LlmSettingsCategoryRoute
       const currentConfig = await readEffectiveSiteConfig()
       if (!currentConfig) {
         return NextResponse.json(
-          { success: false, error: '未找到网页配置，请先完成初始化配置' },
+          { success: false, error: 'Site configuration not found. Please complete setup first.' },
           { status: 400 },
         )
       }
@@ -155,8 +155,8 @@ export function createLlmSettingsCategoryRoute(options: LlmSettingsCategoryRoute
       const knownError = errorResponse(error)
       if (knownError) return knownError
 
-      console.error(`更新 LLM ${options.categoryName} 配置失败:`, error)
-      return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+      console.error(`Failed to update LLM ${options.categoryName} settings:`, error)
+      return NextResponse.json({ success: false, error: 'Failed to update' }, { status: 500 })
     }
   }
 

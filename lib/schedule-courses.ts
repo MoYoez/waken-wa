@@ -135,7 +135,7 @@ export function parseScheduleCoursesJson(raw: unknown): {
       if (em <= sm) {
         return {
           ok: false,
-          error: `Course "${c.title}" (时段 ${i + 1}): end time must be after start time`,
+          error: `Course "${c.title}" (period ${i + 1}): end time must be after start time`,
         }
       }
     }

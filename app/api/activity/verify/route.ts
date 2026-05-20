@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     const tokenInfo = await validateToken(request)
     if (!tokenInfo) {
       return NextResponse.json(
-        { success: false, error: '无效的 API Token' },
+        { success: false, error: 'Invalid API token' },
         { status: 401 },
       )
     }
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json(
-        { success: false, error: '请求体格式无效' },
+        { success: false, error: 'Invalid request body' },
         { status: 400 },
       )
     }
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     if (!generatedHashKey) {
       return NextResponse.json(
-        { success: false, error: '缺少 generatedHashKey（设备身份牌）' },
+        { success: false, error: 'Missing generatedHashKey' },
         { status: 400 },
       )
     }
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
           request,
           generatedHashKey,
           displayName,
-          '设备待后台审核后可用',
+          'Device is pending admin review',
         )
       }
     }
@@ -125,13 +125,13 @@ export async function POST(request: NextRequest) {
         request,
         generatedHashKey,
         String(deviceRecord.displayName ?? '').trim() || displayName,
-        '设备待后台审核后可用',
+        'Device is pending admin review',
       )
     }
 
     if (deviceRecord.status !== 'active') {
       return NextResponse.json(
-        { success: false, error: '设备不可用或不存在' },
+        { success: false, error: 'Device is unavailable or does not exist' },
         { status: 403 },
       )
     }
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       if (canBypassSecondaryReview) {
         if (deviceRecord.status !== 'active') {
           return NextResponse.json(
-            { success: false, error: '设备不可用或不存在' },
+            { success: false, error: 'Device is unavailable or does not exist' },
             { status: 403 },
           )
         }
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
         request,
         generatedHashKey,
         String(deviceRecord.displayName ?? '').trim() || displayName,
-        '设备未绑定 Token，需后台绑定并审核后可用',
+        'Device is not bound to a token. Bind and approve it in admin first.',
       )
       }
     }
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
       if (canBypassSecondaryReview) {
         if (deviceRecord.status !== 'active') {
           return NextResponse.json(
-            { success: false, error: '设备不可用或不存在' },
+            { success: false, error: 'Device is unavailable or does not exist' },
             { status: 403 },
           )
         }
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
         request,
         generatedHashKey,
         String(deviceRecord.displayName ?? '').trim() || displayName,
-        '设备已切换到新的 Token，需重新审核后可用',
+        'Device switched to a new token and requires review before it can be used.',
       )
       }
     }
@@ -227,9 +227,9 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('校验设备 Token 失败:', error)
+    console.error('Failed to verify device token:', error)
     return NextResponse.json(
-      { success: false, error: '校验失败' },
+      { success: false, error: 'Verification failed' },
       { status: 500 },
     )
   }

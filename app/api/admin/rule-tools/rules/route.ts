@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
       data: await getRuleToolsRulesPage({ q, limit, offset }),
     })
   } catch (error) {
-    console.error('读取规则组失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read rule groups:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }
 
@@ -56,7 +56,7 @@ export async function PATCH(request: NextRequest) {
         { status },
       )
     }
-    console.error('更新规则组失败:', error)
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+    console.error('Failed to update rule groups:', error)
+    return NextResponse.json({ success: false, error: 'Failed to update' }, { status: 500 })
   }
 }

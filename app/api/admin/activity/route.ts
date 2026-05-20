@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     )
   } catch (error) {
-    console.error('添加活动失败:', error)
+    console.error('Failed to add activity:', error)
     return NextResponse.json({ success: false, error: t('api.activity.addFailed') }, { status: 500 })
   }
 }
@@ -270,7 +270,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('结束活动失败:', error)
+    console.error('Failed to end activity:', error)
     return NextResponse.json({ success: false, error: t('api.activity.endFailed') }, { status: 500 })
   }
 }

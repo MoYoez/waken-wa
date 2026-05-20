@@ -53,7 +53,7 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
         setError(null)
       }
     } catch {
-      setError('获取活动数据失败')
+      setError('Failed to fetch activity data')
     }
   }, [])
 
@@ -104,7 +104,7 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
           failureCountRef.current = 0
         }
       } catch {
-        setError('实时数据解析失败')
+        setError('Failed to parse realtime data')
       }
     }
 
@@ -115,10 +115,10 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
       eventSourceRef.current = null
 
       if (failureCountRef.current >= MAX_SSE_FAILURES) {
-        setError('实时连接不稳定，已切换到轮询模式')
+        setError('Realtime connection is unstable. Switched to polling mode.')
         startPolling()
       } else {
-        setError('实时连接异常，正在重试...')
+        setError('Realtime connection error. Retrying...')
         reconnectTimerRef.current = setTimeout(() => {
           connectSSE()
         }, SSE_RECONNECT_DELAY_MS)

@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
       data: data ? omitRuleToolsFields(data as Record<string, unknown>) : null,
     })
   } catch (error) {
-    console.error('读取站点配置失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read site settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }
 
@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    console.error('更新站点配置失败:', error)
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+    console.error('Failed to update site settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to update' }, { status: 500 })
   }
 }

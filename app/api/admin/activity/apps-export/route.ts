@@ -15,7 +15,7 @@ export async function GET() {
       data: await exportActivityAppsSnapshot(),
     })
   } catch (error) {
-    console.error('导出应用记录失败:', error)
-    return NextResponse.json({ success: false, error: '导出失败' }, { status: 500 })
+    console.error('Failed to export app records:', error)
+    return NextResponse.json({ success: false, error: 'Failed to export' }, { status: 500 })
   }
 }

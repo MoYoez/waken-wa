@@ -22,8 +22,8 @@ export async function GET() {
       data: serializeSiteSettingsMigrationSnapshot(await readSiteSettingsMigrationSnapshot()),
     })
   } catch (error) {
-    console.error('读取迁移状态失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read migration status:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }
 
@@ -47,7 +47,7 @@ export async function POST(_request: NextRequest) {
       )
     }
 
-    console.error('执行迁移失败:', error)
-    return NextResponse.json({ success: false, error: '迁移失败' }, { status: 500 })
+    console.error('Failed to run migration:', error)
+    return NextResponse.json({ success: false, error: 'Migration failed' }, { status: 500 })
   }
 }

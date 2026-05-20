@@ -87,7 +87,7 @@ export function useViewerCount(options: UseViewerCountOptions = {}) {
       setError(null)
       setLastUpdatedAt(new Date().toISOString())
     } catch {
-      setError('读取在线访客数失败')
+      setError('Failed to read online viewer count')
     } finally {
       inFlightRef.current = false
       if (!hasLoadedRef.current) {

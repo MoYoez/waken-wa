@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
       const siteLockOk = await isSiteLockSatisfied()
       if (!siteLockOk) {
         return NextResponse.json(
-          { success: false, error: '请先解锁页面' },
+          { success: false, error: 'Please unlock the page first' },
           { status: 403 },
         )
       }
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
 
     const session = await getSession()
     if (!session) {
-      return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const feed = await getActivityFeedData(ACTIVITY_FEED_DEFAULT_LIMIT)
@@ -119,9 +119,9 @@ export async function GET(request: NextRequest) {
       data: feed,
     })
   } catch (error) {
-    console.error('获取活动日志失败:', error)
+    console.error('Failed to fetch activity logs:', error)
     return NextResponse.json(
-      { success: false, error: '获取活动日志失败' },
+      { success: false, error: 'Failed to fetch activity logs' },
       { status: 500 },
     )
   }
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     const tokenInfo = await validateToken(request)
     if (!tokenInfo) {
       return NextResponse.json(
-        { success: false, error: '无效的 API Token' },
+        { success: false, error: 'Invalid API token' },
         { status: 401 },
       )
     }
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json(
-        { success: false, error: '请求体格式无效' },
+        { success: false, error: 'Invalid request body' },
         { status: 400 },
       )
     }
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
 
     if (!generatedHashKey || !process_name) {
       return NextResponse.json(
-        { success: false, error: '缺少必要字段: generatedHashKey（设备身份牌）、process_name' },
+        { success: false, error: 'Missing required fields: generatedHashKey and process_name' },
         { status: 400 },
       )
     }
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: '设备待后台审核后可用',
+            error: 'Device is pending admin review',
             pending: true,
             approvalUrl,
             registration: {
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: '设备待后台审核后可用',
+          error: 'Device is pending admin review',
           pending: true,
           approvalUrl,
           registration: {
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
 
     if (deviceRecord.status !== 'active') {
       return NextResponse.json(
-        { success: false, error: '设备不可用或不存在' },
+        { success: false, error: 'Device is unavailable or does not exist' },
         { status: 403 },
       )
     }
@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
       if (canBypassSecondaryReview) {
         if (deviceRecord.status !== 'active') {
           return NextResponse.json(
-            { success: false, error: '设备不可用或不存在' },
+            { success: false, error: 'Device is unavailable or does not exist' },
             { status: 403 },
           )
         }
@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: '设备未绑定 Token，需后台绑定并审核后可用',
+          error: 'Device is not bound to a token. Bind and approve it in admin first.',
           pending: true,
           approvalUrl,
           registration: {
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
       if (canBypassSecondaryReview) {
         if (deviceRecord.status !== 'active') {
           return NextResponse.json(
-            { success: false, error: '设备不可用或不存在' },
+            { success: false, error: 'Device is unavailable or does not exist' },
             { status: 403 },
           )
         }
@@ -321,7 +321,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: '设备已检测到新 Token 绑定请求：旧 Token 已解绑，待后台审核确认切换',
+          error: 'New token binding detected. The old token was unbound and admin review is required.',
           pending: true,
           approvalUrl,
           registration: {
@@ -342,7 +342,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: '站点已开启「休眠视作离线」，已拒绝 LockApp / loginwindow 等锁屏活动上报',
+          error: 'Sleep-as-offline is enabled, so lock-screen activity reports are rejected.',
         },
         { status: 403 },
       )
@@ -500,9 +500,9 @@ export async function POST(request: NextRequest) {
       data: redactGeneratedHashKeyForClient(entry as unknown as Record<string, unknown>),
     }, { status: 200 })
   } catch (error) {
-    console.error('上报活动失败:', error)
+    console.error('Failed to report activity:', error)
     return NextResponse.json(
-      { success: false, error: '上报活动失败' },
+      { success: false, error: 'Failed to report activity' },
       { status: 500 },
     )
   }

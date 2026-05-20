@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       )
     }
-    console.error('初始化管理员失败:', error)
+    console.error('Failed to initialize admin:', error)
     return NextResponse.json(
       { success: false, error: t('setup.initializeFailed') },
       { status: 500 }

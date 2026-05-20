@@ -55,7 +55,7 @@ export async function gateInspirationApiForDevice(
     return {
       ok: false,
       status: 403,
-      error: '灵感随想录 API 已限制为无可用设备，请在后端「网站设置」中调整',
+      error: 'The inspiration API is restricted to no available devices. Update the allowlist in Site Settings.',
     }
   }
 
@@ -65,12 +65,12 @@ export async function gateInspirationApiForDevice(
       ok: false,
       status: 400,
       error:
-        '已启用「仅指定设备可提交随想录」：请在请求头加入 X-Device-Key（值为该设备的设备身份牌），或在 JSON 中传 generatedHashKey',
+        'Only approved devices can submit inspiration entries. Provide X-Device-Key or generatedHashKey.',
     }
   }
 
   if (!allowlist.includes(key)) {
-    return { ok: false, status: 403, error: '该设备未在「灵感随想录」允许列表中' }
+    return { ok: false, status: 403, error: 'This device is not in the inspiration allowlist' }
   }
 
   const ok = await isActiveDeviceBoundToTokenCached(tokenId, key)
@@ -78,7 +78,7 @@ export async function gateInspirationApiForDevice(
     return {
       ok: false,
       status: 403,
-      error: '设备标识与当前 Bearer Token 不匹配，或设备未激活',
+      error: 'The device key does not match the current Bearer token, or the device is inactive',
     }
   }
 

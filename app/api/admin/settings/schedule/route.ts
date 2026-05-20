@@ -22,8 +22,8 @@ export async function GET() {
       data: data ? pickScheduleSettingsFromConfig(data as Record<string, unknown>) : null,
     })
   } catch (error) {
-    console.error('读取课表配置失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read schedule settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }
 
@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    console.error('更新课表配置失败:', error)
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+    console.error('Failed to update schedule settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to update' }, { status: 500 })
   }
 }

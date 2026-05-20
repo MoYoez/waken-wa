@@ -176,7 +176,7 @@ export async function persistCompatibilitySiteConfigValues(
     if (migrationState === 'legacy') {
       throw CreateSiteSettingsMigrationRequiredError()
     }
-    throw CreateSiteSettingsCategoryApiRequiredError('该配置已迁移到分类接口，请使用新的分类保存接口')
+    throw CreateSiteSettingsCategoryApiRequiredError('This setting has moved to a category API. Use the new category save endpoint.')
   }
 
   const migrationState = await readMigrationState(executor)
@@ -245,7 +245,7 @@ export async function persistRulesSettingsValues(
 
   const effectiveConfig = await readEffectiveSiteConfig(executor)
   if (!effectiveConfig) {
-    throw CreateSiteSettingsNotFoundError('未找到网页配置，请先完成初始化配置')
+    throw CreateSiteSettingsNotFoundError('Site configuration not found. Please complete setup first.')
   }
 
   const mergedValues = {
@@ -264,7 +264,7 @@ export async function bootstrapSiteSettingsSplitStorage(executor: any = db): Pro
   const snapshot = await readSiteSettingsSnapshot(executor)
   const legacySiteConfigRow = snapshot.legacySiteConfigRow ?? (await readLegacySiteConfigRow(executor))
   if (!legacySiteConfigRow) {
-    throw CreateSiteSettingsNotFoundError('未找到网页配置，请先完成初始化配置')
+    throw CreateSiteSettingsNotFoundError('Site configuration not found. Please complete setup first.')
   }
 
   const sourceValues =
@@ -273,7 +273,7 @@ export async function bootstrapSiteSettingsSplitStorage(executor: any = db): Pro
       : await readEffectiveSiteConfig(executor)
 
   if (!sourceValues) {
-    throw CreateSiteSettingsNotFoundError('未找到网页配置，请先完成初始化配置')
+    throw CreateSiteSettingsNotFoundError('Site configuration not found. Please complete setup first.')
   }
 
   const migratedAt = snapshot.migration.migratedAt ?? sqlTimestamp()
@@ -303,7 +303,7 @@ export async function migrateLegacySiteSettings(
 }> {
   const snapshot = await readSiteSettingsSnapshot(executor)
   if (!snapshot.legacySiteConfigRow) {
-    throw CreateSiteSettingsNotFoundError('未找到网页配置，请先完成初始化配置')
+    throw CreateSiteSettingsNotFoundError('Site configuration not found. Please complete setup first.')
   }
 
   if (snapshot.migration.migrationState !== 'legacy') {
@@ -338,19 +338,19 @@ export async function clearLegacySiteSettingsData(
 }> {
   const snapshot = await readSiteSettingsSnapshot(executor)
   if (!snapshot.legacySiteConfigRow) {
-    throw CreateSiteSettingsNotFoundError('未找到网页配置，请先完成初始化配置')
+    throw CreateSiteSettingsNotFoundError('Site configuration not found. Please complete setup first.')
   }
 
   if (snapshot.migration.migrationState === 'legacy') {
-    throw CreateSiteSettingsMigrationRequiredError('请先完成迁移，再清理旧数据')
+    throw CreateSiteSettingsMigrationRequiredError('Complete migration before clearing legacy data.')
   }
   if (snapshot.migration.migrationState === 'legacy_cleared') {
-    throw CreateSiteSettingsConflictError('旧数据已清理')
+    throw CreateSiteSettingsConflictError('Legacy data has already been cleared.')
   }
 
   const effectiveConfig = await readEffectiveSiteConfig(executor)
   if (!effectiveConfig) {
-    throw CreateSiteSettingsNotFoundError('未找到网页配置，请先完成初始化配置')
+    throw CreateSiteSettingsNotFoundError('Site configuration not found. Please complete setup first.')
   }
 
   const legacyDataClearedAt = sqlTimestamp()

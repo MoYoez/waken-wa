@@ -49,7 +49,7 @@ export async function fetchSteamPlayerStatus(
   apiKey: string
 ): Promise<SteamStatusResponse> {
   if (!steamId || !apiKey) {
-    return { success: false, error: '缺少 Steam ID 或 API Key' }
+    return { success: false, error: 'Missing Steam ID or API key' }
   }
 
   try {
@@ -62,19 +62,19 @@ export async function fetchSteamPlayerStatus(
     })
 
     if (!response.ok) {
-      return { success: false, error: `Steam API 返回错误: ${response.status}` }
+      return { success: false, error: `Steam API returned an error: ${response.status}` }
     }
 
     const data = await response.json()
     const players = data?.response?.players
 
     if (!players || players.length === 0) {
-      return { success: false, error: '未找到玩家信息' }
+      return { success: false, error: 'Player information not found' }
     }
 
     const player = players[0]
     if (!player || typeof player !== 'object') {
-      return { success: false, error: '未找到玩家信息' }
+      return { success: false, error: 'Player information not found' }
     }
 
     return {
@@ -82,8 +82,8 @@ export async function fetchSteamPlayerStatus(
       data: parseSteamPlayer(player as Record<string, unknown>),
     }
   } catch (error) {
-    console.error('Steam API 请求失败:', error)
-    return { success: false, error: '无法连接到 Steam API' }
+    console.error('Steam API request failed:', error)
+    return { success: false, error: 'Unable to connect to the Steam API' }
   }
 }
 
@@ -156,7 +156,7 @@ export async function fetchSteamPlayersByIds(
         if (p.steamId) out.set(p.steamId, p)
       }
     } catch (error) {
-      console.error('Steam batch API 请求失败:', error)
+      console.error('Steam batch API request failed:', error)
     }
   }
 

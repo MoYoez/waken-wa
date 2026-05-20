@@ -46,7 +46,7 @@ export async function GET() {
     return NextResponse.json({ success: true, data })
   } catch (error) {
     console.error('list orphan inspiration assets failed:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }
 
@@ -61,7 +61,7 @@ export async function DELETE(request: NextRequest) {
     const publicKeysRaw = Array.isArray(body.publicKeys) ? body.publicKeys : []
     const keys = normalizeInspirationAssetPublicKeys(publicKeysRaw)
     if (keys.length === 0) {
-      return NextResponse.json({ success: false, error: '缺少 publicKeys' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Missing publicKeys' }, { status: 400 })
     }
 
     const referenced = await scanReferencedInspirationAssetPublicKeys()
@@ -95,6 +95,6 @@ export async function DELETE(request: NextRequest) {
     })
   } catch (error) {
     console.error('delete orphan inspiration assets failed:', error)
-    return NextResponse.json({ success: false, error: '删除失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Failed to delete' }, { status: 500 })
   }
 }

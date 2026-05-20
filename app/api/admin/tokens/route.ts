@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: maskedTokens })
   } catch (error) {
-    console.error('获取 Token 失败:', error)
+    console.error('Failed to fetch token:', error)
     return NextResponse.json({ success: false, error: t('api.tokens.getFailed') }, { status: 500 })
   }
 }
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     )
   } catch (error) {
-    console.error('创建 Token 失败:', error)
+    console.error('Failed to create token:', error)
     return NextResponse.json({ success: false, error: t('api.tokens.createFailed') }, { status: 500 })
   }
 }
@@ -214,7 +214,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('更新 Token 失败:', error)
+    console.error('Failed to update token:', error)
     return NextResponse.json({ success: false, error: t('api.tokens.updateFailed') }, { status: 500 })
   }
 }
@@ -252,7 +252,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('删除 Token 失败:', error)
+    console.error('Failed to delete token:', error)
     return NextResponse.json({ success: false, error: t('api.tokens.deleteFailed') }, { status: 500 })
   }
 }

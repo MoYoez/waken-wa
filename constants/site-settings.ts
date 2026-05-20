@@ -12,7 +12,7 @@ export const SITE_SETTINGS_MIGRATION_STATES = [
   'legacy_cleared',
 ] as const
 
-export const SITE_SETTINGS_MIGRATION_REQUIRED_MESSAGE = '请先迁移到新方案'
+export const SITE_SETTINGS_MIGRATION_REQUIRED_MESSAGE = 'Please migrate to the new settings storage first.'
 
 export const SITE_SETTINGS_SITE_CONFIG_ID = 1
 

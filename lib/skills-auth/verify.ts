@@ -32,16 +32,16 @@ async function verifyBcryptSecret(
   secretKey: string,
   plain: string,
 ): Promise<SkillsVerifyFail | { ok: true }> {
-  if (!plain) return { ok: false, error: '未授权', status: 401 }
+  if (!plain) return { ok: false, error: 'Unauthorized', status: 401 }
   const envSecret = getEnvSecretValue(secretKey)
   if (envSecret) {
-    if (plain !== envSecret) return { ok: false, error: '未授权', status: 401 }
+    if (plain !== envSecret) return { ok: false, error: 'Unauthorized', status: 401 }
     return { ok: true }
   }
   const stored = await readSecretValue(secretKey)
-  if (!stored) return { ok: false, error: '未配置授权信息', status: 503 }
+  if (!stored) return { ok: false, error: 'Authorization credentials are not configured', status: 503 }
   const ok = await bcrypt.compare(plain, stored)
-  if (!ok) return { ok: false, error: '未授权', status: 401 }
+  if (!ok) return { ok: false, error: 'Unauthorized', status: 401 }
   return { ok: true }
 }
 
@@ -53,7 +53,7 @@ export async function verifySkillsRequest(
     return { ok: false, error: 'Not found', status: 404 }
   }
   if (!isSkillsHttpMode(cfg?.aiToolMode)) {
-    return { ok: false, error: '当前已切换为 MCP 模式，Skills HTTP 接口已关闭', status: 403 }
+    return { ok: false, error: 'MCP mode is active, so the Skills HTTP API is disabled', status: 403 }
   }
 
   const modeFromHeader = parseMode(getHeader(request, 'LLM-Skills-Mode'))
@@ -64,10 +64,10 @@ export async function verifySkillsRequest(
 
   const configuredMode = getConfiguredSkillsMode(cfg.skillsAuthMode)
   if (!configuredMode) {
-    return { ok: false, error: 'Skills 未配置认证模式，请先在后台设置中选择 OAuth 或 APIKEY', status: 503 }
+    return { ok: false, error: 'Skills authentication mode is not configured. Select OAuth or APIKEY in settings first.', status: 503 }
   }
   if (modeFromHeader && modeFromHeader !== configuredMode) {
-    return { ok: false, error: '认证模式不匹配，请在后台切换一致的模式', status: 403 }
+    return { ok: false, error: 'Authentication mode mismatch. Switch to the matching mode in settings.', status: 403 }
   }
   const mode = modeFromHeader ?? configuredMode
 
@@ -77,10 +77,10 @@ export async function verifySkillsRequest(
     return { ok: true, mode, scope, requestId, aiClientId: aiClientId || null, isAdmin: false }
   }
   if (!aiClientId) {
-    return { ok: false, error: 'OAuth 模式缺少 AI 标识（LLM-Skills-AI）', status: 401 }
+    return { ok: false, error: 'OAuth mode requires an AI identifier in LLM-Skills-AI', status: 401 }
   }
   if (!token) {
-    return { ok: false, error: '缺少 token', status: 401 }
+    return { ok: false, error: 'Missing token', status: 401 }
   }
   const now = sqlTimestamp()
   const candidates = await db
@@ -103,17 +103,17 @@ export async function verifySkillsRequest(
       .limit(50)
     for (const row of activeTokens) {
       if (await bcrypt.compare(token, row.tokenHash)) {
-        return { ok: false, error: 'AI 标识与授权 token 不匹配，请携带签发时的 LLM-Skills-AI', status: 401 }
+        return { ok: false, error: 'AI identifier does not match the token. Use the LLM-Skills-AI value from issuance.', status: 401 }
       }
     }
-    return { ok: false, error: 'OAuth 授权不存在或已过期，请重新授权', status: 401 }
+    return { ok: false, error: 'OAuth authorization does not exist or has expired. Authorize again.', status: 401 }
   }
   for (const row of candidates) {
     if (await bcrypt.compare(token, row.tokenHash)) {
       return { ok: true, mode, scope, requestId, aiClientId: row.aiClientId, isAdmin: false }
     }
   }
-  return { ok: false, error: '未授权', status: 401 }
+  return { ok: false, error: 'Unauthorized', status: 401 }
 }
 
 export async function isLegacyMcpEnabled(): Promise<boolean> {
@@ -136,7 +136,7 @@ export async function requireAdminOrSkills(
   if (!hasLlmSkillsHeaders(request)) {
     return {
       ok: false,
-      response: NextResponse.json({ success: false, error: '未授权' }, { status: 401 }),
+      response: NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 }),
     }
   }
 

@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
     if (!cfg) {
       return NextResponse.json(
-        { success: false, error: '未找到网页配置，请先完成初始化配置' },
+        { success: false, error: 'Site configuration not found. Please complete setup first.' },
         { status: 400 },
       )
     }
@@ -210,7 +210,7 @@ export async function GET(request: Request) {
     const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64')
     return NextResponse.json({ success: true, data: { encoded } })
   } catch (error) {
-    console.error('导出配置失败:', error)
-    return NextResponse.json({ success: false, error: '导出失败' }, { status: 500 })
+    console.error('Failed to export settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to export' }, { status: 500 })
   }
 }

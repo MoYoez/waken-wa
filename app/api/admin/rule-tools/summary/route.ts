@@ -18,7 +18,7 @@ export async function GET() {
       data: await getRuleToolsSummary(),
     })
   } catch (error) {
-    console.error('读取规则工具摘要失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read rule tools summary:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }

@@ -30,7 +30,7 @@ export async function PATCH(request: NextRequest) {
         { status },
       )
     }
-    console.error('导入规则工具失败:', error)
-    return NextResponse.json({ success: false, error: '导入失败' }, { status: 500 })
+    console.error('Failed to import rule tools:', error)
+    return NextResponse.json({ success: false, error: 'Failed to import' }, { status: 500 })
   }
 }

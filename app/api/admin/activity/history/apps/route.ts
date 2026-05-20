@@ -57,8 +57,7 @@ export async function GET(request: NextRequest) {
       pagination: { limit, offset, total: null },
     })
   } catch (error) {
-    console.error('读取历史应用记录失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read historical app records:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }
-

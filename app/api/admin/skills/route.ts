@@ -92,13 +92,13 @@ export async function PATCH(request: NextRequest) {
     const envStatus = getSkillsSecretEnvStatus()
     if (rotateApiKey && envStatus.skillsApiKeyEnvManaged) {
       return NextResponse.json(
-        { success: false, error: 'SKILLS_API_KEY 由环境变量接管，请在部署环境中轮换' },
+        { success: false, error: 'SKILLS_API_KEY is managed by environment variables. Rotate it in the deployment environment.' },
         { status: 409 },
       )
     }
     if (rotateLegacyMcpKey && envStatus.legacyMcpApiKeyEnvManaged) {
       return NextResponse.json(
-        { success: false, error: 'LEGACY_MCP_API_KEY 由环境变量接管，请在部署环境中轮换' },
+        { success: false, error: 'LEGACY_MCP_API_KEY is managed by environment variables. Rotate it in the deployment environment.' },
         { status: 409 },
       )
     }
@@ -120,7 +120,7 @@ export async function PATCH(request: NextRequest) {
       const existing = await getSiteConfigMemoryFirst()
       if (!existing) {
         return NextResponse.json(
-          { success: false, error: '请先完成站点初始化配置，再启用 Skills' },
+          { success: false, error: 'Complete site setup before enabling Skills.' },
           { status: 400 },
         )
       }
@@ -181,7 +181,7 @@ export async function PATCH(request: NextRequest) {
         { status: (error as unknown as { status: number }).status },
       )
     }
-    console.error('更新 Skills 设置失败:', error)
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+    console.error('Failed to update Skills settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to update' }, { status: 500 })
   }
 }

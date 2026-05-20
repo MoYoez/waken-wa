@@ -25,21 +25,21 @@ async function canReadViewerPresence(): Promise<boolean> {
 export async function GET() {
   try {
     if (!(await canReadViewerPresence())) {
-      return NextResponse.json({ success: false, error: '请先解锁页面' }, { status: 403 })
+      return NextResponse.json({ success: false, error: 'Please unlock the page first' }, { status: 403 })
     }
 
     const count = await getViewerPresenceCount()
     return NextResponse.json({ success: true, data: { count } })
   } catch (error) {
-    console.error('读取在线访客数失败:', error)
-    return NextResponse.json({ success: false, error: '读取在线访客数失败' }, { status: 500 })
+    console.error('Failed to read online viewer count:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read online viewer count' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     if (!(await canReadViewerPresence())) {
-      return NextResponse.json({ success: false, error: '请先解锁页面' }, { status: 403 })
+      return NextResponse.json({ success: false, error: 'Please unlock the page first' }, { status: 403 })
     }
 
     const existingViewerId = normalizeViewerPresenceId(
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
     return response
   } catch (error) {
-    console.error('更新在线访客心跳失败:', error)
-    return NextResponse.json({ success: false, error: '更新在线访客心跳失败' }, { status: 500 })
+    console.error('Failed to update online viewer heartbeat:', error)
+    return NextResponse.json({ success: false, error: 'Failed to update online viewer heartbeat' }, { status: 500 })
   }
 }

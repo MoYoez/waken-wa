@@ -1,5 +1,6 @@
 import Redis from 'ioredis'
 
+// this is for serverless cost saver, actually I dont prefer to write like this.:(
 const LUA_FIXED_WINDOW_INCR = `
 local c = redis.call('INCR', KEYS[1])
 if c == 1 then

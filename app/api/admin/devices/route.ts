@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       pagination: { limit, offset, total: Number(totalRow?.c ?? 0) },
     })
   } catch (error) {
-    console.error('获取设备列表失败:', error)
+    console.error('Failed to fetch device list:', error)
     return NextResponse.json({ success: false, error: t('api.devices.listFailed') }, { status: 500 })
   }
 }
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: item }, { status: 201 })
   } catch (error) {
-    console.error('创建设备失败:', error)
+    console.error('Failed to create device:', error)
     return NextResponse.json({ success: false, error: t('api.devices.createFailed') }, { status: 500 })
   }
 }
@@ -296,7 +296,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: item })
   } catch (error) {
-    console.error('更新设备失败:', error)
+    console.error('Failed to update device:', error)
     return NextResponse.json({ success: false, error: t('api.devices.updateFailed') }, { status: 500 })
   }
 }
@@ -320,7 +320,7 @@ export async function DELETE(request: NextRequest) {
     await clearActivityFeedDataCache()
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('删除设备失败:', error)
+    console.error('Failed to delete device:', error)
     return NextResponse.json({ success: false, error: t('api.devices.deleteFailed') }, { status: 500 })
   }
 }

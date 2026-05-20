@@ -19,8 +19,8 @@ export async function GET() {
       data: await getRuleToolsConfig(),
     })
   } catch (error) {
-    console.error('读取规则工具配置失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read rule tools settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }
 
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest) {
         { status },
       )
     }
-    console.error('更新规则工具配置失败:', error)
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+    console.error('Failed to update rule tools settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to update' }, { status: 500 })
   }
 }

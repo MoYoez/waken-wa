@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Query token 已废弃，请改用 LLM-Skills-Token 请求头',
+        error: 'Query token is deprecated. Use the LLM-Skills-Token request header instead.',
       },
       { status: 400 },
     )
@@ -95,13 +95,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MCP 未启用，请先在后台打开 MCP 模式并启用独立 MCP 开关',
+          error: 'MCP is not enabled. Enable MCP mode and the standalone MCP switch in admin settings first.',
           finalUrl,
           preferredToolMode,
           endpoints,
           guide: {
             nextStep: 'open_admin_settings',
-            where: 'Web 配置 → 进阶设置 → 允许 AI 调试 → MCP',
+            where: 'Web Settings -> Advanced Settings -> Allow AI Debugging -> MCP',
             finalUrl,
           },
         },
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: '缺少 MCP API Key',
+          error: 'Missing MCP API key',
           finalUrl,
           preferredToolMode,
           data: {
@@ -164,13 +164,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Skills 未配置认证模式，请先在后台设置中选择 OAuth 或 APIKEY',
+        error: 'Skills authentication mode is not configured. Select OAuth or APIKEY in settings first.',
         finalUrl,
         preferredToolMode,
         endpoints,
         guide: {
           nextStep: 'open_admin_settings',
-          where: 'Web 配置 → 进阶设置 → 允许 AI 调试',
+          where: 'Web Settings -> Advanced Settings -> Allow AI Debugging',
           detectModeBy: `GET ${endpoints.direct}`,
         },
       },
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: '认证模式不匹配或缺失，请先请求 direct 接口读取当前模式',
+        error: 'Authentication mode is missing or mismatched. Request the direct endpoint first to read the current mode.',
         finalUrl,
         preferredToolMode,
         endpoints,
@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'OAuth 模式必须携带 AI 标识（LLM-Skills-AI 或 ai 参数），并使用你自己的固定 AI 名字',
+        error: 'OAuth mode requires an AI identifier in LLM-Skills-AI or the ai query parameter. Use your own stable AI name.',
         finalUrl,
         preferredToolMode,
         endpoints,
@@ -227,7 +227,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: '缺少 token',
+        error: 'Missing token',
         finalUrl,
         preferredToolMode,
         data: {

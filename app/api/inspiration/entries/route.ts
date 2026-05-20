@@ -125,7 +125,7 @@ async function resolveEntryImageDataUrl(input: unknown): Promise<string | null> 
 export async function GET(request: NextRequest) {
   try {
     if (!(await isSiteLockSatisfied())) {
-      return NextResponse.json({ success: false, error: '页面已锁定' }, { status: 403 })
+      return NextResponse.json({ success: false, error: 'Page is locked' }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -162,8 +162,8 @@ export async function GET(request: NextRequest) {
       pagination: { limit, offset, total: Number(totalRow?.c ?? 0) },
     })
   } catch (error) {
-    console.error('获取灵感条目失败:', error)
-    return NextResponse.json({ success: false, error: '获取失败' }, { status: 500 })
+    console.error('Failed to fetch inspiration entries:', error)
+    return NextResponse.json({ success: false, error: 'Failed to fetch' }, { status: 500 })
   }
 }
 
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
   const apiToken = await getBearerApiTokenRecord(request.headers.get('authorization'))
 
   if (!session && !apiToken) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -223,7 +223,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             error:
-              '附带当前状态时需要提供设备身份牌（X-Device-Key 或 generatedHashKey）',
+              'Attaching current status requires a device key in X-Device-Key or generatedHashKey',
           },
           { status: 400 },
         )
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
         attachStatusDeviceHashResolved !== tokenDeviceKey.trim().toLowerCase()
       ) {
         return NextResponse.json(
-          { success: false, error: '附带当前状态仅允许使用当前设备身份牌' },
+          { success: false, error: 'Current status can only be attached for the current device key' },
           { status: 403 },
         )
       }
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
     const content = contentMarkdown || contentFromLexical
     const hasLexicalContent = lexicalHasVisibleText(contentLexical)
     if (!content && !hasLexicalContent) {
-      return NextResponse.json({ success: false, error: '缺少 content' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Missing content' }, { status: 400 })
     }
 
     const imageDataUrlRaw = body?.imageDataUrl ?? body?.dataUrl ?? body?.image_data_url
@@ -380,15 +380,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: toEntryResponseItem(entry) }, { status: 201 })
   } catch (error) {
-    console.error('提交灵感条目失败:', error)
-    return NextResponse.json({ success: false, error: '提交失败' }, { status: 500 })
+    console.error('Failed to submit inspiration entry:', error)
+    return NextResponse.json({ success: false, error: 'Submit failed' }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
   const session = await getSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -396,28 +396,28 @@ export async function DELETE(request: NextRequest) {
     const idRaw = searchParams.get('id')
     const id = idRaw ? parseInt(idRaw) : NaN
     if (!id || Number.isNaN(id)) {
-      return NextResponse.json({ success: false, error: '缺少有效的 id' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Missing a valid id' }, { status: 400 })
     }
 
     await db.delete(inspirationEntries).where(eq(inspirationEntries.id, id))
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('删除灵感条目失败:', error)
-    return NextResponse.json({ success: false, error: '删除失败' }, { status: 500 })
+    console.error('Failed to delete inspiration entry:', error)
+    return NextResponse.json({ success: false, error: 'Failed to delete' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
   const session = await getSession()
   if (!session) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const body = await readJsonObject(request)
     const id = Number(body?.id)
     if (!Number.isFinite(id) || id <= 0) {
-      return NextResponse.json({ success: false, error: '缺少有效的 id' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Missing a valid id' }, { status: 400 })
     }
 
     const [existingEntry] = await db
@@ -426,7 +426,7 @@ export async function PATCH(request: NextRequest) {
       .where(eq(inspirationEntries.id, id))
       .limit(1)
     if (!existingEntry) {
-      return NextResponse.json({ success: false, error: '灵感不存在' }, { status: 404 })
+      return NextResponse.json({ success: false, error: 'Inspiration entry does not exist' }, { status: 404 })
     }
 
     const attachCurrentStatus = Boolean(body?.attachCurrentStatus)
@@ -464,7 +464,7 @@ export async function PATCH(request: NextRequest) {
     const content = contentMarkdown || contentFromLexical
     const hasLexicalContent = lexicalHasVisibleText(contentLexical)
     if (!content && !hasLexicalContent) {
-      return NextResponse.json({ success: false, error: '缺少 content' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Missing content' }, { status: 400 })
     }
 
     const hasImageField =
@@ -593,7 +593,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: toEntryResponseItem(entry) })
   } catch (error) {
-    console.error('更新灵感条目失败:', error)
-    return NextResponse.json({ success: false, error: '保存失败' }, { status: 500 })
+    console.error('Failed to update inspiration entry:', error)
+    return NextResponse.json({ success: false, error: 'Save failed' }, { status: 500 })
   }
 }

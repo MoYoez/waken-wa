@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       pagination: { limit, offset, total: null },
     })
   } catch (error) {
-    console.error('读取历史媒体来源记录失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read historical media source records:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }

@@ -9,7 +9,7 @@ export const revalidate = 0
 
 export async function GET(request: NextRequest) {
   if (!(await isOpenApiDocsEnabled())) {
-    return NextResponse.json({ success: false, error: 'OpenAPI 文档未启用' }, { status: 404 })
+    return NextResponse.json({ success: false, error: 'OpenAPI documentation is not enabled' }, { status: 404 })
   }
 
   const origin = getPublicOrigin(request)

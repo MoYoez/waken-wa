@@ -30,7 +30,7 @@ export async function DELETE(_request: NextRequest) {
       )
     }
 
-    console.error('清理旧数据失败:', error)
-    return NextResponse.json({ success: false, error: '清理失败' }, { status: 500 })
+    console.error('Failed to clear legacy data:', error)
+    return NextResponse.json({ success: false, error: 'Failed to clear legacy data' }, { status: 500 })
   }
 }

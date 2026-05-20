@@ -126,7 +126,7 @@ function getListRevision(listKey: RuleToolsListKey, items: string[]): string {
 async function readRuleToolsState(): Promise<RuleToolsState> {
   const raw = await getSiteConfigMemoryFirst()
   if (!raw || typeof raw !== 'object') {
-    const error = new Error('未找到网页配置，请先完成初始化配置')
+    const error = new Error('Site configuration not found. Please complete setup first.')
     ;(error as { status?: number }).status = 400
     throw error
   }
@@ -174,12 +174,12 @@ function findTitleRuleIndex(group: AppMessageRuleGroup, titleRuleId: string): nu
 
 function assertRevisionMatch(current: string, received: unknown): void {
   if (typeof received !== 'string' || !received.trim()) {
-    const error = new Error('缺少 revision')
+    const error = new Error('Missing revision')
     ;(error as { status?: number }).status = 400
     throw error
   }
   if (current !== received.trim()) {
-    const error = new Error('配置已被其他操作更新，请刷新后重试')
+    const error = new Error('Configuration was updated by another operation. Refresh and try again.')
     ;(error as { status?: number }).status = 409
     throw error
   }
@@ -374,7 +374,7 @@ export async function patchRuleToolsRules(
       const groupId = String(body.groupId ?? '').trim()
       const index = findGroupIndex(nextRules, groupId)
       if (index < 0) {
-        const error = new Error('规则组不存在')
+        const error = new Error('Rule group does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
@@ -397,7 +397,7 @@ export async function patchRuleToolsRules(
       const groupId = String(body.groupId ?? '').trim()
       const index = findGroupIndex(nextRules, groupId)
       if (index < 0) {
-        const error = new Error('规则组不存在')
+        const error = new Error('Rule group does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
@@ -408,13 +408,13 @@ export async function patchRuleToolsRules(
       const groupId = String(body.groupId ?? '').trim()
       const index = findGroupIndex(nextRules, groupId)
       if (index < 0) {
-        const error = new Error('规则组不存在')
+        const error = new Error('Rule group does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
       const toIndexRaw = Number(body.toIndex)
       if (!Number.isFinite(toIndexRaw)) {
-        const error = new Error('缺少有效的 toIndex')
+        const error = new Error('Missing a valid toIndex')
         ;(error as { status?: number }).status = 400
         throw error
       }
@@ -427,7 +427,7 @@ export async function patchRuleToolsRules(
       const groupId = String(body.groupId ?? '').trim()
       const groupIndex = findGroupIndex(nextRules, groupId)
       if (groupIndex < 0) {
-        const error = new Error('规则组不存在')
+        const error = new Error('Rule group does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
@@ -446,13 +446,13 @@ export async function patchRuleToolsRules(
       const titleRuleId = String(body.titleRuleId ?? '').trim()
       const groupIndex = findGroupIndex(nextRules, groupId)
       if (groupIndex < 0) {
-        const error = new Error('规则组不存在')
+        const error = new Error('Rule group does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
       const titleRuleIndex = findTitleRuleIndex(nextRules[groupIndex], titleRuleId)
       if (titleRuleIndex < 0) {
-        const error = new Error('标题规则不存在')
+        const error = new Error('Title rule does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
@@ -478,13 +478,13 @@ export async function patchRuleToolsRules(
       const titleRuleId = String(body.titleRuleId ?? '').trim()
       const groupIndex = findGroupIndex(nextRules, groupId)
       if (groupIndex < 0) {
-        const error = new Error('规则组不存在')
+        const error = new Error('Rule group does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
       const titleRuleIndex = findTitleRuleIndex(nextRules[groupIndex], titleRuleId)
       if (titleRuleIndex < 0) {
-        const error = new Error('标题规则不存在')
+        const error = new Error('Title rule does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
@@ -496,19 +496,19 @@ export async function patchRuleToolsRules(
       const titleRuleId = String(body.titleRuleId ?? '').trim()
       const groupIndex = findGroupIndex(nextRules, groupId)
       if (groupIndex < 0) {
-        const error = new Error('规则组不存在')
+        const error = new Error('Rule group does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
       const titleRuleIndex = findTitleRuleIndex(nextRules[groupIndex], titleRuleId)
       if (titleRuleIndex < 0) {
-        const error = new Error('标题规则不存在')
+        const error = new Error('Title rule does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
       const toIndexRaw = Number(body.toIndex)
       if (!Number.isFinite(toIndexRaw)) {
-        const error = new Error('缺少有效的 toIndex')
+        const error = new Error('Missing a valid toIndex')
         ;(error as { status?: number }).status = 400
         throw error
       }
@@ -519,7 +519,7 @@ export async function patchRuleToolsRules(
       break
     }
     default: {
-      const error = new Error('不支持的规则操作')
+      const error = new Error('Unsupported rule operation')
       ;(error as { status?: number }).status = 400
       throw error
     }
@@ -580,12 +580,12 @@ export async function patchRuleToolsList(
     case 'create': {
       const value = normalizeListValue(listKey, body.value)
       if (!value) {
-        const error = new Error('条目内容不能为空')
+        const error = new Error('Entry content cannot be empty')
         ;(error as { status?: number }).status = 400
         throw error
       }
       if (current.some((item) => item.toLowerCase() === value.toLowerCase())) {
-        const error = new Error('条目已存在')
+        const error = new Error('Entry already exists')
         ;(error as { status?: number }).status = 409
         throw error
       }
@@ -594,13 +594,13 @@ export async function patchRuleToolsList(
     }
     case 'update': {
       if (currentIndex < 0) {
-        const error = new Error('条目不存在')
+        const error = new Error('Entry does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
       const nextValue = normalizeListValue(listKey, body.nextValue)
       if (!nextValue) {
-        const error = new Error('条目内容不能为空')
+        const error = new Error('Entry content cannot be empty')
         ;(error as { status?: number }).status = 400
         throw error
       }
@@ -609,7 +609,7 @@ export async function patchRuleToolsList(
           (item, index) => index !== currentIndex && item.toLowerCase() === nextValue.toLowerCase(),
         )
       ) {
-        const error = new Error('条目已存在')
+        const error = new Error('Entry already exists')
         ;(error as { status?: number }).status = 409
         throw error
       }
@@ -618,7 +618,7 @@ export async function patchRuleToolsList(
     }
     case 'delete': {
       if (currentIndex < 0) {
-        const error = new Error('条目不存在')
+        const error = new Error('Entry does not exist')
         ;(error as { status?: number }).status = 404
         throw error
       }
@@ -626,7 +626,7 @@ export async function patchRuleToolsList(
       break
     }
     default: {
-      const error = new Error('不支持的列表操作')
+      const error = new Error('Unsupported list operation')
       ;(error as { status?: number }).status = 400
       throw error
     }

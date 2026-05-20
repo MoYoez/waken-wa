@@ -41,8 +41,8 @@ export async function GET() {
       data: data ? pickThemeSettingsFromConfig(data as Record<string, unknown>) : null,
     })
   } catch (error) {
-    console.error('读取主题配置失败:', error)
-    return NextResponse.json({ success: false, error: '读取失败' }, { status: 500 })
+    console.error('Failed to read theme settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to read' }, { status: 500 })
   }
 }
 
@@ -67,7 +67,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    console.error('更新主题配置失败:', error)
-    return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
+    console.error('Failed to update theme settings:', error)
+    return NextResponse.json({ success: false, error: 'Failed to update' }, { status: 500 })
   }
 }

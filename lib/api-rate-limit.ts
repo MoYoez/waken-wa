@@ -27,7 +27,7 @@ function toRateLimitResponse(options: {
   return NextResponse.json(
     {
       success: false,
-      error: '请求过于频繁，请稍后再试',
+      error: 'Too many requests. Please try again later.',
       retryAfterSeconds,
       rateLimitBackend: options.backend,
     },
@@ -75,4 +75,3 @@ export async function enforceApiRateLimit(
     backend: result.backend,
   })
 }
-

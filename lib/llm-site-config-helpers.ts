@@ -42,7 +42,7 @@ export type SiteConfigRecord = Record<string, any>
 
 export function ensureJsonObject(body: Record<string, unknown>) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    const error = new Error('请求体必须为 JSON 对象')
+    const error = new Error('Request body must be a JSON object.')
     ;(error as any).status = 400
     throw error
   }
@@ -57,7 +57,7 @@ export function assertAllowedLlmFields(
   const denied = new Set<string>(LLM_DENIED_SITE_CONFIG_KEYS)
   const presentDeniedKeys = Object.keys(body ?? {}).filter((key) => denied.has(key))
   if (presentDeniedKeys.length > 0) {
-    const error = new Error(`该请求包含禁止由 AI Skills 修改的字段: ${presentDeniedKeys.join(', ')}`)
+    const error = new Error(`This request includes fields that AI Skills cannot modify: ${presentDeniedKeys.join(', ')}`)
     ;(error as any).status = 403
     ;(error as any).deniedKeys = presentDeniedKeys
     throw error
@@ -135,7 +135,7 @@ export function resolveColorSettings(
     } else if (typeof body.profileOnlineAccentColor === 'string') {
       const normalized = normalizeProfileOnlineAccentColor(body.profileOnlineAccentColor)
       if (!normalized) {
-        const error = new Error('无效的头像在线色（需 #RRGGBB）')
+        const error = new Error('Invalid profile online accent color. Expected #RRGGBB.')
         ;(error as any).status = 400
         throw error
       }
@@ -156,7 +156,7 @@ export function resolveColorSettings(
     } else if (typeof body.adminThemeColor === 'string') {
       const normalized = normalizeAdminThemeColor(body.adminThemeColor)
       if (!normalized) {
-        const error = new Error('后台主题色无效（需 #RRGGBB）')
+        const error = new Error('Invalid admin theme color. Expected #RRGGBB.')
         ;(error as any).status = 400
         throw error
       }
@@ -172,7 +172,7 @@ export function resolveColorSettings(
     } else if (typeof body.adminBackgroundColor === 'string') {
       const normalized = normalizeAdminThemeColor(body.adminBackgroundColor)
       if (!normalized) {
-        const error = new Error('后台背景色无效（需 #RRGGBB）')
+        const error = new Error('Invalid admin background color. Expected #RRGGBB.')
         ;(error as any).status = 400
         throw error
       }

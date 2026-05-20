@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const apiToken = await getBearerApiTokenRecord(request.headers.get('authorization'))
 
   if (!session && !apiToken) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 })
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         : ''
 
     if (!imageDataUrl) {
-      return NextResponse.json({ success: false, error: '缺少 imageDataUrl' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Missing imageDataUrl' }, { status: 400 })
     }
 
     const check = validateInlineImageDataUrl(imageDataUrl)
@@ -69,6 +69,6 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error('inspiration asset upload failed:', error)
-    return NextResponse.json({ success: false, error: '上传失败' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Upload failed' }, { status: 500 })
   }
 }

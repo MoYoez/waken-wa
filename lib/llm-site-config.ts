@@ -415,7 +415,7 @@ export async function prepareSiteConfigValuesFromPayload(
   }
 
   if (!userName || !userBio || !avatarUrl) {
-    const error = new Error('请填写首页必填信息')
+    const error = new Error('Please fill in the required homepage fields.')
     ;(error as any).status = 400
     throw error
   }
@@ -426,7 +426,7 @@ export async function prepareSiteConfigValuesFromPayload(
       : existing?.pageLockPasswordHash ?? null
 
   if (pageLockEnabled && !pageLockPasswordHash) {
-    const error = new Error('启用页面锁时请先设置访问密码')
+    const error = new Error('Set an access password before enabling the page lock.')
     ;(error as any).status = 400
     throw error
   }
@@ -451,7 +451,7 @@ export async function prepareSiteConfigValuesFromPayload(
   }
 
   if (hcaptchaEnabled && (!hcaptchaSiteKey || !hcaptchaSecretKey)) {
-    const error = new Error('启用 hCaptcha 时请填写 Site Key 和 Secret Key')
+    const error = new Error('Set both hCaptcha Site Key and Secret Key before enabling hCaptcha.')
     ;(error as any).status = 400
     throw error
   }

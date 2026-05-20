@@ -30,21 +30,21 @@ function buildTokenKey(aiClientId: string, authorizeCode: string): string {
 function toFailMessage(reason: string): string {
   switch (reason) {
     case 'missing_code':
-      return '缺少授权码，请提供 LLM-Skills-Token'
+      return 'Missing authorization code. Provide LLM-Skills-Token.'
     case 'missing_ai':
-      return 'OAuth 兑换缺少 AI 标识（LLM-Skills-AI）'
+      return 'OAuth exchange requires an AI identifier in LLM-Skills-AI.'
     case 'invalid_code':
-      return '授权码无效，请重新获取授权链接'
+      return 'Invalid authorization code. Request a new authorization link.'
     case 'expired':
-      return '授权码已过期，请重新获取授权链接'
+      return 'Authorization code has expired. Request a new authorization link.'
     case 'not_approved':
-      return '授权码尚未由管理员确认，请先完成页面授权'
+      return 'Authorization code has not been approved by an admin yet.'
     case 'already_exchanged':
-      return '授权码已兑换过，请重新获取授权链接'
+      return 'Authorization code has already been exchanged. Request a new authorization link.'
     case 'ai_mismatch':
-      return 'AI 标识与授权码不匹配，请携带签发时的 LLM-Skills-AI'
+      return 'AI identifier does not match the authorization code. Use the LLM-Skills-AI value from issuance.'
     default:
-      return 'OAuth 兑换失败'
+      return 'OAuth exchange failed'
   }
 }
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
   if (String(cfg.skillsAuthMode ?? '').trim().toLowerCase() !== 'oauth') {
     return NextResponse.json(
-      { success: false, error: '当前不是 OAuth 模式，无法使用 code 换 key' },
+      { success: false, error: 'OAuth mode is not active, so code exchange is unavailable.' },
       { status: 403 },
     )
   }
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
   const mode = readHeader(request, 'LLM-Skills-Mode').toLowerCase()
   if (mode && mode !== 'oauth') {
     return NextResponse.json(
-      { success: false, error: '认证模式不匹配，请使用 LLM-Skills-Mode: oauth' },
+      { success: false, error: 'Authentication mode mismatch. Use LLM-Skills-Mode: oauth.' },
       { status: 403 },
     )
   }

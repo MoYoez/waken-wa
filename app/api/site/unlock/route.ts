@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('解锁主页失败:', error)
+    console.error('Failed to unlock home page:', error)
     const { t } = await getT('auth', { lng: getRequestLanguage(request) })
     return NextResponse.json({ success: false, error: t('siteLock.unlockFailed') }, { status: 500 })
   }

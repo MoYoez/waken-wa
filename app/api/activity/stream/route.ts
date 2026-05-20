@@ -148,13 +148,13 @@ export async function GET(request: NextRequest) {
 
   if (activeStreams >= ACTIVITY_STREAM_MAX_CONCURRENT_CONNECTIONS) {
     return NextResponse.json(
-      { success: false, error: '连接数已达上限，请稍后再试' },
+      { success: false, error: 'Connection limit reached. Please try again later.' },
       { status: 503 },
     )
   }
 
   if (!(await isSiteLockSatisfied())) {
-    return NextResponse.json({ success: false, error: '页面已锁定' }, { status: 403 })
+    return NextResponse.json({ success: false, error: 'Page is locked' }, { status: 403 })
   }
 
   activeStreams++
