@@ -63,7 +63,7 @@ import {
 import { normalizeSiteIconUrl } from '@/lib/site-icon'
 import { unsanitizeSiteConfigImageInputs } from '@/lib/site-image-urls'
 import { persistCompatibilitySiteConfigValues } from '@/lib/site-settings-write'
-import { normalizeSkillsOauthTokenTtlMinutes } from '@/lib/skills-auth'
+import { getConfiguredSkillsMode, normalizeSkillsOauthTokenTtlMinutes } from '@/lib/skills-auth'
 import {
   normalizeStatusCardCoverKey,
   normalizeStatusCardCoverRev,
@@ -84,13 +84,6 @@ function normalizeMediaCoverMaxCount(value: unknown): number {
 
 function parseMediaCoverMaxCountForWrite(value: unknown): number {
   return parseIntegerInRangeForWrite(value, 0, 500, 'mediaCoverMaxCount')
-}
-
-function normalizeSkillsAuthMode(raw: unknown): 'oauth' | 'apikey' | null {
-  const value = String(raw ?? '').trim().toLowerCase()
-  if (value === 'oauth') return 'oauth'
-  if (value === 'apikey') return 'apikey'
-  return null
 }
 
 export async function prepareSiteConfigValuesFromPayload(
@@ -150,8 +143,8 @@ export async function prepareSiteConfigValuesFromPayload(
     ? Boolean(normalizedBody.skillsDebugEnabled)
     : existing?.skillsDebugEnabled === true
   const skillsAuthMode = has('skillsAuthMode')
-    ? normalizeSkillsAuthMode(normalizedBody.skillsAuthMode)
-    : normalizeSkillsAuthMode(existing?.skillsAuthMode)
+    ? getConfiguredSkillsMode(normalizedBody.skillsAuthMode)
+    : getConfiguredSkillsMode(existing?.skillsAuthMode)
   const skillsOauthTokenTtlMinutes = normalizeSkillsOauthTokenTtlMinutes(
     has('skillsOauthTokenTtlMinutes')
       ? normalizedBody.skillsOauthTokenTtlMinutes
@@ -737,4 +730,3 @@ export async function updateSiteConfigFromPayload(
   const siteConfigValues = await prepareSiteConfigValuesFromPayload(body, options)
   return persistCompatibilitySiteConfigValues(siteConfigValues, body)
 }
-

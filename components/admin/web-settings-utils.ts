@@ -364,24 +364,6 @@ function resolveImportedScheduleSlot(value: unknown): number | null {
   return isAllowedSlotMinutes(slot) ? slot : null
 }
 
-function normalizeImportedDeviceHashes(value: unknown[]): string[] {
-  return value
-    .map((item) => String(item ?? '').trim())
-    .filter((item) => item.length > 0)
-}
-
-function normalizeMediaCoverMaxCountImport(value: unknown): number | null {
-  const maxCount = Number(value)
-  if (!Number.isFinite(maxCount) || maxCount < 0) return null
-  return Math.min(Math.max(maxCount, 0), 500)
-}
-
-function normalizeRedisCacheTtlSecondsImport(value: unknown): number | null {
-  const ttl = Number(value)
-  if (!Number.isFinite(ttl)) return null
-  return Math.min(REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS, Math.max(1, Math.round(ttl)))
-}
-
 function resolveStatusCardColorFallback(key: StatusCardColorPatchKey): string {
   switch (key) {
     case 'statusCardBg':
@@ -523,7 +505,9 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
           patch.inspirationAllowedDeviceHashes = []
         } else if (Array.isArray(value)) {
           patch.inspirationDeviceRestrictionEnabled = true
-          patch.inspirationAllowedDeviceHashes = normalizeImportedDeviceHashes(value)
+          patch.inspirationAllowedDeviceHashes = value
+            .map((item) => String(item ?? '').trim())
+            .filter((item) => item.length > 0)
         }
         break
       case 'scheduleSlotMinutes': {
@@ -558,8 +542,10 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
         }
         break
       case 'mediaCoverMaxCount': {
-        const maxCount = normalizeMediaCoverMaxCountImport(value)
-        if (maxCount !== null) patch.mediaCoverMaxCount = maxCount
+        const maxCount = Number(value)
+        if (Number.isFinite(maxCount) && maxCount >= 0) {
+          patch.mediaCoverMaxCount = Math.min(Math.max(maxCount, 0), 500)
+        }
         break
       }
       case 'statusCardVariant':
@@ -598,8 +584,13 @@ export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<Sit
         setStatusCardColorPatchField(patch, key, value)
         break
       case 'redisCacheTtlSeconds': {
-        const ttl = normalizeRedisCacheTtlSecondsImport(value)
-        if (ttl !== null) patch.redisCacheTtlSeconds = ttl
+        const ttl = Number(value)
+        if (Number.isFinite(ttl)) {
+          patch.redisCacheTtlSeconds = Math.min(
+            REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
+            Math.max(1, Math.round(ttl)),
+          )
+        }
         break
       }
       case 'profileOnlinePulseEnabled':

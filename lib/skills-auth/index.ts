@@ -21,9 +21,11 @@ export {
   verifyLegacyMcpApiKey,
 } from '@/lib/skills-auth/secrets'
 export {
+  getConfiguredSkillsMode,
   hasLlmSkillsHeaders,
   normalizeAiClientId,
   normalizeSkillsOauthTokenTtlMinutes,
+  parseMode,
 } from '@/lib/skills-auth/shared'
 export {
   isLegacyMcpEnabled,

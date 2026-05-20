@@ -5,11 +5,13 @@ import { getPublicOrigin } from '@/lib/public-request-url'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import {
   createSkillsOauthAuthorizeCode,
+  getConfiguredSkillsMode,
   hasLegacyMcpApiKeyConfigured,
   hasSkillsApiKeyConfigured,
   hasSkillsOauthTokenConfigured,
   isLegacyMcpEnabled,
   normalizeAiClientId,
+  parseMode,
 } from '@/lib/skills-auth'
 import type { LlmEndpoints, SkillsMode, ToolMode } from '@/types'
 
@@ -18,13 +20,6 @@ export const revalidate = 0
 
 const LLM_DIRECT_RATE_LIMIT_MAX = 120
 const LLM_DIRECT_RATE_LIMIT_WINDOW_MS = 60_000
-
-function normalizeMode(raw: string | null): 'oauth' | 'apikey' | null {
-  const v = String(raw ?? '').trim().toLowerCase()
-  if (v === 'oauth') return 'oauth'
-  if (v === 'apikey') return 'apikey'
-  return null
-}
 
 function resolvePreferredToolMode(raw: unknown): ToolMode {
   return String(raw ?? '').trim().toLowerCase() === 'mcp' ? 'mcp' : 'skills'
@@ -83,12 +78,12 @@ export async function GET(request: NextRequest) {
   }
 
   const origin = getPublicOrigin(request)
-  const modeFromInput = normalizeMode(getInputValue(request, 'LLM-Skills-Mode', 'mode'))
+  const modeFromInput = parseMode(getInputValue(request, 'LLM-Skills-Mode', 'mode'))
   const token = getHeaderValue(request, 'LLM-Skills-Token')
   const scope = getInputValue(request, 'LLM-Skills-Scope', 'scope') || 'theme'
   const ai = normalizeAiClientId(getInputValue(request, 'LLM-Skills-AI', 'ai'))
 
-  const configuredMode = normalizeMode(String(cfg.skillsAuthMode ?? ''))
+  const configuredMode = getConfiguredSkillsMode(cfg.skillsAuthMode)
   const preferredToolMode = resolvePreferredToolMode(cfg.aiToolMode)
   const finalUrl = origin
   const endpoints = buildEndpoints(origin)

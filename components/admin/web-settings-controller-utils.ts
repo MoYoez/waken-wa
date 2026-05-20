@@ -139,20 +139,6 @@ export async function uploadImportedImageSources(
   return next
 }
 
-export function normalizeStringList(items: string[]): string[] {
-  const output: string[] = []
-  const seen = new Set<string>()
-  for (const raw of items) {
-    const value = String(raw ?? '').trim()
-    if (!value) continue
-    const key = value.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    output.push(value)
-  }
-  return output
-}
-
 export function buildWebSettingsForm(
   data: Record<string, any>,
   defaults: WebSettingsFormDefaults,

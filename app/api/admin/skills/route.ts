@@ -7,6 +7,7 @@ import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { parseIntegerInRangeForWrite } from '@/lib/site-config-values'
 import {
   clearSkillsApiKey,
+  getConfiguredSkillsMode,
   getSkillsSecretEnvStatus,
   hasLegacyMcpApiKeyConfigured,
   hasSkillsApiKeyConfigured,
@@ -23,13 +24,6 @@ import {
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-function normalizeAuthMode(raw: unknown): 'oauth' | 'apikey' | null {
-  const v = String(raw ?? '').trim().toLowerCase()
-  if (v === 'oauth') return 'oauth'
-  if (v === 'apikey') return 'apikey'
-  return null
-}
-
 export async function GET() {
   const session = await requireAdminSession()
   if (!session) {
@@ -38,7 +32,7 @@ export async function GET() {
 
   const envStatus = getSkillsSecretEnvStatus()
   const cfg = await getSiteConfigMemoryFirst()
-  const authMode = normalizeAuthMode(cfg?.skillsAuthMode)
+  const authMode = getConfiguredSkillsMode(cfg?.skillsAuthMode)
   return NextResponse.json({
     success: true,
     data: {
@@ -82,7 +76,7 @@ export async function PATCH(request: NextRequest) {
     const enabled = enableInBody ? Boolean(body.enabled) : undefined
 
     const modeInBody = body.authMode !== undefined && body.authMode !== null
-    const authMode = modeInBody ? normalizeAuthMode(body.authMode) : undefined
+    const authMode = modeInBody ? getConfiguredSkillsMode(body.authMode) : undefined
 
     const rotateApiKey = body.rotateApiKey === true
     const rotateLegacyMcpKey = body.rotateLegacyMcpKey === true
@@ -140,7 +134,7 @@ export async function PATCH(request: NextRequest) {
         allowRestrictedFields: true,
       })
 
-      const existingMode = normalizeAuthMode(existing.skillsAuthMode)
+      const existingMode = getConfiguredSkillsMode(existing.skillsAuthMode)
       if (authMode && authMode !== existingMode) {
         if (authMode === 'oauth') {
           // Switch to OAuth: invalidate APIKEY immediately.
@@ -153,7 +147,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const cfg = updatedConfig ?? (await getSiteConfigMemoryFirst())
-    const authModeOut = normalizeAuthMode(cfg?.skillsAuthMode)
+    const authModeOut = getConfiguredSkillsMode(cfg?.skillsAuthMode)
 
     return NextResponse.json({
       success: true,
@@ -191,4 +185,3 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: false, error: '更新失败' }, { status: 500 })
   }
 }
-
