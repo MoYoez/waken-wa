@@ -68,6 +68,11 @@ const MAX_FAMILY_LEN = 100
 const MAX_LABEL_LEN = 60
 const MAX_URL_LEN = 2000
 const MAX_OPTIONS = 2
+const BASE_PUBLIC_FONT_FAMILIES = [
+  'Noto Sans SC:wght@300;400;500',
+  'Satisfy',
+  'Ubuntu:wght@300;400;500;700',
+]
 
 function stripUnsafeCharacters(input: unknown) {
   return String(input ?? '')
@@ -181,14 +186,32 @@ export function getPublicPageFontPresetById(id: PublicPageFontPresetId | null | 
   return PUBLIC_PAGE_FONT_PRESETS.find((item) => item.id === id) ?? null
 }
 
-export function buildGoogleFontsStylesheetHref(family: string): string {
+function encodeGoogleFontFamily(family: string): string {
   const normalizedFamily = normalizePublicPageFontFamily(family)
   const familyParam = normalizedFamily
     .split(' ')
     .filter(Boolean)
     .map((segment) => encodeURIComponent(segment))
     .join('+')
-  return `https://fonts.loli.net/css2?family=${familyParam}&display=swap`
+  return familyParam
+}
+
+export function buildGoogleFontsStylesheetHref(families: string | string[]): string {
+  const uniqueFamilies = new Set<string>()
+  for (const family of Array.isArray(families) ? families : [families]) {
+    const encoded = encodeGoogleFontFamily(family)
+    if (encoded) uniqueFamilies.add(encoded)
+  }
+  const familyParams = Array.from(uniqueFamilies)
+    .map((family) => `family=${family}`)
+    .join('&')
+  return `https://fonts.loli.net/css2?${familyParams}&display=swap`
+}
+
+function buildPublicPageFontsStylesheetHref(extraFamily?: string | null): string {
+  return buildGoogleFontsStylesheetHref(
+    extraFamily ? [...BASE_PUBLIC_FONT_FAMILIES, extraFamily] : BASE_PUBLIC_FONT_FAMILIES,
+  )
 }
 
 export function normalizePublicPageFontOptions(raw: unknown): PublicPageFontOption[] {
@@ -374,18 +397,18 @@ export function buildPublicPageFontRuntime(preferenceRaw: unknown): {
   --public-page-font-family: ${fontFamilyCssValue};
 }`)
 
-  let stylesheetHref: string | null = null
+  let extraStylesheetFamily: string | null = null
   switch (preference.source) {
     case 'preset': {
       const preset = getPublicPageFontPresetById(preference.presetId)
       if (preset && preset.id === 'notoSerifSc') {
-        stylesheetHref = buildGoogleFontsStylesheetHref(preset.family)
+        extraStylesheetFamily = preset.family
       }
       break
     }
     case 'google':
       if (preference.googleFamily) {
-        stylesheetHref = buildGoogleFontsStylesheetHref(preference.googleFamily)
+        extraStylesheetFamily = preference.googleFamily
       }
       break
     case 'custom':
@@ -396,6 +419,6 @@ export function buildPublicPageFontRuntime(preferenceRaw: unknown): {
   return {
     cssText: cssParts.join('\n\n'),
     displayFamily,
-    stylesheetHref,
+    stylesheetHref: buildPublicPageFontsStylesheetHref(extraStylesheetFamily),
   }
 }
