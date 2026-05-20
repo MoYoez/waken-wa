@@ -334,272 +334,310 @@ export function parseAppRulesJson(
   }
 }
 
+type WebPayloadBooleanPatchKey = Extract<
+  {
+    [K in keyof SiteConfig]: SiteConfig[K] extends boolean ? K : never
+  }[keyof SiteConfig],
+  string
+>
+
+type StatusCardColorPatchKey =
+  | 'statusCardBg'
+  | 'statusCardSignatureBg'
+  | 'statusCardFg'
+  | 'statusCardMuted'
+  | 'statusCardAccent'
+  | 'statusCardBorder'
+
+function setBooleanPatchField(
+  patch: Partial<SiteConfig>,
+  key: WebPayloadBooleanPatchKey,
+  value: unknown,
+): void {
+  if (typeof value === 'boolean') {
+    patch[key] = value
+  }
+}
+
+function resolveImportedScheduleSlot(value: unknown): number | null {
+  const slot = Number(value)
+  return isAllowedSlotMinutes(slot) ? slot : null
+}
+
+function normalizeImportedDeviceHashes(value: unknown[]): string[] {
+  return value
+    .map((item) => String(item ?? '').trim())
+    .filter((item) => item.length > 0)
+}
+
+function normalizeMediaCoverMaxCountImport(value: unknown): number | null {
+  const maxCount = Number(value)
+  if (!Number.isFinite(maxCount) || maxCount < 0) return null
+  return Math.min(Math.max(maxCount, 0), 500)
+}
+
+function normalizeRedisCacheTtlSecondsImport(value: unknown): number | null {
+  const ttl = Number(value)
+  if (!Number.isFinite(ttl)) return null
+  return Math.min(REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS, Math.max(1, Math.round(ttl)))
+}
+
+function resolveStatusCardColorFallback(key: StatusCardColorPatchKey): string {
+  switch (key) {
+    case 'statusCardBg':
+      return '#FFFFFF'
+    case 'statusCardSignatureBg':
+      return '#F4F0FF'
+    case 'statusCardFg':
+      return '#111827'
+    case 'statusCardMuted':
+      return '#6B7280'
+    case 'statusCardAccent':
+      return '#22C55E'
+    case 'statusCardBorder':
+      return '#E5E7EB'
+  }
+}
+
+function setStatusCardColorPatchField(
+  patch: Partial<SiteConfig>,
+  key: StatusCardColorPatchKey,
+  value: unknown,
+): void {
+  patch[key] = normalizeStatusCardHexColor(value, resolveStatusCardColorFallback(key))
+}
+
 /** Maps export `web` object into form fields (same shape as GET /api/admin/settings). */
 export function webPayloadToFormPatch(web: Record<string, unknown>): Partial<SiteConfig> {
   const patch: Partial<SiteConfig> = {}
-  if ('adminThemeColor' in web) {
-    patch.adminThemeColor =
-      typeof web.adminThemeColor === 'string'
-        ? (normalizeAdminThemeColor(web.adminThemeColor) ?? '')
-        : ''
-  }
-  if ('adminBackgroundColor' in web) {
-    patch.adminBackgroundColor =
-      typeof web.adminBackgroundColor === 'string'
-        ? (normalizeAdminThemeColor(web.adminBackgroundColor) ?? '')
-        : ''
-  }
-  if ('pageTitle' in web && typeof web.pageTitle === 'string') {
-    const t = web.pageTitle.trim()
-    patch.pageTitle = t ? t.slice(0, PAGE_TITLE_MAX_LEN) : DEFAULT_PAGE_TITLE
-  }
-  if ('siteIconUrl' in web) {
-    patch.siteIconUrl =
-      typeof web.siteIconUrl === 'string' ? (normalizeSiteIconUrl(web.siteIconUrl) ?? '') : ''
-  }
-  if ('userName' in web && typeof web.userName === 'string') patch.userName = web.userName.trim()
-  if ('userBio' in web && typeof web.userBio === 'string') patch.userBio = web.userBio.trim()
-  if ('avatarUrl' in web && typeof web.avatarUrl === 'string') patch.avatarUrl = web.avatarUrl.trim()
-  if ('avatarFetchByServerEnabled' in web && typeof web.avatarFetchByServerEnabled === 'boolean') {
-    patch.avatarFetchByServerEnabled =
-      isRemoteAvatarUrl(typeof web.avatarUrl === 'string' ? web.avatarUrl : patch.avatarUrl) &&
-      web.avatarFetchByServerEnabled
-  }
-  if ('profileOnlineAccentColor' in web) {
-    if (web.profileOnlineAccentColor === null || web.profileOnlineAccentColor === '') {
-      patch.profileOnlineAccentColor = ''
-    } else if (typeof web.profileOnlineAccentColor === 'string') {
-      const n = normalizeProfileOnlineAccentColor(web.profileOnlineAccentColor)
-      patch.profileOnlineAccentColor = n ?? ''
-    }
-  }
-  if ('profileOnlinePulseEnabled' in web && typeof web.profileOnlinePulseEnabled === 'boolean') {
-    patch.profileOnlinePulseEnabled = web.profileOnlinePulseEnabled
-  }
-  if ('todayStatusEmoji' in web) {
-    patch.todayStatusEmoji = normalizeTodayStatusEmoji(web.todayStatusEmoji)
-  }
-  if ('todayStatusText' in web) {
-    patch.todayStatusText = normalizeTodayStatusText(web.todayStatusText)
-  }
-  if ('todayStatusExpiresAt' in web) {
-    patch.todayStatusExpiresAt = normalizeTodayStatusExpiresAt(web.todayStatusExpiresAt)
-  }
-  if ('todayStatusBusy' in web) {
-    patch.todayStatusBusy = normalizeTodayStatusBusy(web.todayStatusBusy)
-  }
-  if ('userNote' in web && typeof web.userNote === 'string') patch.userNote = web.userNote.trim()
-  if ('userNoteHitokotoEnabled' in web && typeof web.userNoteHitokotoEnabled === 'boolean') {
-    patch.userNoteHitokotoEnabled = web.userNoteHitokotoEnabled
-  }
-  if ('userNoteTypewriterEnabled' in web && typeof web.userNoteTypewriterEnabled === 'boolean') {
-    patch.userNoteTypewriterEnabled = web.userNoteTypewriterEnabled
-  }
-  if ('userNoteSignatureFontEnabled' in web && typeof web.userNoteSignatureFontEnabled === 'boolean') {
-    patch.userNoteSignatureFontEnabled = web.userNoteSignatureFontEnabled
-  }
-  if ('userNoteSignatureFontFamily' in web && typeof web.userNoteSignatureFontFamily === 'string') {
-    patch.userNoteSignatureFontFamily = web.userNoteSignatureFontFamily.trim().slice(0, 160)
-  }
-  if ('userNoteHitokotoCategories' in web) {
-    patch.userNoteHitokotoCategories = normalizeHitokotoCategories(web.userNoteHitokotoCategories)
-  }
-  if ('userNoteHitokotoEncode' in web) {
-    patch.userNoteHitokotoEncode = normalizeHitokotoEncode(web.userNoteHitokotoEncode)
-  }
-  if ('userNoteHitokotoFallbackToNote' in web && typeof web.userNoteHitokotoFallbackToNote === 'boolean') {
-    patch.userNoteHitokotoFallbackToNote = web.userNoteHitokotoFallbackToNote
-  }
-  if ('themePreset' in web && typeof web.themePreset === 'string') {
-    patch.themePreset = web.themePreset.trim() || 'basic'
-  }
-  if ('themeCustomSurface' in web) {
-    patch.themeCustomSurface = themeCustomSurfaceFromApi(web.themeCustomSurface)
-  }
-  if ('publicFontOptionsEnabled' in web && typeof web.publicFontOptionsEnabled === 'boolean') {
-    patch.publicFontOptionsEnabled = web.publicFontOptionsEnabled
-  }
-  if ('publicFontOptions' in web) {
-    patch.publicFontOptions = publicPageFontOptionsFromApi(web.publicFontOptions)
-  }
-  if ('customCss' in web && typeof web.customCss === 'string') patch.customCss = web.customCss
-  if ('historyWindowMinutes' in web) {
-    const hw = Number(web.historyWindowMinutes)
-    if (Number.isFinite(hw)) {
-      patch.historyWindowMinutes = clampSiteConfigHistoryWindowMinutes(hw)
-    }
-  }
-  if ('processStaleSeconds' in web) {
-    const st = Number(web.processStaleSeconds)
-    if (Number.isFinite(st)) {
-      patch.processStaleSeconds = clampSiteConfigProcessStaleSeconds(st)
-    }
-  }
-  if ('pageLockEnabled' in web && typeof web.pageLockEnabled === 'boolean') {
-    patch.pageLockEnabled = web.pageLockEnabled
-  }
-  if ('currentlyText' in web && typeof web.currentlyText === 'string') {
-    patch.currentlyText = web.currentlyText.trim()
-  }
-  if ('earlierText' in web && typeof web.earlierText === 'string') {
-    patch.earlierText = web.earlierText.trim()
-  }
-  if ('adminText' in web && typeof web.adminText === 'string') {
-    patch.adminText = web.adminText.trim() || 'admin'
-  }
-  if ('autoAcceptNewDevices' in web && typeof web.autoAcceptNewDevices === 'boolean') {
-    patch.autoAcceptNewDevices = web.autoAcceptNewDevices
-  }
-  if ('inspirationAllowedDeviceHashes' in web) {
-    if (web.inspirationAllowedDeviceHashes === null) {
-      patch.inspirationDeviceRestrictionEnabled = false
-      patch.inspirationAllowedDeviceHashes = []
-    } else if (Array.isArray(web.inspirationAllowedDeviceHashes)) {
-      patch.inspirationDeviceRestrictionEnabled = true
-      patch.inspirationAllowedDeviceHashes = web.inspirationAllowedDeviceHashes
-        .map((item: unknown) => String(item ?? '').trim())
-        .filter((item: string) => item.length > 0)
-    }
-  }
-  let scheduleImportSlot = SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES
-  if ('scheduleSlotMinutes' in web) {
-    const s = Number(web.scheduleSlotMinutes)
-    if (isAllowedSlotMinutes(s)) {
-      patch.scheduleSlotMinutes = s
-      scheduleImportSlot = s
-    }
-  }
-  if ('scheduleGridByWeekday' in web && Array.isArray(web.scheduleGridByWeekday)) {
-    patch.scheduleGridByWeekday = resolveScheduleGridByWeekday(
-      web.scheduleGridByWeekday,
-      scheduleImportSlot,
-    )
-  }
-  if ('schedulePeriodTemplate' in web) {
-    patch.schedulePeriodTemplate = resolveSchedulePeriodTemplate(web.schedulePeriodTemplate)
-  }
-  if ('scheduleCourses' in web && Array.isArray(web.scheduleCourses)) {
-    patch.scheduleCourses = web.scheduleCourses as ScheduleCourse[]
-  }
-  if ('scheduleIcs' in web && web.scheduleIcs === null) {
-    patch.scheduleIcs = ''
-  } else if ('scheduleIcs' in web && typeof web.scheduleIcs === 'string') {
-    patch.scheduleIcs = web.scheduleIcs
-  }
-  if ('scheduleInClassOnHome' in web && typeof web.scheduleInClassOnHome === 'boolean') {
-    patch.scheduleInClassOnHome = web.scheduleInClassOnHome
-  }
-  if ('scheduleHomeShowLocation' in web && typeof web.scheduleHomeShowLocation === 'boolean') {
-    patch.scheduleHomeShowLocation = web.scheduleHomeShowLocation
-  }
-  if ('scheduleHomeShowTeacher' in web && typeof web.scheduleHomeShowTeacher === 'boolean') {
-    patch.scheduleHomeShowTeacher = web.scheduleHomeShowTeacher
-  }
-  if ('scheduleHomeShowNextUpcoming' in web && typeof web.scheduleHomeShowNextUpcoming === 'boolean') {
-    patch.scheduleHomeShowNextUpcoming = web.scheduleHomeShowNextUpcoming
-  }
-  if ('scheduleHomeAfterClassesLabel' in web && typeof web.scheduleHomeAfterClassesLabel === 'string') {
-    const t = web.scheduleHomeAfterClassesLabel.trim()
-    patch.scheduleHomeAfterClassesLabel = (
-      t.length > 0 ? t : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT
-    ).slice(0, SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN)
-  }
-  if ('globalMouseTiltEnabled' in web && typeof web.globalMouseTiltEnabled === 'boolean') {
-    patch.globalMouseTiltEnabled = web.globalMouseTiltEnabled
-  }
-  if ('globalMouseTiltGyroEnabled' in web && typeof web.globalMouseTiltGyroEnabled === 'boolean') {
-    patch.globalMouseTiltGyroEnabled = web.globalMouseTiltGyroEnabled
-  }
-  if ('smoothScrollEnabled' in web && typeof web.smoothScrollEnabled === 'boolean') {
-    patch.smoothScrollEnabled = web.smoothScrollEnabled
-  }
-  if ('hideActivityMedia' in web && typeof web.hideActivityMedia === 'boolean') {
-    patch.hideActivityMedia = web.hideActivityMedia
-  }
-  if ('mediaDisplayShowSource' in web && typeof web.mediaDisplayShowSource === 'boolean') {
-    patch.mediaDisplayShowSource = web.mediaDisplayShowSource
-  }
-  if ('mediaDisplayShowCover' in web && typeof web.mediaDisplayShowCover === 'boolean') {
-    patch.mediaDisplayShowCover = web.mediaDisplayShowCover
-  }
-  if ('mediaDisplayShowAppIcon' in web && typeof web.mediaDisplayShowAppIcon === 'boolean') {
-    patch.mediaDisplayShowAppIcon = web.mediaDisplayShowAppIcon
-  }
-  if ('mediaDisplayShowNcmLink' in web && typeof web.mediaDisplayShowNcmLink === 'boolean') {
-    patch.mediaDisplayShowNcmLink = web.mediaDisplayShowNcmLink
-  }
-  if ('mediaCoverMaxCount' in web) {
-    const maxCount = Number(web.mediaCoverMaxCount)
-    if (Number.isFinite(maxCount) && maxCount >= 0) {
-      patch.mediaCoverMaxCount = Math.min(Math.max(maxCount, 0), 500)
-    }
-  }
-  if ('statusCardEnabled' in web && typeof web.statusCardEnabled === 'boolean') {
-    patch.statusCardEnabled = web.statusCardEnabled
-  }
-  if ('statusCardVariant' in web) {
-    patch.statusCardVariant = normalizeStatusCardVariant(web.statusCardVariant)
-  }
-  if ('statusCardTag' in web) {
-    patch.statusCardTag = normalizeStatusCardTag(web.statusCardTag)
-  }
-  if ('statusCardBackgroundKey' in web) {
-    patch.statusCardBackgroundKey = normalizeStatusCardCoverKey(web.statusCardBackgroundKey) ?? ''
-  }
-  if ('statusCardBackgroundRev' in web) {
-    patch.statusCardBackgroundRev = normalizeStatusCardCoverRev(web.statusCardBackgroundRev)
-  }
-  if ('statusCardCoverKey' in web) {
-    patch.statusCardCoverKey = normalizeStatusCardCoverKey(web.statusCardCoverKey) ?? ''
-  }
-  if ('statusCardCoverRev' in web) {
-    patch.statusCardCoverRev = normalizeStatusCardCoverRev(web.statusCardCoverRev)
-  }
-  for (const key of [
-    'statusCardShowHeader',
-    'statusCardShowAvatar',
-    'statusCardShowName',
-    'statusCardShowBio',
-    'statusCardShowNote',
-    'statusCardPreferGame',
-    'statusCardShowInClassStatus',
-  ] as const) {
-    if (key in web && typeof web[key] === 'boolean') patch[key] = web[key]
-  }
-  if ('statusCardWidth' in web) {
-    patch.statusCardWidth = normalizeStatusCardDimension(web.statusCardWidth, 520, 280, 1200)
-  }
-  if ('statusCardHeight' in web) {
-    patch.statusCardHeight = normalizeStatusCardDimension(web.statusCardHeight, 310, 1, 720)
-  }
-  if ('statusCardRadius' in web) {
-    patch.statusCardRadius = normalizeStatusCardDimension(web.statusCardRadius, 20, 0, 80)
-  }
-  if ('statusCardBg' in web) patch.statusCardBg = normalizeStatusCardHexColor(web.statusCardBg, '#FFFFFF')
-  if ('statusCardSignatureBg' in web) patch.statusCardSignatureBg = normalizeStatusCardHexColor(web.statusCardSignatureBg, '#F4F0FF')
-  if ('statusCardFg' in web) patch.statusCardFg = normalizeStatusCardHexColor(web.statusCardFg, '#111827')
-  if ('statusCardMuted' in web) patch.statusCardMuted = normalizeStatusCardHexColor(web.statusCardMuted, '#6B7280')
-  if ('statusCardAccent' in web) patch.statusCardAccent = normalizeStatusCardHexColor(web.statusCardAccent, '#22C55E')
-  if ('statusCardBorder' in web) patch.statusCardBorder = normalizeStatusCardHexColor(web.statusCardBorder, '#E5E7EB')
-  if ('hideInspirationOnHome' in web && typeof web.hideInspirationOnHome === 'boolean') {
-    patch.hideInspirationOnHome = web.hideInspirationOnHome
-  }
-  if ('disableFrontendDeviceAnimation' in web && typeof web.disableFrontendDeviceAnimation === 'boolean') {
-    patch.disableFrontendDeviceAnimation = web.disableFrontendDeviceAnimation
-  }
-  if ('activityRejectLockappSleep' in web && typeof web.activityRejectLockappSleep === 'boolean') {
-    patch.activityRejectLockappSleep = web.activityRejectLockappSleep
-  }
-  if ('useNoSqlAsCacheRedis' in web && typeof web.useNoSqlAsCacheRedis === 'boolean') {
-    patch.useNoSqlAsCacheRedis = web.useNoSqlAsCacheRedis
-  }
-  if ('redisCacheTtlSeconds' in web) {
-    const ttl = Number(web.redisCacheTtlSeconds)
-    if (Number.isFinite(ttl)) {
-      patch.redisCacheTtlSeconds = Math.min(
-        REDIS_ACTIVITY_FEED_CACHE_TTL_MAX_SECONDS,
-        Math.max(1, Math.round(ttl)),
-      )
+  const importedAvatarUrl = typeof web.avatarUrl === 'string' ? web.avatarUrl.trim() : undefined
+  const scheduleImportSlot =
+    resolveImportedScheduleSlot(web.scheduleSlotMinutes) ??
+    SITE_CONFIG_SCHEDULE_SLOT_DEFAULT_MINUTES
+
+  for (const [key, value] of Object.entries(web)) {
+    switch (key) {
+      case 'adminThemeColor':
+        patch.adminThemeColor =
+          typeof value === 'string' ? (normalizeAdminThemeColor(value) ?? '') : ''
+        break
+      case 'adminBackgroundColor':
+        patch.adminBackgroundColor =
+          typeof value === 'string' ? (normalizeAdminThemeColor(value) ?? '') : ''
+        break
+      case 'pageTitle':
+        if (typeof value === 'string') {
+          const title = value.trim()
+          patch.pageTitle = title ? title.slice(0, PAGE_TITLE_MAX_LEN) : DEFAULT_PAGE_TITLE
+        }
+        break
+      case 'siteIconUrl':
+        patch.siteIconUrl =
+          typeof value === 'string' ? (normalizeSiteIconUrl(value) ?? '') : ''
+        break
+      case 'userName':
+        if (typeof value === 'string') patch.userName = value.trim()
+        break
+      case 'userBio':
+        if (typeof value === 'string') patch.userBio = value.trim()
+        break
+      case 'avatarUrl':
+        if (typeof value === 'string') patch.avatarUrl = value.trim()
+        break
+      case 'avatarFetchByServerEnabled':
+        if (typeof value === 'boolean') {
+          patch.avatarFetchByServerEnabled = isRemoteAvatarUrl(importedAvatarUrl) && value
+        }
+        break
+      case 'profileOnlineAccentColor':
+        if (value === null || value === '') {
+          patch.profileOnlineAccentColor = ''
+        } else if (typeof value === 'string') {
+          patch.profileOnlineAccentColor = normalizeProfileOnlineAccentColor(value) ?? ''
+        }
+        break
+      case 'todayStatusEmoji':
+        patch.todayStatusEmoji = normalizeTodayStatusEmoji(value)
+        break
+      case 'todayStatusText':
+        patch.todayStatusText = normalizeTodayStatusText(value)
+        break
+      case 'todayStatusExpiresAt':
+        patch.todayStatusExpiresAt = normalizeTodayStatusExpiresAt(value)
+        break
+      case 'todayStatusBusy':
+        patch.todayStatusBusy = normalizeTodayStatusBusy(value)
+        break
+      case 'userNote':
+        if (typeof value === 'string') patch.userNote = value.trim()
+        break
+      case 'userNoteSignatureFontFamily':
+        if (typeof value === 'string') {
+          patch.userNoteSignatureFontFamily = value.trim().slice(0, 160)
+        }
+        break
+      case 'userNoteHitokotoCategories':
+        patch.userNoteHitokotoCategories = normalizeHitokotoCategories(value)
+        break
+      case 'userNoteHitokotoEncode':
+        patch.userNoteHitokotoEncode = normalizeHitokotoEncode(value)
+        break
+      case 'themePreset':
+        if (typeof value === 'string') patch.themePreset = value.trim() || 'basic'
+        break
+      case 'themeCustomSurface':
+        patch.themeCustomSurface = themeCustomSurfaceFromApi(value)
+        break
+      case 'publicFontOptions':
+        patch.publicFontOptions = publicPageFontOptionsFromApi(value)
+        break
+      case 'customCss':
+        if (typeof value === 'string') patch.customCss = value
+        break
+      case 'historyWindowMinutes': {
+        const minutes = Number(value)
+        if (Number.isFinite(minutes)) {
+          patch.historyWindowMinutes = clampSiteConfigHistoryWindowMinutes(minutes)
+        }
+        break
+      }
+      case 'processStaleSeconds': {
+        const seconds = Number(value)
+        if (Number.isFinite(seconds)) {
+          patch.processStaleSeconds = clampSiteConfigProcessStaleSeconds(seconds)
+        }
+        break
+      }
+      case 'currentlyText':
+        if (typeof value === 'string') patch.currentlyText = value.trim()
+        break
+      case 'earlierText':
+        if (typeof value === 'string') patch.earlierText = value.trim()
+        break
+      case 'adminText':
+        if (typeof value === 'string') patch.adminText = value.trim() || 'admin'
+        break
+      case 'inspirationAllowedDeviceHashes':
+        if (value === null) {
+          patch.inspirationDeviceRestrictionEnabled = false
+          patch.inspirationAllowedDeviceHashes = []
+        } else if (Array.isArray(value)) {
+          patch.inspirationDeviceRestrictionEnabled = true
+          patch.inspirationAllowedDeviceHashes = normalizeImportedDeviceHashes(value)
+        }
+        break
+      case 'scheduleSlotMinutes': {
+        const slot = resolveImportedScheduleSlot(value)
+        if (slot !== null) patch.scheduleSlotMinutes = slot
+        break
+      }
+      case 'scheduleGridByWeekday':
+        if (Array.isArray(value)) {
+          patch.scheduleGridByWeekday = resolveScheduleGridByWeekday(value, scheduleImportSlot)
+        }
+        break
+      case 'schedulePeriodTemplate':
+        patch.schedulePeriodTemplate = resolveSchedulePeriodTemplate(value)
+        break
+      case 'scheduleCourses':
+        if (Array.isArray(value)) patch.scheduleCourses = value as ScheduleCourse[]
+        break
+      case 'scheduleIcs':
+        if (value === null) {
+          patch.scheduleIcs = ''
+        } else if (typeof value === 'string') {
+          patch.scheduleIcs = value
+        }
+        break
+      case 'scheduleHomeAfterClassesLabel':
+        if (typeof value === 'string') {
+          const label = value.trim()
+          patch.scheduleHomeAfterClassesLabel = (
+            label.length > 0 ? label : SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT
+          ).slice(0, SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN)
+        }
+        break
+      case 'mediaCoverMaxCount': {
+        const maxCount = normalizeMediaCoverMaxCountImport(value)
+        if (maxCount !== null) patch.mediaCoverMaxCount = maxCount
+        break
+      }
+      case 'statusCardVariant':
+        patch.statusCardVariant = normalizeStatusCardVariant(value)
+        break
+      case 'statusCardTag':
+        patch.statusCardTag = normalizeStatusCardTag(value)
+        break
+      case 'statusCardBackgroundKey':
+        patch.statusCardBackgroundKey = normalizeStatusCardCoverKey(value) ?? ''
+        break
+      case 'statusCardBackgroundRev':
+        patch.statusCardBackgroundRev = normalizeStatusCardCoverRev(value)
+        break
+      case 'statusCardCoverKey':
+        patch.statusCardCoverKey = normalizeStatusCardCoverKey(value) ?? ''
+        break
+      case 'statusCardCoverRev':
+        patch.statusCardCoverRev = normalizeStatusCardCoverRev(value)
+        break
+      case 'statusCardWidth':
+        patch.statusCardWidth = normalizeStatusCardDimension(value, 520, 280, 1200)
+        break
+      case 'statusCardHeight':
+        patch.statusCardHeight = normalizeStatusCardDimension(value, 310, 1, 720)
+        break
+      case 'statusCardRadius':
+        patch.statusCardRadius = normalizeStatusCardDimension(value, 20, 0, 80)
+        break
+      case 'statusCardBg':
+      case 'statusCardSignatureBg':
+      case 'statusCardFg':
+      case 'statusCardMuted':
+      case 'statusCardAccent':
+      case 'statusCardBorder':
+        setStatusCardColorPatchField(patch, key, value)
+        break
+      case 'redisCacheTtlSeconds': {
+        const ttl = normalizeRedisCacheTtlSecondsImport(value)
+        if (ttl !== null) patch.redisCacheTtlSeconds = ttl
+        break
+      }
+      case 'profileOnlinePulseEnabled':
+      case 'userNoteHitokotoEnabled':
+      case 'userNoteTypewriterEnabled':
+      case 'userNoteSignatureFontEnabled':
+      case 'userNoteHitokotoFallbackToNote':
+      case 'publicFontOptionsEnabled':
+      case 'pageLockEnabled':
+      case 'autoAcceptNewDevices':
+      case 'scheduleInClassOnHome':
+      case 'scheduleHomeShowLocation':
+      case 'scheduleHomeShowTeacher':
+      case 'scheduleHomeShowNextUpcoming':
+      case 'globalMouseTiltEnabled':
+      case 'globalMouseTiltGyroEnabled':
+      case 'smoothScrollEnabled':
+      case 'hideActivityMedia':
+      case 'mediaDisplayShowSource':
+      case 'mediaDisplayShowCover':
+      case 'mediaDisplayShowAppIcon':
+      case 'mediaDisplayShowNcmLink':
+      case 'statusCardEnabled':
+      case 'statusCardShowHeader':
+      case 'statusCardShowAvatar':
+      case 'statusCardShowName':
+      case 'statusCardShowBio':
+      case 'statusCardShowNote':
+      case 'statusCardPreferGame':
+      case 'statusCardShowInClassStatus':
+      case 'hideInspirationOnHome':
+      case 'disableFrontendDeviceAnimation':
+      case 'activityRejectLockappSleep':
+      case 'useNoSqlAsCacheRedis':
+        setBooleanPatchField(patch, key, value)
+        break
+      default:
+        break
     }
   }
   return patch
