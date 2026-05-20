@@ -6,11 +6,11 @@ import Image from 'next/image'
 import { useT } from 'next-i18next/client'
 
 import { AdminLanguageToggle } from '@/components/admin/admin-language-toggle'
-import { AdminThemeColorControl } from '@/components/admin/admin-theme-color-control'
 import {
   getAdminPanelTransition,
   getAdminSectionVariants,
 } from '@/components/admin/admin-motion'
+import { AdminThemeColorControl } from '@/components/admin/admin-theme-color-control'
 import { FileSelectTrigger } from '@/components/admin/file-select-trigger'
 import {
   webSettingsCropDialogOpenAtom,
