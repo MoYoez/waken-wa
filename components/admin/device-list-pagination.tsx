@@ -24,7 +24,7 @@ export function DeviceListPagination({
   if (total <= 0) return null
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
       <span className="min-w-0 break-words">
         {t('common.countSummary', { total })}
         {itemCount > 0 ? (

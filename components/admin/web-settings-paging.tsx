@@ -31,7 +31,7 @@ export function ListPaginationBar({
   const end = Math.min((safePage + 1) * pageSize, total)
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
       <span>
         {t('common.countSummary', { total })} · {t('common.pageSummary', { start, end })}
       </span>

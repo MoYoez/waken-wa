@@ -91,7 +91,7 @@ export function ScheduleIcsImportDialog({
         </DialogHeader>
         <div className="space-y-3">
           {message ? (
-            <div className="text-sm text-muted-foreground border border-border/60 rounded-md px-3 py-2 bg-muted/20">
+            <div className="text-sm text-muted-foreground border border-border rounded-md px-3 py-2 bg-muted/20">
               {message}
             </div>
           ) : null}

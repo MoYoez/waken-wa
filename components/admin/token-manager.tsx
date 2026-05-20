@@ -306,7 +306,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                     </Button>
                   </div>
                   {reporterImportUrl ? (
-                    <div className="space-y-2 rounded-md border border-border/60 bg-background/60 p-3">
+                    <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
                       <p className="text-xs text-muted-foreground">
                         {t('tokens.reporterImportHint')}
                       </p>
@@ -379,7 +379,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                   onChange={(event) => setNewTokenName(event.target.value)}
                 />
               </div>
-              <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-4">
+              <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="tokenBypassSecondaryReview" className="text-sm font-medium">
@@ -403,7 +403,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                   </div>
                 ) : null}
                 {newTokenBypassSecondaryReview ? (
-                  <div className="space-y-3 rounded-md border border-border/50 bg-background/70 p-3">
+                  <div className="space-y-3 rounded-md border border-border bg-background/70 p-3">
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1">
                         <Label
@@ -576,7 +576,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
                       {token.isActive ? t('tokens.enabled') : t('tokens.disabled')}
                     </span>
                   </div>
-                  <div className="rounded-md border border-border/60 bg-muted/20 p-3">
+                  <div className="rounded-md border border-border bg-muted/20 p-3">
                     <p className="mb-2 text-xs font-medium text-foreground">
                       {t('tokens.recentDevicesTitle')}
                     </p>
@@ -620,7 +620,7 @@ export const TokenManager = forwardRef<TokenManagerHandle, object>(function Toke
         </AnimatePresence>
 
         {total > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
             <span>
               {t('common.countSummary', { total })}
               {tokens.length > 0 ? (

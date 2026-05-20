@@ -232,13 +232,13 @@ export function RuleToolsMediaSourceDialog({
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {isLoading && !hasPayload ? (
-                <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
+                <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-background/30 px-6 py-8 text-center">
                   <p className="text-xs text-muted-foreground">
                     {t('webSettings.loading')}
                   </p>
                 </div>
               ) : filteredMediaSourceItems.length === 0 ? (
-                <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
+                <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-background/30 px-6 py-8 text-center">
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     {mediaSourceSearchInput.trim()
                       ? t(
@@ -252,7 +252,7 @@ export function RuleToolsMediaSourceDialog({
                   <p className="shrink-0 text-xs text-muted-foreground">
                     {t('webSettingsRuleTools.appNameListEditor.savedItemsPaged')}
                   </p>
-                  <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-background/20 p-3">
+                  <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-background/20 p-3">
                     <motion.ul className="space-y-3" layout>
                       <AnimatePresence initial={false}>
                         {pagedMediaSourceItems.map((item) => {

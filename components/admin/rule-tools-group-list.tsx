@@ -88,11 +88,11 @@ export function RuleToolsGroupList({
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {isLoading && !hasPayload ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
+          <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-background/30 px-6 py-8 text-center">
             <p className="text-xs text-muted-foreground">{t('webSettings.loading')}</p>
           </div>
         ) : pagedRuleItems.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
+          <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-background/30 px-6 py-8 text-center">
             <p className="text-xs leading-relaxed text-muted-foreground">
               {hasSearch
                 ? t('webSettingsRuleTools.appRules.noSearchResults')
@@ -101,7 +101,7 @@ export function RuleToolsGroupList({
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-3">
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-lg border border-border/60 bg-background/20 p-3">
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-lg border border-border bg-background/20 p-3">
               {pagedRuleItems.map((item) => {
                 const isSelected = !mobile && activeSelectedRuleId === item.id
                 return (
@@ -112,7 +112,7 @@ export function RuleToolsGroupList({
                       'w-full rounded-lg border px-3 py-3 text-left transition-colors',
                       isSelected
                         ? 'border-primary/60 bg-background shadow-sm'
-                        : 'border-border/50 bg-background/60 hover:bg-background',
+                        : 'border-border bg-background/60 hover:bg-background',
                     )}
                     onClick={() => {
                       if (mobile) {

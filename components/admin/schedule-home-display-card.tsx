@@ -34,7 +34,7 @@ export function ScheduleHomeDisplayCard({
   const { t } = useT('admin')
 
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3">
+    <div className="rounded-lg border border-border bg-muted/10 p-3 space-y-3">
       <h4 className="text-sm font-medium text-foreground">{t('scheduleManager.homeDisplay.title')}</h4>
       <p className="text-xs text-muted-foreground">
         {t('scheduleManager.homeDisplay.description')}

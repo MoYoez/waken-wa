@@ -103,7 +103,7 @@ export function RuleToolsGroupEditor({
   }
   if (!selectedRule) {
     return (
-      <div className="flex h-full min-h-[18rem] items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/30 px-6 py-8 text-center">
+      <div className="flex h-full min-h-[18rem] items-center justify-center rounded-lg border border-dashed border-border bg-background/30 px-6 py-8 text-center">
         <div className="space-y-2">
           <p className="text-sm font-medium text-foreground">
             {t('webSettingsRuleTools.appRules.emptyEditorTitle')}
@@ -134,7 +134,7 @@ export function RuleToolsGroupEditor({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/[0.08] p-4">
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/[0.08] p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
@@ -232,7 +232,7 @@ export function RuleToolsGroupEditor({
         </p>
       </div>
 
-      <div className="space-y-3 rounded-xl border border-border/60 bg-background/70 p-4">
+      <div className="space-y-3 rounded-xl border border-border bg-background/70 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
@@ -272,7 +272,7 @@ export function RuleToolsGroupEditor({
                 return (
                   <motion.li
                     key={titleRule.id}
-                    className="rounded-xl border border-border/60 bg-muted/[0.04] p-4"
+                    className="rounded-xl border border-border bg-muted/[0.04] p-4"
                     variants={sectionVariants}
                     initial="initial"
                     animate="animate"
@@ -333,7 +333,7 @@ export function RuleToolsGroupEditor({
                           }}
                           className="grid gap-3 sm:grid-cols-2"
                         >
-                          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-3">
+                          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background/60 px-3 py-3">
                             <RadioGroupItem value="plain" id={`${titleRule.id}-plain`} />
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-foreground">
@@ -344,7 +344,7 @@ export function RuleToolsGroupEditor({
                               </p>
                             </div>
                           </label>
-                          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-3">
+                          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background/60 px-3 py-3">
                             <RadioGroupItem value="regex" id={`${titleRule.id}-regex`} />
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-foreground">

@@ -157,7 +157,7 @@ function EditorToolbar({ editor }: { editor: LexicalEditorInstance }) {
   const fmtBtn = (f: TextFmt) => () => editor.dispatchCommand(FORMAT_TEXT_COMMAND, f)
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 rounded-md border border-border/60 bg-muted/20 p-1">
+    <div className="flex flex-wrap items-center gap-0.5 rounded-md border border-border bg-muted/20 p-1">
       {/* Undo / Redo */}
       <Button type="button" size="icon-sm" variant="ghost" onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)} {...tbMD}>
         <Undo2 className="h-3.5 w-3.5" />
@@ -268,7 +268,7 @@ export function LexicalEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className={cn('rounded-md border border-border/70 bg-background', className)}>
+      <div className={cn('rounded-md border border-border bg-background', className)}>
         <EditorInner
           value={value}
           onChange={onChange}
@@ -298,7 +298,7 @@ function EditorInner({
       <EditorToolbar editor={editor} />
       <RichTextPlugin
         contentEditable={
-          <ContentEditable className="lexical-editor-content min-h-[220px] rounded-md border border-border/60 bg-muted/10 px-3 py-2 text-sm leading-relaxed outline-none" />
+          <ContentEditable className="lexical-editor-content min-h-[220px] rounded-md border border-border bg-muted/10 px-3 py-2 text-sm leading-relaxed outline-none" />
         }
         placeholder={
           <div className="pointer-events-none px-3 py-2 text-sm text-muted-foreground">{placeholder}</div>

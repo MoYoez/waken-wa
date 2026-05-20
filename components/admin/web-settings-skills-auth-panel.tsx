@@ -99,7 +99,7 @@ export function WebSettingsSkillsAuthPanel({
 
             <div className="space-y-2">
               <Label>{t('webSettingsSkills.authStatusLabel')}</Label>
-              <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
+              <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border bg-background/50 px-3 py-2">
                 {skillsAuthMode === 'oauth' ? (
                   <>
                     {t('webSettingsSkills.oauthStatus', {
@@ -126,7 +126,7 @@ export function WebSettingsSkillsAuthPanel({
           <AnimatePresence initial={false} mode="wait">
             {skillsAuthMode === 'apikey' ? (
               <motion.div
-                className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3"
+                className="space-y-3 rounded-md border border-border bg-background/40 px-3 py-3"
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -165,7 +165,7 @@ export function WebSettingsSkillsAuthPanel({
           <AnimatePresence initial={false} mode="wait">
             {skillsAuthMode === 'oauth' ? (
               <motion.div
-                className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3"
+                className="space-y-3 rounded-md border border-border bg-background/40 px-3 py-3"
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -202,7 +202,7 @@ export function WebSettingsSkillsAuthPanel({
           <AnimatePresence initial={false}>
             {skillsAuthMode ? (
               <motion.div
-                className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3"
+                className="space-y-2 rounded-md border border-border bg-background/40 px-3 py-3"
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -233,7 +233,7 @@ export function WebSettingsSkillsAuthPanel({
           <AnimatePresence initial={false}>
             {skillsAuthMode ? (
               <motion.div
-                className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3"
+                className="space-y-2 rounded-md border border-border bg-background/40 px-3 py-3"
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -270,7 +270,7 @@ export function WebSettingsSkillsAuthPanel({
           <AnimatePresence initial={false}>
             {skillsAuthMode === 'oauth' ? (
               <motion.div
-                className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3"
+                className="space-y-3 rounded-md border border-border bg-background/40 px-3 py-3"
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -303,7 +303,7 @@ export function WebSettingsSkillsAuthPanel({
                         {skillsAiAuthorizations.map((item) => (
                           <div
                             key={item.aiClientId}
-                            className="rounded-md border border-border/60 bg-muted/20 px-3 py-3 space-y-2"
+                            className="rounded-md border border-border bg-muted/20 px-3 py-3 space-y-2"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <code className="text-xs rounded bg-muted px-1.5 py-0.5">{item.aiClientId}</code>
@@ -362,7 +362,7 @@ export function WebSettingsSkillsAuthPanel({
                         {t('webSettingsSkills.revokeDialogDescription')}
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-xs">
+                    <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-xs">
                       {t('webSettingsSkills.aiClientIdLabel')}: <code>{revokeDialogAiClientId || '—'}</code>
                     </div>
                     <DialogFooter>

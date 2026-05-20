@@ -189,14 +189,14 @@ export function WebSettingsCustomSurfaceInsetPanel({
             />
             {value.backgroundImagePool.length > 0 ? (
               <motion.div
-                className="max-h-44 space-y-2 overflow-y-auto rounded-md border border-border/60 bg-background/60 p-2.5 sm:p-3"
+                className="max-h-44 space-y-2 overflow-y-auto rounded-md border border-border bg-background/60 p-2.5 sm:p-3"
                 layout
               >
                 <AnimatePresence initial={false}>
                   {value.backgroundImagePool.map((item, index) => (
                     <motion.div
                       key={`${item.slice(0, 32)}-${index}`}
-                      className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background/70 px-2.5 py-2 sm:px-3"
+                      className="flex items-center justify-between gap-3 rounded-md border border-border bg-background/70 px-2.5 py-2 sm:px-3"
                       variants={sectionVariants}
                       initial="initial"
                       animate="animate"
@@ -390,7 +390,7 @@ export function WebSettingsCustomSurfaceInsetPanel({
                 t('webSettingsCustomSurface.toasts.noPreviewImage')}
             </p>
           </div>
-          <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/20">
+          <div className="overflow-hidden rounded-xl border border-border bg-muted/20">
             <AnimatePresence initial={false} mode="wait">
               {themePreviewImageUrl ? (
                 <motion.div
@@ -432,7 +432,7 @@ export function WebSettingsCustomSurfaceInsetPanel({
             ].map(([label, color]) => (
               <div key={label} className="space-y-1">
                 <div
-                  className="h-10 rounded-md border border-border/60"
+                  className="h-10 rounded-md border border-border"
                   style={{ background: String(color || 'transparent') }}
                 />
                 <p className="truncate text-[11px] text-muted-foreground">{label}</p>

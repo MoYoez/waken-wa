@@ -100,7 +100,7 @@ export function RuleToolsListDialogs({
                 }}
                 className="grid gap-3 sm:grid-cols-2"
               >
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/70 px-4 py-4">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background/70 px-4 py-4">
                   <RadioGroupItem value="blacklist" id="rule-tools-filter-blacklist" />
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-foreground">
@@ -111,7 +111,7 @@ export function RuleToolsListDialogs({
                     </p>
                   </div>
                 </label>
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-background/70 px-4 py-4">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background/70 px-4 py-4">
                   <RadioGroupItem value="whitelist" id="rule-tools-filter-whitelist" />
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-foreground">

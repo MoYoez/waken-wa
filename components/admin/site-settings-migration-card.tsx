@@ -137,7 +137,7 @@ export function SiteSettingsMigrationCard({
         </div>
 
         <dl className="grid gap-3 text-xs text-muted-foreground sm:grid-cols-2">
-          <div className="rounded-xl border border-border/60 bg-background/70 px-3 py-3">
+          <div className="rounded-xl border border-border bg-background/70 px-3 py-3">
             <dt className="font-medium text-foreground">
               {t('webSettingsMigration.meta.migratedAt')}
             </dt>
@@ -145,7 +145,7 @@ export function SiteSettingsMigrationCard({
               {formatMigrationTime(migration.migratedAt)}
             </dd>
           </div>
-          <div className="rounded-xl border border-border/60 bg-background/70 px-3 py-3">
+          <div className="rounded-xl border border-border bg-background/70 px-3 py-3">
             <dt className="font-medium text-foreground">
               {t('webSettingsMigration.meta.legacyDataClearedAt')}
             </dt>

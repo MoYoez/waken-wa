@@ -39,7 +39,7 @@ export function SchedulePeriodTemplateCard({
   const { t } = useT('admin')
 
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5 sm:p-3 space-y-2.5 sm:space-y-3 overflow-x-hidden min-w-0">
+    <div className="rounded-lg border border-border bg-muted/10 p-2.5 sm:p-3 space-y-2.5 sm:space-y-3 overflow-x-hidden min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="min-w-0 text-xs font-medium text-foreground sm:text-sm">
           {t('scheduleManager.periodTemplate.title')}

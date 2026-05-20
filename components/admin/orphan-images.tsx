@@ -162,9 +162,9 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
           {rowsQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">{t('common.loadingEllipsis')}</div>
           ) : rows.length === 0 ? (
-            <div className="rounded-md border border-dashed border-border/60 bg-muted/10 px-4 py-8">
+            <div className="rounded-md border border-dashed border-border bg-muted/10 px-4 py-8">
               <div className="flex flex-col items-center justify-center gap-2 text-center">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground">
                   <ImageOff className="h-4 w-4" />
                 </span>
                 <p className="text-sm font-medium text-foreground/85">{t('orphanImages.noOrphanImages')}</p>
@@ -175,7 +175,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
             </div>
           ) : (
             <div
-              className="overflow-y-auto rounded-md border border-border/60 bg-background/60 p-3"
+              className="overflow-y-auto rounded-md border border-border bg-background/60 p-3"
               style={{ maxHeight: ORPHAN_LIST_MAX_HEIGHT }}
             >
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -185,7 +185,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                     <div
                       key={r.publicKey}
                       className={cn(
-                        'space-y-2.5 rounded-md border border-border/50 bg-muted/[0.04] p-2.5 transition-colors',
+                        'space-y-2.5 rounded-md border border-border bg-muted/[0.04] p-2.5 transition-colors',
                         checked && 'border-primary/40 bg-primary/[0.04]',
                       )}
                     >
@@ -202,7 +202,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                               {r.publicKey}
                             </div>
                             <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                              <span className="rounded-full border border-border/50 bg-background/80 px-2 py-0.5">
+                              <span className="rounded-full border border-border bg-background/80 px-2 py-0.5">
                                 {typeof r.ageMinutes === 'number'
                                   ? t('orphanImages.minutesAgo', { value: r.ageMinutes })
                                   : t('common.unknownTime')}
@@ -212,7 +212,7 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                                   'rounded-full border px-2 py-0.5',
                                   r.eligibleForDelete
                                     ? 'border-emerald-500/25 bg-emerald-500/5 text-emerald-700/90 dark:text-emerald-300'
-                                    : 'border-border/50 bg-background/80',
+                                    : 'border-border bg-background/80',
                                 )}
                               >
                                 {r.eligibleForDelete
@@ -269,12 +269,12 @@ export const OrphanImages = forwardRef<OrphanImagesHandle, object>(function Orph
                           alt={r.publicKey}
                           width={640}
                           height={160}
-                          className="h-32 w-full rounded-md border border-border/50 bg-muted/5 object-contain"
+                          className="h-32 w-full rounded-md border border-border bg-muted/5 object-contain"
                           loading="eager"
                         />
                       </a>
 
-                      <div className="rounded-md border border-border/50 bg-background/70 px-2.5 py-2 text-[11px] text-muted-foreground">
+                      <div className="rounded-md border border-border bg-background/70 px-2.5 py-2 text-[11px] text-muted-foreground">
                         <div className="font-medium text-foreground/75">
                           {t('orphanImages.createdTime')}
                         </div>

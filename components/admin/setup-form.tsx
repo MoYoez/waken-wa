@@ -135,7 +135,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
 
   return (
     <div className="flex min-h-[calc(100svh-6rem)] items-start justify-center bg-background px-3 py-4 sm:px-4 sm:py-6 lg:min-h-screen lg:items-center">
-      <div className="w-full max-w-xl rounded-xl border border-border/70 bg-card/90 p-4 shadow-lg backdrop-blur-sm sm:rounded-2xl sm:p-6">
+      <div className="w-full max-w-xl rounded-xl border border-border bg-card/90 p-4 shadow-lg backdrop-blur-sm sm:rounded-2xl sm:p-6">
         <div className="mb-5 hidden justify-end lg:flex">
           <AdminLanguageToggle />
         </div>
@@ -272,7 +272,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                 />
               </div>
               {avatarUsesRemoteUrl ? (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/10 px-4 py-3">
                   <div className="space-y-0.5 min-w-0">
                     <p className="text-xs font-medium text-foreground">{t('setup.remoteAvatarFetchTitle')}</p>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
@@ -305,7 +305,7 @@ export function SetupForm({ needAdminSetup, initialConfig }: SetupFormProps) {
                 {t('setup.imageUploadHint')}
               </p>
               {avatarPreviewUrl && (
-                <div className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3">
+                <div className="flex items-center gap-3 rounded-md border border-border bg-background/60 p-3">
                   <Image
                     src={avatarPreviewUrl}
                     alt="avatar preview"

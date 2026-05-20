@@ -79,7 +79,7 @@ export function WebSettingsBasicPanel() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/10 px-4 py-3">
         <div className="min-w-0 space-y-0.5">
           <Label className="font-normal">
             {tCommon('admin.language.title')}
@@ -118,7 +118,7 @@ export function WebSettingsBasicPanel() {
         <AnimatePresence initial={false}>
           {siteIconPreviewUrl ? (
             <motion.div
-              className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3"
+              className="flex items-center gap-3 rounded-md border border-border bg-background/60 p-3"
               variants={sectionVariants}
               initial="initial"
               animate="animate"
@@ -158,7 +158,7 @@ export function WebSettingsBasicPanel() {
         <Input value={form.userNote} onChange={(event) => patch('userNote', event.target.value)} />
       </div>
 
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/10 px-4 py-3">
         <div className="space-y-0.5 min-w-0">
           <Label htmlFor="hitokoto-home-note-basic" className="font-normal cursor-pointer">
             {t('webSettingsBasic.hitokotoTitle')}
@@ -239,7 +239,7 @@ export function WebSettingsBasicPanel() {
         <AnimatePresence initial={false}>
           {avatarPreviewUrl ? (
             <motion.div
-              className="flex items-center gap-3 rounded-md border border-border/60 bg-background/60 p-3"
+              className="flex items-center gap-3 rounded-md border border-border bg-background/60 p-3"
               variants={sectionVariants}
               initial="initial"
               animate="animate"

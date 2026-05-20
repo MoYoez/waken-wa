@@ -47,7 +47,7 @@ export function WebSettingsSection({
       </div>
       <div
         className={cn(
-          'space-y-4 sm:rounded-xl sm:border sm:border-border/60 sm:bg-muted/[0.05] sm:p-5',
+          'space-y-4 sm:rounded-xl sm:border sm:border-border sm:bg-muted/[0.08] sm:p-5',
           bodyClassName,
         )}
       >
@@ -61,7 +61,7 @@ export function WebSettingsRows({ children, className }: WebSettingsRowsProps) {
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl border border-border/60 bg-background/70 divide-y divide-border/60',
+        'overflow-hidden rounded-xl border border-border bg-background/80 divide-y divide-border',
         className,
       )}
     >
@@ -106,7 +106,7 @@ export function WebSettingsRow({
 
 export function WebSettingsInset({ children, className }: WebSettingsInsetProps) {
   return (
-    <div className={cn('space-y-4 rounded-xl border border-border/60 bg-background/70 p-3 sm:p-4', className)}>
+    <div className={cn('space-y-4 rounded-xl border border-border bg-background/80 p-3 sm:p-4', className)}>
       {children}
     </div>
   )

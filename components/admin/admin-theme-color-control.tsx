@@ -44,7 +44,7 @@ export function AdminThemeColorControl({
               aria-label={t('webSettings.adminThemeColorAriaLabel')}
             />
             <div className="min-w-0 space-y-1">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 text-[11px] text-muted-foreground">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-2.5 py-1 text-[11px] text-muted-foreground">
                 <span
                   className="h-2.5 w-2.5 rounded-full border border-black/10"
                   style={{ backgroundColor: previewColor }}
@@ -87,7 +87,7 @@ export function AdminThemeColorControl({
               aria-label={t('webSettings.adminBackgroundColorAriaLabel')}
             />
             <div className="min-w-0 space-y-1">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 text-[11px] text-muted-foreground">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-2.5 py-1 text-[11px] text-muted-foreground">
                 <span
                   className="h-2.5 w-2.5 rounded-full border border-black/10"
                   style={{ backgroundColor: previewBackgroundColor }}

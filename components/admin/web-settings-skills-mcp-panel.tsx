@@ -58,14 +58,14 @@ export function WebSettingsSkillsMcpPanel({
         />
       </div>
 
-      <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
+      <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border bg-background/50 px-3 py-2">
         {t('webSettingsSkills.mcpModeHint')}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>{t('webSettingsSkills.mcpStatusLabel')}</Label>
-          <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
+          <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border bg-background/50 px-3 py-2">
             {t('webSettingsSkills.mcpStatus', {
               enabled: mcpThemeToolsEnabled
                 ? t('webSettingsSkills.status.enabled')
@@ -79,13 +79,13 @@ export function WebSettingsSkillsMcpPanel({
 
         <div className="space-y-2">
           <Label>{t('webSettingsSkills.authModeLabel')}</Label>
-          <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
+          <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border bg-background/50 px-3 py-2">
             {t('webSettingsSkills.mcpAuthModeValue')}
           </div>
         </div>
       </div>
 
-      <div className="space-y-3 rounded-md border border-border/60 bg-background/40 px-3 py-3">
+      <div className="space-y-3 rounded-md border border-border bg-background/40 px-3 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <Label className="text-sm font-normal">{t('webSettingsSkills.legacyMcpKeyTitle')}</Label>
@@ -114,7 +114,7 @@ export function WebSettingsSkillsMcpPanel({
         ) : null}
       </div>
 
-      <div className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3">
+      <div className="space-y-2 rounded-md border border-border bg-background/40 px-3 py-3">
         <Label className="text-xs">{t('webSettingsSkills.legacyMcpApiKeyUrlLabel')}</Label>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input value={legacyMcpApiKeyUrl} readOnly className="font-mono text-xs" />
@@ -135,7 +135,7 @@ export function WebSettingsSkillsMcpPanel({
         </div>
       </div>
 
-      <div className="space-y-2 rounded-md border border-border/60 bg-background/40 px-3 py-3">
+      <div className="space-y-2 rounded-md border border-border bg-background/40 px-3 py-3">
         <Label className="text-xs">{t('webSettingsSkills.legacyMcpEndpointLabel')}</Label>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input value={legacyMcpEndpointUrl} readOnly className="font-mono text-xs" />

@@ -210,7 +210,7 @@ export function DashboardOverviewPanel({
               {t('dashboard.viewerCountDescription')}
             </p>
           </div>
-          <div className="rounded-full border border-primary/15 bg-primary/8 p-3 text-primary shadow-sm">
+          <div className="rounded-full border border-primary/25 bg-primary/10 p-3 text-primary shadow-sm">
             <Users className="h-5 w-5" />
           </div>
         </div>
@@ -236,7 +236,7 @@ export function DashboardOverviewPanel({
                     : t('dashboard.viewerCountWaiting')}
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 rounded-full border border-border bg-background/90 px-3 py-1.5 text-xs text-muted-foreground">
             <RefreshCw
               className={`h-3.5 w-3.5 ${viewerCountLoading && !viewerCountUpdatedAt ? 'animate-spin' : ''}`}
             />
@@ -291,7 +291,7 @@ export function DashboardOverviewPanel({
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
-          <div className="space-y-3 rounded-lg border border-border/60 bg-muted/10 p-3">
+          <div className="space-y-3 rounded-lg border border-border bg-muted/15 p-3">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="overview-today-status-emoji">
                 {t('dashboard.todayStatus.emojiLabel')}
@@ -325,7 +325,7 @@ export function DashboardOverviewPanel({
               </Tooltip>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background text-3xl shadow-sm">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border bg-background text-3xl shadow-sm">
                 {todayStatusForm.emoji || t('dashboard.todayStatus.emojiFallback')}
               </div>
               <Input
@@ -345,7 +345,7 @@ export function DashboardOverviewPanel({
                   type="button"
                   onClick={() => patchTodayStatus('emoji', emoji)}
                   disabled={settingsQuery.isLoading || todayStatusSaving}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-background text-base shadow-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-base shadow-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label={t('dashboard.todayStatus.presetEmojiAria', { value: emoji })}
                 >
                   {emoji}
@@ -395,7 +395,7 @@ export function DashboardOverviewPanel({
           </div>
 
           <div className="flex items-end">
-            <div className="w-full rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+            <div className="w-full rounded-lg border border-border bg-muted/15 px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-0.5">
                   <Label
@@ -463,11 +463,11 @@ export function DashboardOverviewPanel({
         </div>
 
         {recentActivityUsageLoading ? (
-          <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+          <div className="rounded-lg border border-border bg-muted/15 px-4 py-6 text-sm text-muted-foreground">
             {t('dashboard.recentRecordsLoading')}
           </div>
         ) : recentActivityUsage.length === 0 ? (
-          <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+          <div className="rounded-lg border border-border bg-muted/15 px-4 py-6 text-sm text-muted-foreground">
             {t('dashboard.recentRecordsEmpty')}
           </div>
         ) : (
@@ -501,11 +501,11 @@ export function DashboardOverviewPanel({
                     {index !== recentActivityUsage.length - 1 ? (
                       <div className="absolute left-[7px] top-7 h-[calc(100%-1rem)] w-px bg-border sm:left-[7px]" />
                     ) : null}
-                    <div className="absolute left-0 top-1.5 h-4 w-4 rounded-full border border-primary/20 bg-primary/12">
+                    <div className="absolute left-0 top-1.5 h-4 w-4 rounded-full border border-primary/30 bg-primary/15">
                       <div className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary" />
                     </div>
 
-                    <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3 sm:ml-7">
+                    <div className="rounded-xl border border-border bg-muted/15 px-4 py-3 sm:ml-7">
                       <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
                         <span className="font-semibold tabular-nums text-foreground">
                           {FormatOverviewClock(recordTime, formatPattern)}

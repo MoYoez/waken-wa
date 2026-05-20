@@ -33,7 +33,7 @@ export function StatusCardPreviewResultPanel({
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-lg border border-border/60 bg-muted/10 p-3">
+      <div className="overflow-hidden rounded-lg border border-border bg-muted/10 p-3">
         <div className="flex min-h-40 items-center justify-center overflow-auto">
           <Image
             src={path}

@@ -40,7 +40,7 @@ export function AdminLanguageToggle({ className = '' }: { className?: string }) 
 
   return (
     <div
-      className={`inline-flex items-center gap-1 rounded-full border border-border/80 bg-card/90 p-[3px] text-foreground shadow-sm backdrop-blur-md ${className}`.trim()}
+      className={`inline-flex items-center gap-1 rounded-full border border-border bg-card/90 p-[3px] text-foreground shadow-sm backdrop-blur-md ${className}`.trim()}
       role="group"
       aria-label={t('admin.language.ariaLabel')}
     >

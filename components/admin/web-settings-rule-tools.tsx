@@ -202,7 +202,7 @@ export function WebSettingsRuleTools() {
 
   return (
     <>
-      <div className="space-y-4 sm:rounded-xl sm:border sm:border-border/60 sm:bg-muted/[0.05] sm:p-5">
+      <div className="space-y-4 sm:rounded-xl sm:border sm:border-border sm:bg-muted/[0.05] sm:p-5">
         <div className="space-y-4">
           <WebSettingsInset className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

@@ -356,7 +356,7 @@ export function StatusCardPreviewPanel() {
               ].map(([key, label]) => (
                 <label
                   key={key}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/60 px-3 py-2 text-sm"
                 >
                   <span>{label}</span>
                   <Switch

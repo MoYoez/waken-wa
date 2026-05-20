@@ -523,7 +523,7 @@ export function WebSettingsActivityPanel() {
         <AnimatePresence initial={false}>
           {form.inspirationDeviceRestrictionEnabled ? (
             <motion.div
-              className="max-h-52 space-y-2 overflow-y-auto rounded-lg border border-border/60 bg-background/60 p-3"
+              className="max-h-52 space-y-2 overflow-y-auto rounded-lg border border-border bg-background/60 p-3"
               variants={sectionVariants}
               initial="initial"
               animate="animate"

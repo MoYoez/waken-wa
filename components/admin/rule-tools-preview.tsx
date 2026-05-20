@@ -48,7 +48,7 @@ export function RuleToolsPreview({
           {previewItems.map((item) => (
             <motion.li
               key={item.id}
-              className="rounded-xl border border-border/60 bg-background/70 px-3 py-3"
+              className="rounded-xl border border-border bg-background/70 px-3 py-3"
               variants={sectionVariants}
               initial="initial"
               animate="animate"

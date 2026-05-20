@@ -92,7 +92,7 @@ export function UnsavedChangesBar({
             exit="exit"
             transition={getAdminPanelTransition(prefersReducedMotion)}
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/80 bg-card/95 px-3 py-2.5 shadow-lg backdrop-blur-md sm:px-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/95 px-3 py-2.5 shadow-lg backdrop-blur-md sm:px-4">
               <span className="text-xs text-muted-foreground sm:text-sm">{resolvedMessage}</span>
               <div className="flex shrink-0 items-center gap-2">
                 <Button

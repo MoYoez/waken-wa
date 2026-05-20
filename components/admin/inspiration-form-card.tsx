@@ -159,7 +159,7 @@ export function InspirationFormCard({
           <AnimatePresence initial={false}>
             {attachCurrentStatus ? (
               <motion.div
-                className="space-y-2 rounded-md border border-border/60 bg-muted/10 p-3"
+                className="space-y-2 rounded-md border border-border bg-muted/10 p-3"
                 variants={sectionVariants}
                 initial="initial"
                 animate="animate"
@@ -216,7 +216,7 @@ export function InspirationFormCard({
                 <AnimatePresence initial={false}>
                   {attachStatusDeviceHash ? (
                     <motion.div
-                      className="mt-2 space-y-2 border-t border-border/50 pt-2"
+                      className="mt-2 space-y-2 border-t border-border pt-2"
                       variants={compactSectionVariants}
                       initial="initial"
                       animate="animate"
@@ -330,7 +330,7 @@ export function InspirationFormCard({
           <AnimatePresence initial={false}>
             {!attachCurrentStatus && statusSnapshotDraft.trim() ? (
               <motion.div
-                className="rounded-md border border-border/60 bg-muted/10 p-3"
+                className="rounded-md border border-border bg-muted/10 p-3"
                 variants={compactSectionVariants}
                 initial="initial"
                 animate="animate"

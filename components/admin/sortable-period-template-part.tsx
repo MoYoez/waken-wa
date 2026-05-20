@@ -59,7 +59,7 @@ function SortablePeriodRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'grid gap-1.5 rounded-lg border border-border/50 bg-muted/15 p-2 sm:gap-2 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0',
+        'grid gap-1.5 rounded-lg border border-border bg-muted/15 p-2 sm:gap-2 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0',
         // Mobile: row1 = grip | label | delete; row2 = start | end under label/delete columns
         'max-sm:grid-cols-[2.25rem_minmax(0,1fr)_auto]',
         'sm:grid-cols-[minmax(0,2.25rem)_minmax(0,9rem)_auto_auto_auto] sm:items-center',

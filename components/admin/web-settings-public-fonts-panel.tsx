@@ -57,7 +57,7 @@ export function WebSettingsPublicFontsPanel() {
         </p>
       </div>
 
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/10 px-4 py-3">
         <div className="min-w-0 space-y-0.5">
           <Label htmlFor="public-font-options-enabled" className="cursor-pointer font-normal">
             {t('webSettingsBasic.publicFontsEnabledTitle')}
@@ -78,7 +78,7 @@ export function WebSettingsPublicFontsPanel() {
         {form.publicFontOptions.map((option, index) => (
           <div
             key={`public-font-option-${index + 1}`}
-            className="space-y-3 rounded-lg border border-border/60 bg-background/40 p-4"
+            className="space-y-3 rounded-lg border border-border bg-background/40 p-4"
           >
             <p className="text-xs font-medium text-foreground/80">
               {t('webSettingsBasic.publicFontsOptionTitle', { index: index + 1 })}

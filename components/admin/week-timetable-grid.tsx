@@ -158,13 +158,13 @@ export function WeekTimetableGrid({
   return (
     <div
       className={cn(
-        'rounded-lg border border-border/70 bg-card shadow-sm overflow-x-auto',
+        'rounded-lg border border-border bg-card shadow-sm overflow-x-auto',
         className,
       )}
     >
       <div className="min-w-[600px] flex text-[11px]">
         <div
-          className="shrink-0 w-10 border-r border-border/50 bg-muted/20 text-muted-foreground"
+          className="shrink-0 w-10 border-r border-border bg-muted/20 text-muted-foreground"
           style={{ paddingTop: HEADER_BAND_PX }}
         >
           {timeLabels.map(({ m, text }, i) => (
@@ -179,7 +179,7 @@ export function WeekTimetableGrid({
             </div>
           ))}
         </div>
-        <div className="flex-1 grid grid-cols-7 border-l border-border/50 bg-card/30">
+        <div className="flex-1 grid grid-cols-7 border-l border-border bg-card/30">
           {columnDays.map((day, col) => {
             const dayEvents = byColumn[col]
             const maxLanes = maxConcurrentOnDay(dayEvents)
@@ -198,7 +198,7 @@ export function WeekTimetableGrid({
               >
                 <div
                   className={cn(
-                    'sticky top-0 z-20 flex flex-col items-center justify-center border-b border-border/50 py-0.5 text-center font-medium leading-tight text-foreground',
+                    'sticky top-0 z-20 flex flex-col items-center justify-center border-b border-border py-0.5 text-center font-medium leading-tight text-foreground',
                     isToday ? 'bg-muted/50' : 'bg-muted/30',
                   )}
                   style={{ height: HEADER_BAND_PX }}

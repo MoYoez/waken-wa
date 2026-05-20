@@ -398,11 +398,11 @@ const ScheduleManagerEditor = forwardRef<
 
   return (
     <>
-    <div className="rounded-xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm space-y-4 sm:space-y-5">
+    <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-sm space-y-4 sm:space-y-5">
       <AnimatePresence initial={false}>
         {message ? (
           <motion.div
-            className="text-sm text-muted-foreground border border-border/60 rounded-md px-3 py-2 bg-muted/20"
+            className="text-sm text-muted-foreground border border-border rounded-md px-3 py-2 bg-muted/20"
             variants={compactSectionVariants}
             initial="initial"
             animate="animate"
@@ -440,7 +440,7 @@ const ScheduleManagerEditor = forwardRef<
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 rounded-full border border-border/60 bg-muted/25 p-0.5 shadow-sm sm:inline-flex sm:w-auto sm:flex-nowrap sm:justify-start">
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-center gap-1 rounded-full border border-border bg-muted/25 p-0.5 shadow-sm sm:inline-flex sm:w-auto sm:flex-nowrap sm:justify-start">
           <Button
             type="button"
             variant="ghost"
@@ -484,7 +484,7 @@ const ScheduleManagerEditor = forwardRef<
         {mobileWeekDays.map((day) => (
           <div
             key={format(day.date, 'yyyy-MM-dd')}
-            className="rounded-lg border border-border/60 bg-card/50 px-3 py-3"
+            className="rounded-lg border border-border bg-card/50 px-3 py-3"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-0.5">
@@ -493,7 +493,7 @@ const ScheduleManagerEditor = forwardRef<
                   {format(day.date, 'yyyy-MM-dd')}
                 </p>
               </div>
-              <span className="shrink-0 rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+              <span className="shrink-0 rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">
                 {day.items.length}
               </span>
             </div>
@@ -506,7 +506,7 @@ const ScheduleManagerEditor = forwardRef<
                 {day.items.map((occurrence, index) => (
                   <div
                     key={`${occurrence.courseId}-${occurrence.start.toISOString()}-${index}`}
-                    className="rounded-md border border-border/50 bg-background/80 px-3 py-2.5"
+                    className="rounded-md border border-border bg-background/80 px-3 py-2.5"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 space-y-0.5">
@@ -559,7 +559,7 @@ const ScheduleManagerEditor = forwardRef<
               {courses.map((c) => (
                 <motion.li
                   key={c.id}
-                  className="flex flex-col gap-3 rounded-lg border border-border/50 bg-card/50 px-3 py-3 text-sm transition-colors hover:bg-muted/35 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-lg border border-border bg-card/50 px-3 py-3 text-sm transition-colors hover:bg-muted/35 sm:flex-row sm:items-center sm:justify-between"
                   variants={compactSectionVariants}
                   initial="initial"
                   animate="animate"

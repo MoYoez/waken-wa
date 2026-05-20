@@ -324,7 +324,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     <div className="admin-shell min-h-screen bg-background text-foreground">
       <div className="admin-shell-backdrop" />
 
-      <header className="sticky top-0 z-50 border-b border-border/60 bg-background/78 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
@@ -405,7 +405,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
               exit="exit"
               transition={panelTransition}
             >
-              <div className="mb-5 flex flex-col gap-3 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="mb-5 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1">
                   <h2 className="break-words text-lg font-semibold tracking-tight text-foreground">
                     {activeTabMeta.label}
@@ -423,7 +423,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
         </section>
 
         {activeTab === 'tokens' ? (
-          <section className="rounded-xl border border-border/60 bg-card p-5">
+          <section className="rounded-xl border border-border bg-card p-5">
             <div className="space-y-2">
               <h3 className="text-base font-semibold text-foreground">{t('dashboard.tokensGuide.title')}</h3>
               <div className="text-sm leading-6 text-muted-foreground">
@@ -452,7 +452,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
             </pre>
           </section>
         ) : activeTab === 'inspiration' ? (
-          <section className="rounded-xl border border-border/60 bg-card p-5">
+          <section className="rounded-xl border border-border bg-card p-5">
             <div className="space-y-2">
               <h3 className="text-base font-semibold text-foreground">{t('dashboard.inspirationGuide.title')}</h3>
               <div className="text-sm leading-6 text-muted-foreground">

@@ -36,7 +36,7 @@ export function InspirationPreviewDialog({
     <Dialog open={Boolean(entry)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl max-h-[min(90vh,56rem)] overflow-y-auto">
         {entry?.imageDataUrl ? (
-          <div className="-mx-6 -mt-6 mb-4 overflow-hidden rounded-t-lg border-b border-border/60 bg-muted/20">
+          <div className="-mx-6 -mt-6 mb-4 overflow-hidden rounded-t-lg border-b border-border bg-muted/20">
             <Image
               src={entry.imageDataUrl}
               alt={t('inspirationManager.preview.headerImageAlt')}
@@ -56,7 +56,7 @@ export function InspirationPreviewDialog({
           </DialogDescription>
         </DialogHeader>
         {entry?.statusSnapshot ? (
-          <div className="rounded-md border border-dashed border-border/70 bg-muted/15 px-2 py-1.5 text-xs text-muted-foreground whitespace-pre-wrap">
+          <div className="rounded-md border border-dashed border-border bg-muted/15 px-2 py-1.5 text-xs text-muted-foreground whitespace-pre-wrap">
             {entry.statusSnapshot}
           </div>
         ) : null}

@@ -52,7 +52,7 @@ function DeviceCustomStatusBypassOptions({
   const filteredBypassDevices = FilterBypassDevices(bypassDevices, bypassSearch)
 
   return (
-    <div className="space-y-2 rounded-md border border-dashed border-border/60 bg-background/70 p-3">
+    <div className="space-y-2 rounded-md border border-dashed border-border bg-background/70 p-3">
       <div className="space-y-1">
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
@@ -78,7 +78,7 @@ function DeviceCustomStatusBypassOptions({
             return (
               <label
                 key={device.id}
-                className="flex cursor-pointer items-start gap-3 rounded-md border border-border/50 px-3 py-2 text-sm hover:bg-muted/30"
+                className="flex cursor-pointer items-start gap-3 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/30"
               >
                 <input
                   type="checkbox"
@@ -169,7 +169,7 @@ export function DeviceCustomStatusDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 space-y-4 overflow-y-auto pr-1">
-          <div className="space-y-3 rounded-md border border-border/60 bg-muted/20 p-3">
+          <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
             <div className="flex items-center justify-between">
               <Label
                 htmlFor="custom-offline-enabled"
@@ -213,7 +213,7 @@ export function DeviceCustomStatusDialog({
             />
           </div>
 
-          <div className="space-y-3 rounded-md border border-border/60 bg-muted/20 p-3">
+          <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
             <div className="flex items-center justify-between">
               <Label
                 htmlFor="custom-lock-enabled"

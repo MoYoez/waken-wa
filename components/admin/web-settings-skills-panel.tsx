@@ -98,7 +98,7 @@ export function WebSettingsSkillsPanel({
         <p className="text-xs text-muted-foreground leading-relaxed">
           {t('webSettingsSkills.toolModeHint')}
         </p>
-        <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2">
+        <div className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border bg-background/50 px-3 py-2">
           {t('webSettingsSkills.currentToolMode', {
             value:
               toolMode === 'mcp'
@@ -150,7 +150,7 @@ export function WebSettingsSkillsPanel({
       <AnimatePresence initial={false}>
         {!skillsEnabled ? (
           <motion.div
-            className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border/60 bg-background/50 px-3 py-2"
+            className="text-xs text-muted-foreground leading-relaxed rounded-md border border-border bg-background/50 px-3 py-2"
             variants={sectionVariants}
             initial="initial"
             animate="animate"
