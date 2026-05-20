@@ -12,7 +12,6 @@ import {
   getAdminSectionVariants,
 } from '@/components/admin/admin-motion'
 import { uploadImageSource } from '@/components/admin/admin-query-mutations'
-import { AdminThemeColorControl } from '@/components/admin/admin-theme-color-control'
 import { ImageCropDialog } from '@/components/admin/image-crop-dialog'
 import { SiteSettingsMigrationCard } from '@/components/admin/site-settings-migration-card'
 import { UnsavedChangesBar } from '@/components/admin/unsaved-changes-bar'
@@ -32,7 +31,6 @@ import { WebSettingsPublicFontsPanel } from '@/components/admin/web-settings-pub
 import { WebSettingsRuleTools } from '@/components/admin/web-settings-rule-tools'
 import { WebSettingsSecurityPanel } from '@/components/admin/web-settings-security-panel'
 import { WebSettingsSkillsPanel } from '@/components/admin/web-settings-skills-panel'
-import { ThemeModeToggle } from '@/components/theme-mode-toggle'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -133,34 +131,6 @@ function WebSettingsContent() {
               title={t('webSettings.sections.platform.title')}
               description={t('webSettings.sections.platform.description')}
             >
-              <WebSettingsRows>
-                <WebSettingsRow
-                  title={t('webSettings.adminThemeModeLabel')}
-                  description={t('webSettings.adminThemeModeHint')}
-                  action={<ThemeModeToggle className="shrink-0" />}
-                  actionClassName="pt-0"
-                />
-              </WebSettingsRows>
-              <WebSettingsInset className="space-y-3">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium text-foreground">
-                    {t('webSettings.adminAppearanceTitle')}
-                  </h4>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    {t('webSettings.adminAppearanceDescription')}
-                  </p>
-                </div>
-                <AdminThemeColorControl
-                  themeColor={form.adminThemeColor}
-                  backgroundColor={form.adminBackgroundColor}
-                  onThemeColorChange={(value) =>
-                    setForm((prev) => ({ ...prev, adminThemeColor: value }))
-                  }
-                  onBackgroundColorChange={(value) =>
-                    setForm((prev) => ({ ...prev, adminBackgroundColor: value }))
-                  }
-                />
-              </WebSettingsInset>
               {avatarUsesRemoteUrl ? (
                 <WebSettingsRows>
                   <WebSettingsRow

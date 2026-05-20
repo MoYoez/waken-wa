@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useT } from 'next-i18next/client'
 
 import { AdminLanguageToggle } from '@/components/admin/admin-language-toggle'
+import { AdminThemeColorControl } from '@/components/admin/admin-theme-color-control'
 import {
   getAdminPanelTransition,
   getAdminSectionVariants,
@@ -18,6 +19,7 @@ import {
   webSettingsFormAtom,
   webSettingsMigrationAtom,
 } from '@/components/admin/web-settings-store'
+import { ThemeModeToggle } from '@/components/theme-mode-toggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -89,6 +91,39 @@ export function WebSettingsBasicPanel() {
           </p>
         </div>
         <AdminLanguageToggle />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/10 px-4 py-3">
+        <div className="min-w-0 space-y-0.5">
+          <Label className="font-normal">
+            {t('webSettings.adminThemeModeLabel')}
+          </Label>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {t('webSettings.adminThemeModeHint')}
+          </p>
+        </div>
+        <ThemeModeToggle className="shrink-0" />
+      </div>
+
+      <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3">
+        <div className="space-y-1">
+          <Label className="font-normal">
+            {t('webSettings.adminAppearanceTitle')}
+          </Label>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {t('webSettings.adminAppearanceDescription')}
+          </p>
+        </div>
+        <AdminThemeColorControl
+          themeColor={form.adminThemeColor}
+          backgroundColor={form.adminBackgroundColor}
+          onThemeColorChange={(value) =>
+            setForm((prev) => ({ ...prev, adminThemeColor: value }))
+          }
+          onBackgroundColorChange={(value) =>
+            setForm((prev) => ({ ...prev, adminBackgroundColor: value }))
+          }
+        />
       </div>
 
       <div className="space-y-2">
