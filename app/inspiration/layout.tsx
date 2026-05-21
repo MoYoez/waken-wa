@@ -10,6 +10,7 @@ import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
 import { resolvePublicPageControlFontOptions } from '@/lib/public-page-font'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { getThemePresetCss } from '@/lib/theme-css'
+import { resolveThemeImageGateRequired } from '@/lib/theme-custom-surface'
 import packageJson from '@/package.json'
 
 export default async function InspirationLayout({ children }: { children: React.ReactNode }) {
@@ -33,6 +34,10 @@ export default async function InspirationLayout({ children }: { children: React.
   const themeCss = `${themePresetCss}\n${customCss}`.trim()
   const pageLoadingEnabled = config.pageLoadingEnabled !== false
   const smoothScrollEnabled = config.smoothScrollEnabled === true
+  const imageGateRequired = resolveThemeImageGateRequired(
+    config.themePreset,
+    config.themeCustomSurface,
+  )
   const publicFontOptions = resolvePublicPageControlFontOptions(
     config.publicFontOptionsEnabled,
     config.publicFontOptions,
@@ -57,6 +62,7 @@ export default async function InspirationLayout({ children }: { children: React.
         appVersion={packageJson.version}
         scope="inspiration"
         enabled={pageLoadingEnabled}
+        imageGateRequired={imageGateRequired}
         fontOptions={publicFontOptions}
       >
         {children}

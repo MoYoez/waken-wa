@@ -39,6 +39,7 @@ import {
 } from '@/lib/schedule-courses'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { getThemePresetCss } from '@/lib/theme-css'
+import { resolveThemeImageGateRequired } from '@/lib/theme-custom-surface'
 import { coerceDbTimestampToIsoUtc, normalizeTimezone } from '@/lib/timezone'
 import {
   normalizeTodayStatusBusy,
@@ -101,6 +102,10 @@ export default async function Home() {
   const themePresetCss = getThemePresetCss(config.themePreset, config.themeCustomSurface)
   const customCss = String(config.customCss ?? '')
   const themeCss = `${themePresetCss}\n${customCss}`.trim()
+  const imageGateRequired = resolveThemeImageGateRequired(
+    config.themePreset,
+    config.themeCustomSurface,
+  )
 
   const [activityInitialFeed, inspirationRows, [countRow]] = await Promise.all([
     getActivityFeedData(undefined, { forPublicFeed: true }),
@@ -198,6 +203,7 @@ export default async function Home() {
         appVersion={packageJson.version}
         scope="home"
         enabled={pageLoadingEnabled}
+        imageGateRequired={imageGateRequired}
         fontOptions={publicFontOptions}
       >
         <main className="min-h-screen relative">

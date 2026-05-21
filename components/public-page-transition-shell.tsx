@@ -19,6 +19,12 @@ type Props = {
   fontOptions: PublicPageFontOption[]
   scope: BrowserStartupScope
   enabled?: boolean
+  /**
+   * Server-resolved hint that the current theme actually needs to wait on a
+   * background image before first paint. When false, the loader/blur gate is
+   * skipped so SSR content reaches LCP without delay.
+   */
+  imageGateRequired?: boolean
 }
 
 const MIN_LOADING_MS = 380
@@ -31,9 +37,11 @@ export function PublicPageTransitionShell({
   fontOptions,
   scope,
   enabled = true,
+  imageGateRequired = false,
 }: Props) {
   const { t } = useT('common')
-  const [contentReady, setContentReady] = useState(!enabled)
+  const gateActive = enabled && imageGateRequired
+  const [contentReady, setContentReady] = useState(!gateActive)
   const prefersReducedMotion = Boolean(useReducedMotion())
   const contentTransition = getSiteSectionTransition(prefersReducedMotion)
   const contentVariants = getSiteSectionVariants(prefersReducedMotion, {
@@ -43,7 +51,7 @@ export function PublicPageTransitionShell({
   })
 
   useEffect(() => {
-    if (!enabled) return
+    if (!gateActive) return
     if (typeof document === 'undefined') return
 
     const root = document.documentElement
@@ -95,7 +103,7 @@ export function PublicPageTransitionShell({
       delete root.dataset.publicPageScope
       delete root.dataset.publicPageLoading
     }
-  }, [enabled, scope])
+  }, [gateActive, scope])
 
   useEffect(() => {
     if (!contentReady) return
@@ -104,7 +112,7 @@ export function PublicPageTransitionShell({
 
   return (
     <>
-      {enabled ? (
+      {gateActive ? (
         <div
           aria-hidden={contentReady}
           className={`public-page-loader ${contentReady ? 'is-hidden' : 'is-visible'}`}
@@ -139,20 +147,26 @@ export function PublicPageTransitionShell({
         </div>
       ) : null}
 
-      <motion.div
-        className="public-page-font-scope"
-        data-public-page-shell="content"
-        variants={contentVariants}
-        initial="initial"
-        animate={contentReady ? 'animate' : 'initial'}
-        transition={contentTransition}
-        style={{
-          filter: contentReady ? 'blur(0px)' : prefersReducedMotion ? 'none' : 'blur(10px)',
-          pointerEvents: contentReady ? 'auto' : 'none',
-        }}
-      >
-        {children}
-      </motion.div>
+      {gateActive ? (
+        <motion.div
+          className="public-page-font-scope"
+          data-public-page-shell="content"
+          variants={contentVariants}
+          initial="initial"
+          animate={contentReady ? 'animate' : 'initial'}
+          transition={contentTransition}
+          style={{
+            filter: contentReady ? 'blur(0px)' : prefersReducedMotion ? 'none' : 'blur(10px)',
+            pointerEvents: contentReady ? 'auto' : 'none',
+          }}
+        >
+          {children}
+        </motion.div>
+      ) : (
+        <div className="public-page-font-scope" data-public-page-shell="content">
+          {children}
+        </div>
+      )}
 
       <PublicPageActionRail fontOptions={fontOptions} visible={contentReady} />
     </>

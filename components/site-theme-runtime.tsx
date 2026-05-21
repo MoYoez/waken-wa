@@ -8,6 +8,7 @@ import {
   isThemePaletteLiveEnabled,
   parseThemeCustomSurface,
   resolveThemeBackgroundImageMode,
+  resolveThemeImageGateRequired,
   resolveThemePaletteLiveScope,
   resolveThemePaletteMode,
 } from '@/lib/theme-custom-surface'
@@ -203,16 +204,7 @@ function shouldGateThemeReadyOnImage(
   themePreset: string | null | undefined,
   parsed: ThemeCustomSurfaceFields,
 ): boolean {
-  if (themePreset !== 'customSurface') return false
-
-  const mode = resolveThemeBackgroundImageMode(parsed)
-  if (mode === 'manual') {
-    return Boolean(String(parsed.backgroundImageUrl ?? '').trim())
-  }
-  if (mode === 'randomPool') {
-    return Array.isArray(parsed.backgroundImagePool) && parsed.backgroundImagePool.length > 0
-  }
-  return Boolean(String(parsed.backgroundRandomApiUrl ?? '').trim())
+  return resolveThemeImageGateRequired(themePreset, parsed)
 }
 
 function buildThemeRuntimeCacheSignature(

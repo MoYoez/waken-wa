@@ -234,6 +234,30 @@ export function resolveThemeImagePool(parsed: ThemeCustomSurfaceFields): string[
   return Array.isArray(parsed.backgroundImagePool) ? parsed.backgroundImagePool : []
 }
 
+/**
+ * Whether the public page should gate first paint on a background image
+ * actually loading. Only relevant for the customSurface preset with an
+ * image source configured; everything else can render immediately.
+ */
+export function resolveThemeImageGateRequired(
+  themePreset: string | null | undefined,
+  themeCustomSurface: unknown,
+): boolean {
+  if (themePreset !== 'customSurface') return false
+  const parsed = parseThemeCustomSurface(themeCustomSurface)
+  const mode = resolveThemeBackgroundImageMode(parsed)
+  if (mode === 'manual') {
+    return Boolean(String(parsed.backgroundImageUrl ?? '').trim())
+  }
+  if (mode === 'randomPool') {
+    return Array.isArray(parsed.backgroundImagePool) && parsed.backgroundImagePool.length > 0
+  }
+  if (mode === 'randomApi') {
+    return Boolean(String(parsed.backgroundRandomApiUrl ?? '').trim())
+  }
+  return false
+}
+
 export function buildThemeImageBackgroundCss(url: string): string {
   const runtimeUrl = resolveThemeImageRuntimeUrl(url)
   if (!runtimeUrl) return ''
