@@ -195,6 +195,22 @@ export default async function Home() {
           fetchPriority="high"
         />
       ) : null}
+      <script
+        type="speculationrules"
+        // Hover-triggered prerender for inspiration links — most home visitors
+        // click into /inspiration or an entry, so warming them up shaves a full
+        // navigation off the next click.
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            prerender: [
+              {
+                where: { href_matches: '/inspiration*' },
+                eagerness: 'moderate',
+              },
+            ],
+          }),
+        }}
+      />
       <LenisSmoothScroll enabled={smoothScrollEnabled} />
       <HomeScrollbarHider />
       {themeCss && (

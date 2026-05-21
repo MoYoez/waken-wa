@@ -1,16 +1,11 @@
 'use client'
 
 import { ChevronRight } from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useT } from 'next-i18next/client'
 
 import { FormattedTime } from '@/components/formatted-time'
-import {
-  getSiteSectionTransition,
-  getSiteSectionVariants,
-} from '@/components/site-motion'
 import { Card } from '@/components/ui/card'
 import { WithInspirationImageTransform } from '@/lib/inspiration-image-client'
 import {
@@ -98,13 +93,6 @@ export function InspirationHomeSection({
   showArchiveLink?: boolean
 }) {
   const { t } = useT('common')
-  const prefersReducedMotion = Boolean(useReducedMotion())
-  const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
-  const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
-    enterY: 12,
-    exitY: 8,
-    scale: 0.996,
-  })
 
   if (entries.length === 0) {
     return (
@@ -114,97 +102,78 @@ export function InspirationHomeSection({
 
   return (
     <div className="space-y-4">
-      <motion.div className="space-y-3" layout>
-        <AnimatePresence initial={false}>
-          {entries.map((entry, index) => {
-            const detailHref = `/inspiration/${entry.id}`
-            const entryImageSrc = entry.imageUrl ?? entry.imageDataUrl ?? null
-            const inlineLead = !entryImageSrc ? extractInspirationLeadImage(entry.content) : null
-            const cardImageSrcRaw = entryImageSrc ?? inlineLead?.imageSrc ?? null
-            const cardImageSrc = cardImageSrcRaw ? WithInspirationImageTransform(cardImageSrcRaw) : null
-            const prioritizeImage = index === 0
-            const preview = inlineLead?.imageSrc
-              ? inspirationPlainPreview(inlineLead.contentWithoutImage, 96).text
-              : inspirationPlainPreviewAny(entry.content, entry.contentLexical, 96).text
-            const statusText = String(entry.statusSnapshot ?? '').trim()
+      <div className="space-y-3">
+        {entries.map((entry, index) => {
+          const detailHref = `/inspiration/${entry.id}`
+          const entryImageSrc = entry.imageUrl ?? entry.imageDataUrl ?? null
+          const inlineLead = !entryImageSrc ? extractInspirationLeadImage(entry.content) : null
+          const cardImageSrcRaw = entryImageSrc ?? inlineLead?.imageSrc ?? null
+          const cardImageSrc = cardImageSrcRaw ? WithInspirationImageTransform(cardImageSrcRaw) : null
+          const prioritizeImage = index === 0
+          const preview = inlineLead?.imageSrc
+            ? inspirationPlainPreview(inlineLead.contentWithoutImage, 96).text
+            : inspirationPlainPreviewAny(entry.content, entry.contentLexical, 96).text
+          const statusText = String(entry.statusSnapshot ?? '').trim()
 
-            return (
-              <motion.article
-                key={entry.id}
-                variants={sectionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={sectionTransition}
-                layout
-              >
-                <Card className={cn(inspirationCardClassName, 'h-[7.75rem] overflow-hidden p-2.5 sm:p-3')}>
-                  <div
-                    className={cn(
-                      'flex h-full items-stretch gap-2 sm:gap-3',
-                      cardImageSrc ? 'flex-row' : 'flex-col',
-                    )}
-                  >
-                    {cardImageSrc ? (
-                      <Link
-                        href={detailHref}
-                        className={cn(
-                          'group relative block shrink-0 self-start overflow-hidden rounded-lg',
-                          'w-16 h-16 sm:w-[4.667rem] sm:h-[4.667rem]',
-                          'border border-t-0 border-r-0 border-border/70 bg-card shadow-sm',
-                          'transition-[box-shadow,border-color] duration-200',
-                          'hover:border-primary/25 hover:shadow-md',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                        )}
-                      >
-                        <Image
-                          src={cardImageSrc}
-                          alt=""
-                          fill
-                          priority={prioritizeImage}
-                          loading={prioritizeImage ? undefined : 'lazy'}
-                          fetchPriority={prioritizeImage ? 'high' : undefined}
-                          className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
-                          sizes="(max-width: 640px) 64px, 75px"
-                        />
-                      </Link>
-                    ) : null}
-                    <EntryBody
-                      detailHref={detailHref}
-                      previewText={preview}
-                      statusText={statusText}
-                      title={entry.title}
-                      createdAt={entry.createdAt}
-                      displayTimezone={entry.displayTimezone}
-                    />
-                  </div>
-                </Card>
-              </motion.article>
-            )
-          })}
-        </AnimatePresence>
-      </motion.div>
+          return (
+            <article key={entry.id}>
+              <Card className={cn(inspirationCardClassName, 'h-[7.75rem] overflow-hidden p-2.5 sm:p-3')}>
+                <div
+                  className={cn(
+                    'flex h-full items-stretch gap-2 sm:gap-3',
+                    cardImageSrc ? 'flex-row' : 'flex-col',
+                  )}
+                >
+                  {cardImageSrc ? (
+                    <Link
+                      href={detailHref}
+                      className={cn(
+                        'group relative block shrink-0 self-start overflow-hidden rounded-lg',
+                        'w-16 h-16 sm:w-[4.667rem] sm:h-[4.667rem]',
+                        'border border-t-0 border-r-0 border-border/70 bg-card shadow-sm',
+                        'transition-[box-shadow,border-color] duration-200',
+                        'hover:border-primary/25 hover:shadow-md',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      )}
+                    >
+                      <Image
+                        src={cardImageSrc}
+                        alt=""
+                        fill
+                        priority={prioritizeImage}
+                        loading={prioritizeImage ? undefined : 'lazy'}
+                        fetchPriority={prioritizeImage ? 'high' : undefined}
+                        className="object-cover object-center transition-transform duration-200 group-hover:scale-[1.04]"
+                        sizes="(max-width: 640px) 64px, 75px"
+                      />
+                    </Link>
+                  ) : null}
+                  <EntryBody
+                    detailHref={detailHref}
+                    previewText={preview}
+                    statusText={statusText}
+                    title={entry.title}
+                    createdAt={entry.createdAt}
+                    displayTimezone={entry.displayTimezone}
+                  />
+                </div>
+              </Card>
+            </article>
+          )
+        })}
+      </div>
 
-      <AnimatePresence initial={false}>
-        {showArchiveLink ? (
-          <motion.div
-            className="flex justify-center pt-1"
-            variants={sectionVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={sectionTransition}
+      {showArchiveLink ? (
+        <div className="flex justify-center pt-1">
+          <Link
+            href="/inspiration"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-0.5"
           >
-            <Link
-              href="/inspiration"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-0.5"
-            >
-              {t('site.inspiration.viewMore')}
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+            {t('site.inspiration.viewMore')}
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
+        </div>
+      ) : null}
     </div>
   )
 }
