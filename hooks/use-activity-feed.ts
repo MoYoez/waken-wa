@@ -10,6 +10,53 @@ const POLLING_INTERVAL_MS = 30000
 const MAX_SSE_FAILURES = 3
 const DEFAULT_REALTIME_START_DELAY_MS = 2500
 
+function isDocumentPrerendering(): boolean {
+  if (typeof document === 'undefined') return false
+  // Speculation Rules / cross-document prerender: until the page is activated,
+  // document.prerendering === true. Opening EventSource here would burn one of
+  // the server's concurrent SSE slots for a tab the user may never visit.
+  return (document as Document & { prerendering?: boolean }).prerendering === true
+}
+
+function scheduleAfterPrerenderActivation(callback: () => void): () => void {
+  if (typeof document === 'undefined') return () => undefined
+  if (!isDocumentPrerendering()) {
+    callback()
+    return () => undefined
+  }
+  const onActivate = () => {
+    document.removeEventListener('prerenderingchange', onActivate)
+    callback()
+  }
+  document.addEventListener('prerenderingchange', onActivate, { once: true })
+  return () => document.removeEventListener('prerenderingchange', onActivate)
+}
+
+function scheduleWhenIdle(callback: () => void, fallbackDelayMs: number): () => void {
+  if (typeof window === 'undefined') {
+    callback()
+    return () => undefined
+  }
+  const ric = (window as Window & {
+    requestIdleCallback?: (
+      cb: () => void,
+      options?: { timeout?: number },
+    ) => number
+    cancelIdleCallback?: (handle: number) => void
+  }).requestIdleCallback
+  if (typeof ric === 'function') {
+    const handle = ric(callback, { timeout: Math.max(fallbackDelayMs, 1000) })
+    return () => {
+      const cic = (window as Window & {
+        cancelIdleCallback?: (handle: number) => void
+      }).cancelIdleCallback
+      if (typeof cic === 'function') cic(handle)
+    }
+  }
+  const timer = window.setTimeout(callback, fallbackDelayMs)
+  return () => window.clearTimeout(timer)
+}
+
 interface UseActivityFeedOptions {
   /** Server-rendered snapshot for immediate first paint. */
   initialFeed?: ActivityFeedData | null
@@ -156,23 +203,30 @@ export function useActivityFeed(options: UseActivityFeedOptions = {}) {
     }
 
     let cleanup: (() => void) | undefined
+    let cancelPrerenderListener: (() => void) | undefined
+    let cancelIdleSchedule: (() => void) | undefined
 
     if (mode === 'polling') {
-      startPolling()
+      cancelPrerenderListener = scheduleAfterPrerenderActivation(() => {
+        startPolling()
+      })
     } else {
       const delayMs = initialFeed ? Math.max(0, Math.round(realtimeStartDelayMs)) : 0
-      if (delayMs > 0) {
-        realtimeStartTimerRef.current = setTimeout(() => {
-          realtimeStartTimerRef.current = null
-          connectSSE()
-        }, delayMs)
-      } else {
-        cleanup = connectSSE()
-      }
+      cancelPrerenderListener = scheduleAfterPrerenderActivation(() => {
+        if (delayMs > 0) {
+          cancelIdleSchedule = scheduleWhenIdle(() => {
+            cleanup = connectSSE()
+          }, delayMs)
+        } else {
+          cleanup = connectSSE()
+        }
+      })
     }
 
     return () => {
       allowSseReconnectRef.current = false
+      cancelPrerenderListener?.()
+      cancelIdleSchedule?.()
       cleanup?.()
       cleanupAll()
     }

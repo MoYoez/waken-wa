@@ -52,18 +52,11 @@ export function CurrentStatus({
       )
     }
     return (
-      <motion.div
-        className="home-glass-card border border-t-0 border-r-0 border-border rounded-lg shadow-sm p-6 sm:p-8 bg-card"
-        variants={sectionVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        transition={sectionTransition}
-      >
+      <div className="site-reveal home-glass-card border border-t-0 border-r-0 border-border rounded-lg shadow-sm p-6 sm:p-8 bg-card">
         <div className="text-center text-muted-foreground">
           <div className="text-sm">{t('site.currentStatus.noActiveStatus')}</div>
         </div>
-      </motion.div>
+      </div>
     )
   }
 

@@ -1,12 +1,5 @@
-'use client'
-
-import { type HTMLMotionProps, motion, useReducedMotion } from 'motion/react'
 import * as React from 'react'
 
-import {
-  getSiteSectionTransition,
-  getSiteSectionVariants,
-} from '@/components/site-motion'
 import { cn } from '@/lib/utils'
 
 /**
@@ -15,27 +8,14 @@ import { cn } from '@/lib/utils'
 export function ContentReadingPanel({
   className,
   ...props
-}: HTMLMotionProps<'div'>) {
-  const prefersReducedMotion = Boolean(useReducedMotion())
-  const sectionTransition = getSiteSectionTransition(prefersReducedMotion)
-  const sectionVariants = getSiteSectionVariants(prefersReducedMotion, {
-    enterY: 8,
-    exitY: 6,
-    scale: 0.998,
-  })
-
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <motion.div
+    <div
       data-slot="content-reading-panel"
       className={cn(
-        'rounded-lg border border-border bg-card/95 text-card-foreground shadow-sm backdrop-blur-md',
+        'site-reveal rounded-lg border border-border bg-card/95 text-card-foreground shadow-sm backdrop-blur-md',
         className,
       )}
-      variants={sectionVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={sectionTransition}
       {...props}
     />
   )

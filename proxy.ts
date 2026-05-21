@@ -36,6 +36,25 @@ const FONT_FILE_CSP_SOURCES = [
   'https://fonts.scalar.com',
 ]
 
+/**
+ * Public LCP-critical assets advertised so CDNs (Cloudflare/Fastly/Akamai) can
+ * synthesize a 103 Early Hints from the 200's Link header. Browsers that don't
+ * understand it simply ignore the header — there's no negative side.
+ */
+const PUBLIC_PAGE_PRELOAD_LINK = [
+  '</api/avatar?w=96&q=70&format=webp>; rel=preload; as=image; fetchpriority=high',
+  '<https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@300;400;500&family=Satisfy&family=Ubuntu:wght@300;400;500;700&display=swap>; rel=preload; as=style; crossorigin',
+  '<https://fonts.loli.net>; rel=preconnect',
+  '<https://gstatic.loli.net>; rel=preconnect; crossorigin',
+].join(', ')
+
+const PUBLIC_PAGE_PATHS = new Set(['/', '/inspiration'])
+
+function isPublicPagePath(pathname: string): boolean {
+  if (PUBLIC_PAGE_PATHS.has(pathname)) return true
+  return pathname.startsWith('/inspiration/')
+}
+
 function getClientIp(request: NextRequest): string {
   return (
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -82,6 +101,9 @@ function addSecurityHeaders(response: NextResponse, pathname?: string): NextResp
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=()',
   )
+  if (pathname && isPublicPagePath(pathname)) {
+    response.headers.set('Link', PUBLIC_PAGE_PRELOAD_LINK)
+  }
   if (process.env.NODE_ENV === 'production') {
     response.headers.set(
       'Strict-Transport-Security',

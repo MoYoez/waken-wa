@@ -5,6 +5,7 @@
     "dev": "node scripts/start-with-banner.mjs dev",
     "build": "next build",
     "build:postgres": "next build",
+    "build:analyze": "ANALYZE=true next build",
     "start": "node scripts/start-with-banner.mjs start",
     "lint": "eslint .",
     "i18n:check": "node scripts/check-i18n-locales.mjs",
@@ -87,6 +88,7 @@
     ]
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.6",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",

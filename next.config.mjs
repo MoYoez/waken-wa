@@ -1,9 +1,15 @@
+import bundleAnalyzer from '@next/bundle-analyzer'
+
 import { pickPostgresUrl } from './scripts/resolve-database-env.mjs'
 
 const _pg = pickPostgresUrl()
 if (_pg && !process.env.DATABASE_URL?.trim()) {
   process.env.DATABASE_URL = _pg
 }
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+})
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -18,8 +24,7 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
-    qualities: [25, 50, 75, 92, 100],
   },
 }
 
-export default nextConfig
+export default withBundleAnalyzer(nextConfig)
