@@ -1,3 +1,5 @@
+import { cache } from 'react'
+
 import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
 import { redisDel, redisGetJson, redisSetJson } from '@/lib/redis-client'
 import { normalizeSiteConfigShape } from '@/lib/site-config-normalize'
@@ -40,7 +42,7 @@ export function setSiteConfigMemoryCache(value: unknown): void {
   state.value = value && typeof value === 'object' ? normalizeSiteConfigShape(value as Record<string, any>) : null
 }
 
-export async function getSiteConfigMemoryFirst(): Promise<SiteConfigValue> {
+async function loadSiteConfig(): Promise<SiteConfigValue> {
   const state = getCacheState()
   if (state.loaded) {
     return state.value
@@ -62,3 +64,10 @@ export async function getSiteConfigMemoryFirst(): Promise<SiteConfigValue> {
   }
   return getCacheState().value
 }
+
+/**
+ * Request-scoped memo around the multi-tier site config lookup. React's
+ * `cache()` dedupes concurrent calls within a single render so layout, page,
+ * metadata, and downstream lib helpers share one promise even on cold misses.
+ */
+export const getSiteConfigMemoryFirst = cache(loadSiteConfig)

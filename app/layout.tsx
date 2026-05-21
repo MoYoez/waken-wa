@@ -128,10 +128,32 @@ export default async function RootLayout({
         ) : null}
         {publicPageFontRuntime.stylesheetHref ? (
           <link
+            rel="preload"
+            as="style"
+            href={publicPageFontRuntime.stylesheetHref}
+          />
+        ) : null}
+        {publicPageFontRuntime.stylesheetHref ? (
+          <link
             id={PUBLIC_PAGE_FONT_STYLESHEET_ELEMENT_ID}
             rel="stylesheet"
             href={publicPageFontRuntime.stylesheetHref}
+            media="print"
           />
+        ) : null}
+        {publicPageFontRuntime.stylesheetHref ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(){var l=document.getElementById(${JSON.stringify(
+                PUBLIC_PAGE_FONT_STYLESHEET_ELEMENT_ID,
+              )});if(!l)return;var swap=function(){l.media='all'};if(l.sheet){swap();return}l.addEventListener('load',swap,{once:true});l.addEventListener('error',swap,{once:true})})();`,
+            }}
+          />
+        ) : null}
+        {publicPageFontRuntime.stylesheetHref ? (
+          <noscript>
+            <link rel="stylesheet" href={publicPageFontRuntime.stylesheetHref} />
+          </noscript>
         ) : null}
         <style id={PUBLIC_PAGE_FONT_STYLE_ELEMENT_ID}>{publicPageFontRuntime.cssText}</style>
       </head>

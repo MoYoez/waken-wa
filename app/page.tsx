@@ -1,4 +1,4 @@
-import { count, desc } from 'drizzle-orm'
+import { desc } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
@@ -58,6 +58,8 @@ const HOME_AVATAR_IMAGE_OPTIONS = {
   width: 96,
 }
 
+const HOME_INSPIRATION_LIMIT = 3
+
 const HOME_INSPIRATION_IMAGE_OPTIONS = {
   format: 'webp' as const,
   quality: 60,
@@ -107,7 +109,7 @@ export default async function Home() {
     config.themeCustomSurface,
   )
 
-  const [activityInitialFeed, inspirationRows, [countRow]] = await Promise.all([
+  const [activityInitialFeed, inspirationRows] = await Promise.all([
     getActivityFeedData(undefined, { forPublicFeed: true }),
     db
       .select({
@@ -121,20 +123,24 @@ export default async function Home() {
       })
       .from(inspirationEntries)
       .orderBy(desc(inspirationEntries.createdAt))
-      .limit(3),
-    db.select({ c: count() }).from(inspirationEntries),
+      .limit(HOME_INSPIRATION_LIMIT + 1),
   ])
-  const inspirationTotal = Number(countRow?.c ?? 0)
-  
+  const hasMoreInspiration = inspirationRows.length > HOME_INSPIRATION_LIMIT
+  const inspirationDisplayRows = hasMoreInspiration
+    ? inspirationRows.slice(0, HOME_INSPIRATION_LIMIT)
+    : inspirationRows
+
   // Timezone for inspiration entries
   const displayTimezoneForEntries = normalizeTimezone(cfg.displayTimezone)
-  const inspirationHomeEntries = inspirationRows.map((row: (typeof inspirationRows)[number]) => ({
-    ...row,
-    imageDataUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, HOME_INSPIRATION_IMAGE_OPTIONS) : null,
-    imageUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, HOME_INSPIRATION_IMAGE_OPTIONS) : null,
-    createdAt: coerceDbTimestampToIsoUtc(row.createdAt),
-    displayTimezone: displayTimezoneForEntries,
-  }))
+  const inspirationHomeEntries = inspirationDisplayRows.map(
+    (row: (typeof inspirationRows)[number]) => ({
+      ...row,
+      imageDataUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, HOME_INSPIRATION_IMAGE_OPTIONS) : null,
+      imageUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, HOME_INSPIRATION_IMAGE_OPTIONS) : null,
+      createdAt: coerceDbTimestampToIsoUtc(row.createdAt),
+      displayTimezone: displayTimezoneForEntries,
+    }),
+  )
 
   const scheduleInClassOnHome = Boolean(config.scheduleInClassOnHome)
   const scheduleHomeShowLocation = Boolean(config.scheduleHomeShowLocation)
@@ -307,7 +313,7 @@ export default async function Home() {
                       </h2>
                       <InspirationHomeSection
                         entries={inspirationHomeEntries}
-                        showArchiveLink={inspirationTotal > 3}
+                        showArchiveLink={hasMoreInspiration}
                       />
                     </section>
                   </SiteReveal>

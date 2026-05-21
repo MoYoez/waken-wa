@@ -80,3 +80,21 @@
     transform: translate(20px, 10px) scale(1.02);
   }
 }
+
+/* Below 640px the orbs are fully covered by the home card and only burn GPU. */
+@media (max-width: 640px) {
+  .floating-orb {
+    display: none;
+  }
+}
+
+/* Honor user motion preference: keep the visual but stop animating. */
+@media (prefers-reduced-motion: reduce) {
+  .animated-bg {
+    animation: none;
+  }
+
+  .floating-orb {
+    animation: none;
+  }
+}
