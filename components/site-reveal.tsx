@@ -1,44 +1,21 @@
-'use client'
+import type { CSSProperties, ReactNode } from 'react'
 
-import { motion, useReducedMotion } from 'motion/react'
-import type { ReactNode } from 'react'
-
-import {
-  getSiteSectionTransition,
-  getSiteSectionVariants,
-} from '@/components/site-motion'
 import { cn } from '@/lib/utils'
 
-export function SiteReveal({
-  children,
-  className,
-  delay = 0,
-}: {
+type SiteRevealProps = {
   children: ReactNode
   className?: string
+  /** Delay in seconds (matches the previous motion API). */
   delay?: number
-}) {
-  const prefersReducedMotion = Boolean(useReducedMotion())
-  const transition = {
-    ...getSiteSectionTransition(prefersReducedMotion),
-    delay: prefersReducedMotion ? 0 : delay,
-  }
-  const variants = getSiteSectionVariants(prefersReducedMotion, {
-    enterY: 12,
-    exitY: 8,
-    scale: 0.996,
-  })
+}
+
+export function SiteReveal({ children, className, delay = 0 }: SiteRevealProps) {
+  const style: CSSProperties | undefined =
+    delay > 0 ? { animationDelay: `${delay}s` } : undefined
 
   return (
-    <motion.div
-      className={cn(className)}
-      variants={variants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={transition}
-    >
+    <div className={cn('site-reveal', className)} style={style}>
       {children}
-    </motion.div>
+    </div>
   )
 }

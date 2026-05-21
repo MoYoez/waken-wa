@@ -168,6 +168,40 @@ body::-webkit-scrollbar {
   font-family: var(--public-page-font-family, var(--font-sans-default));
 }
 
+.site-reveal {
+  animation: site-reveal-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes site-reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.996);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-reveal {
+    animation: site-reveal-in-reduced 0.14s linear both;
+    animation-delay: 0s !important;
+  }
+}
+
+@keyframes site-reveal-in-reduced {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 body[data-scroll-locked][data-scroll-locked] {
   overflow-x: hidden !important;
   overflow-y: scroll !important;

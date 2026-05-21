@@ -181,6 +181,14 @@ export default async function Home() {
 
   return (
     <>
+      {avatarSrc ? (
+        <link
+          rel="preload"
+          as="image"
+          href={avatarSrc}
+          fetchPriority="high"
+        />
+      ) : null}
       <LenisSmoothScroll enabled={smoothScrollEnabled} />
       <HomeScrollbarHider />
       {themeCss && (

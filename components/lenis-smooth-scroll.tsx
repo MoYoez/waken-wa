@@ -1,6 +1,6 @@
 'use client'
 
-import Lenis from 'lenis'
+import type LenisType from 'lenis'
 import { useEffect } from 'react'
 
 type LenisSmoothScrollProps = {
@@ -13,20 +13,21 @@ export function LenisSmoothScroll({ enabled }: LenisSmoothScrollProps) {
     if (typeof window === 'undefined') return
 
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    let lenis: Lenis | null = null
+    let lenis: LenisType | null = null
+    let cancelled = false
+    let pendingLoad: Promise<typeof import('lenis')> | null = null
 
     const stopLenis = () => {
       lenis?.destroy()
       lenis = null
     }
 
-    const syncLenis = () => {
-      if (reducedMotionQuery.matches) {
-        stopLenis()
-        return
-      }
-      if (lenis) return
-
+    const startLenis = async () => {
+      if (lenis || cancelled) return
+      if (!pendingLoad) pendingLoad = import('lenis')
+      const mod = await pendingLoad
+      if (cancelled || lenis) return
+      const Lenis = mod.default
       lenis = new Lenis({
         anchors: true,
         autoRaf: true,
@@ -34,10 +35,19 @@ export function LenisSmoothScroll({ enabled }: LenisSmoothScrollProps) {
       })
     }
 
+    const syncLenis = () => {
+      if (reducedMotionQuery.matches) {
+        stopLenis()
+        return
+      }
+      void startLenis()
+    }
+
     syncLenis()
     reducedMotionQuery.addEventListener('change', syncLenis)
 
     return () => {
+      cancelled = true
       reducedMotionQuery.removeEventListener('change', syncLenis)
       stopLenis()
     }
