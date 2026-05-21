@@ -1,5 +1,4 @@
 import { desc } from 'drizzle-orm'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { ActivityFeedProvider } from '@/components/activity-feed-provider'
@@ -8,38 +7,35 @@ import { CurrentStatus } from '@/components/current-status'
 import { HomeScrollbarHider } from '@/components/home-scrollbar-hider'
 import { InspirationHomeSection } from '@/components/inspiration-home-section'
 import { LayoutFooterPortal } from '@/components/layout-footer-portal'
-import { LenisSmoothScroll } from '@/components/lenis-smooth-scroll'
-import { PublicPageTransitionShell } from '@/components/public-page-transition-shell'
+import { PublicPageShell } from '@/components/public-page-shell'
 import { ScheduleHomeInClassBanner } from '@/components/schedule-home-in-class-banner'
 import { SiteLockForm } from '@/components/site-lock-form'
 import { SiteReveal } from '@/components/site-reveal'
-import { SiteThemeRuntime } from '@/components/site-theme-runtime'
 import { UserProfile, UserProfileNoteSection } from '@/components/user-profile'
+import {
+  HOME_AVATAR_IMAGE_OPTIONS,
+  INSPIRATION_LIST_IMAGE_OPTIONS,
+} from '@/constants/public-images'
 import {
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT,
   SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN,
 } from '@/constants/site-config'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { normalizeActivityUpdateMode } from '@/lib/activity-update-mode'
-import { verifySiteLockSession } from '@/lib/auth'
 import { resolveAvatarUrl } from '@/lib/avatar-url'
 import { db } from '@/lib/db'
 import { inspirationEntries } from '@/lib/drizzle-schema'
-import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
 import {
   normalizeHitokotoCategories,
   normalizeHitokotoEncode,
 } from '@/lib/hitokoto'
 import { inspirationEntryImageUrl } from '@/lib/inspiration-inline-images'
-import { resolvePublicPageControlFontOptions } from '@/lib/public-page-font'
+import { preparePublicPageShell } from '@/lib/public-page-shell'
 import {
   parseScheduleCoursesJson,
   resolveSchedulePeriodTemplate,
   type ScheduleCourse,
 } from '@/lib/schedule-courses'
-import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
-import { getThemePresetCss } from '@/lib/theme-css'
-import { resolveThemeImageGateRequired } from '@/lib/theme-custom-surface'
 import { coerceDbTimestampToIsoUtc, normalizeTimezone } from '@/lib/timezone'
 import {
   normalizeTodayStatusBusy,
@@ -52,36 +48,21 @@ import packageJson from '@/package.json'
 // Force dynamic rendering so each request gets fresh data.
 export const dynamic = 'force-dynamic'
 
-const HOME_AVATAR_IMAGE_OPTIONS = {
-  format: 'webp' as const,
-  quality: 70,
-  width: 96,
-}
-
 const HOME_INSPIRATION_LIMIT = 3
 
-const HOME_INSPIRATION_IMAGE_OPTIONS = {
-  format: 'webp' as const,
-  quality: 60,
-  width: 180,
-}
-
 export default async function Home() {
-  const config = await getSiteConfigMemoryFirst()
-  if (!config) {
-    redirect('/admin/setup')
+  const result = await preparePublicPageShell()
+  if (result.kind === 'redirect-setup') redirect('/admin/setup')
+  if (result.kind === 'locked') {
+    return (
+      <SiteLockForm
+        hcaptchaEnabled={result.hcaptcha.enabled}
+        hcaptchaSiteKey={result.hcaptcha.siteKey}
+      />
+    )
   }
 
-  if (config.pageLockEnabled) {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('site_lock')?.value
-    const unlocked = token ? await verifySiteLockSession(token) : null
-    if (!unlocked) {
-      const hcaptcha = await getHCaptchaPublicConfig()
-      return <SiteLockForm hcaptchaEnabled={hcaptcha.enabled} hcaptchaSiteKey={hcaptcha.siteKey} />
-    }
-  }
-
+  const { config } = result.shell
   const userName = config.userName
   const userBio = config.userBio
   const avatarUrl = config.avatarUrl
@@ -91,7 +72,6 @@ export default async function Home() {
     'public',
     HOME_AVATAR_IMAGE_OPTIONS,
   )
-  // Config object for later use
   const cfg = config as Record<string, unknown>
   const todayStatusEmoji = normalizeTodayStatusEmoji(cfg.todayStatusEmoji)
   const todayStatusText = normalizeTodayStatusText(cfg.todayStatusText)
@@ -101,13 +81,6 @@ export default async function Home() {
   const currentlyText = config.currentlyText
   const earlierText = config.earlierText
   const adminText = String(config.adminText ?? '').trim() || 'admin'
-  const themePresetCss = getThemePresetCss(config.themePreset, config.themeCustomSurface)
-  const customCss = String(config.customCss ?? '')
-  const themeCss = `${themePresetCss}\n${customCss}`.trim()
-  const imageGateRequired = resolveThemeImageGateRequired(
-    config.themePreset,
-    config.themeCustomSurface,
-  )
 
   const [activityInitialFeed, inspirationRows] = await Promise.all([
     getActivityFeedData(undefined, { forPublicFeed: true }),
@@ -130,13 +103,12 @@ export default async function Home() {
     ? inspirationRows.slice(0, HOME_INSPIRATION_LIMIT)
     : inspirationRows
 
-  // Timezone for inspiration entries
   const displayTimezoneForEntries = normalizeTimezone(cfg.displayTimezone)
   const inspirationHomeEntries = inspirationDisplayRows.map(
     (row: (typeof inspirationRows)[number]) => ({
       ...row,
-      imageDataUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, HOME_INSPIRATION_IMAGE_OPTIONS) : null,
-      imageUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, HOME_INSPIRATION_IMAGE_OPTIONS) : null,
+      imageDataUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, INSPIRATION_LIST_IMAGE_OPTIONS) : null,
+      imageUrl: row.imageDataUrl ? inspirationEntryImageUrl(row.id, INSPIRATION_LIST_IMAGE_OPTIONS) : null,
       createdAt: coerceDbTimestampToIsoUtc(row.createdAt),
       displayTimezone: displayTimezoneForEntries,
     }),
@@ -151,7 +123,7 @@ export default async function Home() {
     scheduleHomeAfterClassesLabelRaw.slice(0, SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_MAX_LEN) ||
     SITE_CONFIG_SCHEDULE_HOME_AFTER_CLASSES_LABEL_DEFAULT
   const schedulePeriodTemplate = resolveSchedulePeriodTemplate(cfg.schedulePeriodTemplate ?? null)
-  
+
   let scheduleCoursesForHome: ScheduleCourse[] = []
   if (scheduleInClassOnHome) {
     const parsed = parseScheduleCoursesJson(config.scheduleCourses ?? null)
@@ -167,8 +139,6 @@ export default async function Home() {
   const mediaDisplayShowNcmLink = cfg.mediaDisplayShowNcmLink === true
   const hideInspirationOnHome = cfg.hideInspirationOnHome === true
   const disableFrontendDeviceAnimation = cfg.disableFrontendDeviceAnimation === true
-  const pageLoadingEnabled = cfg.pageLoadingEnabled !== false
-  const smoothScrollEnabled = cfg.smoothScrollEnabled === true
   const noteHitokotoEnabled = Boolean(cfg.userNoteHitokotoEnabled)
   const noteTypewriterEnabled = Boolean(cfg.userNoteTypewriterEnabled)
   const noteSignatureFontEnabled = Boolean(cfg.userNoteSignatureFontEnabled)
@@ -180,10 +150,6 @@ export default async function Home() {
   const noteHitokotoEncode = normalizeHitokotoEncode(cfg.userNoteHitokotoEncode)
   const noteHitokotoFallbackToNote = Boolean(cfg.userNoteHitokotoFallbackToNote)
   const activityUpdateMode = normalizeActivityUpdateMode(cfg.activityUpdateMode)
-  const publicFontOptions = resolvePublicPageControlFontOptions(
-    cfg.publicFontOptionsEnabled,
-    cfg.publicFontOptions,
-  )
 
   return (
     <>
@@ -211,30 +177,11 @@ export default async function Home() {
           }),
         }}
       />
-      <LenisSmoothScroll enabled={smoothScrollEnabled} />
       <HomeScrollbarHider />
-      {themeCss && (
-        <style
-          id="site-theme-override"
-          dangerouslySetInnerHTML={{ __html: themeCss }}
-        />
-      )}
-      <SiteThemeRuntime
-        themePreset={config.themePreset}
-        themeCustomSurface={config.themeCustomSurface}
-      />
-      {/* Animated Background */}
-      <div className="animated-bg">
-        <div className="floating-orb floating-orb-1" />
-        <div className="floating-orb floating-orb-2" />
-        <div className="floating-orb floating-orb-3" />
-      </div>
-      <PublicPageTransitionShell
-        appVersion={packageJson.version}
+      <PublicPageShell
         scope="home"
-        enabled={pageLoadingEnabled}
-        imageGateRequired={imageGateRequired}
-        fontOptions={publicFontOptions}
+        shell={result.shell}
+        appVersion={packageJson.version}
       >
         <main className="min-h-screen relative">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 pb-40">
@@ -340,7 +287,7 @@ export default async function Home() {
         </main>
 
         <LayoutFooterPortal adminText={adminText} userName={userName} />
-      </PublicPageTransitionShell>
+      </PublicPageShell>
     </>
   )
 }

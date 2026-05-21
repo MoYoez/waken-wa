@@ -6,6 +6,7 @@ import {
   ADMIN_LIST_DEFAULT_PAGE_SIZE,
   ADMIN_LIST_MAX_PAGE_SIZE,
 } from '@/constants/admin-list'
+import { INSPIRATION_LIST_IMAGE_OPTIONS } from '@/constants/public-images'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { getBearerApiTokenRecord, getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -69,12 +70,6 @@ function formatDeviceSuffix(options: {
 // Force dynamic rendering, disable caching
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-const INSPIRATION_LIST_IMAGE_OPTIONS = {
-  format: 'webp' as const,
-  quality: 60,
-  width: 180,
-}
 
 function toEntryResponseItem<T extends { id: number; imageDataUrl?: string | null }>(item: T) {
   const imageDataUrl = typeof item.imageDataUrl === 'string' ? item.imageDataUrl.trim() : ''

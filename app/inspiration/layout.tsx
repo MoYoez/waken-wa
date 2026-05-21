@@ -1,72 +1,31 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-import { LenisSmoothScroll } from '@/components/lenis-smooth-scroll'
-import { PublicPageTransitionShell } from '@/components/public-page-transition-shell'
+import { PublicPageShell } from '@/components/public-page-shell'
 import { SiteLockForm } from '@/components/site-lock-form'
-import { SiteThemeRuntime } from '@/components/site-theme-runtime'
-import { verifySiteLockSession } from '@/lib/auth'
-import { getHCaptchaPublicConfig } from '@/lib/hcaptcha'
-import { resolvePublicPageControlFontOptions } from '@/lib/public-page-font'
-import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
-import { getThemePresetCss } from '@/lib/theme-css'
-import { resolveThemeImageGateRequired } from '@/lib/theme-custom-surface'
+import { preparePublicPageShell } from '@/lib/public-page-shell'
 import packageJson from '@/package.json'
 
 export default async function InspirationLayout({ children }: { children: React.ReactNode }) {
-  const config = await getSiteConfigMemoryFirst()
-  if (!config) {
-    redirect('/admin/setup')
+  const result = await preparePublicPageShell()
+  switch (result.kind) {
+    case 'redirect-setup':
+      redirect('/admin/setup')
+    case 'locked':
+      return (
+        <SiteLockForm
+          hcaptchaEnabled={result.hcaptcha.enabled}
+          hcaptchaSiteKey={result.hcaptcha.siteKey}
+        />
+      )
+    case 'ready':
+      return (
+        <PublicPageShell
+          scope="inspiration"
+          shell={result.shell}
+          appVersion={packageJson.version}
+        >
+          {children}
+        </PublicPageShell>
+      )
   }
-
-  if (config.pageLockEnabled) {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('site_lock')?.value
-    const unlocked = token ? await verifySiteLockSession(token) : null
-    if (!unlocked) {
-      const hcaptcha = await getHCaptchaPublicConfig()
-      return <SiteLockForm hcaptchaEnabled={hcaptcha.enabled} hcaptchaSiteKey={hcaptcha.siteKey} />
-    }
-  }
-
-  const themePresetCss = getThemePresetCss(config.themePreset, config.themeCustomSurface)
-  const customCss = String(config.customCss ?? '')
-  const themeCss = `${themePresetCss}\n${customCss}`.trim()
-  const pageLoadingEnabled = config.pageLoadingEnabled !== false
-  const smoothScrollEnabled = config.smoothScrollEnabled === true
-  const imageGateRequired = resolveThemeImageGateRequired(
-    config.themePreset,
-    config.themeCustomSurface,
-  )
-  const publicFontOptions = resolvePublicPageControlFontOptions(
-    config.publicFontOptionsEnabled,
-    config.publicFontOptions,
-  )
-
-  return (
-    <>
-      <LenisSmoothScroll enabled={smoothScrollEnabled} />
-      {themeCss ? (
-        <style id="site-theme-override" dangerouslySetInnerHTML={{ __html: themeCss }} />
-      ) : null}
-      <SiteThemeRuntime
-        themePreset={config.themePreset}
-        themeCustomSurface={config.themeCustomSurface}
-      />
-      <div className="animated-bg">
-        <div className="floating-orb floating-orb-1" />
-        <div className="floating-orb floating-orb-2" />
-        <div className="floating-orb floating-orb-3" />
-      </div>
-      <PublicPageTransitionShell
-        appVersion={packageJson.version}
-        scope="inspiration"
-        enabled={pageLoadingEnabled}
-        imageGateRequired={imageGateRequired}
-        fontOptions={publicFontOptions}
-      >
-        {children}
-      </PublicPageTransitionShell>
-    </>
-  )
 }

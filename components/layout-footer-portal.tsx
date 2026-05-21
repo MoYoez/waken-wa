@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { LayoutFooter } from '@/components/layout-footer'
+import { usePublicPageLoading } from '@/hooks/use-public-page-loading'
 
 const PORTAL_ID = 'site-footer-portal'
 const MOBILE_MEDIA_QUERY = '(max-width: 767px)'
@@ -55,7 +56,6 @@ export function LayoutFooterPortal({
   userName: string
 }) {
   const [el, setEl] = useState<HTMLElement | null>(null)
-  const [ready, setReady] = useState(false)
   const [mobilePinned, setMobilePinned] = useState(false)
   const [nearBottom, setNearBottom] = useState(false)
   const [spacerHeight, setSpacerHeight] = useState(0)
@@ -64,29 +64,11 @@ export function LayoutFooterPortal({
   const shellRef = useRef<HTMLDivElement | null>(null)
   const nearBottomRef = useRef(false)
   const followOffsetRef = useRef(0)
+  const ready = !usePublicPageLoading()
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEl(document.getElementById(PORTAL_ID))
-  }, [])
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return
-
-    const root = document.documentElement
-    const sync = () => {
-      setReady(root.dataset.publicPageLoading !== 'true')
-    }
-
-    sync()
-
-    const observer = new MutationObserver(sync)
-    observer.observe(root, {
-      attributes: true,
-      attributeFilter: ['data-public-page-loading'],
-    })
-
-    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
