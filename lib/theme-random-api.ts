@@ -26,8 +26,7 @@ export async function getConfiguredThemeRandomApiUrl(): Promise<string> {
   return String(parsed.backgroundRandomApiUrl ?? '').trim()
 }
 
-export async function resolveConfiguredThemeRandomImageUrl(): Promise<string> {
-  const rawUrl = await getConfiguredThemeRandomApiUrl()
+export async function fetchThemeRandomImageUrl(rawUrl: string): Promise<string> {
   if (!rawUrl || !isAllowedThemeRemoteImageUrl(rawUrl)) {
     throw new Error('Random api is not configured')
   }
@@ -61,4 +60,9 @@ export async function resolveConfiguredThemeRandomImageUrl(): Promise<string> {
   }
 
   return upstream.url || rawUrl
+}
+
+export async function resolveConfiguredThemeRandomImageUrl(): Promise<string> {
+  const rawUrl = await getConfiguredThemeRandomApiUrl()
+  return fetchThemeRandomImageUrl(rawUrl)
 }

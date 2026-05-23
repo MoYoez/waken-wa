@@ -5,7 +5,7 @@ import { useT } from 'next-i18next/client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
-import { uploadImageSource } from '@/components/admin/admin-query-mutations'
+import { previewThemeRandomImage, uploadImageSource } from '@/components/admin/admin-query-mutations'
 import { WebSettingsCustomSurfaceInsetPanel } from '@/components/admin/web-settings-custom-surface-inset-panel'
 import { WebSettingsCustomSurfaceStylePanel } from '@/components/admin/web-settings-custom-surface-style-panel'
 import {
@@ -114,7 +114,9 @@ export function WebSettingsCustomSurface() {
   const resolveThemePreviewImage = async () => {
     setThemePreviewLoading(true)
     try {
-      const asset = await loadThemeSurfaceActiveImageAsset(value)
+      const asset = await loadThemeSurfaceActiveImageAsset(value, {
+        resolver: async (apiUrl) => previewThemeRandomImage(apiUrl),
+      })
       clearThemePreviewAsset()
       if (!asset) {
         setThemePreviewImageUrl('')

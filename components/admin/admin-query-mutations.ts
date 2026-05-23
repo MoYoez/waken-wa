@@ -180,6 +180,20 @@ export async function uploadImageSource(
   return String(data.url)
 }
 
+export async function previewThemeRandomImage(apiUrl: string): Promise<string> {
+  const data = await fetchAdminData<{ imageUrl?: string }>(
+    '/api/admin/settings/theme/random-preview',
+    {
+      method: 'POST',
+      json: { apiUrl },
+      fallbackError: tAdminClient('mutation.themeRandomPreviewFailed'),
+    },
+  )
+  const imageUrl = String(data.imageUrl ?? '').trim()
+  if (!imageUrl) throw new Error(tAdminClient('mutation.themeRandomPreviewFailed'))
+  return imageUrl
+}
+
 export async function createInspirationEntry(body: Record<string, unknown>): Promise<void> {
   await fetchAdminVoid('/api/inspiration/entries', {
     method: 'POST',

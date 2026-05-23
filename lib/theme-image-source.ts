@@ -30,23 +30,32 @@ function toResolvedThemeImageTarget(input: string): ThemeSurfaceResolvedImageTar
 
 async function tryResolveRandomApiImage(
   apiUrl: string,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; resolver?: RandomApiResolver },
 ): Promise<string> {
   const clean = String(apiUrl ?? '').trim()
   if (!clean) return ''
 
+  const resolver = options?.resolver ?? defaultRandomApiResolver
   try {
-    const response = await fetch('/api/theme/random', {
-      cache: 'no-store',
-      signal: options?.signal,
-    })
-    if (!response.ok) return ''
-    const json = await response.json().catch(() => null)
-    const imageUrl = String(readThemeImageUrlFromJson(json?.data) ?? '').trim()
-    return imageUrl
+    return await resolver(clean, options?.signal)
   } catch {
     return ''
   }
+}
+
+export type RandomApiResolver = (
+  apiUrl: string,
+  signal?: AbortSignal,
+) => Promise<string>
+
+const defaultRandomApiResolver: RandomApiResolver = async (_apiUrl, signal) => {
+  const response = await fetch('/api/theme/random', {
+    cache: 'no-store',
+    signal,
+  })
+  if (!response.ok) return ''
+  const json = await response.json().catch(() => null)
+  return String(readThemeImageUrlFromJson(json?.data) ?? '').trim()
 }
 
 export function resolveThemeSurfaceActiveImageTarget(
@@ -73,7 +82,7 @@ export function resolveThemeSurfaceActiveImageTarget(
 
 export async function resolveThemeSurfaceFixedImageTarget(
   rawThemeCustomSurface: ThemeCustomSurfaceFields | unknown,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; resolver?: RandomApiResolver },
 ): Promise<ThemeSurfaceResolvedImageTarget | null> {
   const parsed = parseThemeCustomSurface(rawThemeCustomSurface)
   const mode = resolveThemeBackgroundImageMode(parsed)
@@ -101,7 +110,7 @@ export function buildThemeSurfaceResolvedImageDisplayUrl(
 
 export async function loadThemeSurfaceActiveImageAsset(
   rawThemeCustomSurface: ThemeCustomSurfaceFields | unknown,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; resolver?: RandomApiResolver },
 ): Promise<ThemeSurfaceLoadedImageAsset | null> {
   const fixedTarget = await resolveThemeSurfaceFixedImageTarget(rawThemeCustomSurface, options)
   if (fixedTarget?.url) {

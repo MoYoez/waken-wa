@@ -54,6 +54,7 @@
     "addFailed": "Add failed",
     "endActivityFailed": "Failed to end the activity",
     "uploadBodyImageFailed": "Failed to upload the body image",
+    "themeRandomPreviewFailed": "Failed to preview the random image",
     "submitFailed": "Submit failed",
     "saveFailed": "Save failed",
     "setupFailed": "Setup failed",

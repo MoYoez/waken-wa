@@ -54,6 +54,7 @@
     "addFailed": "添加失败",
     "endActivityFailed": "结束活动失败",
     "uploadBodyImageFailed": "正文配图上传失败",
+    "themeRandomPreviewFailed": "随机图片预览失败",
     "submitFailed": "提交失败",
     "saveFailed": "保存失败",
     "setupFailed": "初始化失败",
