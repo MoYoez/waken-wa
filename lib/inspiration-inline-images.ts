@@ -22,7 +22,9 @@ const UUID_IN_PATH_RE =
   /\/api\/inspiration\/img\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi
 
 type InspirationImageUrlOptions = {
+  fit?: 'contain' | 'cover' | 'fill' | 'inside' | 'outside'
   format?: 'avif' | 'jpeg' | 'png' | 'webp'
+  height?: number
   quality?: number
   width?: number
 }
@@ -31,8 +33,10 @@ function appendImageUrlOptions(path: string, options?: InspirationImageUrlOption
   if (!options) return path
   const params = new URLSearchParams()
   if (Number.isFinite(options.width)) params.set('w', String(Math.round(options.width as number)))
+  if (Number.isFinite(options.height)) params.set('h', String(Math.round(options.height as number)))
   if (Number.isFinite(options.quality)) params.set('q', String(Math.round(options.quality as number)))
   if (options.format) params.set('format', options.format)
+  if (options.fit) params.set('fit', options.fit)
   const query = params.toString()
   return query ? `${path}?${query}` : path
 }

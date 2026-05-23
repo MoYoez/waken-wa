@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import sharp from 'sharp'
 
 export type ImageTransformFormat = 'avif' | 'jpeg' | 'png' | 'webp'
+export type ImageTransformFit = 'contain' | 'cover' | 'fill' | 'inside' | 'outside'
 
 type ImageTransformOptions = {
   cacheControl: string
@@ -14,7 +15,9 @@ type ImageTransformOptions = {
 }
 
 type ImageTransformParams = {
+  fit: ImageTransformFit | null
   format: ImageTransformFormat | null
+  height: number | null
   quality: number
   width: number | null
 }
@@ -25,6 +28,7 @@ const MAX_IMAGE_QUALITY = 92
 const MIN_IMAGE_WIDTH = 32
 const MAX_IMAGE_WIDTH = 2048
 const SUPPORTED_OUTPUT_FORMATS = new Set<ImageTransformFormat>(['avif', 'jpeg', 'png', 'webp'])
+const SUPPORTED_FIT_MODES = new Set<ImageTransformFit>(['contain', 'cover', 'fill', 'inside', 'outside'])
 
 function ClampNumber(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.round(value)))
@@ -47,12 +51,19 @@ function ParseFormat(raw: string | null, fallback?: ImageTransformFormat): Image
   return SUPPORTED_OUTPUT_FORMATS.has(value) ? value : null
 }
 
+function ParseFit(raw: string | null): ImageTransformFit | null {
+  const value = String(raw ?? '').trim().toLowerCase() as ImageTransformFit
+  return SUPPORTED_FIT_MODES.has(value) ? value : null
+}
+
 function ParseImageTransformParams(
   request: NextRequest,
   options: ImageTransformOptions,
 ): ImageTransformParams {
   return {
+    fit: ParseFit(request.nextUrl.searchParams.get('fit')),
     format: ParseFormat(request.nextUrl.searchParams.get('format'), options.defaultFormat),
+    height: ParseWidth(request.nextUrl.searchParams.get('h'), undefined),
     quality: ParseQuality(request.nextUrl.searchParams.get('q'), options.defaultQuality),
     width: ParseWidth(request.nextUrl.searchParams.get('w'), options.defaultWidth),
   }
@@ -60,7 +71,7 @@ function ParseImageTransformParams(
 
 function ShouldTransformImage(contentType: string, params: ImageTransformParams): boolean {
   if (contentType.includes('svg')) return false
-  return params.width !== null || params.format !== null
+  return params.width !== null || params.height !== null || params.format !== null
 }
 
 async function TransformImageBuffer(
@@ -74,9 +85,13 @@ async function TransformImageBuffer(
 
   try {
     let image = sharp(input, { animated: contentType.includes('gif') }).rotate()
-    if (params.width) {
+    if (params.width || params.height) {
+      const fit = params.fit ?? (params.width && params.height ? 'cover' : 'inside')
       image = image.resize({
-        width: params.width,
+        width: params.width ?? undefined,
+        height: params.height ?? undefined,
+        fit,
+        position: 'centre',
         withoutEnlargement: true,
       })
     }
@@ -103,7 +118,7 @@ async function TransformImageBuffer(
           contentType: 'image/webp',
         }
       default:
-        if (params.width) {
+        if (params.width || params.height) {
           return {
             body: await image.toBuffer(),
             contentType,

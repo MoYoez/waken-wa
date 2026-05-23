@@ -1,6 +1,8 @@
-/** Tuned for the 64–80px home/list cards. WebP at q60 ≈ ~6KB per thumbnail. */
+/** Tuned for the 64–80px home/list cards. Square cover crop avoids the off-axis pixel waste Lighthouse flags. */
 export const INSPIRATION_LIST_IMAGE_OPTIONS = {
+  fit: 'cover' as const,
   format: 'webp' as const,
+  height: 180,
   quality: 60,
   width: 180,
 } as const
