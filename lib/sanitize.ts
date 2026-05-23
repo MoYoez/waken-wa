@@ -26,12 +26,27 @@ export function SanitizePlainText(input: unknown, maxLength?: number): string {
   return String(DOMPurify.sanitize(bounded, PLAIN_TEXT_SANITIZE_CONFIG)).trim()
 }
 
+const SAFE_URL_PREFIXES = [
+  'http://',
+  'https://',
+  'data:image/',
+  'data:font/',
+  'blob:',
+  'mailto:',
+  'tel:',
+  '/',
+  './',
+  '../',
+  '#',
+  '?',
+]
+
 export function SanitizeUrl(input: unknown): string {
   const raw = SanitizePlainText(input, MAX_CSS_URL_LENGTH).replace(/^["']|["']$/g, '').trim()
   if (!raw) return ''
-  if (DOMPurify.isValidAttribute('img', 'src', raw)) return raw
-  if (DOMPurify.isValidAttribute('a', 'href', raw)) return raw
-  return ''
+  if (/\s/.test(raw)) return ''
+  const lower = raw.toLowerCase()
+  return SAFE_URL_PREFIXES.some((prefix) => lower.startsWith(prefix)) ? raw : ''
 }
 
 export function SanitizeCssUrls(css: string): string {
