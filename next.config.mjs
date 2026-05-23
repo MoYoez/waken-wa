@@ -24,6 +24,7 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    qualities:[80,90,100,70,60] // maybe someone Really prefer to use under 60?
   },
 }
 

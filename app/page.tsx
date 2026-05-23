@@ -1,5 +1,6 @@
 import { desc } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
+import Script from 'next/script'
 
 import { ActivityFeedProvider } from '@/components/activity-feed-provider'
 import { ContentReadingPanel } from '@/components/content-reading-panel'
@@ -161,8 +162,10 @@ export default async function Home() {
           fetchPriority="high"
         />
       ) : null}
-      <script
+      <Script
+        id="home-speculation-rules"
         type="speculationrules"
+        strategy="afterInteractive"
         // Hover-triggered prerender for inspiration links — most home visitors
         // click into /inspiration or an entry, so warming them up shaves a full
         // navigation off the next click.
