@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
-import i18nConfig from '@/i18n.config'
 import {
   ADMIN_LANGUAGE_COOKIE_NAME,
   getAdminLanguageFromCookie,
@@ -164,7 +163,7 @@ export async function proxy(request: NextRequest) {
     ) {
       return addSecurityHeaders(
         NextResponse.json(
-          { success: false, error: '请求过于频繁，请稍后再试' },
+          { success: false, error: '🤔 looks like service was in the trouble, :( ' },
           { status: 429 },
         ),
         pathname,
@@ -182,7 +181,7 @@ export async function proxy(request: NextRequest) {
     if (!sessionCookie?.value) {
       return addSecurityHeaders(
         NextResponse.json(
-          { success: false, error: '未授权' },
+          { success: false, error: '😕 Ticket! Please!' },
           { status: 401 },
         ),
         pathname,
