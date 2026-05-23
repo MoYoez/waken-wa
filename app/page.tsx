@@ -1,6 +1,5 @@
 import { desc } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
-import Script from 'next/script'
 
 import { ActivityFeedProvider } from '@/components/activity-feed-provider'
 import { ContentReadingPanel } from '@/components/content-reading-panel'
@@ -12,6 +11,7 @@ import { PublicPageShell } from '@/components/public-page-shell'
 import { ScheduleHomeInClassBanner } from '@/components/schedule-home-in-class-banner'
 import { SiteLockForm } from '@/components/site-lock-form'
 import { SiteReveal } from '@/components/site-reveal'
+import { SpeculationRules } from '@/components/speculation-rules'
 import { UserProfile, UserProfileNoteSection } from '@/components/user-profile'
 import {
   HOME_AVATAR_IMAGE_OPTIONS,
@@ -50,6 +50,14 @@ import packageJson from '@/package.json'
 export const dynamic = 'force-dynamic'
 
 const HOME_INSPIRATION_LIMIT = 3
+const HOME_SPECULATION_RULES_JSON = JSON.stringify({
+  prerender: [
+    {
+      where: { href_matches: '/inspiration*' },
+      eagerness: 'moderate',
+    },
+  ],
+})
 
 export default async function Home() {
   const result = await preparePublicPageShell()
@@ -162,23 +170,12 @@ export default async function Home() {
           fetchPriority="high"
         />
       ) : null}
-      <Script
+      <SpeculationRules
         id="home-speculation-rules"
-        type="speculationrules"
-        strategy="afterInteractive"
         // Hover-triggered prerender for inspiration links — most home visitors
         // click into /inspiration or an entry, so warming them up shaves a full
         // navigation off the next click.
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            prerender: [
-              {
-                where: { href_matches: '/inspiration*' },
-                eagerness: 'moderate',
-              },
-            ],
-          }),
-        }}
+        rulesJson={HOME_SPECULATION_RULES_JSON}
       />
       <HomeScrollbarHider />
       <PublicPageShell
