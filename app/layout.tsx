@@ -139,6 +139,7 @@ export default async function RootLayout({
             rel="stylesheet"
             href={publicPageFontRuntime.stylesheetHref}
             media="print"
+            suppressHydrationWarning
           />
         ) : null}
         {publicPageFontRuntime.stylesheetHref ? (
