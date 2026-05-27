@@ -35,3 +35,5 @@ data/*.db-wal
 tsconfig.tsbuildinfo
 .playwright-cli/
 output/*
+
+docs/superpowers/*
