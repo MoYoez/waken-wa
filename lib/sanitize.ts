@@ -1,12 +1,3 @@
-import DOMPurify, { type Config } from 'isomorphic-dompurify'
-
-const PLAIN_TEXT_SANITIZE_CONFIG: Config = {
-  ALLOWED_ATTR: [],
-  ALLOWED_TAGS: [],
-  KEEP_CONTENT: true,
-  SAFE_FOR_TEMPLATES: true,
-}
-
 const MAX_CSS_URL_LENGTH = 2048
 
 type SanitizeCssTextOptions = {
@@ -17,13 +8,69 @@ function ToString(value: unknown): string {
   return String(value ?? '')
 }
 
+const NAMED_HTML_ENTITIES: Record<string, string> = {
+  amp: '&',
+  apos: "'",
+  gt: '>',
+  lt: '<',
+  nbsp: ' ',
+  quot: '"',
+}
+
+function DecodeHtmlEntities(input: string): string {
+  return input.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (match, body: string) => {
+    if (body[0] === '#') {
+      const isHex = body[1] === 'x' || body[1] === 'X'
+      const codePoint = isHex ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10)
+      if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return ''
+      try {
+        return String.fromCodePoint(codePoint)
+      } catch {
+        return ''
+      }
+    }
+    const replacement = NAMED_HTML_ENTITIES[body.toLowerCase()]
+    return replacement ?? match
+  })
+}
+
+const HTML_BLOCK_TAG_NAMES =
+  'script|style|iframe|noscript|noembed|noframes|template|xmp|plaintext'
+const HTML_BLOCK_TAG_REGEX = new RegExp(
+  `<\\s*(${HTML_BLOCK_TAG_NAMES})\\b[^>]*>[\\s\\S]*?<\\s*/\\s*\\1\\s*>`,
+  'gi',
+)
+const HTML_DANGLING_BLOCK_OPEN_REGEX = new RegExp(
+  `<\\s*(${HTML_BLOCK_TAG_NAMES})\\b[\\s\\S]*$`,
+  'i',
+)
+
+function StripHtml(input: string): string {
+  return input
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '')
+    .replace(/<\?[\s\S]*?\?>/g, '')
+    .replace(HTML_BLOCK_TAG_REGEX, '')
+    .replace(HTML_DANGLING_BLOCK_OPEN_REGEX, '')
+    .replace(/<\/?[a-z!][^>]*>/gi, '')
+}
+
+function StripTemplateTokens(input: string): string {
+  return input
+    .replace(/\{\{[\s\S]*?\}\}/g, '')
+    .replace(/<%[\s\S]*?%>/g, '')
+    .replace(/\$\{[\s\S]*?\}/g, '')
+}
+
 export function SanitizePlainText(input: unknown, maxLength?: number): string {
   const raw = ToString(input)
   const bounded =
     typeof maxLength === 'number' && Number.isFinite(maxLength)
       ? raw.slice(0, Math.max(0, Math.round(maxLength)))
       : raw
-  return String(DOMPurify.sanitize(bounded, PLAIN_TEXT_SANITIZE_CONFIG)).trim()
+  const decoded = DecodeHtmlEntities(bounded)
+  const stripped = StripHtml(decoded)
+  return StripTemplateTokens(stripped).trim()
 }
 
 const SAFE_URL_PREFIXES = [
