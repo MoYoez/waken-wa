@@ -1,6 +1,6 @@
 {
   "name": "waken-wa",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "scripts": {
     "dev": "node scripts/start-with-banner.mjs dev",
     "build": "next build",

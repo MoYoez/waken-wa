@@ -25,6 +25,11 @@
       "activityFallback": "活动 #{{id}}",
       "customOfflineStatus": "离线",
       "customLockStatus": "已锁定",
+      "screenState": {
+        "locked": "屏幕已锁定",
+        "inactive": "屏幕不可交互",
+        "active": "屏幕已解锁且可交互"
+      },
       "lastOnline": "最后在线",
       "mediaSource": "来源",
       "mediaPlaying": "正在播放",

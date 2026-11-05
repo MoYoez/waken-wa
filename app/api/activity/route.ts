@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt, or } from 'drizzle-orm'
+import { and, eq, isNull, lt, ne, or } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
 import {
@@ -25,11 +25,11 @@ import { getSession, isSiteLockSatisfied } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { clearDeviceAuthCache } from '@/lib/device-auth-cache'
 import { devices, userActivities } from '@/lib/drizzle-schema'
-import { isLockScreenReporterProcessName } from '@/lib/lockapp-reporter'
+import { getReportedScreenState, isLockScreenReport } from '@/lib/lockapp-reporter'
 import { saveCoverFromDataUrl } from '@/lib/media-cover-storage'
 import { findMediaPlaySourceRuleMatch } from '@/lib/media-play-source-rules'
 import { buildDeviceApprovalUrl, getPublicOrigin } from '@/lib/public-request-url'
-import { removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
+import { removeRealtimeActivitiesForDevice, removeRealtimeActivity, upsertRealtimeActivity } from '@/lib/realtime-activity-cache'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
 import { parseProcessStaleSeconds } from '@/lib/site-config-values'
 import { sqlDate, sqlTimestamp } from '@/lib/sql-timestamp'
@@ -170,7 +170,8 @@ export async function POST(request: NextRequest) {
       mediaAppIconDataUrl,
     } = parsedBody.data
 
-    if (!generatedHashKey || !process_name) {
+    const screenState = getReportedScreenState(metadata)
+    if (!generatedHashKey || (!process_name && screenState === null)) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields: generatedHashKey and process_name' },
         { status: 400 },
@@ -335,10 +336,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (
-      siteCfg?.activityRejectLockappSleep === true &&
-      isLockScreenReporterProcessName(process_name)
-    ) {
+    const pushModeNorm = String((metadata as Record<string, unknown> | null)?.pushMode ?? '')
+      .trim()
+      .toLowerCase()
+    const isActivePush = pushModeNorm === 'active' || pushModeNorm === 'persistent'
+    const rejectSleepReport = siteCfg?.activityRejectLockappSleep === true &&
+      isLockScreenReport(process_name, metadata)
+
+    if (screenState !== null) {
+      await db.delete(userActivities).where(and(
+        eq(userActivities.deviceId, deviceRecord.id),
+        !rejectSleepReport && isActivePush ? ne(userActivities.processName, process_name) : undefined,
+      ))
+      if (rejectSleepReport || isActivePush) {
+        await removeRealtimeActivitiesForDevice(generatedHashKey)
+      }
+    }
+
+    if (rejectSleepReport) {
+      if (screenState !== null) await clearActivityFeedDataCache()
       return NextResponse.json(
         {
           success: false,
@@ -348,10 +364,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const pushModeNorm = String((metadata as Record<string, unknown> | null)?.pushMode ?? '')
-      .trim()
-      .toLowerCase()
-    const isActivePush = pushModeNorm === 'active' || pushModeNorm === 'persistent'
     const realtimeTtlSeconds = parseProcessStaleSeconds(siteCfg?.processStaleSeconds)
     const realtimeExpiresAt = new Date(reportAtMs + realtimeTtlSeconds * 1000)
     const finalMetadata: Record<string, unknown> = {

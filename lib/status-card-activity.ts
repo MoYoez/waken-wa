@@ -1,4 +1,5 @@
 import { getMediaDisplay } from '@/lib/activity-media'
+import { getReportedScreenState } from '@/lib/lockapp-reporter'
 import type { ScheduleOccurrence } from '@/lib/schedule-courses'
 import { getTrimmedText } from '@/lib/status-card-text'
 import type { ActivityFeedItem } from '@/types/activity'
@@ -45,6 +46,8 @@ export function shouldApplyStatusCardInClassOverride(
   activity: ActivityFeedItem | null,
 ): boolean {
   if (!activity) return false
+  const screenState = getReportedScreenState(activity.metadata)
+  if (screenState !== null) return screenState !== 'active'
   if (activity.isCustomOfflineStatus || activity.isCustomLockStatus) return true
   const source = [
     activity.statusText,

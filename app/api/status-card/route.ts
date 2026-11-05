@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ACTIVITY_FEED_DEFAULT_LIMIT } from '@/constants/activity-api'
 import { getActivityFeedData } from '@/lib/activity-feed'
 import { getSession, isSiteLockSatisfied } from '@/lib/auth'
+import { getRequestLanguage } from '@/lib/i18n/request-locale'
+import { getT } from '@/lib/i18n/server'
+import { getReportedScreenState } from '@/lib/lockapp-reporter'
 import { getPublicOrigin } from '@/lib/public-request-url'
 import {
   findOngoingOccurrenceAt,
@@ -102,7 +105,12 @@ export async function GET(request: NextRequest) {
       forPublicFeed: true,
       includeGeneratedHashKey: true,
     })
-    const activity = selectStatusCardActivity(feed, options)
+    let activity = selectStatusCardActivity(feed, options)
+    const screenState = getReportedScreenState(activity?.metadata)
+    if (activity && screenState !== null && !activity.statusText && !activity.processName && !activity.processTitle) {
+      const { t } = await getT('common', { lng: getRequestLanguage(request) })
+      activity = { ...activity, statusText: t(`site.currentStatus.screenState.${screenState}`) }
+    }
     const avatarDataUri =
       options.showHeader && options.showAvatar
         ? await resolveStatusCardAvatarDataUri(profile)

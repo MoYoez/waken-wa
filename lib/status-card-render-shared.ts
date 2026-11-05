@@ -1,6 +1,7 @@
 import {
   STATUS_CARD_SIGNATURE_WIDTH,
 } from '@/constants/status-card'
+import { getReportedScreenState } from '@/lib/lockapp-reporter'
 import type { ScheduleOccurrence } from '@/lib/schedule-courses'
 import {
   getInClassStatusLine,
@@ -76,6 +77,9 @@ function getStatusIcon(
   if (state === 'empty') return 'hourglass'
   if (state !== 'active' || !activity) return null
   if (activity.isCustomLockStatus) return 'lock'
+  const screenState = getReportedScreenState(activity.metadata)
+  if (screenState === 'locked') return 'lock'
+  if (screenState === 'inactive') return 'hourglass'
   if (!activity.isCustomOfflineStatus) return null
 
   const source = statusLine.toLowerCase()

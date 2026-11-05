@@ -187,7 +187,19 @@ export function buildSchemas(baseUrl: string) {
       description:
         'Custom activity metadata. The server also stores normalized fields such as deviceType, pushMode, and media.',
       additionalProperties: true,
+      dependentRequired: {
+        screen_locked: ['screen_interactive'],
+        screen_interactive: ['screen_locked'],
+      },
       properties: {
+        screen_locked: {
+          type: 'boolean',
+          description: 'Explicit lock-screen state. Must be sent with screen_interactive. When true, process_name and process_title must be empty (title may also be omitted or null).',
+        },
+        screen_interactive: {
+          type: 'boolean',
+          description: 'Whether the device is interactive. Must be sent with screen_locked. When false, process_name and process_title must be empty (title may also be omitted or null). Media may still be reported.',
+        },
         play_source: { type: 'string' },
         play_source_name: { type: 'string' },
         media: {
@@ -227,8 +239,11 @@ export function buildSchemas(baseUrl: string) {
         generatedHashKey: { type: 'string' },
         device: { type: 'string' },
         device_type: { type: 'string', enum: ['desktop', 'tablet', 'mobile'] },
-        process_name: { type: 'string' },
-        process_title: { type: 'string' },
+        process_name: {
+          type: 'string',
+          description: 'Required string. May be empty only when metadata contains both screen-state booleans, including when unlocked with foreground capture disabled.',
+        },
+        process_title: { type: ['string', 'null'] },
         battery_level: { type: 'integer', minimum: 0, maximum: 100 },
         is_charging: { type: 'boolean' },
         isCharging: { type: 'boolean' },

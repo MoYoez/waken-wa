@@ -25,6 +25,11 @@
       "activityFallback": "activity #{{id}}",
       "customOfflineStatus": "Offline",
       "customLockStatus": "Locked",
+      "screenState": {
+        "locked": "Screen locked",
+        "inactive": "Screen inactive",
+        "active": "Screen active"
+      },
       "lastOnline": "Last online",
       "mediaSource": "Source",
       "mediaPlaying": "Playing",

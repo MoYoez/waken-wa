@@ -28,7 +28,7 @@ Unified API reference:
 Required fields:
 
 - `generatedHashKey`: unique device identifier, obtained after creating a device in admin `Device Management`
-- `process_name`: process name, such as `VS Code`
+- `process_name`: process name, such as `VS Code`. An empty string is accepted only with a complete screen-state pair described below.
 
 Optional fields:
 
@@ -39,6 +39,33 @@ Optional fields:
 - `device_type`: device type, one of `desktop` / `tablet` / `mobile`
 - `push_mode`: push mode, one of `realtime` / `active`
 - `metadata`: extended JSON object
+
+#### Explicit Screen State
+
+Android reporters send `metadata.screen_locked` and `metadata.screen_interactive` together as booleans on every report. If either field is present, both are required; missing fields, `null`, and non-boolean values return `400`. Omitting both preserves the existing process-name protocol, including desktop lock-screen detection.
+
+- `screen_locked: true` means the lock screen is showing.
+- `screen_interactive: false` means the device is not interactive; it does not imply that media playback has stopped.
+- If locked or non-interactive, send `process_name: ""` and omit `process_title`, or set the title to `null` or an empty string. A non-empty app name or title returns `400`.
+- When unlocked and interactive, send both fields again. `process_name: ""` remains valid when foreground capture is disabled or no app is available.
+
+```json
+{
+  "generatedHashKey": "MY_DEVICE_HASH",
+  "device": "Android Phone",
+  "device_type": "mobile",
+  "process_name": "",
+  "push_mode": "realtime",
+  "metadata": {
+    "screen_locked": true,
+    "screen_interactive": false
+  }
+}
+```
+
+An explicit screen report supersedes earlier current-activity slots for the same device in both realtime cache and persistent active storage. App filters, active-mode priority, or expiry must not reveal a pre-lock app again. Screen-only status is displayed independently of app filters; media keeps its normal reporting and display rules. Custom lock status also applies to locked/non-interactive reports. With **Sleep as offline** enabled, the server clears the previous current activity and returns the existing `403` sleep rejection instead of displaying the lock state.
+
+Deploy this server support before updating Android reporters. This protocol does not change Android Service ownership, polling intervals, or power restrictions.
 
 #### `metadata.play_source` Optional Media Source
 
@@ -184,7 +211,7 @@ Success response:
 Common errors:
 
 - `401`: Token is invalid or disabled
-- `400`: required fields are missing, such as `generatedHashKey` or `process_name`
+- `400`: required fields are missing, the screen-state pair is invalid, or an inactive screen report includes an app name/title
 - `403`: device does not exist, is revoked, or does not match the current Token binding
 - `500`: server error
 
@@ -194,7 +221,7 @@ If reporting fails, check the following in order:
 
 1. The Token is the full value, not a truncated value
 2. The `Bearer ` prefix is included
-3. `generatedHashKey` and `process_name` are present
+3. `generatedHashKey` and `process_name` are present; an empty process name requires both screen-state booleans
 4. The Token is enabled in the admin panel
 5. The device exists and is in the `active` state in admin `Device Management`
 

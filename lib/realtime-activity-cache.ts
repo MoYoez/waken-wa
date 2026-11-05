@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
+import { getReportedScreenState } from '@/lib/lockapp-reporter'
 import {
   redisHDel,
   redisHDelMany,
@@ -101,7 +102,7 @@ async function cleanupExpiredRedisFields(expiredFields: string[], now = nowMs())
   await redisHDelMany(REALTIME_ACTIVITY_CACHE_KEY, expiredFields)
 }
 
-async function loadState(): Promise<RealtimeActivityState> {
+async function loadState(refresh = false): Promise<RealtimeActivityState> {
   const memory = getMemory()
   memory.state = prune(memory.state)
   const useRedis = await shouldUseRedisCache()
@@ -113,7 +114,7 @@ async function loadState(): Promise<RealtimeActivityState> {
     return memory.state
   }
 
-  if (memory.loaded && nowMs() - memory.loadedAt < REDIS_REFRESH_INTERVAL_MS) {
+  if (!refresh && memory.loaded && nowMs() - memory.loadedAt < REDIS_REFRESH_INTERVAL_MS) {
     return memory.state
   }
 
@@ -147,6 +148,9 @@ export async function upsertRealtimeActivity(
   row: Omit<RealtimeActivityRow, 'id'>,
   ttlSeconds: number,
 ): Promise<void> {
+  if (getReportedScreenState(row.metadata) !== null) {
+    await removeRealtimeActivitiesForDevice(row.generatedHashKey, row.processName)
+  }
   const state = await loadState()
   const key = cacheKey(row.generatedHashKey, row.processName)
   const existingRow = state[key]
@@ -189,6 +193,24 @@ export async function removeRealtimeActivity(
     return
   }
   await saveState(prune(state), 60)
+}
+
+/** Remove superseded device slots from both memory and Redis, regardless of their TTL. */
+export async function removeRealtimeActivitiesForDevice(
+  generatedHashKey: string,
+  keepProcessName?: string,
+): Promise<void> {
+  const state = await loadState(true)
+  const keepKey = keepProcessName === undefined ? null : cacheKey(generatedHashKey, keepProcessName)
+  const removedKeys = Object.keys(state).filter(
+    (key) => state[key].generatedHashKey === generatedHashKey && key !== keepKey,
+  )
+  for (const key of removedKeys) {
+    delete state[key]
+  }
+  if (await shouldUseRedisCache()) {
+    await redisHDelMany(REALTIME_ACTIVITY_CACHE_KEY, removedKeys)
+  }
 }
 
 export async function listRealtimeActivities(): Promise<RealtimeActivityRow[]> {

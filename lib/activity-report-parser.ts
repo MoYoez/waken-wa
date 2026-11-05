@@ -14,6 +14,7 @@ import {
   USER_ACTIVITY_DB_SYNCED_METADATA_KEY,
   USER_PERSIST_EXPIRES_AT_METADATA_KEY,
 } from '@/lib/activity-store'
+import { getReportedScreenState } from '@/lib/lockapp-reporter'
 import { USER_ACTIVITY_PERSIST_MAX_SEC, USER_ACTIVITY_PERSIST_MIN_SEC } from '@/lib/user-activity-persist'
 
 type ParseActivityReportOptions = {
@@ -229,6 +230,23 @@ export function parseActivityReportBody(
   }
 
   metadata = removeMetadataKeys(metadata, options.stripMetadataKeysAfterNormalize)
+
+  try {
+    const screenState = getReportedScreenState(metadata)
+    if (screenState !== null) {
+      if (typeof processNameRaw !== 'string') {
+        return { ok: false, error: 'process_name must be a string, including for screen-only reports', status: 400 }
+      }
+      if (processTitleRaw != null && typeof processTitleRaw !== 'string') {
+        return { ok: false, error: 'process_title must be a string or null', status: 400 }
+      }
+      if (screenState !== 'active' && (processName || processTitle)) {
+        return { ok: false, error: 'Inactive screen reports must not include a process name or title', status: 400 }
+      }
+    }
+  } catch (error) {
+    return { ok: false, error: (error as Error).message, status: 400 }
+  }
 
   return {
     ok: true,

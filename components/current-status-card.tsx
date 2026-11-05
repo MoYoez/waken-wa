@@ -20,6 +20,7 @@ import { getSiteSectionTransition, getSiteSectionVariants } from '@/components/s
 import { useSiteTimeFormat } from '@/components/site-timezone-provider'
 import { isDeviceBatteryCharging } from '@/lib/activity-battery-metadata'
 import { getMediaDisplay } from '@/lib/activity-media'
+import { getReportedScreenState } from '@/lib/lockapp-reporter'
 import { cn } from '@/lib/utils'
 import type { ActivityFeedItem, SteamNowPlayingInfo } from '@/types'
 
@@ -92,7 +93,11 @@ export function CurrentStatusCard({
       : t('site.currentStatus.activityFallback', { id: activity.id }))
   const deviceType = getDeviceType(deviceName, activity.metadata)
   const lastReportAt = activity.lastReportAt || activity.updatedAt || activity.startedAt
-  const statusLine = typeof activity.statusText === 'string' ? activity.statusText.trim() : ''
+  const screenState = getReportedScreenState(activity.metadata)
+  const statusLine = (typeof activity.statusText === 'string' ? activity.statusText.trim() : '') ||
+    (screenState !== null && !activity.processName && !activity.processTitle
+      ? t(`site.currentStatus.screenState.${screenState}`)
+      : '')
   const media = hideActivityMedia ? null : getMediaDisplay(activity.metadata)
   const sp = activity.steamNowPlaying
   const steam: SteamNowPlayingInfo | null =
@@ -195,7 +200,7 @@ export function CurrentStatusCard({
         </div>
 
         <div className="flex items-start gap-2">
-          {activity.isCustomLockStatus ? (
+          {activity.isCustomLockStatus || screenState === 'locked' || screenState === 'inactive' ? (
             <Hourglass className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
           ) : activity.isCustomOfflineStatus ? (
             <Moon className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />

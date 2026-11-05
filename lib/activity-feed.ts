@@ -16,7 +16,7 @@ import {
 } from '@/lib/app-message-rules'
 import { db } from '@/lib/db'
 import { devices, userActivities } from '@/lib/drizzle-schema'
-import { isLockScreenReporterProcessName } from '@/lib/lockapp-reporter'
+import { getReportedScreenState, isLockScreenReport } from '@/lib/lockapp-reporter'
 import { applyMediaPlaySourceRulesToMetadata, normalizeMediaPlaySourceRules } from '@/lib/media-play-source-rules'
 import { listRealtimeActivities } from '@/lib/realtime-activity-cache'
 import { getSiteConfigMemoryFirst } from '@/lib/site-config-cache'
@@ -365,10 +365,24 @@ export async function getActivityFeedData(
   // Keep latest active entry for each device
   const activePending: Array<{ hashKey: string; row: Record<string, unknown> }> = []
   const seen = new Set<string>()
-  const activeMerged: ActivityFeedCandidate[] = [
+  const activeCandidates: ActivityFeedCandidate[] = [
     ...activeRows.map((row): ActivityFeedCandidate => ({ row, source: 'persistent' })),
     ...realtimeRowsTyped.map((row): ActivityFeedCandidate => ({ row, source: 'realtime' })),
-  ].sort((a, b) => {
+  ]
+  // Resolve explicit device state before app filtering or active-mode priority.
+  const latestScreenReportByDevice = new Map<string, ActivityFeedCandidate>()
+  for (const candidate of activeCandidates) {
+    if (getReportedScreenState(normalizeMetadata(candidate.row.metadata)) === null) continue
+    const key = candidate.row.generatedHashKey
+    const previous = latestScreenReportByDevice.get(key)
+    if (!previous || getActivityTimeMs(candidate.row) > getActivityTimeMs(previous.row)) {
+      latestScreenReportByDevice.set(key, candidate)
+    }
+  }
+  const activeMerged = activeCandidates.filter((candidate) => {
+    const screenReport = latestScreenReportByDevice.get(candidate.row.generatedHashKey)
+    return !screenReport || screenReport === candidate
+  }).sort((a, b) => {
     const aMode = getFeedPushMode(a)
     const bMode = getFeedPushMode(b)
     if (aMode !== bMode) return aMode === 'active' ? -1 : 1
@@ -380,10 +394,12 @@ export async function getActivityFeedData(
     const key = item.generatedHashKey
     if (!key) continue
     if (seen.has(key)) continue
-    if (!passesAppFilter(item.processName)) continue
+    const normalizedMeta = normalizeMetadata(item.metadata)
+    const screenState = getReportedScreenState(normalizedMeta)
+    if (screenState !== null && screenState !== 'active' && config?.activityRejectLockappSleep === true) continue
+    if (!(screenState !== null && !item.processName) && !passesAppFilter(item.processName)) continue
     seen.add(key)
     const pushMode = getFeedPushMode(candidate)
-    const normalizedMeta = normalizeMetadata(item.metadata)
     const maskedTitle = nameOnlySet.has(processKey) ? null : item.processTitle
     const ruleStatusText = applyMessageRule(
       item.processName,
@@ -504,11 +520,13 @@ export async function getActivityFeedData(
 
   const activeStatuses: ActivityFeedItem[] = []
   for (const { hashKey, row } of sortedActivePending) {
-    const sp = steamByHash.get(hashKey)
-    if (sp) row.steamNowPlaying = sp
-
     const processName = String(row.processName ?? '')
-    if (processName && isLockScreenReporterProcessName(processName)) {
+    const metadata = row.metadata as Record<string, unknown> | null
+    const isScreenOnly = getReportedScreenState(metadata) !== null && !processName
+    const sp = steamByHash.get(hashKey)
+    if (sp && !isScreenOnly) row.steamNowPlaying = sp
+
+    if (isLockScreenReport(processName, metadata)) {
       const device = allDevicesWithCustomStatus.find(
         (candidate: { generatedHashKey: string | null }) => candidate.generatedHashKey === hashKey,
       )
@@ -564,6 +582,7 @@ export async function getActivityFeedData(
   const seenProcess = new Set<string>()
   for (const item of recentActivities as Array<{ processName: string; processTitle?: string | null }>) {
     const key = item.processName.toLowerCase()
+    if (!key) continue
     if (seenProcess.has(key)) continue
     seenProcess.add(key)
     const processKey = normalizeProcessName(item.processName)

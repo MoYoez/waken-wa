@@ -24,3 +24,27 @@ export function isLockScreenReporterProcessName(processName: string): boolean {
 }
 
 export const isLockAppReporterProcessName = isLockScreenReporterProcessName
+
+/** Explicit screen state takes precedence over desktop process-name detection. */
+export function getReportedScreenState(
+  metadata: Record<string, unknown> | null | undefined,
+): 'locked' | 'inactive' | 'active' | null {
+  if (!metadata || (!('screen_locked' in metadata) && !('screen_interactive' in metadata))) {
+    return null
+  }
+  if (typeof metadata.screen_locked !== 'boolean' || typeof metadata.screen_interactive !== 'boolean') {
+    throw new Error('metadata.screen_locked and metadata.screen_interactive must both be booleans')
+  }
+  if (metadata.screen_locked) return 'locked'
+  return metadata.screen_interactive ? 'active' : 'inactive'
+}
+
+export function isLockScreenReport(
+  processName: string,
+  metadata: Record<string, unknown> | null | undefined,
+): boolean {
+  const screenState = getReportedScreenState(metadata)
+  return screenState === null
+    ? isLockScreenReporterProcessName(processName)
+    : screenState !== 'active'
+}

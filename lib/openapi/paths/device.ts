@@ -97,7 +97,7 @@ export function buildDevicePaths(baseUrl: string) {
         tags: ['Device'],
         summary: 'Report device activity',
         description:
-          'Primary device reporting endpoint. Use a bearer API token and a stable generatedHashKey.',
+          'Primary device reporting endpoint. Use a bearer API token and a stable generatedHashKey. Explicit screen-state reports replace earlier current activity for the device; locked or non-interactive reports must not contain an app name or title.',
         security: bearerSecurity('Bearer token from the API Token admin page.'),
         requestBody: {
           required: true,
@@ -131,6 +131,17 @@ export function buildDevicePaths(baseUrl: string) {
                   process_title: 'Dashboard',
                   push_mode: 'active',
                   metadata: { play_source: 'system_media', play_source_name: 'System Media' },
+                },
+              },
+              screenLocked: {
+                summary: 'Android locked screen',
+                value: {
+                  generatedHashKey: 'MY_DEVICE_HASH',
+                  device: 'Android Phone',
+                  device_type: 'mobile',
+                  process_name: '',
+                  push_mode: 'realtime',
+                  metadata: { screen_locked: true, screen_interactive: false },
                 },
               },
             },
