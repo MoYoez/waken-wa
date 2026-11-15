@@ -647,6 +647,39 @@ export const activityPlaySourceHistory = sqliteTable(
   },
 )
 
+export const activityStatBuckets = sqliteTable(
+  'activity_stat_buckets',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    /** Wall-clock date (YYYY-MM-DD) in the site display timezone. */
+    statDate: text('stat_date').notNull(),
+    /** Wall-clock hour (0-23) in the site display timezone. */
+    hourOfDay: integer('hour_of_day').notNull().default(0),
+    /** 'app' or 'play_source'. */
+    kind: text('kind').notNull(),
+    /** Normalized process name or play source. */
+    entryKey: text('entry_key').notNull(),
+    /** 'pc' / 'mobile' for apps; empty string for play sources. */
+    platform: text('platform').notNull().default(''),
+    hitCount: integer('hit_count').notNull().default(0),
+    firstSeenAt: ts('first_seen_at'),
+    lastSeenAt: ts('last_seen_at'),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    uniqueIndex('activity_stat_buckets_grain_key').on(
+      t.statDate,
+      t.hourOfDay,
+      t.kind,
+      t.entryKey,
+      t.platform,
+    ),
+    index('activity_stat_buckets_date_idx').on(t.statDate),
+    index('activity_stat_buckets_kind_date_idx').on(t.kind, t.statDate),
+  ],
+)
+
 export const imageSources = sqliteTable(
   'image_sources',
   {
@@ -761,6 +794,7 @@ export const sqliteSchema = {
   siteSettingsV2RuleTitleRules,
   activityAppHistory,
   activityPlaySourceHistory,
+  activityStatBuckets,
   imageSources,
   systemSecrets,
   skillsOauthTokens,

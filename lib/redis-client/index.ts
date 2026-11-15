@@ -13,6 +13,8 @@ export {
   redisHSetManyAndIncrWithExpire,
   redisIncrWithExpire,
   redisListKeysByPrefix,
+  redisPing,
+  redisPttl,
   redisSetJson,
   redisSetString,
   redisZAdd,

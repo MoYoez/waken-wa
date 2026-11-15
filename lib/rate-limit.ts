@@ -1,5 +1,5 @@
 import { shouldUseRedisCache } from '@/lib/cache-runtime-toggle'
-import { redisIncrWithExpire } from '@/lib/redis-client'
+import { redisIncrWithExpire, redisPttl } from '@/lib/redis-client'
 
 const memoryStore = new Map<string, { count: number; resetAt: number }>()
 let memoryOpCount = 0
@@ -53,10 +53,14 @@ export async function checkRateLimit(
     (await shouldUseRedisCache()) ? await redisIncrWithExpire(`waken:rl:${key}`, windowSeconds) : null
   if (redisCount != null) {
     const now = Date.now()
+    // Prefer the real key TTL so Retry-After / X-RateLimit-Reset match the fixed window
+    // instead of always reporting a full window from "now".
+    const ttlMs = await redisPttl(`waken:rl:${key}`)
+    const resetAt = ttlMs != null ? now + ttlMs : now + windowMs
     return {
       limited: redisCount > maxRequests,
       count: redisCount,
-      resetAt: now + windowMs,
+      resetAt,
       backend: 'redis',
     }
   }

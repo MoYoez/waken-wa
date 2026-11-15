@@ -5,6 +5,7 @@ import { buildDevicePaths } from '@/lib/openapi/paths/device'
 import { buildInspirationPaths } from '@/lib/openapi/paths/inspiration'
 import { buildLlmPaths } from '@/lib/openapi/paths/llm'
 import { buildMcpPaths } from '@/lib/openapi/paths/mcp'
+import { buildPublicFeedPaths } from '@/lib/openapi/paths/public-feeds'
 import type { OpenApiDocument } from '@/types/openapi'
 
 export function getOpenApiDocument(baseUrl: string): OpenApiDocument {
@@ -44,6 +45,7 @@ export function getOpenApiDocument(baseUrl: string): OpenApiDocument {
       ...buildLlmPaths(),
       ...buildMcpPaths(),
       ...buildInspirationPaths(),
+      ...buildPublicFeedPaths(),
     },
   }
 }

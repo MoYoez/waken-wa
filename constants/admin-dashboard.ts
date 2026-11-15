@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  BarChart3,
   CalendarDays,
   Key,
   LayoutDashboard,
@@ -61,6 +62,12 @@ export const ADMIN_DASHBOARD_TAB_ITEMS: ReadonlyArray<AdminDashboardTabItem> = [
     label: '孤儿图片',
     description: '清理未被正文引用的素材',
     icon: Link2Off,
+  },
+  {
+    value: 'stats',
+    label: '历史统计',
+    description: '查看活动排行、占比与趋势热力图',
+    icon: BarChart3,
   },
   {
     value: 'settings',

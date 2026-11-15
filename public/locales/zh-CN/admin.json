@@ -40,7 +40,8 @@
     "loadPublicActivityFeedFailed": "活动数据加载失败（HTTP {{status}}）",
     "loadHistoryAppsFailed": "加载历史应用失败（HTTP {{status}}）",
     "loadHistoryPlaySourcesFailed": "加载历史媒体来源失败（HTTP {{status}}）",
-    "loadInspirationEntriesFailed": "加载灵感记录失败（HTTP {{status}}）"
+    "loadInspirationEntriesFailed": "加载灵感记录失败（HTTP {{status}}）",
+    "loadActivityStatsFailed": "加载历史统计失败（HTTP {{status}}）"
   },
   "mutation": {
     "createAdminUserFailed": "创建管理员失败",
@@ -373,6 +374,10 @@
         "label": "孤儿图片",
         "description": "清理未被正文引用的素材"
       },
+      "stats": {
+        "label": "历史统计",
+        "description": "查看活动排行、占比与趋势热力图"
+      },
       "settings": {
         "label": "网站设置",
         "description": "统一管理站点行为、主题与规则"
@@ -388,6 +393,51 @@
     "viewerCountLastUpdated": "最后更新 {{value}}",
     "viewerCountWaiting": "等待首个访客心跳",
     "justNow": "刚刚",
+    "stats": {
+      "loadFailed": "加载历史统计失败，请稍后重试。",
+      "rangeLabel": "统计范围",
+      "rangeDays": "{{days}} 天",
+      "timezone": "时区 {{value}}",
+      "empty": "暂无数据",
+      "hits": "次",
+      "totals": {
+        "rangeHits": "范围内上报次数",
+        "appCount": "应用总数",
+        "playSourceCount": "媒体来源总数",
+        "devices": "设备总数",
+        "devicesActive": "近 7 天活跃 {{count}} 台",
+        "appReportTotal": "应用累计上报",
+        "inspirationCount": "灵感条目"
+      },
+      "topApps": "应用排行",
+      "topAppsDescription": "按统计范围内上报次数排序的常用应用。",
+      "topPlaySources": "媒体来源排行",
+      "topPlaySourcesDescription": "按统计范围内上报次数排序的媒体来源。",
+      "platformSplit": "PC / 移动占比",
+      "platformSplitDescription": "统计范围内应用上报的平台分布。",
+      "platformPc": "桌面端",
+      "platformMobile": "移动端",
+      "recentApps": "最近活跃应用",
+      "recentAppsDescription": "按最近出现时间排序的应用。",
+      "dailyTrend": "每日趋势",
+      "dailyTrendDescription": "统计范围内每天的应用与媒体来源上报次数（仅统计启用后产生的数据）。",
+      "trendApps": "应用",
+      "trendPlaySources": "媒体来源",
+      "trendEmpty": "暂无时序数据，启用统计后将逐步积累。",
+      "heatmap": "活跃热力图",
+      "heatmapDescription": "按星期与小时聚合的上报热度（基于统计范围内的时序数据）。",
+      "heatmapLess": "少",
+      "heatmapMore": "多",
+      "weekday": {
+        "sun": "日",
+        "mon": "一",
+        "tue": "二",
+        "wed": "三",
+        "thu": "四",
+        "fri": "五",
+        "sat": "六"
+      }
+    },
     "todayStatus": {
       "title": "今日状态",
       "description": "更新首页头像角标：一个 emoji、一段短文、过期时间和繁忙提示。",

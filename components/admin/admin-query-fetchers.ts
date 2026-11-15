@@ -3,6 +3,7 @@
 import { fetchAdminData, fetchAdminSuccess } from '@/lib/admin-client-fetch'
 import { tAdminClient } from '@/lib/i18n/admin-client'
 import type { ActivityFeedData } from '@/types/activity'
+import type { ActivityStatsResponse } from '@/types/activity-stats'
 import type {
   AdminDeviceItem,
   AdminDeviceSummary,
@@ -234,6 +235,22 @@ export async function exportAdminActivityApps(): Promise<unknown> {
   return fetchAdminData<unknown>('/api/admin/activity/apps-export', {
     fallbackError: tAdminClient('query.exportFailed'),
   })
+}
+
+export async function fetchActivityStats(input?: {
+  days?: number
+}): Promise<ActivityStatsResponse> {
+  const params = new URLSearchParams()
+  if (typeof input?.days === 'number') params.set('days', String(input.days))
+  const query = params.toString()
+  return fetchAdminData<ActivityStatsResponse>(
+    query ? `/api/admin/activity/stats?${query}` : '/api/admin/activity/stats',
+    {
+      cache: 'no-store',
+      fallbackError: (response) =>
+        tAdminClient('query.loadActivityStatsFailed', { status: response.status }),
+    },
+  )
 }
 
 export async function fetchAdminRuleToolsSummary(): Promise<RuleToolsSummary> {

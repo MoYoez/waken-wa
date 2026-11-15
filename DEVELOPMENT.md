@@ -71,3 +71,4 @@ pnpm start
 - OpenAPI JSON: `/api/openapi.json`
 - Device integration guide: [`docs/activity-reporting.md`](./docs/activity-reporting.md)
 - Inspiration integration guide: [`docs/inspiration-integration.md`](./docs/inspiration-integration.md)
+- Public embeds & feeds: [`docs/public-endpoints.md`](./docs/public-endpoints.md)

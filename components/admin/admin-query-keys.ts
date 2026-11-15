@@ -34,6 +34,8 @@ export const adminQueryKeys = {
       ['admin', 'activity-history', 'apps', input ?? {}] as const,
     historyPlaySources: (input?: { q?: string; limit?: number; offset?: number }) =>
       ['admin', 'activity-history', 'play-sources', input ?? {}] as const,
+    stats: (input?: { days?: number }) =>
+      ['admin', 'activity-stats', input ?? {}] as const,
   },
   ruleTools: {
     summary: () => ['admin', 'rule-tools', 'summary'] as const,

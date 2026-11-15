@@ -40,6 +40,7 @@ import { useViewerCount } from '@/hooks/use-viewer-count'
 import type { AdminTabValue } from '@/types/admin-dashboard'
 
 import { AccountSettings } from './account-settings'
+import { ActivityStatsPanel } from './activity-stats-panel'
 import { AddActivityForm } from './add-activity-form'
 import { DashboardOverviewPanel } from './dashboard-overview-panel'
 import { ShouldShowRecentRecord } from './dashboard-utils'
@@ -108,6 +109,7 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     tokens: null,
     account: null,
     'orphan-images': null,
+    stats: null,
     settings: null,
   })
   const tabIndicatorTransition = useMemo(
@@ -232,6 +234,9 @@ function AdminDashboardContent({ username, initialTab, initialDeviceHash }: Dash
     }
     if (activeTab === 'account') {
       return <AccountSettings />
+    }
+    if (activeTab === 'stats') {
+      return <ActivityStatsPanel />
     }
     if (activeTab === 'settings') {
       return <WebSettings />
