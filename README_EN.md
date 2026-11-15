@@ -169,6 +169,7 @@ See [**DEVELOPMENT.md**](DEVELOPMENT.md).
 - OpenAPI JSON: [`/api/openapi.json`](./app/api/openapi.json/route.ts)
 - Device quickstart: [`docs/activity-reporting.md`](./docs/activity-reporting.md)
 - Inspiration quickstart: [`docs/inspiration-integration.md`](./docs/inspiration-integration.md)
+- Public embeds & feeds: [`docs/public-endpoints.md`](./docs/public-endpoints.md)
 
 ---
 

@@ -56,6 +56,7 @@ export const activityAppHistory = usePg ? pg.activityAppHistory : sqlite.activit
 export const activityPlaySourceHistory = usePg
   ? pg.activityPlaySourceHistory
   : sqlite.activityPlaySourceHistory
+export const activityStatBuckets = usePg ? pg.activityStatBuckets : sqlite.activityStatBuckets
 export const imageSources = usePg ? pg.imageSources : sqlite.imageSources
 export const systemSecrets = usePg ? pg.systemSecrets : sqlite.systemSecrets
 export const skillsOauthTokens = usePg ? pg.skillsOauthTokens : sqlite.skillsOauthTokens

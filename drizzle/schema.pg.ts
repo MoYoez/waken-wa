@@ -669,6 +669,47 @@ export const activityPlaySourceHistory = pgTable('activity_play_source_history',
     .defaultNow(),
 })
 
+export const activityStatBuckets = pgTable(
+  'activity_stat_buckets',
+  {
+    id: serial('id').primaryKey(),
+    /** Wall-clock date (YYYY-MM-DD) in the site display timezone. */
+    statDate: varchar('stat_date', { length: 10 }).notNull(),
+    /** Wall-clock hour (0-23) in the site display timezone. */
+    hourOfDay: integer('hour_of_day').notNull().default(0),
+    /** 'app' or 'play_source'. */
+    kind: varchar('kind', { length: 20 }).notNull(),
+    /** Normalized process name or play source. */
+    entryKey: varchar('entry_key', { length: 200 }).notNull(),
+    /** 'pc' / 'mobile' for apps; empty string for play sources. */
+    platform: varchar('platform', { length: 20 }).notNull().default(''),
+    hitCount: integer('hit_count').notNull().default(0),
+    firstSeenAt: timestamp('first_seen_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp('last_seen_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('activity_stat_buckets_grain_key').on(
+      t.statDate,
+      t.hourOfDay,
+      t.kind,
+      t.entryKey,
+      t.platform,
+    ),
+    index('activity_stat_buckets_date_idx').on(t.statDate),
+    index('activity_stat_buckets_kind_date_idx').on(t.kind, t.statDate),
+  ],
+)
+
 export const imageSources = pgTable(
   'image_sources',
   {
@@ -797,6 +838,7 @@ export const pgSchema = {
   siteSettingsV2RuleTitleRules,
   activityAppHistory,
   activityPlaySourceHistory,
+  activityStatBuckets,
   imageSources,
   systemSecrets,
   skillsOauthTokens,

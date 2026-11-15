@@ -130,6 +130,31 @@ export async function redisExpire(key: string, ttlSeconds: number): Promise<bool
   }
 }
 
+/** Remaining TTL for `key` in milliseconds, or null when unknown/unsupported. */
+export async function redisPttl(key: string): Promise<number | null> {
+  const client = getRedisClient()
+  if (!client) return null
+  try {
+    const ms = Number(await client.pttl(key))
+    // ioredis returns -2 (missing key) or -1 (no expire); treat both as unknown.
+    return Number.isFinite(ms) && ms >= 0 ? ms : null
+  } catch {
+    return null
+  }
+}
+
+/** Lightweight connectivity probe used by the health endpoint. */
+export async function redisPing(): Promise<boolean> {
+  const client = getRedisClient()
+  if (!client) return false
+  try {
+    const pong = await client.ping()
+    return String(pong).toUpperCase() === 'PONG'
+  } catch {
+    return false
+  }
+}
+
 /** Best-effort: delete all keys matching `prefix*` (SCAN + batched DEL). */
 export async function redisDeleteByPrefix(prefix: string): Promise<void> {
   const client = getRedisClient()

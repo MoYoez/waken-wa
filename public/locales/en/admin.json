@@ -40,7 +40,8 @@
     "loadPublicActivityFeedFailed": "Failed to load public activity data (HTTP {{status}})",
     "loadHistoryAppsFailed": "Failed to load app history (HTTP {{status}})",
     "loadHistoryPlaySourcesFailed": "Failed to load play-source history (HTTP {{status}})",
-    "loadInspirationEntriesFailed": "Failed to load inspiration entries (HTTP {{status}})"
+    "loadInspirationEntriesFailed": "Failed to load inspiration entries (HTTP {{status}})",
+    "loadActivityStatsFailed": "Failed to load statistics (HTTP {{status}})"
   },
   "mutation": {
     "createAdminUserFailed": "Failed to create the admin user",
@@ -373,6 +374,10 @@
         "label": "Orphan img",
         "description": "Clean up assets that are no longer referenced"
       },
+      "stats": {
+        "label": "Statistics",
+        "description": "Review activity rankings, splits, and trend heatmaps"
+      },
       "settings": {
         "label": "Site settings",
         "description": "Manage site behavior, theme, and rules in one place"
@@ -388,6 +393,51 @@
     "viewerCountLastUpdated": "Updated {{value}}",
     "viewerCountWaiting": "Waiting for the first visitor heartbeat",
     "justNow": "just now",
+    "stats": {
+      "loadFailed": "Failed to load statistics. Please try again later.",
+      "rangeLabel": "Range",
+      "rangeDays": "{{days}} days",
+      "timezone": "TZ {{value}}",
+      "empty": "No data yet",
+      "hits": "hits",
+      "totals": {
+        "rangeHits": "Reports in range",
+        "appCount": "Total apps",
+        "playSourceCount": "Total play sources",
+        "devices": "Total devices",
+        "devicesActive": "{{count}} active in last 7 days",
+        "appReportTotal": "Cumulative app reports",
+        "inspirationCount": "Inspiration entries"
+      },
+      "topApps": "Top apps",
+      "topAppsDescription": "Most active apps by report count within the range.",
+      "topPlaySources": "Top play sources",
+      "topPlaySourcesDescription": "Play sources ranked by report count within the range.",
+      "platformSplit": "PC / mobile split",
+      "platformSplitDescription": "Platform distribution of app reports within the range.",
+      "platformPc": "Desktop",
+      "platformMobile": "Mobile",
+      "recentApps": "Recently active apps",
+      "recentAppsDescription": "Apps ordered by last seen time.",
+      "dailyTrend": "Daily trend",
+      "dailyTrendDescription": "Daily app and play-source reports within the range (only data captured after enabling).",
+      "trendApps": "Apps",
+      "trendPlaySources": "Play sources",
+      "trendEmpty": "No timeseries data yet; it accumulates after enabling stats.",
+      "heatmap": "Activity heatmap",
+      "heatmapDescription": "Report intensity aggregated by weekday and hour (from range timeseries).",
+      "heatmapLess": "Less",
+      "heatmapMore": "More",
+      "weekday": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      }
+    },
     "todayStatus": {
       "title": "Today's status",
       "description": "Update the homepage avatar badge with one emoji, a short message, expiry time, and busy ring.",

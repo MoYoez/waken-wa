@@ -6,4 +6,5 @@ export type AdminTabValue =
   | 'tokens'
   | 'account'
   | 'orphan-images'
+  | 'stats'
   | 'settings'

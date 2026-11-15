@@ -5,6 +5,7 @@ import {
   mergeBuckets,
   parseBuckets,
 } from '@/lib/activity-history-pending/helpers'
+import { WriteActivityStatBuckets } from '@/lib/activity-stat-buckets-write'
 import { db } from '@/lib/db'
 import { activityAppHistory, activityPlaySourceHistory } from '@/lib/drizzle-schema'
 import { normalizeReportedAppTitleLimit } from '@/lib/reported-app-title-limit'
@@ -185,5 +186,13 @@ export async function flushEntriesToDb(entries: PendingHistoryEntry[]): Promise<
 
   const appFlushed = await writeAppPendingsToDb(appEntries)
   const playSourceFlushed = await writePlaySourcePendingsToDb(playSourceEntries)
+
+  try {
+    await WriteActivityStatBuckets(entries)
+  } catch (error) {
+    // Timeseries buckets are best-effort; never block the dictionary flush.
+    console.error('[activity-history] stat bucket write failed:', error)
+  }
+
   return appFlushed + playSourceFlushed
 }
