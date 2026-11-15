@@ -119,3 +119,23 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy production to Dokploy
+    needs: ci
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Notify Dokploy
+        env:
+          DEPLOY_URL: ${{ secrets.ORBIT_HUIGE233_WAKEN_DEPLOY_URL }}
+        run: |
+          status=$(curl --silent --show-error --fail \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --header 'X-GitHub-Event: push' \
+            --data-binary @"$GITHUB_EVENT_PATH" \
+            --output /dev/null --write-out '%{http_code}' "$DEPLOY_URL")
+          [ "$status" = 200 ]
